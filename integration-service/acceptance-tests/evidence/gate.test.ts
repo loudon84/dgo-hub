@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { evaluateReleaseGate, validateEvidenceStructure } from '../../contracts/evidence.js';
-import { runRecordLocalChecks } from '../../scripts/record-local-checks.js';
+import { platformNpmInvocation, runRecordLocalChecks } from '../../scripts/record-local-checks.js';
 import { runGateCli } from './run-gate.js';
 
 let root: string | undefined;
@@ -140,6 +140,11 @@ describe('evidence release gate', () => {
 });
 
 describe('fixed local check recorder', () => {
+  it('routes Windows npm scripts through cmd.exe with only the fixed command words', () => {
+    expect(platformNpmInvocation(['run', 'typecheck'], 'win32')).toEqual({ executable: 'cmd.exe', args: ['/d', '/s', '/c', 'npm run typecheck'] });
+    expect(platformNpmInvocation(['test'], 'linux')).toEqual({ executable: 'npm', args: ['test'] });
+  });
+
   it('runs only the fixed allowlist, records source and log digests, and refuses overwrite', async () => {
     root = await mkdtemp(join(tmpdir(), 'alpha1-recorder-'));
     const commands: string[][] = [];
@@ -152,8 +157,13 @@ describe('fixed local check recorder', () => {
     expect(results.results).toHaveLength(48);
     expect(results.results.every((item: any) => item.status === 'NOT_RUN')).toBe(true);
     const worktree = JSON.parse(await readFile(join(runDir, 'worktree-manifest.json'), 'utf8'));
-    expect(worktree).toMatchObject({ git_sha: expect.any(String), dirty: true });
-    expect(worktree.files.length).toBeGreaterThan(0);
+    expect(worktree.git_sha).toMatch(/^[a-f0-9]{40}$/);
+    expect(typeof worktree.dirty).toBe('boolean');
+    expect(worktree.dirty).toBe(worktree.files.length > 0 || worktree.unavailable_paths.length > 0);
+    for (const file of worktree.files) {
+      const bytes = await readFile(join(process.cwd(), '..', file.path));
+      expect(file.sha256).toBe(`sha256:${createHash('sha256').update(bytes).digest('hex')}`);
+    }
     const gate = await evaluateReleaseGate(runDir);
     expect(gate).toMatchObject({ status: 'BLOCKED', product_ready: false });
     const duplicate = await runRecordLocalChecks(['--output-parent', root, '--run-id', 'check-run-1'], runner);

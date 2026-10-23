@@ -20,6 +20,11 @@ const allowlist = [
 ] as const;
 
 function digest(bytes: string | Buffer): string { return `sha256:${createHash('sha256').update(bytes).digest('hex')}`; }
+export function platformNpmInvocation(command: readonly string[], platform: NodeJS.Platform = process.platform): { executable: string; args: string[] } {
+  return platform === 'win32'
+    ? { executable: 'cmd.exe', args: ['/d', '/s', '/c', `npm ${command.join(' ')}`] }
+    : { executable: 'npm', args: [...command] };
+}
 function reqs(id: string): string[] {
   if (id.startsWith('FI-')) return (fiOwners[id] ?? []).map(owner => `REQ-${owner}-001`);
   return [`REQ-${id.split('-')[1]}-001`];
@@ -27,9 +32,8 @@ function reqs(id: string): string[] {
 function spawnRunner(command: string[], cwd: string): Promise<{ stdout: string; stderr: string; exit_code: number }> {
   return new Promise((resolveResult, reject) => {
     // Windows .cmd entry points must run through cmd.exe. `command` comes only from the fixed allowlist above.
-    const executable = process.platform === 'win32' ? 'cmd.exe' : 'npm';
-    const args = process.platform === 'win32' ? ['/d', '/s', '/c', `npm ${command.join(' ')}`] : command;
-    const child = spawn(executable, args, { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const invocation = platformNpmInvocation(command);
+    const child = spawn(invocation.executable, invocation.args, { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '';
     child.stdout.setEncoding('utf8').on('data', chunk => { stdout += chunk; });
     child.stderr.setEncoding('utf8').on('data', chunk => { stderr += chunk; });
