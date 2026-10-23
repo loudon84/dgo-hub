@@ -1,0 +1,121 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/evidence/gate.test.ts (30 tests | 8 failed | 22 skipped) 889ms
+     × distinguishes a complete synthetic structure from release readiness 157ms
+     × allows a complete unit-only release-shaped bundle through the final release branch 100ms
+     × anchors bundle pins to the controlled repository pins even when bundle files are self-consistent 98ms
+     × blocks explicit nonreal consumer authority reference synthetic://hermes in a release-shaped bundle 108ms
+     × blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle 108ms
+     × blocks explicit nonreal consumer authority reference fixture://hermes in a release-shaped bundle 105ms
+     × blocks explicit nonreal approval authority reference synthetic:approval:crm in a release-shaped bundle 107ms
+     × blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle 104ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+AssertionError: expected { status: 'FAIL', …(1) } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:50:50
+     48|     const run = await runDirectory();
+     49|     await createSyntheticFixture(run, true);
+     50|     expect(await validateEvidenceStructure(run)).toMatchObject({ statu…
+       |                                                  ^
+     51|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BL…
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > allows a complete unit-only release-shaped bundle through the final release branch
+AssertionError: expected { status: 'FAIL', …(1) } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:58:50
+     56|     // Every byte here is artificial unit-test material; this is never…
+     57|     await createSyntheticFixture(run, true, true);
+     58|     expect(await validateEvidenceStructure(run)).toMatchObject({ statu…
+       |                                                  ^
+     59|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PA…
+     60|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > anchors bundle pins to the controlled repository pins even when bundle files are self-consistent
+AssertionError: expected { status: 'FAIL', …(2) } to match object { status: 'PASS', product_ready: true }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "product_ready": true,
+-   "status": "PASS",
++   "product_ready": false,
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:65:44
+     63|     const run = await runDirectory();
+     64|     await createSyntheticFixture(run, true, true);
+     65|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PA…
+       |                                            ^
+     66|
+     67|     const altered = { ...JSON.parse(await readFile(join(run, 'upstream…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference synthetic://hermes in a release-shaped bundle
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference fixture://hermes in a release-shaped bundle
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal approval authority reference synthetic:approval:crm in a release-shaped bundle
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle
+AssertionError: expected { status: 'FAIL', …(2) } to match object { status: 'BLOCKED', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "product_ready": false,
+-   "status": "BLOCKED",
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:116:44
+    114|     await refreshDigests(run);
+    115|
+    116|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BL…
+       |                                            ^
+    117|   });
+    118|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 22 skipped (30)
+   Start at  15:33:42
+   Duration  1.28s (transform 91ms, setup 0ms, import 214ms, tests 889ms, environment 0ms)

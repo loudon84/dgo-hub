@@ -1,0 +1,23 @@
+
+added 199 packages in 19s
+
+69 packages are looking for funding
+  run `npm fund` for details
+npm notice
+npm notice New minor version of npm available! 11.11.0 -> 11.21.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.1
+npm notice To update run: npm install -g npm@11.21.1
+npm notice
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=dot acceptance-tests/deployment-lock.test.ts acceptance-tests/evidence/gate.test.ts acceptance-tests/environment.test.ts acceptance-tests/record-local-checks.test.ts
+
+
+ RUN  v4.1.12 /work/integration-service
+
+····································································-······
+
+ Test Files  4 passed (4)
+      Tests  74 passed | 1 skipped (75)
+   Start at  07:29:30
+   Duration  4.50s (transform 335ms, setup 0ms, import 2.38s, tests 3.47s, environment 0ms)

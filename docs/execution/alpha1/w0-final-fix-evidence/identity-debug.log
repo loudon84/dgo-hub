@@ -1,0 +1,86 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+stdout | acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+debug artifact identities [
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\oracle-0.json',
+    'file:3591297891:20266198324071612'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\trace-0.json',
+    'file:3591297891:11258999069330620'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\answer-0.json',
+    'file:3591297891:19984723347360960'
+  ]
+]
+
+stdout | acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+debug artifact identities [
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\oracle-1.json',
+    'file:3591297891:19421773393939652'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\trace-1.json',
+    'file:3591297891:19421773393939650'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\answer-1.json',
+    'file:3591297891:18577348463807684'
+  ]
+]
+
+stdout | acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+debug artifact identities [
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\oracle-2.json',
+    'file:3591297891:18858823440518344'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\trace-2.json',
+    'file:3591297891:19140298417229000'
+  ],
+  [
+    'C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-evidence-tq2uEw\\run\\golden-consumer\\calls\\answer-2.json',
+    'file:3591297891:18858823440518344'
+  ]
+]
+
+ ❯ acceptance-tests/evidence/gate.test.ts (30 tests | 1 failed | 29 skipped) 163ms
+     × distinguishes a complete synthetic structure from release readiness 161ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+AssertionError: expected { status: 'FAIL', …(1) } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:50:50
+     48|     const run = await runDirectory();
+     49|     await createSyntheticFixture(run, true);
+     50|     expect(await validateEvidenceStructure(run)).toMatchObject({ statu…
+       |                                                  ^
+     51|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BL…
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 29 skipped (30)
+   Start at  15:33:53
+   Duration  648ms (transform 113ms, setup 0ms, import 283ms, tests 163ms, environment 0ms)

@@ -1,0 +1,275 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ dist/acceptance-tests/deployment-lock.test.js (22 tests | 1 failed) 61ms
+     × keeps the checked-in example schema-valid and release-blocked 23ms
+ ❯ dist/acceptance-tests/evidence/gate.test.js (23 tests | 4 failed) 2549ms
+     × distinguishes a complete synthetic structure from release readiness 169ms
+     × compares referenced Oracle JSON values while ignoring object key order 120ms
+     × accepts nonempty falsey Oracle values from distinct files: false 115ms
+     × accepts nonempty falsey Oracle values from distinct files: 0 120ms
+ ❯ acceptance-tests/evidence/gate.test.ts (30 tests | 5 failed) 3314ms
+     × distinguishes a complete synthetic structure from release readiness 160ms
+     × anchors bundle pins to the controlled repository pins even when bundle files are self-consistent 102ms
+     × blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle 113ms
+     × blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle 113ms
+     × accepts nonempty falsey Oracle values from distinct files: false 114ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+AssertionError: expected { status: 'FAIL', …(1) } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:50:50
+     48|     const run = await runDirectory();
+     49|     await createSyntheticFixture(run, true);
+     50|     expect(await validateEvidenceStructure(run)).toMatchObject({ statu…
+       |                                                  ^
+     51|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BL…
+     52|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > anchors bundle pins to the controlled repository pins even when bundle files are self-consistent
+AssertionError: expected { status: 'FAIL', …(2) } to match object { status: 'PASS', product_ready: true }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "product_ready": true,
+-   "status": "PASS",
++   "product_ready": false,
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:65:44
+     63|     const run = await runDirectory();
+     64|     await createSyntheticFixture(run, true, true);
+     65|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PA…
+       |                                            ^
+     66|
+     67|     const altered = { ...JSON.parse(await readFile(join(run, 'upstream…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle
+AssertionError: expected { status: 'FAIL', …(2) } to match object { status: 'BLOCKED', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "product_ready": false,
+-   "status": "BLOCKED",
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:116:44
+    114|     await refreshDigests(run);
+    115|
+    116|     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BL…
+       |                                            ^
+    117|   });
+    118|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts nonempty falsey Oracle values from distinct files: false
+AssertionError: expected { status: 'FAIL', …(1) } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/evidence/gate.test.ts:204:50
+    202|     await addDigestEntries(run, [refs.expected, refs.actual]);
+    203|     await refreshDigests(run);
+    204|     expect(await validateEvidenceStructure(run)).toMatchObject({ statu…
+       |                                                  ^
+    205|   });
+    206|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  dist/acceptance-tests/deployment-lock.test.js > deployment lock contract > keeps the checked-in example schema-valid and release-blocked
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ dist/acceptance-tests/deployment-lock.test.js:60:65
+     58|     it('keeps the checked-in example schema-valid and release-blocked'…
+     59|         const example = JSON.parse(readFileSync(resolve('deploy/deploy…
+     60|         expect(deploymentLockSchema.safeParse(example).success).toBe(t…
+       |                                                                 ^
+     61|         expect(validateDeploymentLock(example, pins, { release: true }…
+     62|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  dist/acceptance-tests/evidence/gate.test.js > evidence release gate > distinguishes a complete synthetic structure from release readiness
+AssertionError: expected { status: 'FAIL', issues: [ …(8) ] } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "deployment.lock.json: components.hasura.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.helix-foundry.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-api.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-publisher.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-worker.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.openmetadata.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.postgres.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.sales-mcp.image: Unrecognized key: \"digest_source\"",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ dist/acceptance-tests/evidence/gate.test.js:45:54
+     43|         const run = await runDirectory();
+     44|         await createSyntheticFixture(run, true);
+     45|         expect(await validateEvidenceStructure(run)).toMatchObject({ s…
+       |                                                      ^
+     46|         expect(await evaluateReleaseGate(run)).toMatchObject({ status:…
+     47|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  dist/acceptance-tests/evidence/gate.test.js > evidence release gate > compares referenced Oracle JSON values while ignoring object key order
+AssertionError: expected { status: 'FAIL', issues: [ …(9) ] } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "deployment.lock.json: components.hasura.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.helix-foundry.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-api.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-publisher.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-worker.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.openmetadata.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.postgres.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.sales-mcp.image: Unrecognized key: \"digest_source\"",
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ dist/acceptance-tests/evidence/gate.test.js:104:54
+    102|         await writeFile(join(run, 'file-digests.json'), JSON.stringify…
+    103|         await refreshDigests(run);
+    104|         expect(await validateEvidenceStructure(run)).toMatchObject({ s…
+       |                                                      ^
+    105|     });
+    106|     it.each(['null', '""', '{}', '[]'])('rejects empty Oracle assertio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  dist/acceptance-tests/evidence/gate.test.js > evidence release gate > accepts nonempty falsey Oracle values from distinct files: false
+AssertionError: expected { status: 'FAIL', issues: [ …(8) ] } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "deployment.lock.json: components.hasura.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.helix-foundry.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-api.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-publisher.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-worker.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.openmetadata.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.postgres.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.sales-mcp.image: Unrecognized key: \"digest_source\"",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ dist/acceptance-tests/evidence/gate.test.js:132:54
+    130|         await addDigestEntries(run, [refs.expected, refs.actual]);
+    131|         await refreshDigests(run);
+    132|         expect(await validateEvidenceStructure(run)).toMatchObject({ s…
+       |                                                      ^
+    133|     });
+    134|     it('rejects expected and actual Oracle references that alias the s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  dist/acceptance-tests/evidence/gate.test.js > evidence release gate > accepts nonempty falsey Oracle values from distinct files: 0
+AssertionError: expected { status: 'FAIL', issues: [ …(9) ] } to match object { status: 'PASS', issues: [] }
+
+- Expected
++ Received
+
+  {
+-   "issues": [],
+-   "status": "PASS",
++   "issues": [
++     "deployment.lock.json: components.hasura.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.helix-foundry.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-api.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-publisher.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.hub-worker.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.openmetadata.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.postgres.image: Unrecognized key: \"digest_source\"",
++     "deployment.lock.json: components.sales-mcp.image: Unrecognized key: \"digest_source\"",
++     "golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct",
++   ],
++   "status": "FAIL",
+  }
+
+ ❯ dist/acceptance-tests/evidence/gate.test.js:132:54
+    130|         await addDigestEntries(run, [refs.expected, refs.actual]);
+    131|         await refreshDigests(run);
+    132|         expect(await validateEvidenceStructure(run)).toMatchObject({ s…
+       |                                                      ^
+    133|     });
+    134|     it('rejects expected and actual Oracle references that alias the s…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+
+ Test Files  3 failed | 8 passed (11)
+      Tests  10 failed | 147 passed (157)
+   Start at  15:32:40
+   Duration  3.89s (transform 934ms, setup 0ms, import 3.04s, tests 6.40s, environment 1ms)
