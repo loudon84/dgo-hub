@@ -8,6 +8,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const pins = JSON.parse(readFileSync(resolve('deploy/upstream-pins.json'), 'utf8')) as unknown;
+const jsonSchema = JSON.parse(readFileSync(resolve('deploy/deployment.lock.schema.json'), 'utf8')) as {
+  '$defs': { component: { properties: { image: { properties: { reference: { pattern: string } } } } } };
+};
 
 const digest = `sha256:${'a'.repeat(64)}`;
 const hubSourceSha = 'b'.repeat(40);
@@ -99,6 +102,25 @@ describe('deployment lock contract', () => {
     expect(blocked(lock).join(' ')).toMatch(/hub-api.*manifest_digest|manifest_digest.*hub-api/i);
   });
 
+  it('blocks copying a known config image ID into manifest fields on a complete site observation', () => {
+    const lock = validLock();
+    lock.environment_kind = 'site';
+    lock.input_kind = 'observed';
+    const component = lock.components['hub-api'] as {
+      image: { manifest_digest: string };
+      runtime_identity: { manifest_digest: string };
+      capability_probe: { runtime_identity: { manifest_digest: string } };
+    };
+    const configImageId = `sha256:${'c'.repeat(64)}`;
+    component.image.manifest_digest = configImageId;
+    component.runtime_identity.manifest_digest = configImageId;
+    component.capability_probe.runtime_identity.manifest_digest = configImageId;
+
+    const result = validateDeploymentLock(lock, pins, { release: true });
+    expect(result.status).toBe('BLOCKED');
+    expect(result.issues.join(' ')).toMatch(/hub-api.*manifest_digest.*image_id/i);
+  });
+
   it('blocks floating latest image references', () => {
     const lock = validLock();
     (lock.components['hub-api'] as { image: { reference: string } }).image.reference = 'registry.example.test/hub-api:latest';
@@ -145,6 +167,33 @@ describe('deployment lock contract', () => {
     const embeddedDigest = validLock();
     (embeddedDigest.components.hasura as { image: { reference: string } }).image.reference = 'registry.example.test:5000/hasura:v2.51.1@sha256:abc';
     expect(blocked(embeddedDigest).join(' ')).toMatch(/hasura.*reference|reference.*hasura/i);
+  });
+
+  it('requires repository:fixed-tag image syntax while allowing registry ports', () => {
+    const invalidReferences = [':fixed', 'repo:tag:again', 'https://example.test/repo:1', ' repo:tag '];
+    for (const reference of invalidReferences) {
+      const lock = validLock();
+      lock.environment_kind = 'site';
+      lock.input_kind = 'observed';
+      (lock.components.hasura as { image: { reference: string } }).image.reference = reference;
+      const result = validateDeploymentLock(lock, pins, { release: true });
+      expect(result.status, reference).toBe('BLOCKED');
+      expect(result.issues.join(' '), reference).toMatch(/hasura.*reference|reference.*hasura/i);
+    }
+
+    const registryPort = validLock();
+    registryPort.environment_kind = 'site';
+    registryPort.input_kind = 'observed';
+    (registryPort.components.hasura as { image: { reference: string } }).image.reference = 'registry.example.test:5000/hasura:v2.51.1';
+    expect(validateDeploymentLock(registryPort, pins, { release: true }).status).toBe('PASS');
+  });
+
+  it('represents the same repository and tag restrictions in JSON Schema', () => {
+    const imageReferencePattern = new RegExp(jsonSchema['$defs'].component.properties.image.properties.reference.pattern);
+    for (const reference of [':fixed', 'repo:tag:again', 'https://example.test/repo:1', ' repo:tag ']) {
+      expect(imageReferencePattern.test(reference), reference).toBe(false);
+    }
+    expect(imageReferencePattern.test('registry.example.test:5000/repo:1')).toBe(true);
   });
 
   it('blocks source pins that drift from the approved pins file', () => {
@@ -214,6 +263,26 @@ describe('deployment lock CLI', () => {
       expect(result.exitCode).toBe(2);
       expect(JSON.parse(result.output)).toMatchObject({ status: 'BLOCKED', product_ready: false });
       expect(JSON.parse(result.output).issues.join(' ')).toMatch(/hub-api/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns stable nonzero JSON when the requested output cannot be written', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'alpha1-lock-'));
+    try {
+      const observationsPath = join(dir, 'observations.json');
+      const pinsPath = join(dir, 'pins.json');
+      writeFileSync(observationsPath, JSON.stringify({ ...validLock(), input_kind: 'synthetic' }));
+      writeFileSync(pinsPath, JSON.stringify(pins));
+
+      const result = await runGenerateLock([
+        '--observations', observationsPath,
+        '--pins', pinsPath,
+        '--output', dir,
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(JSON.parse(result.output)).toMatchObject({ error: 'output_write', product_ready: false });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

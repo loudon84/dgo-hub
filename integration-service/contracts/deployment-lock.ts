@@ -7,6 +7,32 @@ const utcTimestamp = z.string().datetime({ offset: false });
 const sha256Value = z.string().regex(sha256);
 const environmentKindSchema = environmentInputSchema.shape.environment_kind;
 
+const repositoryComponent = /^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*$/;
+const registryHost = /^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)(?::([1-9][0-9]{0,4}))?$/;
+const imageTag = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
+
+function hasRepositoryTagGrammar(reference: string): boolean {
+  if (reference.includes('@') || reference.includes('://') || /\s/.test(reference)) return false;
+  const lastSlash = reference.lastIndexOf('/');
+  const tagSeparator = reference.lastIndexOf(':');
+  if (tagSeparator <= lastSlash || tagSeparator === reference.length - 1) return false;
+
+  const repository = reference.slice(0, tagSeparator);
+  const tag = reference.slice(tagSeparator + 1);
+  if (!imageTag.test(tag)) return false;
+
+  const pathComponents = repository.split('/');
+  if (pathComponents.some(component => component.length === 0)) return false;
+  if (pathComponents.length > 1 && pathComponents[0]!.includes(':')) {
+    const host = pathComponents[0]!;
+    const match = registryHost.exec(host);
+    if (!match) return false;
+    if (match[1] && Number(match[1]) > 65535) return false;
+    return pathComponents.slice(1).every(component => repositoryComponent.test(component));
+  }
+  return pathComponents.every(component => repositoryComponent.test(component));
+}
+
 const upstreamPinsSchema = z.object({
   helix: z.object({ revision: z.string().regex(sha1OrSha256) }).strict(),
   openmetadata: z.object({ tag: z.string().trim().min(1), revision: z.string().regex(sha1OrSha256) }).strict(),
@@ -26,7 +52,7 @@ const runtimeIdentitySchema = z.object({
 }).strict();
 
 const imageSchema = z.object({
-  reference: z.string().trim().min(1),
+  reference: z.string().min(1),
   manifest_digest: sha256Value,
   image_id: sha256Value.optional(),
 }).strict();
@@ -44,22 +70,20 @@ const componentSchema = z.object({
   }).strict(),
 }).strict().superRefine((component, ctx) => {
   const ref = component.image.reference;
-  if (ref.includes('@') || /\s/.test(ref)) {
-    ctx.addIssue({ code: 'custom', path: ['image', 'reference'], message: 'Image reference must not contain whitespace or an embedded digest' });
-  } else {
-    const finalSlash = ref.lastIndexOf('/');
-    const tagSeparator = ref.lastIndexOf(':');
-    if (tagSeparator <= finalSlash || tagSeparator === ref.length - 1) {
-      ctx.addIssue({ code: 'custom', path: ['image', 'reference'], message: 'Image reference must include a fixed tag' });
-    } else if (ref.slice(tagSeparator + 1).toLowerCase() === 'latest') {
-      ctx.addIssue({ code: 'custom', path: ['image', 'reference'], message: 'Floating latest image tags are not allowed' });
-    }
+  if (!hasRepositoryTagGrammar(ref)) {
+    ctx.addIssue({ code: 'custom', path: ['image', 'reference'], message: 'Image reference must use repository:fixed-tag syntax with a valid repository and tag' });
+  } else if (ref.slice(ref.lastIndexOf(':') + 1).toLowerCase() === 'latest') {
+    ctx.addIssue({ code: 'custom', path: ['image', 'reference'], message: 'Floating latest image tags are not allowed' });
   }
 
   if (component.runtime_identity.manifest_digest !== component.image.manifest_digest
     || component.runtime_identity.config_digest !== component.config.digest
     || (component.image.image_id !== undefined && component.runtime_identity.image_id !== component.image.image_id)) {
     ctx.addIssue({ code: 'custom', path: ['runtime_identity'], message: 'Runtime identity must match the declared image and config digests' });
+  }
+  if (component.image.manifest_digest === component.runtime_identity.image_id
+    || component.runtime_identity.manifest_digest === component.runtime_identity.image_id) {
+    ctx.addIssue({ code: 'custom', path: ['image', 'manifest_digest'], message: 'manifest_digest must not be populated with the config image_id' });
   }
   if (component.capability_probe.runtime_identity.image_id !== component.runtime_identity.image_id
     || component.capability_probe.runtime_identity.manifest_digest !== component.runtime_identity.manifest_digest

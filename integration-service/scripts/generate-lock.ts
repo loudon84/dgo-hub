@@ -66,7 +66,18 @@ export async function runGenerateLock(argv: string[]): Promise<{ exitCode: numbe
   const result = validateDeploymentLock(observations, pins, { release: options.release });
   const productReady = false;
   if (result.status === 'PASS' && options.output) {
-    writeFileSync(resolve(options.output), `${JSON.stringify(observations, null, 2)}\n`, { encoding: 'utf8', flag: 'w' });
+    try {
+      writeFileSync(resolve(options.output), `${JSON.stringify(observations, null, 2)}\n`, { encoding: 'utf8', flag: 'w' });
+    } catch {
+      return {
+        exitCode: 1,
+        output: jsonResult({
+          error: 'output_write',
+          message: 'Validated lock could not be written to the requested output file',
+          product_ready: false,
+        }),
+      };
+    }
   }
   return {
     exitCode: result.status === 'PASS' ? 0 : 2,
