@@ -1,0 +1,64 @@
+{
+  "schema_version": "alpha1.v1",
+  "environment_kind": "local_lab",
+  "tenant_key": "example-tenant",
+  "business_timezone": "Asia/Shanghai",
+  "idp": {
+    "issuer": "http://127.0.0.1:8081/realms/example",
+    "audience": "sales-mcp-example",
+    "jwks_uri": "http://127.0.0.1:8081/realms/example/protocol/openid-connect/certs"
+  },
+  "sources": [
+    {
+      "source_id": "crm-example",
+      "connection_mode": "rest",
+      "endpoint": "http://127.0.0.1:8090/api/read-only",
+      "secret_ref": "env://CRM_READONLY_TOKEN",
+      "mapping_ref": "REQUIRED_MAPPING_REFERENCE",
+      "replica_authorization_ref": "REQUIRED_REPLICA_AUTHORIZATION_REFERENCE",
+      "deletion_contract_ref": "REQUIRED_DELETION_CONTRACT_REFERENCE"
+    },
+    {
+      "source_id": "orders-example",
+      "connection_mode": "postgresql",
+      "endpoint": "postgresql://127.0.0.1:5432/orders",
+      "secret_ref": "secret://REQUIRED_ORDERS_READONLY_SECRET_REFERENCE",
+      "mapping_ref": "REQUIRED_ORDERS_MAPPING_REFERENCE",
+      "replica_authorization_ref": "REQUIRED_ORDERS_REPLICA_AUTHORIZATION_REFERENCE",
+      "deletion_contract_ref": "REQUIRED_ORDERS_DELETION_CONTRACT_REFERENCE",
+      "read_only": true
+    }
+  ],
+  "identity_mapping_ref": "REQUIRED_IDENTITY_MAPPING_REFERENCE",
+  "tls_hostname": "localhost",
+  "internal_services": {
+    "hub_api": "http://127.0.0.1:3100",
+    "sales_mcp": "http://127.0.0.1:3101",
+    "hasura": "http://127.0.0.1:8088",
+    "postgres": "postgresql://127.0.0.1:5432/hub",
+    "openmetadata": "http://127.0.0.1:8585",
+    "helix": "http://127.0.0.1:6969"
+  },
+  "backup_ref": "REQUIRED_BACKUP_AND_RESTORE_EVIDENCE_REFERENCE",
+  "hermes": {
+    "actual_version": "REQUIRED_ACTUAL_HERMES_VERSION"
+  },
+  "test_identities": [
+    {
+      "actor_ref": "synthetic://example-tenant/sales-1",
+      "role": "sales",
+      "tenant_key": "example-tenant"
+    },
+    {
+      "actor_ref": "synthetic://example-tenant/sales-2",
+      "role": "sales",
+      "tenant_key": "example-tenant"
+    },
+    {
+      "actor_ref": "synthetic://example-tenant/sales-manager-1",
+      "role": "sales_manager",
+      "tenant_key": "example-tenant"
+    }
+  ],
+  "example": true
+}

@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "alpha1.v1"
+    },
+    "environment_kind": {
+      "type": "string",
+      "enum": [
+        "local_lab",
+        "site"
+      ]
+    },
+    "tenant_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "business_timezone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "idp": {
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1
+        },
+        "jwks_uri": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "issuer",
+        "audience",
+        "jwks_uri"
+      ],
+      "additionalProperties": false
+    },
+    "sources": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "connection_mode": {
+            "type": "string",
+            "enum": [
+              "rest",
+              "postgresql",
+              "sqlserver"
+            ]
+          },
+          "endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "secret_ref": {
+            "type": "string",
+            "pattern": "^(env|secret|vault):\\/\\/[A-Za-z0-9._/-]+$"
+          },
+          "mapping_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "replica_authorization_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "deletion_contract_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "read_only": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source_id",
+          "connection_mode",
+          "endpoint",
+          "secret_ref",
+          "mapping_ref",
+          "replica_authorization_ref",
+          "deletion_contract_ref"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "identity_mapping_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tls_hostname": {
+      "type": "string",
+      "minLength": 1
+    },
+    "internal_services": {
+      "type": "object",
+      "properties": {
+        "hub_api": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sales_mcp": {
+          "type": "string",
+          "format": "uri"
+        },
+        "hasura": {
+          "type": "string",
+          "format": "uri"
+        },
+        "postgres": {
+          "type": "string",
+          "format": "uri"
+        },
+        "openmetadata": {
+          "type": "string",
+          "format": "uri"
+        },
+        "helix": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "hub_api",
+        "sales_mcp",
+        "hasura",
+        "postgres",
+        "openmetadata",
+        "helix"
+      ],
+      "additionalProperties": false
+    },
+    "backup_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hermes": {
+      "type": "object",
+      "properties": {
+        "actual_version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "actual_version"
+      ],
+      "additionalProperties": false
+    },
+    "test_identities": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actor_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "sales",
+              "sales_manager"
+            ]
+          },
+          "tenant_key": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "actor_ref",
+          "role",
+          "tenant_key"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "example": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "environment_kind",
+    "tenant_key",
+    "business_timezone",
+    "idp",
+    "sources",
+    "identity_mapping_ref",
+    "tls_hostname",
+    "internal_services",
+    "backup_ref",
+    "hermes",
+    "test_identities",
+    "example"
+  ],
+  "additionalProperties": false,
+  "title": "Alpha1 EnvironmentInput",
+  "description": "Environment contract structure for alpha1.v1. Runtime Zod validation also checks protocols, credentials, tenant identity binding, IANA timezone, unique ids, and environment-kind rules.",
+  "$comment": "Generated from integration-service/contracts/environment.ts. Refinements that JSON Schema cannot fully express remain enforced by the runtime schema; a schema-valid example is not evidence of a live environment.",
+  "x-runtime-validation": [
+    "environment-kind-specific HTTPS and loopback rules",
+    "endpoint protocols and credential or secret query rejection",
+    "unique source_id and actor_ref values",
+    "IANA timezone validation",
+    "tenant-bound identities and site sales and sales_manager minimums",
+    "database source read_only requirement"
+  ]
+}
