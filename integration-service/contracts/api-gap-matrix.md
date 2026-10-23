@@ -43,12 +43,12 @@
 | API-037 | GET `/hub/v1/admin/policies` | REQ-POL-001 | Adapt | GET /admin/permissions; no desired/applied/observed contract. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
 | API-038 | POST `/hub/v1/admin/policies` | REQ-POL-001 | Adapt | POST /admin/permissions creates legacy PolicyInput. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
 | API-039 | PATCH `/hub/v1/admin/policies/{id}` | REQ-POL-001 | Missing | No corresponding Hub endpoint or complete workflow. | M2/M5 | No canonical API contract test. |
-| API-040 | POST `/hub/v1/admin/policies/{id}/validate` | REQ-POL-001 | Adapt | POST /admin/permissions/preview; preview contract differs. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
+| API-040 | POST `/hub/v1/admin/policies/{id}/validate` | REQ-POL-001 | Missing | No policy-revision validation endpoint; draft preview belongs to API-045/P09 and does not validate a policy. | M2/M5 | No canonical policy validation test. |
 | API-041 | POST `/hub/v1/admin/policies/{id}/approve` | REQ-POL-001 | Adapt | POST /admin/permissions/:id/approve; x-actor is not trusted identity. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
 | API-042 | POST `/hub/v1/admin/policies/{id}/apply` | REQ-POL-001 | Adapt | POST /admin/permissions/:id/publish + Publisher; CAS/recovery contract incomplete. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
 | API-043 | POST `/hub/v1/admin/policies/{id}/revoke` | REQ-POL-001 | Missing | No corresponding Hub endpoint or complete workflow. | M2/M5 | No canonical API contract test. |
 | API-044 | GET `/hub/v1/admin/policies/{id}/status` | REQ-POL-001 | Missing | No corresponding Hub endpoint or complete workflow. | M2/M5 | No canonical API contract test. |
-| API-045 | POST `/hub/v1/admin/access-previews` | REQ-UI-001, REQ-SEC-001 | Adapt | POST /admin/permissions/preview; caller-supplied identity fields differ from fixed principal contract. | M2/M5 | integration tests cover legacy flow/preview subsets; not canonical API acceptance. |
+| API-045 | POST `/hub/v1/admin/access-previews` | REQ-UI-001, REQ-SEC-001 | Adapt | `POST /admin/permissions/preview` accepts caller-supplied tenantId/userId and columns; it echoes requested columns and counts rows from the Hub API view using tenant_id/owner_user_id. Response labels this a pre-release estimate and says Hasura must reverify after application. No authorized principal resolution, fixed template ID, or read of applied Hasura policy. | M2/M5 | No route-level preview or applied-policy verification test; core.test.ts tests policy helpers only. |
 | API-046 | POST `/hub/v1/me/agent-credentials` | REQ-AUTH-001, REQ-AGENT-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
 | API-047 | GET `/hub/v1/me/agent-credentials` | REQ-AUTH-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
 | API-048 | DELETE `/hub/v1/me/agent-credentials/{id}` | REQ-AUTH-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
@@ -88,23 +88,22 @@
 | REQ-EVID-001 | M6 | A/N-EVID-001; 48-row evidence gate |
 ## 页面覆盖（主 PRD P01–P12 → 四页聚合规格）
 
-四页聚合规格来源 `docs/OpenMetadata_UI扩展规格说明_v1.0.md`；UI-1..UI-4 映射到四个聚合入口，UI-5 映射原生 OpenMetadata 与运行/交付总览。前置 API 阶段按 PRD M0–M4 分开，页面验收属于 M5。
+页面 ID 与标题以主 PRD 附录 B 为准；UI-1..UI-4 是四页聚合规格入口，UI-5 表示原生 OpenMetadata/运维交付入口映射。页面工作流/API归属按附录 B逐项核对。页面验收属 M5；括号内的 M1–M4 表示其API/能力依赖。
 
-| PRD页面 | 聚合入口 | 阶段 | 覆盖与代码现状 |
-|---|---|---|---|
-| P01 总览 | UI-5 总览待补 | M5 | 四页规格没有总览；API-002/020/037/049/053只提供部分数据源，无聚合UI。 |
-| P02 接入配置 | UI-1 接入 | M5（M1 API依赖） | 来源/任务/映射/重试；实现为旧 `/v1/ingest`、事件/水位/重试，无受管来源配置工作流。 |
-| P03 批次与隔离 | UI-1 接入 | M5（M1 API依赖） | 有失败查询/重试 seam；无规范 job/item/quarantine API。 |
-| P04 字段映射 | UI-1 接入 | M5（M1 API依赖） | 规格有映射只读/验证；无来源映射配置或完整数据合同。 |
-| P05 原生元数据治理 | UI-5 原生 OpenMetadata | M5 | 复用原生资产/血缘/质量入口；只读 `ontology-binding` 不证明扩展 UI 或写回完成。 |
-| P06 本体工作区 | UI-2 本体绑定 | M5（M3 API依赖） | 有 Helix 活动模型只读与字段存在性校验；缺提案编辑/验证/发布/审批。 |
-| P07 绑定与发布 | UI-2 本体绑定 | M5（M3 API依赖） | 旧绑定列表/创建是适配 seam；缺不可变 Binding Release、批准、激活与恢复。 |
-| P08 策略设计 | UI-3 数据权限 | M5（M2 API依赖） | 旧 policy list/create/preview seam；缺正式角色、关系、版本合同。 |
-| P09 权限发布 | UI-3 数据权限 | M5（M2 API依赖） | 有旧草稿/审批/应用；缺 CAS、并发锁、撤权恢复和 desired/applied/observed 证据。 |
-| P10 Agent 配置 | UI-4 Agent 服务 | M5（M4 API依赖） | 有旧工具目录/范围 API；缺用户绑定凭据与 Hermes Profile/真实版本绑定。 |
-| P11 调用追踪 | UI-4 Agent 服务 | M5（M4 API依赖） | 有旧 audit/errors 查询；脱敏、request_id、审计失败闭锁、真实调用证据未验收。 |
-| P12 运行与交付记录 | UI-5 运维/交付总览 | M5（OPS/EVID gate归M6） | PRD要求 lock、gate、备份/恢复；Task3提供本地检查记录与结构/发布Gate工具。 |
-
+| PRD ID / canonical title | 聚合入口 | 阶段 | PRD工作流与 API ownership | 当前实现与差距 |
+|---|---|---|---|---|
+| P01 总览 | UI-5 总览待补 | M5 | 状态卡并可钻取任务、策略、审计；API-002/020/037/049/053 | 无聚合UI；这些 API 只提供部分来源数据，且多为缺失或适配。 |
+| P02 数据源 | UI-1 接入 | M5（M1依赖） | 新建→测试→审批→激活；编辑→重测；暂停；API-002–009 | 没有受管数据源端点/工作流。 |
+| P03 字段与身份映射 | UI-1 接入 | M5（M1依赖） | 来源字段映射到标准属性、转换/版本/状态映射，用户/部门/客户身份映射与主来源字段权；保存草稿、结构校验、查看影响、人工确认冲突；API-010–014 | API-010–012字段映射与API-013–014身份映射均缺失；现有 `/admin/ontology/bindings` 是本体到资产字段的绑定，不是来源映射或身份映射。 |
+| P04 同步任务与隔离 | UI-1 接入 | M5（M1依赖） | 查看batch/run/event、接收/应用/隔离计数、游标、错误与客户依赖；修正映射后逐项重试；API-017–024/051 | `/admin/ingestion/events`、`/admin/ingestion/failures`、`/admin/etl/watermarks` 与 `/admin/etl/:source/retry` 是部分旧 seam；无规范 job/item/run/quarantine/operation receipt 生命周期，失败列表不等于隔离队列。 |
+| P05 数据资产与治理 | UI-5 原生 OpenMetadata | M5（M3依赖） | 查看资产、分类、质量、血缘、术语与Owner；触发受控同步并查看质量历史；API-025/026及原生 OM | 原生 OM 可承载既有治理浏览；本 Hub 无 API-025/026规范同步与context端点，适配器仅只读核验。 |
+| P06 本体模型 | UI-2 本体绑定 | M5（M3依赖） | 编辑固定三类模型/关系提案，校验并确认发布；API-027–030 | 仅有Helix活动代次只读与字段存在性检查；缺提案编辑、校验、发布工作流。 |
+| P07 查询绑定与发布 | UI-2 本体绑定 | M5（M3依赖） | 创建草稿→校验→独立审批→激活；看历史并显式回退；API-031–036/051 | 旧绑定列表/创建仅验证活动对象与物理字段；缺不可变Binding Release、审批、激活、回退与operation查询。 |
+| P08 授权策略 | UI-3 数据权限 | M5（M2依赖） | 编制、验证、提交审批、发布、撤销并查看漂移；API-037–044/051 | 旧 `/admin/permissions` list/create/approve/publish 与Publisher提供部分草稿/审批/应用 seam；缺正式 revision/CAS、撤权/恢复及desired/applied/observed核验。此处不把草稿预览视为策略验证或应用证明。 |
+| P09 权限验证 | UI-3 数据权限 | M5（M2依赖） | 固定测试主体/模板：草稿对合成fixture预览；对已应用策略，按获授权主体只读验证可见列/行范围、拒绝原因并留证；API-045 | `POST /admin/permissions/preview` 是草稿估算 seam：调用者直接提供 tenantId/userId与列，服务端回显请求列，并用固定 tenant_id/owner_user_id 条件查询Hub API视图计数；返回“预发布估算；生效后应由 Hasura 复验”。它没有固定模板ID或服务端解析的principal，也不读取已应用Hasura策略/代表授权主体执行只读验证；因此不能证明应用权限。当前测试只校验 policy helper，不覆盖该路由或应用策略验证。 |
+| P10 Agent 服务与凭据 | UI-4 Agent 服务 | M5（M4依赖） | 用户创建/复制一次性token、撤销、下载无秘密配置模板、本人联通测试；服务管理员看MCP URL和工具状态；API-046–049/001 | 工具目录有旧只读API；用户凭据API和Hermes/Profile联通流程缺失。 |
+| P11 调用审计 | UI-4 Agent 服务 | M5（M4依赖） | 按request/operation ID检索、查看脱敏错误并在授权范围内导出；API-050/051 | 旧 audit/errors 查询部分可复用；完整脱敏审计、操作查询与追踪合同未完成。 |
+| P12 运行与交付记录 | UI-5 运维/交付总览 | M5（M6依赖） | 查看实际版本/摘要、依赖、gate、备份/恢复和required验收；API-053/051 | Task3提供本地检查记录及结构/发布Gate工具；无规范运行健康/operation API或真实lock/恢复数据。 |
 ## 48项 required acceptance 阶段覆盖
 
 18 A + 18 N + 12 FI，共48项。阶段归属不表示通过；当前产品状态按 Task3 Gate 实际结果为 `NOT_RUN`。FI关联按PRD第23章。

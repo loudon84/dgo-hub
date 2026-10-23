@@ -67,3 +67,14 @@ W0 broad review backlog is preserved:
 ## RED / GREEN
 
 Documentation-only change; there is no new behavior, so RED/GREEN is not applicable. Validation was limited to required documentation ID/link checks and the three specified readiness CLI checks. The unchanged full typecheck/test/build suite was not rerun.
+
+## Task 4 correction round 1 — page ownership fixes
+
+- Review base: `642bd72492abd2cae2ab25a8fa3f44830b054d88`; review source: `.superpowers/sdd/alpha1/task-4-review.md`.
+- Scope: documentation-only correction. No code, tests, full suite, build, readiness CLI, upstream source, or environment input changed/read.
+- I1: restored the PRD's canonical P03 title **字段与身份映射** and ownership of API-010–014, explicitly including user/department/customer identity mapping; P04 is now **同步任务与隔离**, owning API-017–024/051 and the job/event/quarantine/retry/operation lifecycle. The prior legacy event/failure/watermark/retry routes are described as partial seams; a failure list is not claimed to be a quarantine lifecycle.
+- I2: restored P09 **权限验证** with API-045: draft preview against synthetic fixtures and read-only verification of an applied policy as an authorized principal using the fixed template. The existing `/admin/permissions/preview` route accepts caller-supplied tenant/user and columns, echoes requested columns, counts Hub API-view rows with tenant/owner filters, and labels the result a pre-release estimate requiring later Hasura recheck. It does not resolve an authorized principal, use a fixed template ID, inspect the applied Hasura policy, or prove effective permissions. Existing `core.test.ts` checks policy helpers only; no route-level preview or applied-policy verification test was found.
+- Kept draft, approval, apply, CAS, revoke and recovery concerns under P08 **授权策略**. Reclassified API-040 policy-revision validation as Missing; the API-045 draft preview does not implement API-040.
+- Focused comparison against PRD Appendix B: all 12 canonical page IDs and titles match; each page now carries its Appendix B workflow summary and API ownership. P03/P04/P08/P09 ownership is explicit. Four-page aggregation remains UI-1 through UI-4, with UI-5 for native OpenMetadata and operations/delivery surfaces.
+- Relative Markdown link check across changed committed docs: PASS. Page ID/title inventory: 12/12; API-045/API-040 ownership cross-check: PASS. `git diff --check`: PASS.
+- No new CLI output or product status is asserted. Site readiness remains BLOCKED; all 48 A/N/FI remain NOT_RUN; W0 broad review remains pending.
