@@ -11,6 +11,7 @@
     "mcp": "node dist/sales-mcp/main.js",
     "migrate": "node dist/migrate.js",
     "check:m0-entry": "npm run build && node dist/scripts/check-m0-entry.js",
+    "check:deployment-lock": "npm run build && node dist/scripts/generate-lock.js",
     "test": "vitest run",
     "acceptance:live": "node --env-file=.env dist/acceptance-tests/live.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"

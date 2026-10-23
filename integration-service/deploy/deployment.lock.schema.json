@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dgo-hub.example/contracts/deployment.lock.schema.json",
+  "title": "alpha1 deployment lock observations",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "environment_kind", "input_kind", "run_id", "captured_at", "source_pins", "components"],
+  "properties": {
+    "schema_version": { "const": "alpha1.v1" },
+    "environment_kind": { "enum": ["local_lab", "site"] },
+    "input_kind": { "enum": ["observed", "synthetic", "example"] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "captured_at": { "$ref": "#/$defs/timestamp" },
+    "source_pins": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["helix", "openmetadata", "hasura"],
+      "properties": {
+        "helix": { "type": "object", "additionalProperties": false, "required": ["revision"], "properties": { "revision": { "$ref": "#/$defs/sourceSha" } } },
+        "openmetadata": { "type": "object", "additionalProperties": false, "required": ["tag", "revision"], "properties": { "tag": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/sourceSha" } } },
+        "hasura": { "type": "object", "additionalProperties": false, "required": ["tag", "revision"], "properties": { "tag": { "type": "string", "minLength": 1 }, "revision": { "$ref": "#/$defs/sourceSha" } } }
+      }
+    },
+    "components": {
+      "type": "object",
+      "required": ["hub-api", "hub-worker", "hub-publisher", "sales-mcp", "hasura", "postgres", "openmetadata", "helix-foundry"],
+      "properties": {
+        "hub-api": { "$ref": "#/$defs/sourceComponent" },
+        "hub-worker": { "$ref": "#/$defs/sourceComponent" },
+        "hub-publisher": { "$ref": "#/$defs/sourceComponent" },
+        "sales-mcp": { "$ref": "#/$defs/sourceComponent" },
+        "hasura": { "$ref": "#/$defs/sourceComponent" },
+        "postgres": { "$ref": "#/$defs/component" },
+        "openmetadata": { "$ref": "#/$defs/sourceComponent" },
+        "helix-foundry": { "$ref": "#/$defs/sourceComponent" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/component" }
+    }
+  },
+  "$defs": {
+    "timestamp": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceSha": { "type": "string", "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$" },
+    "runtimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image_id", "manifest_digest", "config_digest"],
+      "properties": { "image_id": { "$ref": "#/$defs/sha256" }, "manifest_digest": { "$ref": "#/$defs/sha256" }, "config_digest": { "$ref": "#/$defs/sha256" } }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "config", "captured_at", "runtime_identity", "capability_probe"],
+      "properties": {
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference", "manifest_digest"],
+          "properties": { "reference": { "type": "string", "minLength": 1, "pattern": "^[^\\s@]+:[^/:\\s][^@\\s]*$" }, "manifest_digest": { "$ref": "#/$defs/sha256" }, "image_id": { "$ref": "#/$defs/sha256" } }
+        },
+        "source_sha": { "$ref": "#/$defs/sourceSha" },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "digest"],
+          "properties": { "schema": { "type": "string", "minLength": 1 }, "digest": { "$ref": "#/$defs/sha256" } }
+        },
+        "captured_at": { "$ref": "#/$defs/timestamp" },
+        "runtime_identity": { "$ref": "#/$defs/runtimeIdentity" },
+        "capability_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "captured_at", "runtime_identity"],
+          "properties": { "status": { "enum": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"] }, "captured_at": { "$ref": "#/$defs/timestamp" }, "runtime_identity": { "$ref": "#/$defs/runtimeIdentity" } }
+        }
+      }
+    },
+    "sourceComponent": { "allOf": [{ "$ref": "#/$defs/component" }, { "type": "object", "required": ["source_sha"] }] }
+  }
+}

@@ -88,6 +88,29 @@ Hermes 配置示意（按实际版本的远程 MCP 配置格式调整）：
 
 正式上线前仍需：企业 SSO 与双人审批身份可信化；源库字段映射和 CDC/补数；OpenMetadata 自定义属性与血缘写回方案；Helix 发布版本固定与部署隔离；Hasura 撤权和权限漂移处理；管理页面实现、监控告警与备份恢复。这里交付的是完整可运行的**集成验证代码**，不是已完成生产认证的企业平台。
 
+## 部署版本锁
+
+`deploy/upstream-pins.json` 固定 Helix Foundry、OpenMetadata 和 Hasura 的参考源码版本。`deploy/deployment.lock.schema.json` 描述每个部署组件的镜像引用、OCI manifest digest、适用时的源码 revision、配置 schema 与摘要，以及采集时间和能力探测记录。八个必需组件是 hub-api、hub-worker、hub-publisher、sales-mcp、hasura、postgres、openmetadata 和 helix-foundry；现场声明的额外组件也必须提供完整观测。`image_id` 是本地镜像配置身份，不能替代仓库 manifest digest。
+
+生成器只读显式提供的观测 JSON 与 pins 文件，不连接 Docker、上游 checkout 或运行现场，也不读取容器环境变量。命令参数为 `--observations <file> --pins <file>`，可选 `--output <file>` 写出通过结构检查的锁，`--release` 增加正式部署条件。结构检查通过只说明声明字段和内部身份一致，输出仍为 `product_ready: false`；release 模式要求 `input_kind=observed`、`environment_kind=site`、全部组件探测为 PASS，且版本和运行身份匹配。
+
+可从部署控制面或镜像仓库只读收集运行时元数据。Docker 环境可只读取以下字段，避免导出容器环境：
+
+```powershell
+docker inspect --format '{{.Config.Image}} {{.Image}} {{.Id}}' <container>
+docker image inspect --format '{{json .RepoDigests}}' <image>
+```
+
+从实际构建记录或可信制品元数据取得组件 `source_sha`；参考 clone 的 HEAD 只作为参考 clone 观察，不能代表运行镜像的源码身份。manifest digest 从 registry 的 repo digest/OCI manifest 记录取得，Docker image ID 单独记入可选 `image.image_id`。如果本地镜像没有 registry manifest digest，保留缺失并记录 image ID，正式校验会 BLOCKED。能力探测必须记录被探测的运行 image ID、manifest digest、配置摘要和 UTC 时间。
+
+样例可用如下命令检查 JSON 形状；它会通过结构检查并明确保持 `product_ready: false`：
+
+```powershell
+node dist/scripts/generate-lock.js --observations deploy/deployment.lock.example.json --pins deploy/upstream-pins.json
+```
+
+当前尚未提供 OpenMetadata、Helix Foundry 及八个组件的实际部署观测，因此正式 lock 保持 BLOCKED。样例中的摘要仅用于演示结构，`input_kind=synthetic` 明确禁止其作为真实部署证据。
+
 ## 已核对的上游接口
 
 - [Hasura V2 Metadata API](https://hasura.io/docs/2.0/api-reference/metadata-api/index/) 与 [权限规则](https://hasura.io/docs/2.0/auth/authorization/permissions/)

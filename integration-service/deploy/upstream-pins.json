@@ -1,0 +1,21 @@
+{
+  "schema_version": "alpha1.v1",
+  "source_pins": {
+    "helix": {
+      "revision": "00d7927d7c08e16c58316e006959f052427e7fa1"
+    },
+    "openmetadata": {
+      "tag": "2.0.6-release",
+      "revision": "a695261b19d48411a39502a5c5fc0b453729eb4e"
+    },
+    "hasura": {
+      "tag": "v2.51.1",
+      "revision": "2b130a135659026ff6eda42c1df5722f123fd84e"
+    }
+  },
+  "reference_sources": {
+    "helix": "https://github.com/HelixDB/helix-foundry",
+    "openmetadata": "https://github.com/open-metadata/OpenMetadata",
+    "hasura": "https://github.com/hasura/graphql-engine"
+  }
+}
