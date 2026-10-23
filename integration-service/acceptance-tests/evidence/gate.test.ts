@@ -51,6 +51,30 @@ describe('evidence release gate', () => {
     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BLOCKED', product_ready: false });
   });
 
+  it('requires one unique fixture input artifact for each approved source contract', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const fixturePath = join(run, 'fixture-manifest.json');
+    const fixture = JSON.parse(await readFile(fixturePath, 'utf8')) as Record<string, any>;
+    fixture.inputs[1] = { ...fixture.inputs[0] };
+    const fixtureText = JSON.stringify(fixture);
+    await writeFile(fixturePath, fixtureText);
+    const goldenPath = join(run, 'golden-consumer', 'manifest.json');
+    const golden = JSON.parse(await readFile(goldenPath, 'utf8')) as Record<string, any>;
+    golden.approved_source_inputs = [fixture.inputs[0].file, fixture.inputs[1].file];
+    for (const call of golden.calls) call.input_refs = [...golden.approved_source_inputs];
+    await writeFile(goldenPath, JSON.stringify(golden));
+    const resultsPath = join(run, 'acceptance-results.json');
+    const acceptance = JSON.parse(await readFile(resultsPath, 'utf8')) as Record<string, any>;
+    const fixtureDigest = `sha256:${createHash('sha256').update(fixtureText).digest('hex')}`;
+    for (const result of acceptance.results) result.input_manifest.sha256 = fixtureDigest;
+    await writeFile(resultsPath, JSON.stringify(acceptance));
+    await refreshDigests(run);
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues.some(issue => issue.includes('fixture-manifest.json') && issue.includes('unique'))).toBe(true);
+  });
+
   it('rejects a PASS result when its Oracle assertion values differ', async () => {
     const run = await runDirectory();
     await createSyntheticFixture(run, true);
@@ -85,6 +109,57 @@ describe('evidence release gate', () => {
     expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
   });
 
+  it.each(['null', '""', '{}', '[]'])('rejects empty Oracle assertion values loaded from references: %s', async value => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const resultsPath = join(run, 'acceptance-results.json');
+    const acceptance = JSON.parse(await readFile(resultsPath, 'utf8')) as Record<string, any>;
+    const refs = await writeOraclePair(run, 'empty', value, value);
+    acceptance.results[0].oracle = { expected: refs.expected, actual: refs.actual };
+    acceptance.results[0].evidence_files.push(refs.expected, refs.actual);
+    await writeFile(resultsPath, JSON.stringify(acceptance));
+    await addDigestEntries(run, [refs.expected, refs.actual]);
+    await refreshDigests(run);
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues.some(issue => issue.includes(`${acceptance.results[0].acceptance_id}: PASS requires concrete Oracle`))).toBe(true);
+  });
+
+  it.each(['false', '0'])('accepts nonempty falsey Oracle values from distinct files: %s', async value => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const resultsPath = join(run, 'acceptance-results.json');
+    const acceptance = JSON.parse(await readFile(resultsPath, 'utf8')) as Record<string, any>;
+    const refs = await writeOraclePair(run, 'valid', value, value);
+    acceptance.results[0].oracle = { expected: refs.expected, actual: refs.actual };
+    acceptance.results[0].evidence_files.push(refs.expected, refs.actual);
+    await writeFile(resultsPath, JSON.stringify(acceptance));
+    await addDigestEntries(run, [refs.expected, refs.actual]);
+    await refreshDigests(run);
+    expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
+  });
+
+  it('rejects expected and actual Oracle references that alias the same file', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const resultsPath = join(run, 'acceptance-results.json');
+    const acceptance = JSON.parse(await readFile(resultsPath, 'utf8')) as Record<string, any>;
+    const content = '{"assertion":true}';
+    const expectedPath = 'oracle/alias-expected.json';
+    await mkdir(join(run, 'oracle'));
+    await writeFile(join(run, expectedPath), content);
+    const expected = { path: expectedPath, sha256: `sha256:${createHash('sha256').update(content).digest('hex')}` };
+    const actual = { path: expectedPath.replaceAll('/', '\\'), sha256: expected.sha256 };
+    acceptance.results[0].oracle = { expected, actual };
+    acceptance.results[0].evidence_files.push(expected, actual);
+    await writeFile(resultsPath, JSON.stringify(acceptance));
+    await addDigestEntries(run, [expected, actual]);
+    await refreshDigests(run);
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues.some(issue => issue.includes('expected and actual Oracle references must be independent'))).toBe(true);
+  });
+
   it('rejects a symlink in any referenced path segment', async () => {
     const run = await runDirectory();
     await createSyntheticFixture(run, true);
@@ -98,6 +173,28 @@ describe('evidence release gate', () => {
     const result = await validateEvidenceStructure(run);
     expect(result.status).toBe('FAIL');
     expect(result.issues.some(issue => issue.includes('symlink evidence path rejected'))).toBe(true);
+  });
+
+  it('rejects Golden Consumer artifact path aliases to the same underlying file', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const manifestPath = join(run, 'golden-consumer', 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, any>;
+    const tracePath = 'golden-consumer/calls/trace-0.json';
+    const trace = await readFile(join(run, tracePath));
+    const traceDigest = `sha256:${createHash('sha256').update(trace).digest('hex')}`;
+    const backslashAlias = 'golden-consumer\\calls\\trace-0.json';
+    const caseAlias = 'GOLDEN-CONSUMER/CALLS/TRACE-0.JSON';
+    const call = manifest.calls[0];
+    call.oracle = { path: tracePath, sha256: traceDigest };
+    call.tool_trace = { path: backslashAlias, sha256: traceDigest };
+    call.final_answer = { path: caseAlias, sha256: traceDigest };
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await addDigestEntries(run, [call.oracle, call.tool_trace, call.final_answer]);
+    await refreshDigests(run);
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues.some(issue => issue.includes('Oracle, trace, and answer files must be distinct'))).toBe(true);
   });
 
   it('rejects PASS records whose source, image, or fixture identities differ from the run', async () => {
@@ -283,6 +380,21 @@ async function refreshDigests(run: string): Promise<void> {
     raw[path] = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
   }
   await writeFile(join(run, 'file-digests.json'), JSON.stringify(raw));
+}
+
+async function writeOraclePair(run: string, name: string, expected: string, actual: string): Promise<{ expected: { path: string; sha256: string }; actual: { path: string; sha256: string } }> {
+  const expectedPath = `oracle-${name}-expected.json`, actualPath = `oracle-${name}-actual.json`;
+  await writeFile(join(run, expectedPath), expected); await writeFile(join(run, actualPath), actual);
+  return {
+    expected: { path: expectedPath, sha256: `sha256:${createHash('sha256').update(expected).digest('hex')}` },
+    actual: { path: actualPath, sha256: `sha256:${createHash('sha256').update(actual).digest('hex')}` },
+  };
+}
+async function addDigestEntries(run: string, refs: Array<{ path: string; sha256: string }>): Promise<void> {
+  const path = join(run, 'file-digests.json');
+  const digests = JSON.parse(await readFile(path, 'utf8')) as Record<string, string>;
+  for (const ref of refs) digests[ref.path] = ref.sha256;
+  await writeFile(path, JSON.stringify(digests));
 }
 
 function requiredIds(): string[] { return [...Array.from({ length: 18 }, (_, i) => i), ...Array.from({ length: 18 }, (_, i) => i)].map((_, index) => index < 18 ? `A-${['ARCH', 'AUTH', 'SRC', 'ING', 'ETL', 'DATA', 'GOV', 'ONT', 'PUB', 'SEC', 'POL', 'API', 'MCP', 'AGENT', 'UI', 'OBS', 'OPS', 'EVID'][index]}-001` : `N-${['ARCH', 'AUTH', 'SRC', 'ING', 'ETL', 'DATA', 'GOV', 'ONT', 'PUB', 'SEC', 'POL', 'API', 'MCP', 'AGENT', 'UI', 'OBS', 'OPS', 'EVID'][index - 18]}-001`).concat(Array.from({ length: 12 }, (_, i) => `FI-${String(i + 1).padStart(2, '0')}`)); }

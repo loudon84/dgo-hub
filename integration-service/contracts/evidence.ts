@@ -75,7 +75,7 @@ export type GateStatus = 'PASS' | 'FAIL' | 'BLOCKED';
 export type EvidenceCheckResult = { status: GateStatus; issues: string[] };
 export type ReleaseGateResult = EvidenceCheckResult & { product_ready: boolean };
 
-export async function safeReadEvidenceFile(runDir: string, filePath: string): Promise<{ bytes: Buffer; sha256: string; absolutePath: string }> {
+export async function safeReadEvidenceFile(runDir: string, filePath: string): Promise<{ bytes: Buffer; sha256: string; absolutePath: string; identity: string }> {
   if (filePath.includes('\0') || filePath.startsWith('/') || filePath.startsWith('\\') || /^[A-Za-z]:/.test(filePath) || isAbsolute(filePath)) {
     throw new Error(`unsafe evidence path: ${filePath}`);
   }
@@ -97,8 +97,11 @@ export async function safeReadEvidenceFile(runDir: string, filePath: string): Pr
   const actual = await realpath(absolutePath);
   const actualRelative = relative(base, actual);
   if (actualRelative === '..' || actualRelative.startsWith(`..${sep}`) || isAbsolute(actualRelative)) throw new Error(`evidence path escapes run directory: ${filePath}`);
+  const fileInfo = await lstat(absolutePath);
   const bytes = await readFile(absolutePath);
-  return { bytes, sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, absolutePath };
+  const canonicalPath = process.platform === 'win32' ? actual.toLocaleLowerCase('en-US') : actual;
+  const identity = fileInfo.ino !== 0 ? `file:${fileInfo.dev}:${fileInfo.ino}` : `path:${canonicalPath}`;
+  return { bytes, sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, absolutePath: actual, identity };
 }
 
 const fixedFiles = [
@@ -148,7 +151,7 @@ function stable(value: unknown): string {
   return JSON.stringify(value);
 }
 function hasConcreteOracle(value: unknown): boolean {
-  if (value === null || value === undefined || value === '') return false;
+  if (value === null || value === undefined || (typeof value === 'string' && value.trim().length === 0)) return false;
   if (Array.isArray(value)) return value.length > 0 && value.every(hasConcreteOracle);
   if (typeof value === 'object') return Object.keys(value as object).length > 0 && Object.values(value as object).every(hasConcreteOracle);
   return true;
@@ -198,6 +201,14 @@ async function validateBundle(runDir: string): Promise<EvidenceCheckResult & { d
   for (const contract of sourceContracts.contracts) {
     if (!env.sources.some(source => source.source_id === contract.source_id)) issues.push(`source-contracts.json: ${contract.source_id} is absent from environment sources`);
   }
+  const fixtureSourceIds = fixture.inputs.map(input => input.source_id);
+  const uniqueFixtureSourceIds = new Set(fixtureSourceIds);
+  if (uniqueFixtureSourceIds.size !== fixtureSourceIds.length) issues.push('fixture-manifest.json: source IDs must be unique');
+  const approvedSourceIds = [...contractsById.keys()].sort();
+  const fixtureSourceIdSet = [...uniqueFixtureSourceIds].sort();
+  if (stable(fixtureSourceIdSet) !== stable(approvedSourceIds) || fixture.inputs.length !== contractsById.size) {
+    issues.push('fixture-manifest.json: must contain exactly one input artifact for every approved source contract');
+  }
   for (const input of fixture.inputs) {
     const contract = contractsById.get(input.source_id);
     if (!contract || contract.schema_digest !== input.schema_digest || contract.approval_ref !== input.approval_ref) issues.push(`fixture-manifest.json: ${input.source_id} does not match source contract`);
@@ -241,7 +252,7 @@ async function validateBundle(runDir: string): Promise<EvidenceCheckResult & { d
       if (!result.test_ids?.includes(`TEST-${result.acceptance_id}`)) issues.push(`${result.acceptance_id}: PASS requires its canonical test_id`);
       if (!result.input_manifest || result.input_manifest.path !== 'fixture-manifest.json' || result.input_manifest.sha256 !== loaded.digests['fixture-manifest.json']) issues.push(`${result.acceptance_id}: PASS requires matching fixture manifest reference`);
       if (!result.evidence_files?.length) issues.push(`${result.acceptance_id}: PASS requires evidence files`);
-      if (!result.oracle || !hasConcreteOracle(result.oracle.expected) || !hasConcreteOracle(result.oracle.actual)) issues.push(`${result.acceptance_id}: PASS requires concrete Oracle expected and actual values`);
+      if (!result.oracle || result.oracle.expected === undefined || result.oracle.actual === undefined) issues.push(`${result.acceptance_id}: PASS requires concrete Oracle expected and actual values`);
       for (const evidence of result.evidence_files ?? []) if (!loaded.digests[evidence.path] || loaded.digests[evidence.path] !== evidence.sha256) issues.push(`${result.acceptance_id}: evidence file is not covered by file-digests.json`);
     } else if (result.status === 'NOT_RUN') {
       // NOT_RUN is the canonical initial state and contributes no release evidence.
@@ -261,17 +272,31 @@ async function validateBundle(runDir: string): Promise<EvidenceCheckResult & { d
   for (const ref of refs) {
     if (loaded.digests[ref.path] !== ref.sha256) issues.push(`${ref.path}: reference digest is missing or does not match file-digests.json`);
   }
-  if (golden.calls.some(call => new Set([call.oracle.path, call.tool_trace.path, call.final_answer.path]).size !== 3)) issues.push('golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct');
+  for (const call of golden.calls) {
+    try {
+      const artifacts = await Promise.all([call.oracle, call.tool_trace, call.final_answer].map(ref => safeReadEvidenceFile(runDir, ref.path)));
+      if (new Set(artifacts.map(file => file.identity)).size !== 3) issues.push('golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct');
+    } catch (error) {
+      issues.push(`golden-consumer/manifest.json: artifact identity could not be checked (${error instanceof Error ? error.message : 'read failed'})`);
+    }
+  }
   for (const result of acceptance.results.filter(item => item.status === 'PASS' && item.oracle)) {
     const expected = result.oracle!.expected, actual = result.oracle!.actual;
-    if (isReference(expected) && isReference(actual) && expected.path === actual.path) issues.push(`${result.acceptance_id}: expected and actual Oracle references must be independent`);
-    const readOracle = async (value: unknown): Promise<unknown> => {
-      if (!isReference(value)) return value;
+    const resolveOracle = async (value: unknown): Promise<{ assertion: unknown; identity?: string }> => {
+      if (!isReference(value)) return { assertion: value };
       const file = await safeReadEvidenceFile(runDir, value.path);
-      return JSON.parse(file.bytes.toString('utf8'));
+      return { assertion: JSON.parse(file.bytes.toString('utf8')), identity: file.identity };
     };
     try {
-      if (stable(await readOracle(expected)) !== stable(await readOracle(actual))) issues.push(`${result.acceptance_id}: Oracle expected and actual values differ`);
+      const expectedResolved = await resolveOracle(expected);
+      const actualResolved = await resolveOracle(actual);
+      if (expectedResolved.identity !== undefined && expectedResolved.identity === actualResolved.identity) {
+        issues.push(`${result.acceptance_id}: expected and actual Oracle references must be independent`);
+      }
+      if (!hasConcreteOracle(expectedResolved.assertion) || !hasConcreteOracle(actualResolved.assertion)) {
+        issues.push(`${result.acceptance_id}: PASS requires concrete Oracle expected and actual values`);
+      }
+      if (stable(expectedResolved.assertion) !== stable(actualResolved.assertion)) issues.push(`${result.acceptance_id}: Oracle expected and actual values differ`);
     } catch (error) { issues.push(`${result.acceptance_id}: Oracle reference invalid (${error instanceof Error ? error.message : 'read failed'})`); }
   }
   return { status: issues.length ? 'FAIL' : 'PASS', issues: [...new Set(issues)].sort(), data: d, digests: loaded.digests };
