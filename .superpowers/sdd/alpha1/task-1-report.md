@@ -205,3 +205,68 @@ EXAMPLES_PARSE
 ```
 
 `git diff --check` 与 `git diff --cached --check` 均无空白错误；Git 仅提示 Windows 工作区将 LF 转为 CRLF。未重跑全量测试；本轮变更覆盖由 16 项 focused 测试、typecheck 和 build 验证。
+
+## 首轮修复复审（Round 2）
+
+- 状态：`DONE_WITH_CONCERNS`
+- 修复提交：`b8b072b43414db6b111badd6f02b7ffd41531a76`
+- Review 基线：`f76c929242b13d7714c5ff92843236ab62e95e22`。
+- R1：在所有 URI scheme 分支之前拒绝裸 `name:password@host` 语法；环境测试身份和批准人共享此校验。`urn:employee:alice` 正例仍通过。
+- R2：归一化查询名后恢复旧的 `auth` 子串拒绝边界；`auth_key`、`pwd` 与百分号编码后的 `pwd` 都由 focused 用例覆盖。
+- JSON Schema 结构没有变化，本轮只收紧 Zod refinements，因此不需重新生成。
+
+### RED
+
+命令：`npm test -- acceptance-tests/environment.test.ts`
+
+```text
+ RUN  v3.2.7 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/environment.test.ts (19 tests | 3 failed) 56ms
+   × rejects bare user:password@host syntax in test identity references
+     → expected true to be false // Object.is equality
+   × rejects bare user:password@host syntax in approval actor references
+     → expected true to be false // Object.is equality
+   × rejects auth_key endpoint query aliases while retaining password aliases
+     → expected true to be false // Object.is equality
+   ✓ 16 other contract and CLI tests
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 16 passed (19)
+   Start at 13:00:37
+   Duration 607ms (transform 72ms, setup 0ms, collect 181ms, tests 56ms, environment 0ms, prepare 143ms)
+```
+
+### GREEN
+
+命令：`npm test -- acceptance-tests/environment.test.ts`
+
+```text
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/environment.test.ts
+
+ RUN  v3.2.7 E:/git/dgo-hub/integration-service
+
+ ✓ acceptance-tests/environment.test.ts (19 tests) 44ms
+
+ Test Files  1 passed (1)
+      Tests  19 passed (19)
+   Start at 13:00:49
+   Duration 572ms (transform 71ms, setup 0ms, collect 171ms, tests 44ms, environment 0ms, prepare 135ms)
+```
+
+`npm run typecheck`：
+
+```text
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+```
+
+`npm run build`：
+
+```text
+> data-governance-integration-service@1.0.0 build
+> tsc -p tsconfig.json
+```
+
+Task 1 原有 I1–I4、`vault:///`、有效 opaque URN、`pwd` 与编码后 query alias 等回归均在这 19 项 focused 测试中继续通过。未重跑全量 suite，符合本轮限定的变更覆盖范围。
