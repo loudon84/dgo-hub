@@ -50,7 +50,7 @@ This wave implements W0-I1 through W0-I4 and W0-M1/M2. It does not start M0. W0 
 
 ## File identity investigation
 
-The first Windows Vitest 4 full-suite run surfaced distinct-file fixture failures. A direct reproduction on Node v24.14.1 showed `lstat().ino` values above `Number.MAX_SAFE_INTEGER`; different NTFS files could round to the same JavaScript `number` (the fixture showed `oracle-2.json` and `answer-2.json` sharing the rounded identity). A Windows path-only identity fallback was tried briefly and rejected in self-review because it would miss hardlink aliases.
+The first Windows Vitest 4 full-suite run surfaced distinct-file fixture failures. A direct reproduction on Node v24.14.1 showed `lstat().ino` values above `Number.MAX_SAFE_INTEGER`; different NTFS files could round to the same JavaScript `number` (the fixture showed `oracle-2.json` and `answer-2.json` sharing the rounded identity). A Windows path-only identity fallback was tried briefly. The coordinating controller pointed out before final review that this would miss hardlink aliases, so the implementation was corrected to preserve filesystem identity.
 
 The final guard uses `lstat(path, { bigint: true })` and exact `dev`/`ino` BigInts on all platforms. It falls back to the existing canonical real path only when the filesystem returns zero device or inode identity. This preserves hardlink identity. Added a real NTFS test that confirms two ordinary files have distinct identities and a true hardlink alias shares identity and is rejected as a duplicate Golden Consumer artifact. Both cases pass. Node's [v24 fs documentation](https://nodejs.org/download/release/v24.19.0/docs/api/fs.html) documents the `bigint` option, BigInt stat fields, `ino`, and hardlink count.
 
@@ -64,7 +64,7 @@ The first clean-install full test run was not accepted as final evidence:
 - The source run exposed the NTFS `ino` precision collision described above. The final BigInt fix preserves both distinct-file and hardlink alias semantics.
 - The artificial fixture also exposed an invalid Oracle identity collision on Windows. Its source was the imprecise file identity value, not a product timeout; no timeout was widened.
 
-Exact first full-run output is retained in `.superpowers/sdd/alpha1/w0-final-fix-outputs/full-test.log`; the focused BigInt diagnosis is in `identity-debug.log`. `focused-vitest4-debug.log` records the first focused reproduction. The temporary Windows realpath-only implementation is not included in either final evidence or the final commit.
+Exact first full-run output is retained in [full-test.log](w0-final-fix-evidence/full-test.log); the focused BigInt diagnosis is in [identity-debug.log](w0-final-fix-evidence/identity-debug.log). [focused-vitest4-debug.log](w0-final-fix-evidence/focused-vitest4-debug.log) records the first focused reproduction. The temporary Windows realpath-only implementation is not included in either final evidence or the final commit.
 
 ## Final verification
 
@@ -79,7 +79,7 @@ The final Windows commands ran against the exact source tree committed as `90f37
 | `npm audit --omit=dev --json` | 0 vulnerabilities; exit 0 |
 | Linux focused Gate + Git path recorder | 2 files passed; 31 passed, 1 Windows-only skip; exit 0 |
 
-Full check logs and exit codes are retained under `.superpowers/sdd/alpha1/w0-final-fix-outputs/`. The final Linux focused source SHA-256 values are recorded in `linux-source-sha256.txt`; its complete output is `linux-bigint-focused.log`.
+Full check logs, dependency resolution, package-lock hash, audit JSON and exit codes are retained under [w0-final-fix-evidence](w0-final-fix-evidence/). The final Linux focused source SHA-256 values are recorded in [linux-source-sha256.txt](w0-final-fix-evidence/linux-source-sha256.txt); its complete output is [linux-bigint-focused.log](w0-final-fix-evidence/linux-bigint-focused.log).
 
 ## Linux fixture attempts and owned resources
 
@@ -89,10 +89,10 @@ All containers were named `alpha1-w0-linux-*` and used `docker run --rm`; no ser
 - `alpha1-w0-linux-retry-1b5cbf6931cd`: separate empty configs fixed npm; 73 passed, 1 skipped, 1 failed because the isolated copy lacked Git HEAD (`could not capture hub git SHA`).
 - `alpha1-w0-linux-git-14fee99e5988`: the first temporary `.gitignore` contained literal backtick text and included node_modules in the recorder scan; the 5-second recorder test timed out. Product timeout was not changed.
 - `alpha1-w0-linux-final-0cb0a1724a99`: corrected ignore fixture and temporary Git commit; old snapshot before final BigInt source, Node 24.14.1/Vitest 4.1.12; 74 passed, 1 skipped.
-- `alpha1-w0-linux-bigint-identity` first attempts: a slim image had no Git and the parent approvals example was not mounted; a subsequent `apt-get` attempt did not complete and its exact container was stopped. With `node:24` the copied Gate and path tests first showed one fixture-root mismatch (`/work` versus `/work/integration-service`), while the identity and Chinese path assertions passed. These fixture attempts are detailed in `.superpowers/sdd/alpha1/w0-final-fix-outputs/linux-bigint-attempts.md`.
+- `alpha1-w0-linux-bigint-identity` first attempts: a slim image had no Git and the parent approvals example was not mounted; a subsequent `apt-get` attempt did not complete and its exact container was stopped. With `node:24` the copied Gate and path tests first showed one fixture-root mismatch (`/work` versus `/work/integration-service`), while the identity and Chinese path assertions passed. These fixture attempts are detailed in [linux-bigint-attempts.md](w0-final-fix-evidence/linux-bigint-attempts.md); original Linux attempts are in [linux-attempts.md](w0-final-fix-evidence/linux-attempts.md).
 - `alpha1-w0-linux-bigint-identity` final retry: the temporary Git root was corrected to `/work`, only the required approval example was added, and the current BigInt source was recopied. Node v24.22.1/npm 11.19.1, Vitest 4.1.12: 31 passed, 1 Windows-only skip, exit 0.
 
-Temporary npm config files were distinct empty files and contained no user configuration. No secrets were read or copied. The named containers use `--rm`; the stopped apt attempt was explicitly stopped and no matching container is still running. The owned temp mount path was verified, but recursive removal was rejected by the local command safety gate; it remains at the exact path above with only our isolated fixture and installed test dependencies. No other temp path was targeted.
+Saved logs contain the container names but not full Docker container IDs; no full ID is reconstructed or assumed. Temporary npm config files were distinct empty files and contained no user configuration. No secrets were read or copied. The named containers use `--rm`; the stopped apt attempt was explicitly stopped and no matching container is still running. The owned temp mount path was verified, but recursive removal was rejected by the local command safety gate with `CreateProcess ... rejected: blocked by policy`; it was not retried. The mount remains at the exact path above. The detailed resource record is in [resource-disposition.md](w0-final-fix-evidence/resource-disposition.md).
 
 ## Limits and next action
 

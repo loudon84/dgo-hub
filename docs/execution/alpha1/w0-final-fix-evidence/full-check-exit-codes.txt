@@ -1,0 +1,2 @@
+typecheck=0
+full-test=1

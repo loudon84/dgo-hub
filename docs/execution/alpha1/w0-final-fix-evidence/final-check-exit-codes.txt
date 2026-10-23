@@ -1,0 +1,3 @@
+final-typecheck=0
+final-build=0
+final-full-test=0
