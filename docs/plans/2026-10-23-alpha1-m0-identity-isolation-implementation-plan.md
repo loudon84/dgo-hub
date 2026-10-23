@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** PLANNED。实施已获用户授权，在 W0 final review 完成后开始；Hermes v0.22.1 为用户报告值，远端握手/构建未观察。
+**状态:** IMPLEMENTING（开始分派Task0）。W0整体评审已完成；Important W0-R1由Task0第一前置承接，修复通过review前不称W0全部批准。用户授权先做本地实现；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
 
 ## Global Constraints
 
@@ -44,9 +44,11 @@
 | deploy/alpha1/、deploy/scripts/ | 与演示分离的启动、账号、网络、拒绝探测 |
 | acceptance-tests/helpers/postgres.ts / identity*.test.ts | 独立本地真实数据库/签名/HTTP/协议验证 |
 
-## Task 0：版本化迁移 runner
+## Task 0：前置门禁修正与版本化迁移 runner
 
 **refs:** REQ-ARCH/AUTH；架构基础验证，不单独关闭A-ARCH。**files:** migrate.ts、可选migrations/runner.ts、acceptance-tests/migrations.test.ts、helpers/postgres.ts、README.md。
+
+**前置承接W0-R1：** 先使formal Gate的authority scheme判断与schema使用同样trim语义，覆盖带空白的consumer/source owner/approval；保持结构helper和合法引用行为。该修正独立提交、focused Gate验证，纳入本任务Solreview。另见[交接裁定](../execution/alpha1/w0-closure.md)。
 
 **Produces:** runMigrations(pool, {directory,environmentKind,adoptLegacy001?}) -> {applied:string[],skipped:string[]}；可导入不自动执行；测试helper返回本次pool与close。
 
@@ -140,3 +142,10 @@ CLI默认保持npm run migrate可用，明确--adopt-legacy-001只local_lab。�
 ## Alpha 过渡运行裁定
 
 M0仅身份与隔离就绪时，未批准来源的worker不得启动旧演示固定表扫描；无已发布/验证权限的publisher启动先关闸并保持关闭，不能调用旧bootstrap自动打开gate。旧演示扫描与bootstrap同旧HTTP路由一样只属于local_lab+显式legacy路径。Task3/4按现有进程入口实现清楚的未就绪状态，M1/M2再接入真正的调度与恢复；不要伪造业务capability PASS，也不引入可绕过门禁的force-ready开关。健康、进程存活与业务就绪分开记录。
+
+## 分派时冻结的配置与就绪合同
+
+- HUB_ENVIRONMENT_KIND=local_lab|site，默认site；HUB_ENABLE_LEGACY_LAB默认false，仅local_lab可显式开启，site+true拒绝。
+- OIDC固定受控HUB_AUTH_ISSUER/AUDIENCE/JWKS_URL；HUB_AUTH_ALLOW_LOOPBACK_HTTP仅显式local_lab测试允许，site禁止。库与测试不自动读取.env。
+- 旧query_gate=open或sales_reader已发布不证明Alpha就绪。M0严格MCP包括context在M2受控applied证明缺失时保持NOT_READY；测试可注入受控状态验证在途边界，运行时没有force-ready开关，MCP不获得gate写权。
+- Task4本地TLS优先用PowerShell7/.NET内存证书API，仅写本次临时目录、客户端显式CA信任；不修改主机证书存储或系统信任。服务SQL权限按M0真实查询重新核定，publisher关闸权限必须可执行约束而非普通UPDATE授权声明。

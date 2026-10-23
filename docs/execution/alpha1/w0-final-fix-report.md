@@ -22,7 +22,7 @@ This wave implements W0-I1 through W0-I4 and W0-M1/M2. It does not start M0. W0 
 - Final Gate reads `deploy/upstream-pins.json` anchored from the source module location or compiled `dist/contracts` location, outside the untrusted run directory. Missing or invalid anchor fails closed.
 - Gate compares the run's embedded pin file with the controlled pin set, then validates the lock against the controlled values. `validateDeploymentLock` remains caller-parameterized and `evaluateReleaseGate(runDir)` remains unchanged.
 - RED: a self-consistent run bundle with changed Hasura pins, component source SHA and recomputed digests returned PASS. GREEN: the equivalent post-fix bundle returns BLOCKED with a controlled/approved pins issue.
-- Unit coverage includes both the source module path and the compiled-layout resolution branch through build and full suite. The single full Windows suite uses the current build output.
+- Build verifies compilation; the full Windows suite verifies source tests. The subsequent scoped Sol review used dedicated in-memory source/dist module-location probes to verify controlled anchor resolution; it did not establish a historical full-process CLI test. See [scoped review](reviews/w0-final-fix-review.md).
 
 ### I3 — explicit nonreal authorities
 
