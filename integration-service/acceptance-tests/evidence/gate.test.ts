@@ -32,6 +32,7 @@ describe('evidence release gate', () => {
     const result = await runGateCli(['--run-dir', run]);
     expect(result.exitCode).toBe(2);
     expect(result.result).toMatchObject({ status: 'BLOCKED', product_ready: false });
+    expect(Object.keys(result.result).sort()).toEqual(['issues', 'product_ready', 'status']);
   });
 
   it('exposes the canonical 48 acceptance ids and keeps them NOT_RUN by default', async () => {

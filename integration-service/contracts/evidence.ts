@@ -286,7 +286,7 @@ export async function validateEvidenceStructure(runDir: string): Promise<Evidenc
 export async function evaluateReleaseGate(runDir: string): Promise<ReleaseGateResult> {
   try {
     const result = await validateBundle(runDir);
-    if (result.status !== 'PASS') return { ...result, product_ready: false };
+    if (result.status !== 'PASS') return { status: result.status, issues: result.issues, product_ready: false };
     const d = result.data!;
     const run = runManifestSchema.parse(d['run.json']);
     const env = (await import('./environment.js')).environmentInputSchema.parse(d['environment-inputs.json']);
