@@ -19,7 +19,7 @@ function isCredentialQueryName(key: string): boolean {
     'user', 'username', 'userid', 'uid', 'token', 'accesstoken', 'refreshtoken', 'idtoken', 'secret',
     'clientsecret', 'clientid', 'apikey', 'accesskey',
   ]);
-  return aliases.has(normalized) || /(?:password|passwd|pwd|token|secret|credential|authorization|apikey|accesskey)/.test(normalized);
+  return aliases.has(normalized) || /(?:auth|password|passwd|pwd|token|secret|credential|authorization|apikey|accesskey)/.test(normalized);
 }
 
 function isLoopback(hostname: string): boolean {
@@ -39,6 +39,7 @@ const safeUrl = z.string().url().refine(value => !hasCredentialsOrSecretQuery(va
 const secretRef = z.string().regex(/^(env|secret|vault):\/\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/, 'secret_ref must be a nonempty env://, secret://, or vault:// reference');
 export const identityReferenceSchema = nonEmpty.refine(value => {
   if (/[\s?#]/.test(value) || /^(?:bearer|password|token)\s*:/i.test(value)) return false;
+  if (/^[^/@:]+:[^/@]+@/.test(value)) return false;
   if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
     try {
       const url = new URL(value);
@@ -50,7 +51,7 @@ export const identityReferenceSchema = nonEmpty.refine(value => {
       return false;
     }
   }
-  return !/^[^/@:]+:[^/@]+@/.test(value);
+  return true;
 }, 'identity references cannot contain credentials');
 const hostname = nonEmpty.refine(value => {
   try {

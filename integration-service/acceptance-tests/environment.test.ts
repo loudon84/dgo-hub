@@ -199,6 +199,24 @@ describe('environment and signoff contracts', () => {
     expect(environmentInputSchema.safeParse(opaque).success).toBe(true);
   });
 
+  it('rejects bare user:password@host syntax in test identity references', () => {
+    const environment = validEnvironment();
+    environment.test_identities[0]!.actor_ref = 'user:NON_SECRET_SENTINEL@directory.example.test';
+    expect(environmentInputSchema.safeParse(environment).success).toBe(false);
+  });
+
+  it('rejects bare user:password@host syntax in approval actor references', () => {
+    const signoffs = validSignoffs();
+    signoffs.approvals[0]!.actor_ref = 'user:NON_SECRET_SENTINEL@directory.example.test';
+    expect(signoffRecordSchema.safeParse(signoffs).success).toBe(false);
+  });
+
+  it('rejects auth_key endpoint query aliases while retaining password aliases', () => {
+    const environment = validEnvironment();
+    environment.sources[0]!.endpoint = 'https://crm.example.test/api?auth_key=NON_SECRET_SENTINEL';
+    expect(environmentInputSchema.safeParse(environment).success).toBe(false);
+  });
+
   it('does not pass an example or a mismatched environment kind as formal M0 readiness', () => {
     const signoffs = validSignoffs();
     const sample = { ...validEnvironment(), example: true };
