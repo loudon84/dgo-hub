@@ -100,8 +100,8 @@ describe('versioned migration runner', () => {
       windowsHide: true,
       encoding: 'utf8',
     });
-    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth'], skipped: [] });
-    expect(await ledgerState()).toEqual({ exists: true, count: 2 });
+    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary'], skipped: [] });
+    expect(await ledgerState()).toEqual({ exists: true, count: 3 });
   });
 
   it('applies 001 to an empty database, skips it on repeat, and preserves migration data', async () => {

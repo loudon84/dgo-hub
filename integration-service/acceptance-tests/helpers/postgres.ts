@@ -10,7 +10,7 @@ const execFile = promisify(execFileCallback);
 const IMAGE_REFERENCE = 'postgres:16.10-alpine';
 const START_TIMEOUT_MS = 75_000;
 type DockerCommand = (args: string[], stage: string, timeout?: number) => Promise<string>;
-export type OwnedTaskLabel = 'task0' | 'task1' | 'task2';
+export type OwnedTaskLabel = 'task0' | 'task1' | 'task2' | 'task3';
 
 type SafeFailure = 'docker_unavailable' | 'image_unavailable' | 'startup_failed' | 'readiness_timeout' | 'pool_unavailable';
 

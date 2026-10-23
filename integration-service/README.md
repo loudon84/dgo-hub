@@ -3,9 +3,9 @@
 本工程是 OpenMetadata + Helix Foundry + Hasura V2 方案的**可运行集成原型**。CRM 与订单系统通过 REST 或 PostgreSQL ETL 写入标准模型；Hasura 在 SQL 查询层执行行列权限；销售 MCP 只提供五个固定只读工具。OpenMetadata 与 Helix 通过只读适配器核验资产和已发布模型，不作为销售数据查询旁路。项目基线以 `E:\git\dgo-hub\docs\数据治理与本体集成中台_产品架构与二开说明_v1.0.md` 为准：OpenMetadata `2.0.6-release`、Hasura `v2.51.1`、Helix Foundry `00d7927d7c08e16c58316e006959f052427e7fa1`。
 
 
-## Alpha.1 W0 status (2026-10-23)
+## Alpha.1 M0 status (2026-10-23)
 
-This repository is a runnable integration prototype with legacy `/v1/ingest`, `/admin/*`, and `/mcp` routes. These existing capabilities do not mean the PRD's formal `/hub/v1/*` API set is implemented. The [API/page gap matrix](contracts/api-gap-matrix.md) maps all 59 API IDs, 12 pages, and 48 A/N/FI acceptance IDs; the [implementation baseline](docs/implementation-baseline.md) lists test scope and known gaps. W0 Tasks 0–3 passed their code/spec reviews, and Task 4 is pending the overall W0 review. Engineering-tool readiness is recorded separately from product acceptance.
+The M0 identity boundary is implemented behind a strict default runtime. `/mcp/sales` authenticates an opaque personal agent credential against current database state, exposes five fixed read-only tools, and remains not ready until an applied binding/policy readiness resolver is supplied. This M0 implementation does not supply that resolver or verify M2 applied proof. Legacy `/v1/ingest`, `/admin/*`, `/mcp`, fixed-source worker scans, and publisher bootstrap are disabled by default. They require both `HUB_ENVIRONMENT_KIND=local_lab` and `HUB_ENABLE_LEGACY_LAB=true`; `site` rejects the legacy flag. The [API/page gap matrix](contracts/api-gap-matrix.md) maps all 59 API IDs, 12 pages, and 48 A/N/FI acceptance IDs; the [implementation baseline](docs/implementation-baseline.md) lists test scope and known gaps. Engineering-tool readiness is recorded separately from product acceptance.
 
 Site endpoints, auth/Profile bindings, CRM/order contracts and approved real inputs, IdP configuration, site signoffs, and observed deployment metadata are absent. M0 and the product gate remain BLOCKED; all 48 product acceptance rows are NOT_RUN. Hermes Agent v0.22.1 is user-reported installed elsewhere, but no runtime build or MCP call was observed. Examples are structural checks and cannot satisfy site readiness.
 
@@ -23,19 +23,23 @@ Site endpoints, auth/Profile bindings, CRM/order contracts and approved real inp
 
 ## 快速启动
 
-需要 Docker Compose、Node.js 24。示例密码仅用于本机验证，正式部署应替换并置于密钥管理系统。
+需要 Docker Compose、Node.js 24。运行进程只读取显式注入的环境变量，不读取 `.env` 文件。示例密码仅用于本机验证，正式部署应替换并置于密钥管理系统。
 
 ```powershell
-Copy-Item .env.example .env
 docker compose up -d --build
 docker compose ps
 npm ci
 npm test
 npm run build
-npm run acceptance:live
 ```
 
-服务地址：接入与管理 API `http://127.0.0.1:3100`，MCP `http://127.0.0.1:3101/mcp`，Hasura Console `http://127.0.0.1:8088`。PostgreSQL 不发布主机端口，避免与现有实例冲突。容器首次启动由 API 执行迁移，由独立 Publisher 执行 Hasura 表跟踪和权限初始化。运行 `docker compose logs api worker publisher mcp hasura` 查看状态。Publisher 完成后查询闸门打开。
+Default service behavior is strict and not ready for sales queries until M2 provides applied binding and policy proof. Set the runtime variables explicitly in the deployment environment. `HUB_ENVIRONMENT_KIND` defaults to `site`; `HUB_ENABLE_LEGACY_LAB` defaults to `false`. Do not run the legacy live acceptance workflow in the strict default configuration.
+
+For the documented local demo only, set `HUB_ENVIRONMENT_KIND=local_lab` and `HUB_ENABLE_LEGACY_LAB=true` on the API, worker, publisher, and MCP processes before starting them. This restores `/v1/ingest`, `/admin/*`, and demo `/mcp`, enables the fixed-source worker, and permits the publisher's legacy bootstrap. The setting is rejected in `site`. The demo accepts its legacy `sales_reader` JWT and does not represent the M0 credential boundary.
+
+The strict sales MCP endpoint is `http://<trusted-host>:<port>/mcp/sales` (default MCP port `3001`). PostgreSQL does not publish a host port in the owned test setup. `HUB_MCP_ALLOWED_ORIGINS` is an optional comma-separated exact-origin allowlist; wildcards, paths, credentials, and query strings are rejected. Requests without an `Origin` remain usable with Bearer authentication; a present origin outside the list receives HTTP 403 before authentication or query work. The service does not trust `Host` or forwarded-host headers to establish origins. MCP listens on `0.0.0.0`; expose it only through a controlled network path.
+
+The MCP process requires explicit `DATABASE_URL`, `HASURA_URL`, and `HASURA_JWT_SECRET` settings. It does not read Hasura Admin Secret. Keep credentials in the deployment secret manager and out of logs and command transcripts. Runtime configuration is validated at process startup.
 
 OpenMetadata 与 Helix Foundry 属于外部部署，配置 `OPENMETADATA_*` 与 `HELIX_*` 后才会启用适配器。Helix Foundry 当前官方安全模型是本机单用户；应在受信网络内使用只读工作区令牌，正式多用户方案需单独评估身份边界。它的 `/ingest` 是**整批快照替换**，本工程不把订单增量事件直接推到该接口。
 
@@ -89,7 +93,11 @@ Hasura 策略使用 `tenant_id = X-Hasura-Tenant-Id` 且 `owner_user_id = X-Hasu
 
 ## Hermes MCP 对接
 
-HTTP Streamable MCP 地址为 `http://<trusted-host>:3101/mcp`。调用须带 `Authorization: Bearer <JWT>`；JWT 使用 HS256，含 `sub`、`tenant_id`、`role=sales_reader`、`iss=data-hub`、`aud=sales-mcp`、过期时间。生产应改用企业身份提供方的非对称签名/JWKS，并在网关验证 Hermes 用户与令牌绑定。工具名称对齐 PRD：`get_sales_context`、`find_customers`、`get_customer_orders`、`get_order_detail`、`get_sales_summary`。MCP 验证用户令牌后签发 60 秒 Hasura JWT，只发送固定的 `sales_reader` GraphQL 查询，不接受任意 SQL/GraphQL。MCP 容器没有 Hasura Admin Secret。
+The M0 strict Streamable MCP endpoint is `http://<trusted-host>:3001/mcp/sales`. Use the pinned MCP SDK and Hermes v0.22.1 compatibility guidance in `docs/hermes-v0.22.1-compatibility.md`; do not upgrade either as part of deployment. Send `Authorization: Bearer <opaque-personal-agent-credential>`. Each HTTP request resolves current credential, user, tenant, role, department, auth epoch, and expiry from the auth service; caller-supplied identity fields are rejected by tool schemas. The five fixed tools are `get_sales_context`, `find_customers`, `get_customer_orders`, `get_order_detail`, and `get_sales_summary`.
+
+Before a business query, after it, and after durable audit, the service rechecks current authorization, query-gate state and epoch, and the readiness snapshot. A changed or revoked boundary discards the query data. Hasura receives a short-lived (60 second) HS256 JWT with audience `hasura-sales`, a tenant-prefixed role derived from the trusted principal, and no admin secret. The readiness resolver defaults to `ALPHA_POLICY_NOT_READY`; a pre-existing open gate or a legacy `sales_reader` role is not proof of applied M2 bindings or policy. Controlled tests may inject a ready resolver without enabling a runtime force-ready setting.
+
+The legacy demo route remains available only with both `HUB_ENVIRONMENT_KIND=local_lab` and `HUB_ENABLE_LEGACY_LAB=true`, as described above. Never use its `sales_reader` demo JWT as a site credential.
 
 Hermes 配置示意（按实际版本的远程 MCP 配置格式调整）：
 
@@ -99,7 +107,7 @@ Hermes 配置示意（按实际版本的远程 MCP 配置格式调整）：
 
 ## 验证与边界
 
-`npm test` 覆盖金额一致性、标准化、列白名单、行过滤表达式、五个工具、绑定验证及重试。`npm run acceptance:live` 需启动本机 Compose，覆盖 REST 写入、幂等、MCP 握手与五工具调用、跨用户行隔离、原始列拒绝。真实 OpenMetadata、Helix Foundry、CRM、订单库与 Hermes 环境未纳入本地验收。
+`npm test` 覆盖金额一致性、标准化、列白名单、行过滤表达式、身份验证、MCP 请求边界、审计与并发撤权。`npm run acceptance:live` 是显式 legacy lab 流程，需要在 API、worker、publisher、MCP 进程上设置 `HUB_ENVIRONMENT_KIND=local_lab` 和 `HUB_ENABLE_LEGACY_LAB=true`。真实 OpenMetadata、Helix Foundry、CRM、订单库与 Hermes 环境未纳入本地验收。
 
 正式上线前仍需：企业 SSO 与双人审批身份可信化；源库字段映射和 CDC/补数；OpenMetadata 自定义属性与血缘写回方案；Helix 发布版本固定与部署隔离；Hasura 撤权和权限漂移处理；管理页面实现、监控告警与备份恢复。这里交付的是完整可运行的**集成验证代码**，不是已完成生产认证的企业平台。
 

@@ -68,9 +68,9 @@ beforeEach(async () => {
 });
 
 describe('Task1 identity and credential persistence', () => {
-  it('applies 002 once and skips it on repeat while keeping migration 001 bytes intact', async () => {
+  it('applies the current migrations and skips them on repeat while keeping migration 001 bytes intact', async () => {
     await expect(runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' }))
-      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth'] });
+      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth', '003_mcp_audit_boundary'] });
     const tables = await fixture.pool.query<{ name: string }>(
       `SELECT table_name AS name FROM information_schema.tables
         WHERE table_schema='control' AND table_name IN ('tenant','auth_subject','identity_binding','agent_credential','source_credential','credential_digest_registry','agent_credential_idempotency')`,

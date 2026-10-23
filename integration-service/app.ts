@@ -4,10 +4,12 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IdentityRouteOptions } from './ingestion-api/identity-routes.js';
 import { createHubLoggerOptions } from './ingestion-api/logging.js';
+import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from './contracts/runtime-config.js';
 
 export type BuildAppOptions = Readonly<{
   identity?: IdentityRouteOptions;
   logger?: FastifyServerOptions['logger'];
+  runtime?: HubRuntimeConfiguration;
 }>;
 
 /** Build an injectable Fastify app; importing this module does not listen or access runtime configuration. */
@@ -15,22 +17,30 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const logger = options.logger ?? createHubLoggerOptions();
   const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false, genReqId: () => randomUUID() });
   const { registerRoutes } = await import('./ingestion-api/routes.js');
-  await registerRoutes(app, { identity: options.identity });
+  await registerRoutes(app, { identity: options.identity, runtime: options.runtime });
   return app;
 }
 
 /** Validate controlled OIDC settings and start the executable server. */
-export async function startApp(): Promise<void> {
+export async function startApp(environment: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const runtime = readHubRuntimeConfiguration(environment);
+  if (runtime.legacyLabEnabled) {
+    if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
+    const app = await buildApp({ runtime });
+    await app.listen({ host: '0.0.0.0', port: Number(environment.PORT ?? 3000) });
+    return;
+  }
   const { readOidcConfiguration, createOidcAuthenticator } = await import('./auth/oidc.js');
-  const controlledConfig = readOidcConfiguration(process.env);
+  const controlledConfig = readOidcConfiguration(environment);
+  if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
   const [{ pool }, { createAuthService }] = await Promise.all([
     import('./db.js'),
     import('./auth/service.js'),
   ]);
   const authService = createAuthService({ pool });
   const identity = { authenticator: createOidcAuthenticator(controlledConfig, authService), authService };
-  const app = await buildApp({ identity });
-  await app.listen({ host: '0.0.0.0', port: Number(process.env.PORT ?? 3000) });
+  const app = await buildApp({ identity, runtime });
+  await app.listen({ host: '0.0.0.0', port: Number(environment.PORT ?? 3000) });
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
