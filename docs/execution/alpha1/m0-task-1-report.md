@@ -9,6 +9,7 @@
 - `2549a13cb48c815cd5553c23a015e0946d561407` — 修复迁移事务边界和 task-owned fixture 清理；此提交在首次 Task1 真实 PostgreSQL fixture 前完成。
 - `98b726bcb140c4e7baa8da91c3c94a23acaa44b5` — 约束 runner 的字符串词法模式并补充清理歧义证据。
 - `1250b960e3f8f89841a0b1c45f04015e2335da7b` — 实现身份与凭据生命周期。
+- `17856e89ea99481e06163d673bb14901a4988756` — 同步公开计划、状态、报告与结构化证据。
 
 ## 已实现合同
 
@@ -33,9 +34,95 @@ I2 helper 仅在检查 task/run labels 与完整 container ID 后操作该 ID；
 
 最终验证在源摘要冻结后执行：`npm run typecheck`、`npm run build`、`npm test` 均退出0；Vitest 4.1.12 全部10个文件、149项测试通过。最终日志、退出码、源摘要在 [Task1 evidence](m0-task-1-evidence/)；pre/post-gate摘要一致，提交后再计算的工作树摘要也一致。
 
-真实数据库使用 postgres:16.10-alpine。RepoDigest 与 runtime image ID 分别记录，均观测为 `sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`。Task1 identity fixture 使用 task label `task1`，container ID `ff50df4d45a78735c556bc309a3867b386b14d60e4b7944886967a7f254002f7`；Foundation migration suite 使用两个 task0 fixtures，container ID 分别为 `69687fe5c2efd8b9e427c81f6592b1ebf66ee414dcb1edea7566704bb0e0595c`、`42aa04696cb4b509dc99791e1fff4c58cc701f5730e0464a0ae4405e506ca63a`、`8ad475f48f2399d4173adffb71ed1f7aeb0b4851f5236076e964e972b5633cb8`（前两次为此前 Task0 focused run，最后一个为最终全套）。每个 ID 和唯一 run label 见对应 `*-postgres-lifecycle.jsonl`；summary 记录已按 label 校验、精确 ID 清理并确认不存在。未接触已有数据库或容器。
+真实数据库使用 postgres:16.10-alpine。RepoDigest 与 runtime image ID 分别记录，均观测为 `sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`。Task1 identity fixture 使用 task label `task1`，container ID `ff50df4d45a78735c556bc309a3867b386b14d60e4b7944886967a7f254002f7`。Foundation migration suite 有三条 task0 生命周期记录：两个此前 focused run 的 ID `69687fe5c2efd8b9e427c81f6592b1ebf66ee414dcb1edea7566704bb0e0595c`、`42aa04696cb4b509dc99791e1fff4c58cc701f5730e0464a0ae4405e506ca63a`，以及最终全套 run 的 ID `8ad475f48f2399d4173adffb71ed1f7aeb0b4851f5236076e964e972b5633cb8`。每个 ID 和唯一 run label 见对应 `*-postgres-lifecycle.jsonl`；summary 记录已按 label 校验、精确 ID 清理并确认不存在。未接触已有数据库或容器。
 
 实现前 codec RED 曾观测为缺少模块，GREEN codec focused 用例通过；初始 RED 原始终端输出未留存，因此没有重建或伪造该证据。最终完整测试覆盖 canonical 编码/拒绝非 canonical 输入、raw-byte 摘要、随机性、execution role、真实 PG 生命周期、幂等并发、多 binding、epoch 和安全错误。
+
+## Consumer interface appendix
+
+以下为 `integration-service/auth/types.ts` 中导出的确切 Task1 对外形状（输入只列类型字段；运行时还执行更严格的 validation）：
+
+```ts
+createAuthService(options: { pool: Pool; clock?: () => Date }): AuthService
+
+type BusinessRole = 'sales' | 'sales_manager';
+type SourceEntity = 'customer' | 'order';
+type AuthScope =
+  | 'source:read' | 'source:write' | 'source:approve' | 'mapping:write'
+  | 'governance:read' | 'governance:write' | 'ontology:write' | 'ontology:publish'
+  | 'binding:read' | 'binding:write' | 'binding:approve' | 'binding:publish'
+  | 'policy:read' | 'policy:write' | 'policy:approve' | 'policy:publish' | 'policy:revoke'
+  | 'access:preview' | 'agent:read' | 'agent:revoke' | 'audit:read'
+  | 'operation:read' | 'ops:read';
+
+type UserPrincipal = Readonly<{
+  userId: string; tenantId: string; departmentId: string | null;
+  businessRole: BusinessRole | null; managementScopes: readonly AuthScope[];
+  authEpoch: string; businessTimezone: string; issuer: string; subject: string;
+}>;
+type AgentPrincipal = UserPrincipal & Readonly<{
+  credentialId: string; credentialEpoch: string; expiresAt: string;
+}>;
+type SourcePrincipal = Readonly<{
+  sourceId: string; tenantId: string; allowedEntities: readonly SourceEntity[];
+  credentialId: string; revision: string;
+}>;
+
+type CreateAgentCredentialInput = Readonly<{ purpose: string; ttl_seconds?: number }>;
+type AgentCredentialMetadata = Readonly<{
+  credential_id: string; purpose: string; created_at: string;
+  expires_at: string; revoked_at: string | null;
+}>;
+type CreateAgentCredentialResult = AgentCredentialMetadata & Readonly<{
+  secret: string | null; replayed: boolean;
+}>;
+type AgentCredentialPage = Readonly<{ cursor?: string; limit?: number }>;
+type AgentCredentialPageResult = Readonly<{
+  items: readonly AgentCredentialMetadata[]; next_cursor: string | null;
+}>;
+
+resolveOidc(issuer: string, subject: string): Promise<UserPrincipal>;
+createAgentCredential(
+  principal: UserPrincipal, input: CreateAgentCredentialInput, idempotencyKey: string,
+): Promise<CreateAgentCredentialResult>;
+listAgentCredentials(
+  principal: UserPrincipal, page?: AgentCredentialPage,
+): Promise<AgentCredentialPageResult>;
+revokeAgentCredential(principal: UserPrincipal, credentialId: string): Promise<void>;
+authenticateAgent(token: string): Promise<AgentPrincipal>;
+authenticateSource(token: string, entity: SourceEntity): Promise<SourcePrincipal>;
+assertCurrentAgent(snapshot: AgentPrincipal): Promise<void>;
+```
+
+`clock` 是可选函数，须返回有效 `Date`；默认值为 `() => new Date()`。`createAgentCredential` 单独接收 `idempotencyKey`；首次结果返回一次性 `secret`，同请求 replay 返回 `secret: null, replayed: true`，元数据字段与 `AgentCredentialMetadata` 相同。`purpose` 经过 trim，接受1–96个允许的 ASCII 字符；`ttl_seconds` 默认3600，接受整数1–86400。`listAgentCredentials` 默认 limit 20，接受1–100；cursor 是上次结果给出的 UUID string，结束时 `next_cursor` 为 null。`assertCurrentAgent` 返回 void，只在精确 snapshot 仍然有效时 resolve。
+
+`AuthError` 包含 `code` 与 `status`；`message` 等于稳定 code，不附带数据库 cause：
+
+| Code | HTTP status |
+|---|---:|
+| `AUTH_INVALID`, `AUTH_EXPIRED`, `AUTH_REVOKED`, `AUTH_CONTEXT_CHANGED`, `PRINCIPAL_MAPPING_MISSING` | 401 |
+| `AUTH_FORBIDDEN` | 403 |
+| `IDEMPOTENCY_CONFLICT` | 409 |
+| `AUTH_INPUT_INVALID` | 400 |
+| `AUTH_UNAVAILABLE` | 503 |
+
+受控 repository 合同（可选 `client` 是调用方拥有的 `PoolClient`；提供后 Task1 不开嵌套事务或释放它）：
+
+```ts
+provisionTenant(input: TenantProvisionInput, client?: PoolClient): Promise<void>
+provisionSubject(input: SubjectProvisionInput, client?: PoolClient): Promise<void>
+bindIdentity(input: IdentityBindingInput, client?: PoolClient): Promise<void>
+updateSubject(input: SubjectProvisionInput, client?: PoolClient): Promise<void>
+setIdentityBinding(issuer: string, subject: string, enabled: boolean, client?: PoolClient): Promise<void>
+setTenantEnabled(tenantId: string, enabled: boolean, client?: PoolClient): Promise<void>
+provisionSourceCredential(input: SourceCredentialProvisionInput, client?: PoolClient): Promise<void>
+updateSourceCredential(
+  sourceId: string, tenantId: string, enabled: boolean, revision: string,
+  allowedEntities: readonly SourceEntity[], client?: PoolClient,
+): Promise<void>
+```
+
+Input records 精确为 `TenantProvisionInput={tenantId,businessTimezone,enabled?}`、`SubjectProvisionInput={tenantId,userId,departmentId?,businessRole?,managementScopes?,enabled?}`、`IdentityBindingInput={issuer,subject,tenantId,userId,enabled?}`、`SourceCredentialProvisionInput={sourceId,tenantId,token,secretRef,allowedEntities,revision,enabled?}`。字段均按上述类型定义；repository 方法都返回 `Promise<void>`。
 
 ## 当前边界
 
