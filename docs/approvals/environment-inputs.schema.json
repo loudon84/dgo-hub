@@ -68,7 +68,7 @@
           },
           "secret_ref": {
             "type": "string",
-            "pattern": "^(env|secret|vault):\\/\\/[A-Za-z0-9._/-]+$"
+            "pattern": "^(env|secret|vault):\\/\\/(?:[A-Za-z0-9._-]+\\/)*[A-Za-z0-9._-]+$"
           },
           "mapping_ref": {
             "type": "string",
@@ -220,6 +220,7 @@
     "unique source_id and actor_ref values",
     "IANA timezone validation",
     "tenant-bound identities and site sales and sales_manager minimums",
+    "synthetic identities cannot satisfy site readiness",
     "database source read_only requirement"
   ]
 }

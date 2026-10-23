@@ -1,23 +1,12 @@
 import { z } from 'zod';
-import { environmentInputSchema } from './environment.js';
+import { environmentInputSchema, identityReferenceSchema } from './environment.js';
 
 const approvalRoles = ['product', 'architecture', 'data_owner', 'security', 'test'] as const;
-
-function identityReferenceHasCredentials(value: string): boolean {
-  if (/[\s?#]/.test(value) || /^(?:bearer|password|token)\s*:/i.test(value)) return true;
-  if (!/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return /^[^/@:]+:[^/@]+@/.test(value);
-  try {
-    const url = new URL(value);
-    return Boolean(url.username || url.password) || [...url.searchParams.keys()].some(key => /password|passwd|token|secret|api[_-]?key|credential|auth/i.test(key));
-  } catch {
-    return true;
-  }
-}
 
 const approvalSchema = z.object({
   role: z.enum(approvalRoles),
   status: z.enum(['APPROVED', 'REJECTED']),
-  actor_ref: z.string().trim().min(1).refine(value => !identityReferenceHasCredentials(value), 'actor_ref cannot contain credentials'),
+  actor_ref: identityReferenceSchema,
   approved_at: z.string().datetime({ offset: true }),
 }).strict();
 

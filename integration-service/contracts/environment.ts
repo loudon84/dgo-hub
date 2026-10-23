@@ -6,10 +6,20 @@ function hasCredentialsOrSecretQuery(value: string): boolean {
   try {
     const url = new URL(value);
     if (url.username || url.password) return true;
-    return [...url.searchParams.keys()].some(key => /password|passwd|token|secret|api[_-]?key|credential|auth/i.test(key));
+    return [...url.searchParams.keys()].some(isCredentialQueryName);
   } catch {
-    return false;
+    return true;
   }
+}
+
+function isCredentialQueryName(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const aliases = new Set([
+    'auth', 'authorization', 'credential', 'credentials', 'password', 'passwd', 'pass', 'pwd', 'passphrase',
+    'user', 'username', 'userid', 'uid', 'token', 'accesstoken', 'refreshtoken', 'idtoken', 'secret',
+    'clientsecret', 'clientid', 'apikey', 'accesskey',
+  ]);
+  return aliases.has(normalized) || /(?:password|passwd|pwd|token|secret|credential|authorization|apikey|accesskey)/.test(normalized);
 }
 
 function isLoopback(hostname: string): boolean {
@@ -26,10 +36,20 @@ function hasProtocol(value: string, protocols: string[]): boolean {
 }
 
 const safeUrl = z.string().url().refine(value => !hasCredentialsOrSecretQuery(value), 'URL must not contain credentials or secret query parameters');
-const secretRef = z.string().regex(/^(env|secret|vault):\/\/[A-Za-z0-9._/-]+$/, 'secret_ref must be a nonempty env://, secret://, or vault:// reference');
-const identityRef = nonEmpty.refine(value => {
+const secretRef = z.string().regex(/^(env|secret|vault):\/\/(?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+$/, 'secret_ref must be a nonempty env://, secret://, or vault:// reference');
+export const identityReferenceSchema = nonEmpty.refine(value => {
   if (/[\s?#]/.test(value) || /^(?:bearer|password|token)\s*:/i.test(value)) return false;
-  if (/^[a-z][a-z\d+.-]*:\/\//i.test(value)) return !hasCredentialsOrSecretQuery(value);
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
+    try {
+      const url = new URL(value);
+      if (url.username || url.password || [...url.searchParams.keys()].some(isCredentialQueryName)) return false;
+      if (/^[a-z][a-z\d+.-]*:\/\//i.test(value) && !url.hostname) return false;
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && !url.hostname) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
   return !/^[^/@:]+:[^/@]+@/.test(value);
 }, 'identity references cannot contain credentials');
 const hostname = nonEmpty.refine(value => {
@@ -85,7 +105,7 @@ const internalServicesSchema = z.object({
 });
 
 const testIdentitySchema = z.object({
-  actor_ref: identityRef,
+  actor_ref: identityReferenceSchema,
   role: z.enum(['sales', 'sales_manager']),
   tenant_key: nonEmpty,
 }).strict();
@@ -143,6 +163,11 @@ export const environmentInputSchema = z.object({
     if (salesCount < 2 || managerCount < 1) {
       ctx.addIssue({ code: 'custom', path: ['test_identities'], message: 'Site requires at least two sales users and one sales_manager' });
     }
+    environment.test_identities.forEach((identity, index) => {
+      if (/^synthetic:/i.test(identity.actor_ref)) {
+        ctx.addIssue({ code: 'custom', path: ['test_identities', index, 'actor_ref'], message: 'Synthetic identities cannot satisfy site readiness' });
+      }
+    });
   } else {
     for (const [path, value] of [
       [['idp', 'issuer'], environment.idp.issuer],
@@ -150,8 +175,8 @@ export const environmentInputSchema = z.object({
     ] as const) {
       try {
         const url = new URL(value);
-        if (url.protocol === 'http:' && !isLoopback(url.hostname)) {
-          ctx.addIssue({ code: 'custom', path: [...path], message: 'Local lab HTTP identity provider URLs must use loopback' });
+        if (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLoopback(url.hostname))) {
+          ctx.addIssue({ code: 'custom', path: [...path], message: 'Local lab identity provider URLs must use HTTPS or loopback HTTP' });
         }
       } catch { /* safeUrl already reports invalid URLs */ }
     }

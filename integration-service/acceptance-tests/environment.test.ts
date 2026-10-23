@@ -87,7 +87,7 @@ describe('environment and signoff contracts', () => {
   });
 
   it('rejects credential-bearing endpoints and invalid secret references', () => {
-    for (const secret_ref of ['vault://', 'vault://user:password@vault/path', 'postgres://user:password@db/hub']) {
+    for (const secret_ref of ['vault://', 'vault:///', 'vault://user:password@vault/path', 'postgres://user:password@db/hub']) {
       const environment = validEnvironment();
       environment.sources[0]!.secret_ref = secret_ref;
       expect(environmentInputSchema.safeParse(environment).success, secret_ref).toBe(false);
@@ -131,6 +131,56 @@ describe('environment and signoff contracts', () => {
     expect(environmentInputSchema.safeParse(insecure).success).toBe(false);
   });
 
+  it('blocks synthetic identities in site readiness while allowing them in a local lab', () => {
+    const site = validEnvironment();
+    site.test_identities.forEach((identity, index) => {
+      identity.actor_ref = `synthetic://tenant-north/actor-${index}`;
+    });
+    expect(environmentInputSchema.safeParse(site).success).toBe(false);
+    expect(evaluateM0Entry(validSignoffs(), site, { expectedKind: 'site', allowExample: false }).status).toBe('BLOCKED');
+
+    const localLab = { ...site, environment_kind: 'local_lab' as const };
+    localLab.idp = {
+      issuer: 'http://127.0.0.1:8081/realms/example',
+      audience: 'sales-mcp',
+      jwks_uri: 'http://localhost:8081/realms/example/jwks',
+    };
+    expect(environmentInputSchema.safeParse(localLab).success).toBe(true);
+  });
+
+  it('rejects password aliases in accepted endpoint query strings', () => {
+    for (const endpoint of [
+      'mssql://db.example.test/hub?user=readonly&pwd=NON_SECRET_SENTINEL',
+      'mssql://db.example.test/hub?%70%77%64=NON_SECRET_SENTINEL',
+    ]) {
+      const environment = validEnvironment();
+      const source = environment.sources[0]! as { connection_mode: string; endpoint: string; read_only?: boolean };
+      source.connection_mode = 'sqlserver';
+      source.endpoint = endpoint;
+      source.read_only = true;
+      expect(environmentInputSchema.safeParse(environment).success, endpoint).toBe(false);
+    }
+  });
+
+  it('allows only HTTPS or loopback HTTP for local-lab IdP URLs', () => {
+    const localLab = { ...validEnvironment(), environment_kind: 'local_lab' as const };
+    localLab.idp.issuer = 'ftp://id.example.test/realm';
+    localLab.idp.jwks_uri = 'ftp://id.example.test/jwks';
+    expect(environmentInputSchema.safeParse(localLab).success).toBe(false);
+
+    localLab.idp.issuer = 'http://id.example.test/realm';
+    localLab.idp.jwks_uri = 'http://id.example.test/jwks';
+    expect(environmentInputSchema.safeParse(localLab).success).toBe(false);
+
+    localLab.idp.issuer = 'https://id.example.test/realm';
+    localLab.idp.jwks_uri = 'https://id.example.test/jwks';
+    expect(environmentInputSchema.safeParse(localLab).success).toBe(true);
+
+    localLab.idp.issuer = 'http://127.0.0.1:8081/realm';
+    localLab.idp.jwks_uri = 'http://[::1]:8081/jwks';
+    expect(environmentInputSchema.safeParse(localLab).success).toBe(true);
+  });
+
   it('rejects credentials embedded in identity references', () => {
     const environment = validEnvironment();
     environment.test_identities[0]!.actor_ref = 'https://user:password@id.example.test/subject';
@@ -139,6 +189,14 @@ describe('environment and signoff contracts', () => {
     const signoffs = validSignoffs();
     signoffs.approvals[0]!.actor_ref = 'https://user:password@directory.example.test/approver';
     expect(signoffRecordSchema.safeParse(signoffs).success).toBe(false);
+
+    const malformed = validEnvironment();
+    malformed.test_identities[0]!.actor_ref = 'https://user:NON_SECRET_SENTINEL@';
+    expect(environmentInputSchema.safeParse(malformed).success).toBe(false);
+
+    const opaque = validEnvironment();
+    opaque.test_identities[0]!.actor_ref = 'urn:employee:alice';
+    expect(environmentInputSchema.safeParse(opaque).success).toBe(true);
   });
 
   it('does not pass an example or a mismatched environment kind as formal M0 readiness', () => {
