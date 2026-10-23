@@ -8,7 +8,7 @@ const sha256Value = z.string().regex(sha256);
 const environmentKindSchema = environmentInputSchema.shape.environment_kind;
 
 const repositoryComponent = /^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*$/;
-const registryHost = /^(?:localhost|[a-z0-9]+(?:[.-][a-z0-9]+)*)(?::([1-9][0-9]{0,4}))?$/;
+const registryHost = /^(?:localhost|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*)(?::([1-9][0-9]{0,4}))?$/;
 const imageTag = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/;
 
 function hasRepositoryTagGrammar(reference: string): boolean {

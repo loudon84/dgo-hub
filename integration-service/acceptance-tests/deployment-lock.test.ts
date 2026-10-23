@@ -186,6 +186,15 @@ describe('deployment lock contract', () => {
     registryPort.input_kind = 'observed';
     (registryPort.components.hasura as { image: { reference: string } }).image.reference = 'registry.example.test:5000/hasura:v2.51.1';
     expect(validateDeploymentLock(registryPort, pins, { release: true }).status).toBe('PASS');
+
+    const repeatedHyphenRegistry = validLock();
+    repeatedHyphenRegistry.environment_kind = 'site';
+    repeatedHyphenRegistry.input_kind = 'observed';
+    const repeatedHyphenReference = 'registry--east.example.test:5000/repo:1';
+    (repeatedHyphenRegistry.components.hasura as { image: { reference: string } }).image.reference = repeatedHyphenReference;
+    expect(validateDeploymentLock(repeatedHyphenRegistry, pins, { release: true }).status).toBe('PASS');
+    const imageReferencePattern = new RegExp(jsonSchema['$defs'].component.properties.image.properties.reference.pattern);
+    expect(imageReferencePattern.test(repeatedHyphenReference)).toBe(true);
   });
 
   it('represents the same repository and tag restrictions in JSON Schema', () => {
