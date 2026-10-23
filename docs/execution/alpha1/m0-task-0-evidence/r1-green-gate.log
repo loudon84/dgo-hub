@@ -1,0 +1,12 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/evidence/gate.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  36 passed (36)
+   Start at  16:03:47
+   Duration  4.11s (transform 88ms, setup 0ms, import 207ms, tests 3.73s, environment 0ms)

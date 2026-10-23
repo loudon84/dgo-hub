@@ -1,0 +1,4 @@
+base=17d3d28ffe87ebb23e47f167cfe10fe298e6c45c
+r1_commit=8b2ea433fd34349e04fb24890faaa238577b2f80
+branch=feat/alpha1-implementation
+worktree=E:/git/dgo-hub

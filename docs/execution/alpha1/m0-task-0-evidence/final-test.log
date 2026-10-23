@@ -1,0 +1,12 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  7 passed (7)
+      Tests  106 passed (106)
+   Start at  16:12:04
+   Duration  4.55s (transform 636ms, setup 0ms, import 1.88s, tests 7.69s, environment 1ms)
