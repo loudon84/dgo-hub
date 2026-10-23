@@ -12,6 +12,7 @@
     "migrate": "node dist/migrate.js",
     "check:m0-entry": "npm run build && node dist/scripts/check-m0-entry.js",
     "check:deployment-lock": "npm run build && node dist/scripts/generate-lock.js",
+    "check:release-gate": "npm run build && node dist/acceptance-tests/evidence/run-gate.js",
     "record:local-checks": "npm run build && node dist/scripts/record-local-checks.js",
     "test": "vitest run",
     "acceptance:live": "node --env-file=.env dist/acceptance-tests/live.js",

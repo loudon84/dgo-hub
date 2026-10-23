@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { evaluateReleaseGate, validateEvidenceStructure } from '../../contracts/evidence.js';
 import { runRecordLocalChecks } from '../../scripts/record-local-checks.js';
+import { runGateCli } from './run-gate.js';
 
 let root: string | undefined;
 afterEach(async () => { if (root) await rm(root, { recursive: true, force: true }); root = undefined; });
@@ -23,6 +24,14 @@ describe('evidence release gate', () => {
     expect(['FAIL', 'BLOCKED']).toContain(result.status);
     expect(result.product_ready).toBe(false);
     expect(result.issues.length).toBeGreaterThan(0);
+  });
+
+  it('returns stable JSON-compatible CLI results and a nonzero code for blocked input', async () => {
+    const run = await runDirectory();
+    expect(await runGateCli([])).toEqual({ result: { status: 'FAIL', product_ready: false, issues: ['usage: --run-dir <path>'] }, exitCode: 1 });
+    const result = await runGateCli(['--run-dir', run]);
+    expect(result.exitCode).toBe(2);
+    expect(result.result).toMatchObject({ status: 'BLOCKED', product_ready: false });
   });
 
   it('exposes the canonical 48 acceptance ids and keeps them NOT_RUN by default', async () => {
