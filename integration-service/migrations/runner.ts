@@ -35,6 +35,100 @@ const KNOWN_APPLICATION_OBJECTS = [
   'control.permission_policy', 'control.query_gate', 'control.ontology_binding', 'control.agent_audit',
 ] as const;
 
+function isWordStart(char: string | undefined): boolean {
+  return char !== undefined && /[A-Za-z_]/.test(char);
+}
+
+function isWordPart(char: string | undefined): boolean {
+  return char !== undefined && /[A-Za-z0-9_$]/.test(char);
+}
+
+function dollarDelimiterAt(sql: string, index: number): string | undefined {
+  const match = /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.exec(sql.slice(index));
+  return match?.[0];
+}
+
+function hasTransactionControlStatement(sql: string): boolean {
+  const statements: string[][] = [];
+  let words: string[] = [];
+  let index = 0;
+  const finishStatement = () => {
+    if (words.length) statements.push(words);
+    words = [];
+  };
+
+  while (index < sql.length) {
+    const char = sql[index];
+    const next = sql[index + 1];
+    if (/\s/.test(char)) { index += 1; continue; }
+    if (char === '-' && next === '-') {
+      index += 2;
+      while (index < sql.length && sql[index] !== '\n' && sql[index] !== '\r') index += 1;
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      index += 2;
+      let depth = 1;
+      while (index < sql.length && depth > 0) {
+        if (sql[index] === '/' && sql[index + 1] === '*') { depth += 1; index += 2; }
+        else if (sql[index] === '*' && sql[index + 1] === '/') { depth -= 1; index += 2; }
+        else index += 1;
+      }
+      continue;
+    }
+    if ((char === 'E' || char === 'e') && next === "'" && (index === 0 || !isWordPart(sql[index - 1]))) {
+      index += 2;
+      while (index < sql.length) {
+        if (sql[index] === '\\') { index += 2; continue; }
+        if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
+        if (sql[index] === "'") { index += 1; break; }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === "'") {
+      index += 1;
+      while (index < sql.length) {
+        if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
+        if (sql[index] === "'") { index += 1; break; }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '"') {
+      index += 1;
+      while (index < sql.length) {
+        if (sql[index] === '"' && sql[index + 1] === '"') { index += 2; continue; }
+        if (sql[index] === '"') { index += 1; break; }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '$') {
+      const delimiter = dollarDelimiterAt(sql, index);
+      if (delimiter) {
+        const end = sql.indexOf(delimiter, index + delimiter.length);
+        index = end < 0 ? sql.length : end + delimiter.length;
+        continue;
+      }
+    }
+    if (isWordStart(char)) {
+      const start = index++;
+      while (isWordPart(sql[index])) index += 1;
+      words.push(sql.slice(start, index).toUpperCase());
+      continue;
+    }
+    if (char === ';') finishStatement();
+    index += 1;
+  }
+  finishStatement();
+
+  return statements.some(([first, second]) => {
+    if (['BEGIN', 'START', 'COMMIT', 'END', 'ROLLBACK', 'ABORT'].includes(first)) return true;
+    return first === 'PREPARE' && second === 'TRANSACTION';
+  });
+}
+
 function invalid(code: string, migration?: Migration): MigrationRunnerError {
   return new MigrationRunnerError(code, migration?.versionText, migration?.name);
 }
@@ -83,6 +177,7 @@ async function discoverMigrations(directory: string): Promise<Migration[]> {
       throw new MigrationRunnerError('MIGRATION_SET_INVALID', item.versionText, item.name);
     }
     const sql = normalizeSql(bytes, item);
+    if (hasTransactionControlStatement(sql)) throw new MigrationRunnerError('MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', item.versionText, item.name);
     migrations.push({
       ...item,
       sql,
