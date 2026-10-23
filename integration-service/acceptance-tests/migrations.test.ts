@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
-const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-0-evidence/', import.meta.url));
-const evidenceFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
+const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/', import.meta.url));
+const evidenceFile = join(evidenceDirectory, 'foundation-postgres-lifecycle.jsonl');
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
 let postgres: OwnedPostgres;
 let runMigrations: (pool: pg.Pool, options: { directory: string; environmentKind: 'local_lab' | 'site'; adoptLegacy001?: boolean }) => Promise<{ applied: string[]; skipped: string[] }>;
@@ -38,6 +38,7 @@ async function migrationRunner() {
 }
 
 beforeAll(async () => {
+  await mkdir(evidenceDirectory, { recursive: true });
   postgres = await startOwnedPostgres({ evidenceFile });
 }, 90_000);
 
@@ -52,7 +53,7 @@ afterAll(async () => {
       hostPort: postgres.hostPort,
     };
     await postgres.close();
-    await writeFile(join(evidenceDirectory, 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`);
+    await writeFile(join(evidenceDirectory, 'foundation-postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`);
   }
 });
 
@@ -98,8 +99,8 @@ describe('versioned migration runner', () => {
       windowsHide: true,
       encoding: 'utf8',
     });
-    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init'], skipped: [] });
-    expect(await ledgerState()).toEqual({ exists: true, count: 1 });
+    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth'], skipped: [] });
+    expect(await ledgerState()).toEqual({ exists: true, count: 2 });
   });
 
   it('applies 001 to an empty database, skips it on repeat, and preserves migration data', async () => {
