@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** Task0/1本地实现及GPT-6.1 Sol Spec、Quality review已通过，审查HEAD为 `cd5315439c404e3ab1e88635ff4d28bc0a29cab8`。W0-R1及Task0 I1/I2均已确认ADDRESSED，Task1分页精度缺陷经一轮修复和复审关闭。见[Task1报告](../execution/alpha1/m0-task-1-report.md)与[复审](../execution/alpha1/reviews/m0-task-1-rereview-1.md)。下一步Task2 OIDC、Task3 MCP。正式现场验收仍BLOCKED；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
+**状态:** Task0/1/2本地实现及GPT-6.1 Sol Spec、Quality review已通过。Task2审查HEAD为 `7ed0fe59d717b3582141b45aeff2dce7d4074bda`，请求ID关联与日志输入问题经一轮修复关闭；见[Task2报告](../execution/alpha1/m0-task-2-report.md)与[复审](../execution/alpha1/reviews/m0-task-2-rereview-1.md)。W0-R1、Task0 I1/I2与Task1分页问题已关闭。下一步Task3 MCP。正式现场验收仍BLOCKED；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
 
 ## Global Constraints
 
@@ -74,10 +74,10 @@
 
 **Consumes:** Task1 AuthService；**Produces:** createOidcAuthenticator(controlledConfig,authService) 与 registerIdentityRoutes(app,{authenticator,authService})；路由可用Fastify.inject验证，不需要启动用户服务。
 
-- [ ] RED：本机JWKS真实RS256/ES256签名，坏签名/issuer/audience/kid/exp/nbf/缺claim/HS/none/jku/伪造身份、未绑定/停用；JWT合法但身份仅取DB。
-- [ ] RED：GET/me输出白名单；POST凭据严格body+Idempotency-Key；GET列表分页上限；DELETE本人/授权管理员租户范围；HTTP401/403/404/409/422安全envelope与日志不泄漏secret。
-- [ ] GREEN：固定issuer/audience/JWKS/算法，site HTTPS；local_lab loopbackHTTP仅显式测试；无cookie身份流程，不增加未实现CSRF会话；企业IdP缺项fail closed。
-- [ ] focused HTTP+crypto+PG、typecheck/test/build、commit → Sol review。
+- [x] RED：本机JWKS真实RS256/ES256签名，坏签名/issuer/audience/kid/exp/nbf/缺claim/HS/none/jku/伪造身份、未绑定/停用；JWT合法但身份仅取DB。
+- [x] RED：GET/me输出白名单；POST凭据严格body+Idempotency-Key；GET列表分页上限；DELETE本人/授权管理员租户范围；HTTP401/403/404/409/422安全envelope与日志不泄漏secret。
+- [x] GREEN：固定issuer/audience/JWKS/算法，site HTTPS；local_lab loopbackHTTP仅显式测试；无cookie身份流程，不增加未实现CSRF会话；企业IdP缺项fail closed。
+- [x] focused HTTP+crypto+PG、typecheck/test/build、commit；一轮日志修复后Sol Spec/Quality Approved。
 
 ## Task 3：MCP 与来源认证边界接入
 
@@ -118,7 +118,7 @@
 - OIDC 配置固定受控issuer/audience/JWKS与算法 RS256/ES256；不允许 HS、none、客户端jku/x5u动态地址。生产HTTPS；本机测试显式 local_lab 允许loopbackHTTP。jose校验 exp/iss/aud/sub必填和nbf，不使用JWT中的tenant/role/dept/scope覆盖DB。未知kid/错误签名/过期/JWKS不可用返回AUTH_INVALID且0业务查询；未绑定PRINCIPAL_MAPPING_MISSING；停用/撤销AUTH_REVOKED。
 - API统一envelope/request_id；每请求由服务端生成可追踪ID，不将任意来访字符串直接写日志。服务日志不记录body/headers；仅最小状态。GET /me 返回用户/租户/部门/业务角色/管理scope/时区，不返回token、digest、issuer秘密或内部连接。
 - M0将strict MCP映射到恰好一个 `hub_<tenant_key>_<business_role>` Hasura execution role的短期JWT（audience=hasura-sales，60秒）；business_role只能是sales或sales_manager，tenant_key来自当前数据库绑定。M2尚未发布对应权限时请求被Hasura拒绝；不能为了演示成功静默降为sales_reader或admin。local_lab旧路径需独立显式开关，Alpha默认禁用。M0只接入身份与gate/epoch/审计边界；完整查询语义、关系过滤与role权限归M2。
-- 查询开始与交付前校验credential、auth_subject/tenant启用和epoch、query_gate epoch/open；get_sales_context同样受检查。工具层审计成功后才交付，审计失败OBS_AUDIT_UNAVAILABLE且不返回业务数据；错误审计不得带原始业务payload或秘密。M2负责客户转交epoch与关系一致性，M0本地先证明撤销在途结果丢弃（FI-10子集）与审计失败（FI-12子集）。
+- 查询开始与交付前校验credential、auth_subject/tenant启用和epoch、query_gate epoch/open；get_sales_context同样受检查。工具层审计成功后才交付，审计失败AUDIT_UNAVAILABLE且不返回业务数据；错误审计不得带原始业务payload或秘密。M2负责客户转交epoch与关系一致性，M0本地先证明撤销在途结果丢弃（FI-10子集）与审计失败（FI-12子集）。
 - M0的新来源resolver不等于来源可接入：旧/v1/ingest和/admin不能在Alpha默认注册；正式/hub/v1/ingest由M1接入来源配置、映射、批次后开放。明确返回不可用/404，不能继续接受共享key和自报owner。M1之前Alpha仅开放/me/credentials及健康和认证MCP边界。
 - 独立测试数据库/容器必须有本次run的不可猜测名称，记录资源ID再清理；测试finally只删除本次创建资源。对现存hub服务、容器或卷无隐式迁移/清理。真正OIDC/网络/TLS/现场用户映射仍BLOCKED，不从本机测试推断。
 

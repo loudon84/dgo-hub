@@ -1,6 +1,6 @@
 # M0 Task2 — implementation report
 
-Status: `DONE_WITH_CONCERNS` — local implementation and verification are complete; independent GPT-6.1 Sol spec/quality review is pending. No enterprise IdP configuration was available, so this report does not claim site SSO or remote Hermes acceptance.
+Status: local engineering **Spec Approved / Quality Approved** after one fix round, independently reviewed by GPT-6.1 Sol at HEAD `7ed0fe59d717b3582141b45aeff2dce7d4074bda`. No enterprise IdP configuration was available, so this report does not claim site SSO or remote Hermes acceptance.
 
 ## Provenance
 
@@ -8,7 +8,7 @@ Status: `DONE_WITH_CONCERNS` — local implementation and verification are compl
 - Exact Task2 base: `04fe627b9b387983395a9aaacd3793e4e37e207b`.
 - Product implementation commit: `9240dd1886a91925d158b42a5dd2a07f59fda8e2` (`Implement controlled OIDC identity APIs`).
 - Report/evidence handoff closure is committed separately from product source; this final docs/evidence commit is the HEAD supplied for independent review.
-- Task2 source and migration001 SHA-256 manifests: `docs/execution/alpha1/m0-task-2-evidence/source-final.sha256.json` and `migration-001-final.sha256.json`.
+- Initial implementation source and migration001 SHA-256 manifests: `docs/execution/alpha1/m0-task-2-evidence/source-final.sha256.json` and `migration-001-final.sha256.json`; these belong to `9240dd1`. The review-round manifest below records the later changed files.
 - Migration001 SHA-256 remains `600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251`.
 
 ## Implementation
@@ -100,7 +100,7 @@ Initial Task2 focused command `npm test -- acceptance-tests/identity-http.test.t
 - `npm run typecheck` and `npm run build` both exit 0; their command outputs and exit files are in `m0-task-2-evidence/review-round1/`. The final focused Task2 fixture run is in `review-round1/b4008691-e7a2-4611-895b-fa39382ae2a3/`: task label `task2`, run label `c074489f-611e-48ae-83dc-d6a99b1241f3`, container ID `666485a8e20ff8b86ec2858dd63912b9cf93e101247556a646acb2ecab4f2e27`, digest `postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`; ownership confirmation and absence after removal are recorded. One earlier review-round fixture cleanup is retained directly in `review-round1/postgres-lifecycle.jsonl` and its resource summary, with task label `task2`, run label `9bdc3158-22b7-4471-b7d8-1ef66c9bd06b`, container ID `a16529aa666e090697b634cf5c890741c30ab61361ed8d2be23880075333e052`, same image digest, and confirmed absence after removal. SHA-256 for the four review-round source/test files is retained in `review-round1/source.sha256.json`.
 - Review-round source fix commit: `df61be0fc698e07a2b895a3c0caa4dbda8e764ab`. The docs/evidence closure is a separate follow-up commit and its exact HEAD is supplied with the review handoff. No OIDC or AuthService persistence behavior changed in this round.
 
-Final complete checks were run after source freeze:
+Initial complete checks were run after freezing implementation `9240dd1886a91925d158b42a5dd2a07f59fda8e2`, before the review-round logging fix:
 
 - `npm run typecheck` — exit 0; retained in `m0-task-2-evidence/final-typecheck.log` and `.exit`.
 - `npm run build` — exit 0; retained in `m0-task-2-evidence/final-build.log` and `.exit`.
@@ -114,4 +114,8 @@ Final Task2 owned PostgreSQL record: task label `task2`, run label `3616bc4f-527
 - Cookie sessions, CSRF, MCP transport, and Task3 legacy-route default hardening are outside Task2 and remain unimplemented here.
 - `migrations/001_init.sql` is unchanged by Task2 with the baseline SHA-256 above.
 - No push, merge, deployment, or remote service/database operation occurred.
+
+## Independent review archive
+
+The [initial review](reviews/m0-task-2-review.md) retains both Changes required findings. The [scoped round1 review](reviews/m0-task-2-rereview-1.md) confirms M0-T2-I1/I2 ADDRESSED and both local gates Approved, with no new blocking regression. Initial168 full tests and review-round14 focused tests remain separate execution records; no full run is attributed to the later fix source. This controller documentation closure changes no product code and repeats no test.
 
