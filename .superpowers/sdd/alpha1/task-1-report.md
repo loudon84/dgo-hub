@@ -126,3 +126,82 @@ node dist/scripts/check-m0-entry.js --signoffs ../docs/approvals/alpha1-signoffs
 ```
 
 此外，三个交付 JSON 文件均通过 `ConvertFrom-Json` 解析；`git diff --cached --check` 无空白错误。Task 1 文件之外没有进入提交。
+
+## 首轮 review 修复（Round 1）
+
+- 状态：`DONE_WITH_CONCERNS`
+- 修复提交：`acbe4ce9cffac05ad853b9776a7998c37f90bcc4`
+- Review 基线：`4e08a8c923342717bd9f64a75b0d6fba231137cd`。
+- I1：明确 `synthetic:` 身份仍可用于 `local_lab`，但不能满足 site readiness。
+- I2：拒绝 `pwd`、`user`、`username`、`passwd`、`token`、`secret`、`auth`、API key 等凭据查询名；使用 URLSearchParams 解码后再归一化检查，覆盖 `%70%77%64`。仍拒绝 userinfo。
+- I3：local_lab IdP issuer 和 JWKS URL 仅允许 HTTPS 或 loopback HTTP。
+- I4：环境测试身份和批准人统一使用 `identityReferenceSchema`；URI-like 引用解析失败时拒绝，保留 `urn:employee:alice` 等合法 opaque 引用。
+- 空引用探测：`vault:///` 在 RED 用例中曾被接受；secret_ref 改为必须包含非空路径段后已拒绝。
+- 同步更新环境 JSON Schema 的 secret_ref pattern 与运行时规则说明。其结构除导出元信息外与当前 Zod `toJSONSchema` 完全匹配。
+
+### 修复 RED
+
+命令：`npm test -- acceptance-tests/environment.test.ts`
+
+```text
+ RUN  v3.2.7 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/environment.test.ts (16 tests | 5 failed) 50ms
+   × rejects credential-bearing endpoints and invalid secret references
+     → vault:///: expected true to be false // Object.is equality
+   × blocks synthetic identities in site readiness while allowing them in a local lab
+     → expected true to be false // Object.is equality
+   × rejects password aliases in accepted endpoint query strings
+     → mssql://db.example.test/hub?user=readonly&pwd=NON_SECRET_SENTINEL: expected true to be false // Object.is equality
+   × allows only HTTPS or loopback HTTP for local-lab IdP URLs
+     → expected true to be false // Object.is equality
+   × rejects credentials embedded in identity references
+     → expected true to be false // Object.is equality
+   ✓ 11 other contract and CLI tests
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 11 passed (16)
+```
+
+### 修复 GREEN
+
+命令：`npm test -- acceptance-tests/environment.test.ts`
+
+```text
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/environment.test.ts
+
+ RUN  v3.2.7 E:/git/dgo-hub/integration-service
+
+ ✓ acceptance-tests/environment.test.ts (16 tests) 43ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at 12:56:21
+   Duration 592ms (transform 66ms, setup 0ms, collect 170ms, tests 43ms, environment 0ms, prepare 130ms)
+```
+
+变更后的专项检查：
+
+`npm run typecheck`：
+
+```text
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+```
+
+`npm run build`：
+
+```text
+> data-governance-integration-service@1.0.0 build
+> tsc -p tsconfig.json
+```
+
+schema 对齐命令输出：
+
+```text
+SCHEMA_MATCH
+EXAMPLES_PARSE
+```
+
+`git diff --check` 与 `git diff --cached --check` 均无空白错误；Git 仅提示 Windows 工作区将 LF 转为 CRLF。未重跑全量测试；本轮变更覆盖由 16 项 focused 测试、typecheck 和 build 验证。
