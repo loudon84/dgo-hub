@@ -1,6 +1,13 @@
 # 数据治理与本体集成中台 · 交付件 A
 
-本工程是 OpenMetadata + Helix Foundry + Hasura V2 方案的**可运行验证实现**。CRM 与订单系统通过 REST 或 PostgreSQL ETL 写入标准模型；Hasura 在 SQL 查询层执行行列权限；销售 MCP 只提供五个固定只读工具。OpenMetadata 与 Helix 通过只读适配器核验资产和已发布模型，不作为销售数据查询旁路。项目基线以 `E:\git\dgo-hub\docs\数据治理与本体集成中台_产品架构与二开说明_v1.0.md` 为准：OpenMetadata `2.0.6-release`、Hasura `v2.51.1`、Helix Foundry `00d7927d7c08e16c58316e006959f052427e7fa1`。
+本工程是 OpenMetadata + Helix Foundry + Hasura V2 方案的**可运行集成原型**。CRM 与订单系统通过 REST 或 PostgreSQL ETL 写入标准模型；Hasura 在 SQL 查询层执行行列权限；销售 MCP 只提供五个固定只读工具。OpenMetadata 与 Helix 通过只读适配器核验资产和已发布模型，不作为销售数据查询旁路。项目基线以 `E:\git\dgo-hub\docs\数据治理与本体集成中台_产品架构与二开说明_v1.0.md` 为准：OpenMetadata `2.0.6-release`、Hasura `v2.51.1`、Helix Foundry `00d7927d7c08e16c58316e006959f052427e7fa1`。
+
+
+## Alpha.1 W0 status (2026-10-23)
+
+This repository is a runnable integration prototype with legacy `/v1/ingest`, `/admin/*`, and `/mcp` routes. These existing capabilities do not mean the PRD's formal `/hub/v1/*` API set is implemented. The [API/page gap matrix](contracts/api-gap-matrix.md) maps all 59 API IDs, 12 pages, and 48 A/N/FI acceptance IDs; the [implementation baseline](docs/implementation-baseline.md) lists test scope and known gaps. W0 Tasks 0–3 passed their code/spec reviews, and Task 4 is pending the overall W0 review. Engineering-tool readiness is recorded separately from product acceptance.
+
+Site endpoints, auth/Profile bindings, CRM/order contracts and approved real inputs, IdP configuration, site signoffs, and observed deployment metadata are absent. M0 and the product gate remain BLOCKED; all 48 product acceptance rows are NOT_RUN. Hermes Agent v0.22.1 is user-reported installed elsewhere, but no runtime build or MCP call was observed. Examples are structural checks and cannot satisfy site readiness.
 
 ## 目录
 
@@ -116,6 +123,3 @@ node dist/scripts/generate-lock.js --observations deploy/deployment.lock.example
 - [Hasura V2 Metadata API](https://hasura.io/docs/2.0/api-reference/metadata-api/index/) 与 [权限规则](https://hasura.io/docs/2.0/auth/authorization/permissions/)
 - [OpenMetadata 表 REST API](https://docs.open-metadata.org/latest/api-reference/data-assets/tables)（以本地 `2.0.6-release` 实例 OpenAPI 核对最终字段）
 - [Helix Foundry API](https://github.com/HelixDB/helix-foundry/blob/main/docs/API.md) 与 [安全/快照说明](https://github.com/HelixDB/helix-foundry/blob/main/README.md)
-
-
-

@@ -1,0 +1,36 @@
+{
+  "schema_version": "alpha1.w0-readiness.v1",
+  "run_date": "2026-10-23",
+  "source_sha": "1ffd8824b1c00108373823e6239ea63eb23216dc",
+  "product_ready": false,
+  "checks": [
+    {
+      "id": "task1_m0_entry",
+      "command": "node dist/scripts/check-m0-entry.js --signoffs ../docs/approvals/alpha1-signoffs.example.json --environment ../docs/approvals/environment-inputs.example.json --expected-kind site",
+      "input_kind": "example",
+      "input_paths": ["../docs/approvals/alpha1-signoffs.example.json", "../docs/approvals/environment-inputs.example.json"],
+      "expected_environment_kind": "site",
+      "exit_code": 2,
+      "stdout_json": {"status":"BLOCKED","missing":["signoffs:status_not_approved_for_plan","environment:kind_mismatch","example:formal_readiness_rejected"],"example":true,"product_ready":false,"scope":"entry-input-validation"}
+    },
+    {
+      "id": "task2_deployment_lock_release",
+      "command": "node dist/scripts/generate-lock.js --observations deploy/deployment.lock.example.json --pins deploy/upstream-pins.json --release",
+      "input_kind": "synthetic",
+      "input_paths": ["deploy/deployment.lock.example.json", "deploy/upstream-pins.json"],
+      "exit_code": 2,
+      "stdout_json": {"status":"BLOCKED","issues":["environment_kind: release requires site","input_kind: release requires observed deployment data"],"product_ready":false,"scope":"deployment-lock-validation"}
+    },
+    {
+      "id": "task3_release_gate_on_recorded_local_check",
+      "command": "node dist/acceptance-tests/evidence/run-gate.js --run-dir C:\\Users\\Administrator\\AppData\\Local\\Temp\\alpha1-task3-runs\\task3-final-20261023",
+      "input_kind": "local_check",
+      "input_run_id": "task3-final-20261023",
+      "input_source_sha": "f9abd03f968590ee8fac50ad7916b49453fbb735",
+      "exit_code": 2,
+      "stdout_json": {"status":"BLOCKED","issues":["deployment.lock.json: required file is missing","environment-inputs.json: required file is missing","fixture-manifest.json: required file is missing","golden-consumer/manifest.json: required file is missing","signoffs.json: required file is missing","source-contracts.json: required file is missing","upstream-pins.json: required file is missing"],"product_ready":false}
+    }
+  ],
+  "site_inputs_present": false,
+  "note": "Task1/2 used examples only; Task3 used the recorded local_check run. No actual site input or approval was supplied."
+}

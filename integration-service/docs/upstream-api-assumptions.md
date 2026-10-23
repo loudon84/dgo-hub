@@ -1,0 +1,16 @@
+# Pinned upstream API assumptions for Alpha.1
+
+Date: 2026-10-23. Source: read-only pinned-source discovery in `.superpowers/sdd/alpha1/m3-api-discovery.md`; this note preserves implementation-relevant details without asserting that deployed instances match the pins. Runtime status for every upstream interface: `NOT_RUN`.
+
+| Upstream | Reusable pinned capability | Hub adaptation required | M-stage |
+|---|---|---|---|
+| OpenMetadata 2.0.6-release, SHA `a695261b19d48411a39502a5c5fc0b453729eb4e` | Native FQN PUT upsert for service/database/schema/table, `sourceHash`, bulk table upsert, `overrideMetadata=false`; classification, test-case definitions/results, lineage writes; bot principal/token issuance. | Wrap entity operations in Hub 202 operation/idempotency/revision/envelope and audit receipts. Preserve human metadata. A test definition is not a test result; keep quality `NOT_RUN` until an actual result. Native lineage is graph state, not Hub operation provenance. Bot JWT is not sales-user identity. | M3 |
+| Helix Foundry SHA `00d7927d7c08e16c58316e006959f052427e7fa1` | LLM-free `POST /api/v1/workspaces/:w/definitions/import` seeds a proposal from `{version:1, proposals:[BundleSchema]}` after source snapshots/profile validation. `GET .../overview` and generation-tagged resources support read/projection. Proposal validation/publication use hashes, input snapshot versions, and active-generation CAS. | Capture the returned candidate ID and hash: proposal PUT/edit and validation create a successor proposal ID and recompute hash. Never reuse a stale ID/hash. Add Hub approval, immutable binding release/export digest, tenant mapping, and 202 operation receipts. No native `/ontologies`, `/projection`, or proposal-diff endpoint was found at the pin. | M3 |
+| Helix PostgreSQL source connector | Discovery lists only `BASE TABLE`; import can `SELECT` an explicitly configured view using `schema` + `table` in read-only repeatable-read transaction. | Projection safety must come from a dedicated least-privilege PostgreSQL principal with `SELECT` only on the approved view, plus captured view/column proof. Helix does not enforce the approved-column boundary. | M1/M3 |
+| Hasura v2.51.1, SHA `2b130a135659026ff6eda42c1df5722f123fd84e` | `/v1/graphql` user queries; `/v1/metadata` controlled metadata work. | Use short-lived user JWT for GraphQL; keep admin secret in Publisher only. HTTP 200 may contain GraphQL `errors`; discard partial data and map the error per PRD. No native M3 ontology API. | M2 |
+
+## Provenance and limits
+
+The pins and route/schema citations are static source evidence only. They do not prove current runtime version, endpoint availability, authentication, tenant isolation, or behavior. Do not infer an installed deployment's revision from a reference clone's HEAD. No upstream checkout, branch, index, service or source file was changed for this report.
+
+Primary local source: `.superpowers/sdd/alpha1/m3-api-discovery.md`, including source-file and schema citations for each behavior. UI/auth insertion seams and toolchain are separately recorded in `.superpowers/sdd/alpha1/ui-seam-discovery.md`; no enterprise OpenMetadata UI build or patch was performed. See the short Hermes note for M4 compatibility evidence and probe gaps.
