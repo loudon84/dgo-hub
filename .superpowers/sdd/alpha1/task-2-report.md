@@ -166,3 +166,33 @@ tsc --noEmit -p tsconfig.json; EXIT_CODE=0
 npm run build
 tsc -p tsconfig.json; EXIT_CODE=0
 ```
+
+## Review Round 2 修复（N1）
+
+- 修复基线：`8d9f17f281d574baf0eedabe5d48465998272ec8`；实现提交：`dca179c49d4fbe34a3c9f909c67136042811a43e`（`fix(alpha1): accept repeated hyphens in registry hosts`）。
+- DNS host label 现在允许标签内部连续连字符，同时要求 label 以字母数字开头和结尾；registry port 校验与原有非法 repository/tag 拒绝保持不变。JSON Schema 使用相同 host-label 规则。
+
+RED：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'repository:fixed-tag image syntax'`
+
+```text
+FAIL: expected 'BLOCKED' to be 'PASS'
+Tests 1 failed | 21 skipped
+EXIT_CODE=1
+```
+
+新增正例为 `registry--east.example.test:5000/repo:1`，同时断言 Zod validator 与 JSON Schema pattern 接受该引用；原先 `:fixed`、`repo:tag:again`、HTTPS scheme、空白、latest 等负例继续保留。
+
+GREEN：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'repository:fixed-tag image syntax|same repository and tag restrictions'` 输出 `Tests 2 passed | 20 skipped`，退出码 0。
+
+影响范围验证：
+
+```text
+npm test -- acceptance-tests/deployment-lock.test.ts
+Test Files 1 passed (1); Tests 22 passed (22); EXIT_CODE=0
+
+npm run typecheck
+tsc --noEmit -p tsconfig.json; EXIT_CODE=0
+
+npm run build
+tsc -p tsconfig.json; EXIT_CODE=0
+```
