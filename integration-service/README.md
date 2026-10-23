@@ -23,7 +23,7 @@ Site endpoints, auth/Profile bindings, CRM/order contracts and approved real inp
 
 ## 快速启动
 
-需要 Docker Compose、Node.js 24。运行进程只读取显式注入的环境变量，不读取 `.env` 文件。示例密码仅用于本机验证，正式部署应替换并置于密钥管理系统。
+需要 Docker Compose、Node.js 24。服务入口只读取显式注入的环境变量，不会自行加载 `.env` 文件。`acceptance:live` 脚本使用 Node 的显式 `--env-file=.env` 参数，仅供受控的本地演示。示例密码仅用于本机验证，正式部署应替换并置于密钥管理系统。
 
 ```powershell
 docker compose up -d --build

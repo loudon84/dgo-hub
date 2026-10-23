@@ -1,0 +1,7 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+sales-mcp/server.ts(149,42): error TS2345: Argument of type '{ requestId: string; principal: AgentPrincipal; name: "get_sales_context" | "find_customers" | "get_customer_orders" | "get_sales_summary" | "get_order_detail"; ... 9 more ...; stage: string; }' is not assignable to parameter of type '{ requestId: string; principal: AgentPrincipal; name: string; outcome: AuditOutcome; errorCode: string | null; durationMs: number; resultCount: number | null; ... 5 more ...; stage: AuditStage; }'.
+  Types of property 'stage' are incompatible.
+    Type 'string' is not assignable to type 'AuditStage'.

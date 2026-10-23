@@ -1,0 +1,10 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+sales-mcp/legacy.ts(85,14): error TS7006: Parameter 'args' implicitly has an 'any' type.
+sales-mcp/server.ts(134,152): error TS7006: Parameter 'rawArgs' implicitly has an 'any' type.
+sales-mcp/server.ts(228,27): error TS18046: 'error' is of type 'unknown'.
+sales-mcp/server.ts(228,60): error TS18046: 'error' is of type 'unknown'.
+sales-mcp/server.ts(228,87): error TS18046: 'error' is of type 'unknown'.
+sales-mcp/server.ts(228,112): error TS18046: 'error' is of type 'unknown'.
