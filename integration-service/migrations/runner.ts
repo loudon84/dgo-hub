@@ -48,13 +48,15 @@ function dollarDelimiterAt(sql: string, index: number): string | undefined {
   return match?.[0];
 }
 
-function hasTransactionControlStatement(sql: string): boolean {
-  const statements: string[][] = [];
+function scanMigrationSql(sql: string): { transactionControl: boolean; stringModeChange: boolean } {
+  const statements: Array<{ words: string[]; values: string[] }> = [];
   let words: string[] = [];
+  let values: string[] = [];
   let index = 0;
   const finishStatement = () => {
-    if (words.length) statements.push(words);
+    if (words.length || values.length) statements.push({ words, values });
     words = [];
+    values = [];
   };
 
   while (index < sql.length) {
@@ -78,28 +80,32 @@ function hasTransactionControlStatement(sql: string): boolean {
     }
     if ((char === 'E' || char === 'e') && next === "'" && (index === 0 || !isWordPart(sql[index - 1]))) {
       index += 2;
+      const start = index;
       while (index < sql.length) {
         if (sql[index] === '\\') { index += 2; continue; }
         if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
-        if (sql[index] === "'") { index += 1; break; }
+        if (sql[index] === "'") { values.push(sql.slice(start, index).toUpperCase()); index += 1; break; }
         index += 1;
       }
       continue;
     }
     if (char === "'") {
       index += 1;
+      const start = index;
       while (index < sql.length) {
         if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
-        if (sql[index] === "'") { index += 1; break; }
+        if (sql[index] === "'") { values.push(sql.slice(start, index).toUpperCase()); index += 1; break; }
         index += 1;
       }
       continue;
     }
     if (char === '"') {
       index += 1;
+      const identifier: string[] = [];
       while (index < sql.length) {
-        if (sql[index] === '"' && sql[index + 1] === '"') { index += 2; continue; }
-        if (sql[index] === '"') { index += 1; break; }
+        if (sql[index] === '"' && sql[index + 1] === '"') { identifier.push('"'); index += 2; continue; }
+        if (sql[index] === '"') { values.push(identifier.join('').toUpperCase()); index += 1; break; }
+        identifier.push(sql[index]);
         index += 1;
       }
       continue;
@@ -115,7 +121,9 @@ function hasTransactionControlStatement(sql: string): boolean {
     if (isWordStart(char)) {
       const start = index++;
       while (isWordPart(sql[index])) index += 1;
-      words.push(sql.slice(start, index).toUpperCase());
+      const word = sql.slice(start, index).toUpperCase();
+      words.push(word);
+      values.push(word);
       continue;
     }
     if (char === ';') finishStatement();
@@ -123,10 +131,18 @@ function hasTransactionControlStatement(sql: string): boolean {
   }
   finishStatement();
 
-  return statements.some(([first, second]) => {
-    if (['BEGIN', 'START', 'COMMIT', 'END', 'ROLLBACK', 'ABORT'].includes(first)) return true;
-    return first === 'PREPARE' && second === 'TRANSACTION';
-  });
+  let transactionControl = false;
+  let stringModeChange = false;
+  for (const { words: statementWords, values: statementValues } of statements) {
+    const [first, second] = statementWords;
+    if (['BEGIN', 'START', 'COMMIT', 'END', 'ROLLBACK', 'ABORT'].includes(first) || (first === 'PREPARE' && second === 'TRANSACTION')) {
+      transactionControl = true;
+    }
+
+    const changesStringMode = statementValues.includes('STANDARD_CONFORMING_STRINGS') && (first === 'SET' || first === 'RESET');
+    if (changesStringMode || statementValues.includes('SET_CONFIG') || (first === 'RESET' && second === 'ALL')) stringModeChange = true;
+  }
+  return { transactionControl, stringModeChange };
 }
 
 function invalid(code: string, migration?: Migration): MigrationRunnerError {
@@ -177,7 +193,9 @@ async function discoverMigrations(directory: string): Promise<Migration[]> {
       throw new MigrationRunnerError('MIGRATION_SET_INVALID', item.versionText, item.name);
     }
     const sql = normalizeSql(bytes, item);
-    if (hasTransactionControlStatement(sql)) throw new MigrationRunnerError('MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', item.versionText, item.name);
+    const safety = scanMigrationSql(sql);
+    if (safety.transactionControl) throw new MigrationRunnerError('MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', item.versionText, item.name);
+    if (safety.stringModeChange) throw new MigrationRunnerError('MIGRATION_SQL_MODE_UNSUPPORTED', item.versionText, item.name);
     migrations.push({
       ...item,
       sql,
@@ -284,6 +302,14 @@ export async function runMigrations(pool: pg.Pool, options: RunMigrationsOptions
       await client.query('SELECT pg_advisory_lock($1, $2)', [LOCK_CLASS, LOCK_ID]);
     } catch {
       throw new MigrationRunnerError('MIGRATION_LOCK_FAILED');
+    }
+
+    try {
+      const sqlMode = await client.query<{ standard_conforming_strings: string }>('SHOW standard_conforming_strings');
+      if (sqlMode.rows[0]?.standard_conforming_strings !== 'on') throw new MigrationRunnerError('MIGRATION_SQL_MODE_UNSUPPORTED');
+    } catch (error) {
+      if (error instanceof MigrationRunnerError) throw error;
+      throw new MigrationRunnerError('MIGRATION_SQL_MODE_UNSUPPORTED');
     }
 
     let ledgerExists = false;

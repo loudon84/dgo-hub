@@ -8,9 +8,9 @@ import pg from 'pg';
 
 const execFile = promisify(execFileCallback);
 const IMAGE_REFERENCE = 'postgres:16.10-alpine';
-const TASK_LABEL = 'codex.m0.task=task0';
 const START_TIMEOUT_MS = 75_000;
 type DockerCommand = (args: string[], stage: string, timeout?: number) => Promise<string>;
+export type OwnedTaskLabel = 'task0' | 'task1';
 
 type SafeFailure = 'docker_unavailable' | 'image_unavailable' | 'startup_failed' | 'readiness_timeout' | 'pool_unavailable';
 
@@ -23,6 +23,7 @@ export class OwnedPostgresError extends Error {
 
 export type OwnedPostgres = {
   pool: pg.Pool;
+  taskLabel: OwnedTaskLabel;
   runLabel: string;
   containerId: string;
   imageReference: string;
@@ -58,8 +59,9 @@ async function appendEvidence(path: string, event: Record<string, string | numbe
   await appendFile(path, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`, 'utf8');
 }
 
-export async function startOwnedPostgres(options: { evidenceFile: string }, command: DockerCommand = docker): Promise<OwnedPostgres> {
+export async function startOwnedPostgres(options: { evidenceFile: string; taskLabel?: OwnedTaskLabel }, command: DockerCommand = docker): Promise<OwnedPostgres> {
   const runLabel = randomUUID();
+  const taskLabel = options.taskLabel ?? 'task0';
   const tempDirectory = await mkdtemp(join(tmpdir(), 'dgo-m0-pg-'));
   const cidFile = join(tempDirectory, 'container.cid');
   let containerId: string | undefined;
@@ -69,7 +71,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
     try {
       await command([
         'run', '--detach', '--cidfile', cidFile, '--name', `dgo-m0-${runLabel}`,
-        '--label', TASK_LABEL, '--label', `codex.m0.run=${runLabel}`,
+        '--label', `codex.m0.task=${taskLabel}`, '--label', `codex.m0.run=${runLabel}`,
         '--publish', '127.0.0.1::5432', '--tmpfs', '/var/lib/postgresql/data:rw,size=268435456',
         '--env', 'POSTGRES_USER=postgres', '--env', 'POSTGRES_DB=postgres', '--env', 'POSTGRES_HOST_AUTH_METHOD=trust',
         IMAGE_REFERENCE,
@@ -78,7 +80,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
 
     containerId = (await readFile(cidFile, 'utf8')).trim();
     if (!/^[a-f0-9]{64}$/i.test(containerId)) throw new OwnedPostgresError('OWNED_POSTGRES_ID_INVALID', 'record_created_resource', 'startup_failed');
-    await appendEvidence(options.evidenceFile, { event: 'created', taskLabel: 'task0', runLabel, containerId, imageReference: IMAGE_REFERENCE });
+    await appendEvidence(options.evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE });
 
     const inspectRaw = await command(['inspect', '--format', '{{.Config.Image}}|{{.Image}}|{{json .Mounts}}', containerId], 'container_metadata');
     const [imageReference, runtimeImageId, mountJson] = inspectRaw.split('|');
@@ -123,6 +125,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
     const ownedPool = pool;
     return {
       pool: ownedPool,
+      taskLabel,
       runLabel,
       containerId,
       imageReference,
@@ -131,12 +134,23 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
       hostPort,
       async close() {
         await ownedPool.end();
-        const confirmed = await inspectOwnedContainerWith(command, containerId!, runLabel);
-        if (!confirmed) throw new OwnedPostgresError('OWNED_POSTGRES_OWNERSHIP_UNCONFIRMED', 'cleanup', 'startup_failed');
-        await command(['rm', '--force', containerId!], 'owned_container_removal');
-        if (!await containerIsAbsent(command, containerId!)) throw new OwnedPostgresError('OWNED_POSTGRES_CLEANUP_INCOMPLETE', 'cleanup_verification', 'startup_failed');
-        await appendEvidence(options.evidenceFile, { event: 'removed', taskLabel: 'task0', runLabel, containerId: containerId!, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
-        await rm(tempDirectory, { recursive: true, force: true });
+        let ownershipConfirmed = false;
+        let containerAbsentAfterRemoval = false;
+        try {
+          ownershipConfirmed = await inspectOwnedContainerWith(command, containerId!, runLabel, taskLabel);
+          if (!ownershipConfirmed) throw new OwnedPostgresError('OWNED_POSTGRES_OWNERSHIP_UNCONFIRMED', 'cleanup', 'startup_failed');
+          await command(['rm', '--force', containerId!], 'owned_container_removal');
+          containerAbsentAfterRemoval = await containerIsAbsent(command, containerId!);
+          if (!containerAbsentAfterRemoval) throw new OwnedPostgresError('OWNED_POSTGRES_CLEANUP_INCOMPLETE', 'cleanup_verification', 'startup_failed');
+          await appendEvidence(options.evidenceFile, { event: 'removed', taskLabel, runLabel, containerId: containerId!, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+          await rm(tempDirectory, { recursive: true, force: true });
+        } catch (error) {
+          await appendEvidence(options.evidenceFile, {
+            event: 'cleanup_unconfirmed', taskLabel, runLabel, containerId: containerId!, cidFile,
+            ownershipConfirmed, containerAbsentAfterRemoval,
+          }).catch(() => undefined);
+          throw error;
+        }
       },
     };
   } catch (error) {
@@ -146,14 +160,14 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
         const candidate = (await readFile(cidFile, 'utf8')).trim();
         if (/^[a-f0-9]{64}$/.test(candidate)) {
           containerId = candidate;
-          await appendEvidence(options.evidenceFile, { event: 'created', taskLabel: 'task0', runLabel, containerId, imageReference: IMAGE_REFERENCE, recoveredFromCidFile: true });
+          await appendEvidence(options.evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE, recoveredFromCidFile: true });
         }
       } catch { /* Keep the cidfile directory if resource identity cannot be recovered. */ }
     }
     let cleanupConfirmed = false;
     let ownershipConfirmed = false;
     if (containerId) {
-      ownershipConfirmed = await inspectOwnedContainerWith(command, containerId, runLabel);
+      ownershipConfirmed = await inspectOwnedContainerWith(command, containerId, runLabel, taskLabel);
       if (ownershipConfirmed) {
         try {
           await command(['rm', '--force', containerId], 'failed_start_cleanup');
@@ -162,26 +176,26 @@ export async function startOwnedPostgres(options: { evidenceFile: string }, comm
       }
       if (cleanupConfirmed) {
         try {
-          await appendEvidence(options.evidenceFile, { event: 'removed_after_start_failure', taskLabel: 'task0', runLabel, containerId, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+          await appendEvidence(options.evidenceFile, { event: 'removed_after_start_failure', taskLabel, runLabel, containerId, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
           await rm(tempDirectory, { recursive: true, force: true });
         } catch { /* Retain the cidfile directory when lifecycle evidence cannot be completed. */ }
       } else {
         await appendEvidence(options.evidenceFile, {
-          event: 'cleanup_unconfirmed', taskLabel: 'task0', runLabel, containerId, cidFile, ownershipConfirmed,
+          event: 'cleanup_unconfirmed', taskLabel, runLabel, containerId, cidFile, ownershipConfirmed,
           containerAbsentAfterRemoval: false,
         }).catch(() => undefined);
       }
     } else {
-      await appendEvidence(options.evidenceFile, { event: 'start_failure_unresolved', taskLabel: 'task0', runLabel, cidFile }).catch(() => undefined);
+      await appendEvidence(options.evidenceFile, { event: 'start_failure_unresolved', taskLabel, runLabel, cidFile }).catch(() => undefined);
     }
     throw error;
   }
 }
 
-async function inspectOwnedContainerWith(command: DockerCommand, containerId: string, runLabel: string): Promise<boolean> {
+async function inspectOwnedContainerWith(command: DockerCommand, containerId: string, runLabel: string, expectedTaskLabel: OwnedTaskLabel): Promise<boolean> {
   try {
     const raw = await command(['inspect', '--format', '{{.Id}}|{{index .Config.Labels "codex.m0.task"}}|{{index .Config.Labels "codex.m0.run"}}', containerId], 'ownership_check');
-    const [id, taskLabel, run] = raw.split('|');
-    return id === containerId && taskLabel === 'task0' && run === runLabel;
+    const [id, actualTaskLabel, run] = raw.split('|');
+    return id === containerId && actualTaskLabel === expectedTaskLabel && run === runLabel;
   } catch { return false; }
 }

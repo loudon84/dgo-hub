@@ -38,13 +38,27 @@ describe('migration transaction boundary', () => {
     expect(connect).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'SET standard_conforming_strings = off;',
+    `SET LOCAL "standard_conforming_strings" TO 'off';`,
+    `SELECT set_config('standard_conforming_strings','off',false);`,
+    `SELECT set_config('standard_' || 'conforming_strings','off',false);`,
+    'RESET standard_conforming_strings;', 'RESET ALL;',
+  ])('rejects migration changes to the SQL string lexer mode (%s)', async sql => {
+    const connect = vi.fn();
+    const pool = { connect } as unknown as pg.Pool;
+    await expect(runMigrations(pool, { directory: await migrationDirectory(sql), environmentKind: 'local_lab' }))
+      .rejects.toMatchObject({ code: 'MIGRATION_SQL_MODE_UNSUPPORTED', version: '002', migrationName: 'boundary' });
+    expect(connect).not.toHaveBeenCalled();
+  });
+
   it('allows transaction words in comments, strings, identifiers and dollar-quoted bodies', async () => {
     const sql = `/* COMMIT; /* ROLLBACK; */ */
       CREATE FUNCTION control.word_fixture() RETURNS text LANGUAGE plpgsql AS $body$
       BEGIN RAISE NOTICE 'COMMIT;'; RETURN 'ROLLBACK'; END;
       $body$;
       SELECT 'COMMIT; ROLLBACK;';
-      SELECT E'escaped \\\\' COMMIT';
+      SELECT E'COMMIT; escaped \\' still text';
       SELECT 1 AS "COMMIT"; -- END; ABORT
     `;
     const connect = vi.fn().mockRejectedValue(new Error('not connected in preflight test'));
@@ -130,5 +144,28 @@ describe('owned PostgreSQL startup cleanup failure paths', () => {
     expect(f.calls.map(args => args[0])).not.toContain('rm');
     const events = (await readFile(f.evidenceFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
     expect(events.at(-1)).toMatchObject({ event: 'cleanup_unconfirmed', ownershipConfirmed: false, containerId: 'a'.repeat(64) });
+  });
+
+  it('keeps cleanup unconfirmed when Docker cannot verify absence after rm', async () => {
+    const f = await fixture();
+    f.command.mockImplementation(async (args: string[], stage: string) => {
+      f.calls.push(args);
+      if (stage === 'container_start') {
+        const label = args.find(value => value.startsWith('codex.m0.run='))!.slice('codex.m0.run='.length);
+        const cidFile = args[args.indexOf('--cidfile') + 1];
+        await writeFile(cidFile, `${'a'.repeat(64)}\n`);
+        Object.assign(f, { recoveredLabel: label, recoveredCidFile: cidFile });
+        throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stage, 'startup_failed');
+      }
+      if (stage === 'ownership_check') return `${'a'.repeat(64)}|task0|${String((f as unknown as { recoveredLabel: string }).recoveredLabel)}`;
+      if (stage === 'failed_start_cleanup') return '';
+      if (stage === 'cleanup_verification') throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stage, 'docker_unavailable');
+      throw new Error(`unexpected stage: ${stage}`);
+    });
+    await expect(startOwnedPostgres({ evidenceFile: f.evidenceFile }, f.command)).rejects.toMatchObject({ code: 'OWNED_POSTGRES_COMMAND_FAILED' });
+    const events = (await readFile(f.evidenceFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
+    expect(events.at(-1)).toMatchObject({ event: 'cleanup_unconfirmed', containerId: 'a'.repeat(64), ownershipConfirmed: true, containerAbsentAfterRemoval: false });
+    const locator = String((f as unknown as { recoveredCidFile: string }).recoveredCidFile);
+    await expect(readFile(locator, 'utf8')).resolves.toBe(`${'a'.repeat(64)}\n`);
   });
 });
