@@ -124,6 +124,21 @@ updateSourceCredential(
 
 Input records 精确为 `TenantProvisionInput={tenantId,businessTimezone,enabled?}`、`SubjectProvisionInput={tenantId,userId,departmentId?,businessRole?,managementScopes?,enabled?}`、`IdentityBindingInput={issuer,subject,tenantId,userId,enabled?}`、`SourceCredentialProvisionInput={sourceId,tenantId,token,secretRef,allowedEntities,revision,enabled?}`。字段均按上述类型定义；repository 方法都返回 `Promise<void>`。
 
+## Fix round 1/5 — scoped Sol findings
+
+**Reviewed base:** `68c8657aad4d001ab4cecd6c6e72e6346c311956`. **Fix commit:** `a15dce871dd7017385e10f8b6dfc3ce18e3c2b50`. Both reported findings are addressed in code and focused verification; scoped Sol re-review is pending. Consumer interface is unchanged.
+
+- **M0-T0-I1 — addressed:** The scanner now recognizes newline-separated adjacent string segments after an E string, including whitespace and comments between segments. It preserves E escape handling across the continuation so the actual top-level `COMMIT` and `ROLLBACK` in the reproducer are found during migration discovery, before `pool.connect()`. A continued E-string segment containing a backslash is conservatively rejected as `MIGRATION_SQL_LEXING_UNSUPPORTED` when no transaction-control token was otherwise found. Ordinary legal newline continuation remains accepted. The PostgreSQL regression copies unchanged 001/002 plus the exact 003 reproducer for both controls and confirms preflight rejection leaves the schema absent and ledger at zero.
+- **M0-T1-I1 — addressed:** Cursor validation still resolves the UUID only for the current `(tenant_key,user_id)`. The list query now compares `(created_at,id)` against an owner-filtered SQL CTE anchor, so `timestamptz` microseconds never round-trip through JavaScript `Date`. The deterministic `.000900Z/.000800Z/.000700Z` regression enumerates all three credentials through limit-1 pages; forged and cross-user cursor cases remain covered.
+
+**RED:** Before these implementation changes, `npm test -- acceptance-tests/migration-boundary.test.ts acceptance-tests/migrations.test.ts acceptance-tests/identity-store.test.ts` exited 1 (3 files, 54 tests, 51 passed / 3 failed). Real PostgreSQL showed COMMIT left `control.review_e_commit` behind with ledger versions 001/002 but no 003; ROLLBACK also failed apply after 001/002 were written; submillisecond pagination traversed 1 of 3 credentials. The round1 RED summary is in [focused-red-summary.md](m0-task-1-evidence/round1/focused-red-summary.md). The independent review's original raw probe remains in the scratch review package.
+
+**GREEN / focused gate:** `npm test -- acceptance-tests/migration-boundary.test.ts acceptance-tests/migrations.test.ts acceptance-tests/identity-store.test.ts` exited 0: 3 files, 54 tests passed. `npm run typecheck` and `npm run build` each exited 0. Raw command logs and exit files are in [round1 evidence](m0-task-1-evidence/round1/). No unrelated full suite was rerun.
+
+The final round1 migration fixture used task label `task0`, run label `1462f684-eb54-4957-a2de-730199b101ea`, and container ID `1e23a0abdf1eb1bf1ec6af8be88ad19409a5f6b39716ad9143cc0f11e82dcd4c`. The identity fixture used task label `task1`, run label `974e4acf-8010-4f7d-9104-301c7c962d47`, and container ID `8575e30c53996079184f12536b15d98b37bd8cb017dfa2b9b44a7fddb7be63a6`. An earlier focused GREEN retry is also fully recorded in the lifecycle JSONL as task0/run `e59632d6-133e-4df4-acbe-ce04ca42a587`, container `dd6e3c83714ecc9ddc36c7ea078c0f127ddcbfd6e86b8aa64a4da411ce949672`. Every recorded container has `ownershipConfirmed=true` and `containerAbsentAfterRemoval=true`. The resource summaries preserve both image fields; RepoDigest and runtime image ID were each observed as `sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`.
+
+The original Task1 evidence directory was restored and left unchanged; all fix-round outputs are isolated under `m0-task-1-evidence/round1/`. `001_init.sql` SHA-256 remains `600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251`.
+
 ## 当前边界
 
 这项工作只完成身份持久层和凭据生命周期，没有实现 OIDC HTTP/JWKS、MCP 传输层、Hasura JWT 实际签发、现场 deployment 或产品验收。W0-R1 已由 Sol 确认 ADDRESSED；Task0 I1/I2 修正随 Task1 等待 Sol review 确认关闭。M0–M6 的正式产品接受仍 BLOCKED/NOT_RUN，48项 A/N/FI 仍 NOT_RUN。

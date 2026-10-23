@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/migration-boundary.test.ts acceptance-tests/migrations.test.ts acceptance-tests/identity-store.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  3 passed (3)
+      Tests  54 passed (54)
+   Start at  21:29:41
+   Duration  3.52s (transform 152ms, setup 0ms, import 341ms, tests 6.06s, environment 0ms)
+
