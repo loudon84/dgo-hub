@@ -7,6 +7,7 @@ Status: `DONE_WITH_CONCERNS` — local implementation and verification are compl
 - Repository: `E:/git/dgo-hub`, branch `feat/alpha1-implementation`.
 - Exact Task2 base: `04fe627b9b387983395a9aaacd3793e4e37e207b`.
 - Product implementation commit: `9240dd1886a91925d158b42a5dd2a07f59fda8e2` (`Implement controlled OIDC identity APIs`).
+- Report/evidence handoff closure is committed separately from product source; this final docs/evidence commit is the HEAD supplied for independent review.
 - Task2 source and migration001 SHA-256 manifests: `docs/execution/alpha1/m0-task-2-evidence/source-final.sha256.json` and `migration-001-final.sha256.json`.
 - Migration001 SHA-256 remains `600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251`.
 
@@ -62,7 +63,7 @@ All non-204 success responses use `{ request_id, data }`. Failures use `{ reques
 | API | Request | Response data |
 | --- | --- | --- |
 | API001 `GET /hub/v1/me` | Bearer token | Safe whitelist: `user_id`, `tenant_id`, `department_id`, `business_role`, `management_scopes`, `business_timezone`. |
-| API046 `POST /hub/v1/me/agent-credentials` | `Idempotency-Key`; body only `purpose` and optional integer `ttl_seconds` | First create: safe metadata, `replayed:false`, and the one-time `secret`. Identical replay: metadata and `replayed:true`, with no `secret` field. |
+| API046 `POST /hub/v1/me/agent-credentials` | `Idempotency-Key`; body only `purpose` and optional integer `ttl_seconds` | First create: HTTP 201 with safe metadata, `replayed:false`, and the one-time `secret`. Identical replay: HTTP 201 with metadata and `replayed:true`, with no `secret` field. |
 | API047 `GET /hub/v1/me/agent-credentials` | Optional `cursor`, `limit` (default 20, max 100) | Own metadata only: `items`, `next_cursor`; no secret, digest, tenant filter, or user filter. |
 | API048 `DELETE /hub/v1/me/agent-credentials/{id}` | Credential ID | Empty 204. |
 
