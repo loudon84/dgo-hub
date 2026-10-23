@@ -56,6 +56,12 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:3100/v1/ingest/order -Heade
 
 示例源表见 `examples/source-schema.sql`。配置 `CRM_DB_URL`、`ORDER_DB_URL` 后，worker 按 `(updated_at, source_id)` 顺序抽取，每成功一行再前移水位；出错记录不前移，下一轮自动重试。源库需在更新时可靠地递增 `version` 和 `updated_at`。CRM 数据须先于关联订单可用。`GET /admin/etl/watermarks` 展示水位和错误，`POST /admin/etl/{source}/retry` 清除错误状态；实际重试由轮询执行。上游源表和游标方案是本演示约定，真实 CRM/订单库应做字段映射与快照一致性评审。
 
+## 版本化数据库迁移
+
+迁移文件放在 `migrations/`，使用连续三位版本号和名称，例如 `001_init.sql`。`npm run migrate` 运行独立 CLI；它要求调用环境显式提供 `DATABASE_URL`，`HUB_ENVIRONMENT_KIND` 可设为 `local_lab` 或 `site`，缺省按 `site` 处理。CLI 不加载 `.env` 文件。迁移 ledger 保存版本、文件名、规范化 LF 后的 UTF-8 SQL SHA-256 和应用时间；runner 用 PostgreSQL session advisory lock 串行化执行，并在每个迁移事务中同时执行 SQL 与写入 ledger。已应用文件缺失、改名、checksum 改变或历史有缺口都会拒绝继续。
+
+默认情况下，检测到既有 hub 布局却没有迁移记录时，runner 返回 `LEGACY_BASELINE_REQUIRED`。仅在受控的本地实验库上，可显式设置 `HUB_ENVIRONMENT_KIND=local_lab` 并传入 `npm run migrate -- --adopt-legacy-001`，重放幂等的 001 并记录基线；site 环境禁止此选项。不要将基线接管用于已有部署数据。程序调用方可从 `migrate.ts` 导入 `runMigrations(pool, { directory, environmentKind, adoptLegacy001 })`；导入不会连接或执行迁移，传入的 pool 由调用方管理。
+
 本地 ETL 冒烟验证：
 
 ```powershell

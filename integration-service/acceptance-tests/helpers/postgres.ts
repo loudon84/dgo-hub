@@ -1,0 +1,161 @@
+import { appendFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { execFile as execFileCallback } from 'node:child_process';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import pg from 'pg';
+
+const execFile = promisify(execFileCallback);
+const IMAGE_REFERENCE = 'postgres:16.10-alpine';
+const TASK_LABEL = 'codex.m0.task=task0';
+const START_TIMEOUT_MS = 75_000;
+
+type SafeFailure = 'docker_unavailable' | 'image_unavailable' | 'startup_failed' | 'readiness_timeout' | 'pool_unavailable';
+
+export class OwnedPostgresError extends Error {
+  constructor(readonly code: string, readonly stage: string, readonly safeReason: SafeFailure) {
+    super(`${code} at ${stage}: ${safeReason}`);
+    this.name = 'OwnedPostgresError';
+  }
+}
+
+export type OwnedPostgres = {
+  pool: pg.Pool;
+  runLabel: string;
+  containerId: string;
+  imageReference: string;
+  repoDigest: string;
+  runtimeImageId: string;
+  hostPort: number;
+  close(): Promise<void>;
+};
+
+function classifyDockerFailure(stage: string, stderr = ''): SafeFailure {
+  const text = stderr.toLowerCase();
+  if (text.includes('cannot connect') || text.includes('is the docker daemon running') || text.includes('error during connect')) return 'docker_unavailable';
+  if (stage.includes('image') || text.includes('manifest unknown') || text.includes('pull access denied')) return 'image_unavailable';
+  return 'startup_failed';
+}
+
+async function docker(args: string[], stage: string, timeout = 20_000): Promise<string> {
+  try {
+    const { stdout } = await execFile('docker', args, { encoding: 'utf8', timeout, windowsHide: true, maxBuffer: 1024 * 1024 });
+    return stdout.trim();
+  } catch (error) {
+    const stderr = typeof error === 'object' && error !== null && 'stderr' in error ? String(error.stderr) : '';
+    throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stage, classifyDockerFailure(stage, stderr));
+  }
+}
+
+async function appendEvidence(path: string, event: Record<string, string | number | boolean>): Promise<void> {
+  await appendFile(path, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`, 'utf8');
+}
+
+async function inspectOwnedContainer(containerId: string, runLabel: string): Promise<boolean> {
+  try {
+    const raw = await docker(['inspect', '--format', '{{.Id}}|{{index .Config.Labels "codex.m0.task"}}|{{index .Config.Labels "codex.m0.run"}}', containerId], 'ownership_check');
+    const [id, taskLabel, run] = raw.split('|');
+    return id === containerId && taskLabel === 'task0' && run === runLabel;
+  } catch {
+    return false;
+  }
+}
+
+export async function startOwnedPostgres(options: { evidenceFile: string }): Promise<OwnedPostgres> {
+  const runLabel = randomUUID();
+  const tempDirectory = await mkdtemp(join(tmpdir(), 'dgo-m0-pg-'));
+  const cidFile = join(tempDirectory, 'container.cid');
+  let containerId: string | undefined;
+  let pool: pg.Pool | undefined;
+
+  try {
+    try {
+      await docker([
+        'run', '--detach', '--cidfile', cidFile, '--name', `dgo-m0-${runLabel}`,
+        '--label', TASK_LABEL, '--label', `codex.m0.run=${runLabel}`,
+        '--publish', '127.0.0.1::5432', '--tmpfs', '/var/lib/postgresql/data:rw,size=268435456',
+        '--env', 'POSTGRES_USER=postgres', '--env', 'POSTGRES_DB=postgres', '--env', 'POSTGRES_HOST_AUTH_METHOD=trust',
+        IMAGE_REFERENCE,
+      ], 'container_start', START_TIMEOUT_MS);
+    } catch (error) {
+      if (error instanceof OwnedPostgresError && error.safeReason === 'startup_failed') {
+        throw new OwnedPostgresError(error.code, error.stage, error.safeReason);
+      }
+      throw error;
+    }
+
+    containerId = (await readFile(cidFile, 'utf8')).trim();
+    if (!/^[a-f0-9]{64}$/i.test(containerId)) throw new OwnedPostgresError('OWNED_POSTGRES_ID_INVALID', 'record_created_resource', 'startup_failed');
+    await appendEvidence(options.evidenceFile, { event: 'created', runLabel, containerId, imageReference: IMAGE_REFERENCE });
+
+    const inspectRaw = await docker(['inspect', '--format', '{{.Config.Image}}|{{.Image}}|{{json .Mounts}}', containerId], 'container_metadata');
+    const [imageReference, runtimeImageId, mountJson] = inspectRaw.split('|');
+    if (imageReference !== IMAGE_REFERENCE || !/^sha256:[a-f0-9]{64}$/i.test(runtimeImageId)) {
+      throw new OwnedPostgresError('OWNED_POSTGRES_IMAGE_IDENTITY_INVALID', 'container_metadata', 'startup_failed');
+    }
+    const mounts = JSON.parse(mountJson) as Array<{ Type: string; Destination: string }>;
+    if (mounts.some(mount => mount.Type !== 'tmpfs' || mount.Destination !== '/var/lib/postgresql/data')) {
+      throw new OwnedPostgresError('OWNED_POSTGRES_STORAGE_NOT_ISOLATED', 'container_metadata', 'startup_failed');
+    }
+
+    const repoDigestsRaw = await docker(['image', 'inspect', '--format', '{{json .RepoDigests}}', IMAGE_REFERENCE], 'image_metadata');
+    const repoDigests = JSON.parse(repoDigestsRaw) as string[] | null;
+    const repoDigest = repoDigests?.find(value => value.startsWith('postgres@sha256:'));
+    if (!repoDigest || !/^postgres@sha256:[a-f0-9]{64}$/i.test(repoDigest)) {
+      throw new OwnedPostgresError('OWNED_POSTGRES_REPO_DIGEST_MISSING', 'image_metadata', 'image_unavailable');
+    }
+    await appendEvidence(options.evidenceFile, { event: 'image_observed', runLabel, containerId, imageReference, repoDigest, runtimeImageId });
+
+    const readyBy = Date.now() + START_TIMEOUT_MS;
+    while (Date.now() < readyBy) {
+      try {
+        await docker(['exec', containerId, 'pg_isready', '-U', 'postgres', '-d', 'postgres'], 'readiness_check', 5_000);
+        break;
+      } catch {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    if (Date.now() >= readyBy) throw new OwnedPostgresError('OWNED_POSTGRES_READINESS_TIMEOUT', 'readiness', 'readiness_timeout');
+
+    const portText = await docker(['port', containerId, '5432/tcp'], 'port_discovery');
+    const portMatch = /^127\.0\.0\.1:(\d+)$/.exec(portText);
+    if (!portMatch) throw new OwnedPostgresError('OWNED_POSTGRES_PORT_INVALID', 'port_discovery', 'startup_failed');
+    const hostPort = Number(portMatch[1]);
+    pool = new pg.Pool({ connectionString: `postgres://postgres@127.0.0.1:${hostPort}/postgres`, max: 8, connectionTimeoutMillis: 3_000 });
+    try {
+      await pool.query('SELECT 1');
+    } catch {
+      throw new OwnedPostgresError('OWNED_POSTGRES_POOL_UNAVAILABLE', 'pool_check', 'pool_unavailable');
+    }
+
+    const ownedPool = pool;
+    return {
+      pool: ownedPool,
+      runLabel,
+      containerId,
+      imageReference,
+      repoDigest,
+      runtimeImageId,
+      hostPort,
+      async close() {
+        await ownedPool.end();
+        const confirmed = await inspectOwnedContainer(containerId!, runLabel);
+        if (!confirmed) throw new OwnedPostgresError('OWNED_POSTGRES_OWNERSHIP_UNCONFIRMED', 'cleanup', 'startup_failed');
+        await docker(['rm', '--force', containerId!], 'owned_container_removal');
+        const remaining = await docker(['ps', '--all', '--quiet', '--no-trunc', '--filter', `id=${containerId}`], 'cleanup_verification');
+        if (remaining) throw new OwnedPostgresError('OWNED_POSTGRES_CLEANUP_INCOMPLETE', 'cleanup_verification', 'startup_failed');
+        await appendEvidence(options.evidenceFile, { event: 'removed', runLabel, containerId: containerId!, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+        await rm(tempDirectory, { recursive: true, force: true });
+      },
+    };
+  } catch (error) {
+    if (pool) await pool.end().catch(() => undefined);
+    if (containerId && await inspectOwnedContainer(containerId, runLabel)) {
+      await docker(['rm', '--force', containerId], 'failed_start_cleanup').catch(() => undefined);
+      await appendEvidence(options.evidenceFile, { event: 'removed_after_start_failure', runLabel, containerId, ownershipConfirmed: true }).catch(() => undefined);
+    }
+    await rm(tempDirectory, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+}
