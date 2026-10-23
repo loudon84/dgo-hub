@@ -175,7 +175,7 @@ describe('evidence release gate', () => {
     expect(result.issues.some(issue => issue.includes('symlink evidence path rejected'))).toBe(true);
   });
 
-  it('rejects Golden Consumer artifact path aliases to the same underlying file', async () => {
+  it('rejects Golden Consumer separator aliases to the same underlying file', async () => {
     const run = await runDirectory();
     await createSyntheticFixture(run, true);
     const manifestPath = join(run, 'golden-consumer', 'manifest.json');
@@ -184,11 +184,35 @@ describe('evidence release gate', () => {
     const trace = await readFile(join(run, tracePath));
     const traceDigest = `sha256:${createHash('sha256').update(trace).digest('hex')}`;
     const backslashAlias = 'golden-consumer\\calls\\trace-0.json';
-    const caseAlias = 'GOLDEN-CONSUMER/CALLS/TRACE-0.JSON';
+    const answerPath = 'golden-consumer/calls/answer-0.json';
+    const answer = await readFile(join(run, answerPath));
     const call = manifest.calls[0];
     call.oracle = { path: tracePath, sha256: traceDigest };
     call.tool_trace = { path: backslashAlias, sha256: traceDigest };
-    call.final_answer = { path: caseAlias, sha256: traceDigest };
+    call.final_answer = { path: answerPath, sha256: `sha256:${createHash('sha256').update(answer).digest('hex')}` };
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await addDigestEntries(run, [call.oracle, call.tool_trace, call.final_answer]);
+    await refreshDigests(run);
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues.some(issue => issue.includes('Oracle, trace, and answer files must be distinct'))).toBe(true);
+  });
+
+  it.skipIf(process.platform !== 'win32')('rejects Golden Consumer case aliases to the same underlying file on Windows', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const manifestPath = join(run, 'golden-consumer', 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, any>;
+    const tracePath = 'golden-consumer/calls/trace-0.json';
+    const trace = await readFile(join(run, tracePath));
+    const traceDigest = `sha256:${createHash('sha256').update(trace).digest('hex')}`;
+    const caseAlias = 'GOLDEN-CONSUMER/CALLS/TRACE-0.JSON';
+    const answerPath = 'golden-consumer/calls/answer-0.json';
+    const answer = await readFile(join(run, answerPath));
+    const call = manifest.calls[0];
+    call.oracle = { path: tracePath, sha256: traceDigest };
+    call.tool_trace = { path: caseAlias, sha256: traceDigest };
+    call.final_answer = { path: answerPath, sha256: `sha256:${createHash('sha256').update(answer).digest('hex')}` };
     await writeFile(manifestPath, JSON.stringify(manifest));
     await addDigestEntries(run, [call.oracle, call.tool_trace, call.final_answer]);
     await refreshDigests(run);
@@ -376,7 +400,8 @@ async function createSyntheticFixture(run: string, complete = false): Promise<vo
 async function refreshDigests(run: string): Promise<void> {
   const raw = JSON.parse(await readFile(join(run, 'file-digests.json'), 'utf8')) as Record<string, string>;
   for (const path of Object.keys(raw)) {
-    const bytes = await readFile(join(run, path));
+    const lookupPath = path.replaceAll('\\', '/').split('/');
+    const bytes = await readFile(join(run, ...lookupPath));
     raw[path] = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
   }
   await writeFile(join(run, 'file-digests.json'), JSON.stringify(raw));
