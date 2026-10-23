@@ -1,6 +1,6 @@
 # Alpha.1 execution status
 
-Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. Current execution: M0 Task1 local implementation is complete and awaiting GPT-6.1 Sol review. Task0 I1/I2 corrections are included in this Task1 work and await that same review before the Task0 gate can close. This status is local engineering progress, not product release.
+Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1 have passed local GPT-6.1 Sol Spec and Quality review at `cd5315439c404e3ab1e88635ff4d28bc0a29cab8`. Task1 fix round1 closed the remaining migration and pagination findings. Next: Task2 OIDC/current-user APIs, then Task3 MCP isolation. This status is local engineering progress, not product release.
 
 ## W0 disposition
 
@@ -8,14 +8,14 @@ Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. Current executio
 |---|---|---|
 | Tasks0–4 | implemented; individual spec/quality reviews approved | NOT_RUN/BLOCKED |
 | Final fix wave | local Windows85, Linux31+1skip; I1/I2/I4/M1/M2 addressed | NOT_RUN/BLOCKED |
-| W0-R1 | Important trim-normalization bypass; Task0 correction independently confirmed ADDRESSED by Sol | ADDRESSED |
+| W0-R1 | Important trim-normalization bypass; Task0 correction independently confirmed ADDRESSED by Sol | no product claim |
 | W0-R2 | evidence-scope wording corrected; compiled anchor uses review memory probe evidence | no product claim |
 
-See [W0 handoff](w0-closure.md), [scoped review](reviews/w0-final-fix-review.md), [final fix report](w0-final-fix-report.md), and [retained logs](w0-final-fix-evidence/). W0 is not described as all-approved while R1 remains open.
+See [W0 handoff](w0-closure.md), [scoped review](reviews/w0-final-fix-review.md), [final fix report](w0-final-fix-report.md), and [retained logs](w0-final-fix-evidence/). The carried W0-R1 engineering finding is now closed through the Task0 correction and independent Sol review.
 
 ## M0 local implementation
 
-Six detailed tasks prepared: prerequisite/versions migration runner; identity and credential storage; OIDC/current-user APIs; strict MCP/source boundaries; independent deployment and rejection probes; evidence/M1 handoff. [Published plan](../../plans/2026-10-23-alpha1-m0-identity-isolation-implementation-plan.md) governs. Task1 implementation and local verification are recorded in [Task1 report](m0-task-1-report.md); independent Sol review is pending. Task0 I1/I2 are corrected by commit `2549a13cb48c815cd5553c23a015e0946d561407` and remain open until the combined review. Task2/3 have not started. No M0 behavior is called verified merely because its plan exists.
+Six detailed tasks prepared: prerequisite/versions migration runner; identity and credential storage; OIDC/current-user APIs; strict MCP/source boundaries; independent deployment and rejection probes; evidence/M1 handoff. [Published plan](../../plans/2026-10-23-alpha1-m0-identity-isolation-implementation-plan.md) governs. [Task1 report](m0-task-1-report.md) retains the initial149-test run and fix-round54-test run with typecheck/build exits. The [initial Sol review](reviews/m0-task-1-review.md) found migration E-string and timestamp-pagination defects; the [scoped re-review](reviews/m0-task-1-rereview-1.md) confirmed both addressed, with I2 cleanup also addressed. Task2/3 are next. No M0 behavior is called verified merely because its plan exists.
 
 ## Product gate
 

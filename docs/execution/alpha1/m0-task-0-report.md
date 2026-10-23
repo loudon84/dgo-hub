@@ -61,3 +61,7 @@ GPT-6.1 Sol confirmed W0-R1 as ADDRESSED. Its Task0 review also identified two i
 ## Limits
 
 Verification used only task-owned local PostgreSQL databases and synthetic fixtures. No existing hub database/container/volume was inspected for migration or modified. This proves runner behavior against the pinned local PostgreSQL image; it does not establish production database compatibility, site identity readiness, or PASS for any product acceptance ID. Independent GPT-6.1 Sol review remains the next gate.
+
+## 后续独立 review 关闭记录
+
+Task0初审发现的I1/I2由Task1承接修正，I1续行边界在 `a15dce871dd7017385e10f8b6dfc3ce18e3c2b50` 最终修复；GPT-6.1 Sol在 `cd5315439c404e3ab1e88635ff4d28bc0a29cab8` 确认I1/I2均ADDRESSED。见[原始初审](reviews/m0-task-0-review.md)与[Task1复审](reviews/m0-task-1-rereview-1.md)。这是本地工程审查关闭，不修改原106项测试的执行版本，也不构成现场产品验收。

@@ -1,6 +1,6 @@
 # M0 Task 1 — 身份持久合同与凭据生命周期
 
-**状态：** 本地实现与验证完成，等待 GPT-6.1 Sol 独立 review。Task2 OIDC 和 Task3 MCP 未开始。
+**状态：** 本地实现与验证完成；一轮修复后 GPT-6.1 Sol Spec、Quality review 均 Approved，审查 HEAD 为 `cd5315439c404e3ab1e88635ff4d28bc0a29cab8`。下一步 Task2 OIDC、Task3 MCP。
 
 **分支 / dispatch base：** `feat/alpha1-implementation` / `b2f31bb683ef72a0ff3fda0248c5cb7c8b684a02`
 
@@ -141,4 +141,8 @@ The original Task1 evidence directory was restored and left unchanged; all fix-r
 
 ## 当前边界
 
-这项工作只完成身份持久层和凭据生命周期，没有实现 OIDC HTTP/JWKS、MCP 传输层、Hasura JWT 实际签发、现场 deployment 或产品验收。W0-R1 已由 Sol 确认 ADDRESSED；Task0 I1/I2 修正随 Task1 等待 Sol review 确认关闭。M0–M6 的正式产品接受仍 BLOCKED/NOT_RUN，48项 A/N/FI 仍 NOT_RUN。
+这项工作只完成身份持久层和凭据生命周期，没有实现 OIDC HTTP/JWKS、MCP 传输层、Hasura JWT 实际签发、现场 deployment 或产品验收。W0-R1、Task0 I1/I2 与 Task1 分页缺陷均已由 Sol 确认 ADDRESSED。M0–M6 的正式产品接受仍 BLOCKED/NOT_RUN，48项 A/N/FI 仍 NOT_RUN。
+
+## 独立 review 归档
+
+[Task0 初审](reviews/m0-task-0-review.md)、[Task1 初审](reviews/m0-task-1-review.md)保留原始 Needs fixes 结论；[Task1 第一轮复审](reviews/m0-task-1-rereview-1.md)确认两项阻塞已修复、无新增 Critical/Important。初始149项全量测试与修复轮54项定向测试分别对应报告中的源版本，未把旧全量结果移作新HEAD的执行记录。此归档为控制会话文档更新，不修改产品代码或重复执行测试。

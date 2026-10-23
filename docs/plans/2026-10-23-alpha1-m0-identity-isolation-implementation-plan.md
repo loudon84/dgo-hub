@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** Task1本地实现和验证完成，等待GPT-6.1 Sol独立review。W0-R1已由Task0修正并经Sol确认ADDRESSED；Task0 review发现的M0-T0-I1/I2由基础提交 `2549a13cb48c815cd5553c23a015e0946d561407` 修正，Task0门禁等待本次整体review确认。Task1实现提交与验证证据见[Task1报告](../execution/alpha1/m0-task-1-report.md)。Task2 OIDC和Task3 MCP未开始。Hermes v0.22.1为用户报告值，远端握手/构建未观察。
+**状态:** Task0/1本地实现及GPT-6.1 Sol Spec、Quality review已通过，审查HEAD为 `cd5315439c404e3ab1e88635ff4d28bc0a29cab8`。W0-R1及Task0 I1/I2均已确认ADDRESSED，Task1分页精度缺陷经一轮修复和复审关闭。见[Task1报告](../execution/alpha1/m0-task-1-report.md)与[复审](../execution/alpha1/reviews/m0-task-1-rereview-1.md)。下一步Task2 OIDC、Task3 MCP。正式现场验收仍BLOCKED；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
 
 ## Global Constraints
 
@@ -54,9 +54,9 @@
 
 - [x] RED：空库/重复、两个并发runner、失败002、checksum改变/本地已应用文件缺失/版本重名缺序号、legacy默认拒绝与local_lab显式基线、导入无副作用。
 - [x] GREEN：UTF8 LF规范化checksum；001起三位连续版本；单连接session advisory锁；每SQL和ledger同事务；不修改001。历史库默认LEGACY_BASELINE_REQUIRED，仅local_lab显式adoptLegacy001允许受控001重放；site禁止。
-- [x] 真实独立PG focused、typecheck/test/build；记录资源边界和输出；实现已提交；Sol review 随Task1整体review待执行。
+- [x] 真实独立PG focused、typecheck/test/build；记录资源边界和输出；实现已提交；Sol已在Task1复审确认I1/I2关闭。
 
-**Review follow-up：** Task0 review发现 I1 顶层事务逃逸与 I2 fixture 清理证据不足。核心修复已在 Task1 真实PG前以 `2549a13` 独立提交；受支持合同要求迁移运行期间 `standard_conforming_strings=on`，runner 检查连接会话并拒绝直接顶层 `SET`/`RESET`、`RESET ALL` 和 `set_config` 调用。扫描只覆盖 SQL 文件边界，不是任意恶意SQL/routine副作用 sandbox。I2 按 label 与完整 ID 验证归属，rm 后只有能确认资源不存在才标 removed；daemon 失败保留 `cleanup_unconfirmed` 和 cidfile locator。补充回归在 `98b726b`，两项等本任务Sol整体review确认后关闭Task0 review gate。
+**Review follow-up：** Task0 review发现 I1 顶层事务逃逸与 I2 fixture 清理证据不足。核心修复在 Task1 真实PG前以 `2549a13` 独立提交，`98b726b`补充词法模式与清理歧义处理；Task1初审又确认E字符串续行仍可逃逸，由 `a15dce8`修复并加真实PG回归。受支持合同要求迁移运行期间 `standard_conforming_strings=on`，拒绝事务控制、模式切换和明确不支持的续行形式；不是任意恶意SQL/routine副作用 sandbox。I2按完整ID和两项label核验，只在确认不存在后记录removed，无法确认时保留locator。Sol复审已确认I1/I2均ADDRESSED，关闭本地工程review gate。
 
 ## Task 1：身份持久合同与凭据生命周期
 
@@ -66,7 +66,7 @@
 
 - [x] RED：32bytes随机载荷/摘要非明文、默认/最大TTL、同key重试无secret/异内容409/并发单凭据、本人分页无secret/跨租户不可见、撤销与epoch同事务/重复幂等、过期/停用/无业务角色拒绝、来源个人token互拒。
 - [x] GREEN：按下方精确合同建表、服务和安全回执；不自动注册/激活/授角色；来源注册只接部署提供secret与secret_ref，不开放匿名API。
-- [x] 真实独立PG focused、typecheck/test/build、实现与文档精确提交 → Sol review（待独立review）。
+- [x] 真实独立PG focused、typecheck/test/build、实现与文档精确提交；一轮修复后Sol Spec/Quality review均Approved。
 
 ## Task 2：可信 OIDC 与本人 HTTP API
 
