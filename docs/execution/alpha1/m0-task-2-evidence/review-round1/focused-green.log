@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/identity-http.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  22:17:16
+   Duration  3.62s (transform 124ms, setup 0ms, import 314ms, tests 3.12s, environment 0ms)
+

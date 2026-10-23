@@ -1,0 +1,18 @@
+[
+  {
+    "file": "integration-service/app.ts",
+    "sha256": "b4aac33391f2b70cd5238c6d9cfe856b6c1e3047d3581cde479999db17a478b5"
+  },
+  {
+    "file": "integration-service/ingestion-api/identity-routes.ts",
+    "sha256": "ac78f1b539cbb33d0fd812ffcd5399ca0aceef225cc26bcb46a87a8f0407a0c3"
+  },
+  {
+    "file": "integration-service/ingestion-api/logging.ts",
+    "sha256": "f6148bb2faa7ffb04d1fc6d3b8cc170934fc1433342c2f0fb1f235b8ce42531f"
+  },
+  {
+    "file": "integration-service/acceptance-tests/identity-http.test.ts",
+    "sha256": "e39e5a0356d3144065c4bf917e221d282e151eec953365a6a84c56e77264807d"
+  }
+]

@@ -1,0 +1,13 @@
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/identity-http.test.ts
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/identity-http.test.ts (14 tests | 1 failed)
+     × uses one trusted request ID in envelopes and logs while excluding rejected input and client headers
+
+FAIL: The regression observed the rejected query sentinel in Fastify's incoming-request log (`req.url`); request IDs also differed from the response envelope before the fix. The sentinel value and captured request payloads were removed from this retained log.
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 passed (14)
+TEST_EXIT=1
