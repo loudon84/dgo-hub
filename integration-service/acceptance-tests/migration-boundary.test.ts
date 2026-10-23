@@ -25,6 +25,9 @@ afterEach(async () => {
 });
 
 describe('migration transaction boundary', () => {
+  const continuedEString = (control: 'COMMIT' | 'ROLLBACK', table: string) =>
+    `CREATE TABLE control.${table}(id integer); SELECT E'x'\n'\\'; SELECT 1; ' ; ${control}; SELECT 1 / 0; SELECT 'x';`;
+
   it.each([
     'CREATE TABLE control.escape_a(id integer); COMMIT; SELECT 1 / 0;',
     'CREATE TABLE control.escape_b(id integer); ROLLBACK; SELECT 1 / 0;',
@@ -36,6 +39,28 @@ describe('migration transaction boundary', () => {
     await expect(runMigrations(pool, { directory: await migrationDirectory(sql), environmentKind: 'local_lab' }))
       .rejects.toMatchObject({ code: 'MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', version: '002', migrationName: 'boundary' });
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  it.each(['COMMIT', 'ROLLBACK'] as const)(
+    'rejects transaction control after a newline-continued E string before connecting (%s)', async control => {
+      const connect = vi.fn().mockRejectedValue(new Error('scanner did not reject the input'));
+      const pool = { connect } as unknown as pg.Pool;
+      await expect(runMigrations(pool, {
+        directory: await migrationDirectory(continuedEString(control, `review_e_${control.toLowerCase()}`)),
+        environmentKind: 'local_lab',
+      })).rejects.toMatchObject({ code: 'MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', version: '002', migrationName: 'boundary' });
+      expect(connect).not.toHaveBeenCalled();
+    },
+  );
+
+  it('supports legitimate newline-continued E string literals', async () => {
+    const connect = vi.fn().mockRejectedValue(new Error('not connected in preflight test'));
+    const pool = { connect } as unknown as pg.Pool;
+    await expect(runMigrations(pool, {
+      directory: await migrationDirectory("SELECT E'first'\n'COMMIT second'; SELECT 1;"),
+      environmentKind: 'local_lab',
+    })).rejects.toMatchObject({ code: 'MIGRATION_CONNECTION_FAILED' });
+    expect(connect).toHaveBeenCalledTimes(1);
   });
 
   it.each([

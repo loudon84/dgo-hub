@@ -8,9 +8,10 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
-const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/', import.meta.url));
+const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/round1/', import.meta.url));
 const evidenceFile = join(evidenceDirectory, 'foundation-postgres-lifecycle.jsonl');
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
+const source002 = fileURLToPath(new URL('../migrations/002_identity_auth.sql', import.meta.url));
 let postgres: OwnedPostgres;
 let runMigrations: (pool: pg.Pool, options: { directory: string; environmentKind: 'local_lab' | 'site'; adoptLegacy001?: boolean }) => Promise<{ applied: string[]; skipped: string[] }>;
 let migrationDirectories: string[] = [];
@@ -157,6 +158,32 @@ describe('versioned migration runner', () => {
     expect(marker.rows[0].name).toBe('control.retry_marker');
     expect(await ledgerState()).toEqual({ exists: true, count: 2 });
   });
+
+  it.each(['COMMIT', 'ROLLBACK'] as const)(
+    'rejects a newline-continued E-string %s before any migration DDL or ledger write', async control => {
+      const run = await migrationRunner();
+      const directory = await createMigrationDirectory();
+      await copyFile(source002, join(directory, '002_identity_auth.sql'));
+      const sql = `CREATE TABLE control.review_e_${control.toLowerCase()}(id integer); SELECT E'x'\n'\\'; SELECT 1; ' ; ${control}; SELECT 1 / 0; SELECT 'x';`;
+      await writeFile(join(directory, '003_e_continuation.sql'), sql);
+
+      let runError: unknown;
+      try { await run(postgres.pool, { directory, environmentKind: 'local_lab' }); } catch (error) { runError = error; }
+      const escapedTable = await postgres.pool.query<{ name: string | null }>(
+        `SELECT to_regclass('control.review_e_${control.toLowerCase()}')::text AS name`,
+      );
+      const ledger = await ledgerState();
+      expect({
+        error: (runError as { code?: string } | undefined)?.code,
+        escapedTable: escapedTable.rows[0].name,
+        ledger,
+      }).toEqual({
+        error: 'MIGRATION_TRANSACTION_CONTROL_FORBIDDEN',
+        escapedTable: null,
+        ledger: { exists: false, count: 0 },
+      });
+    },
+  );
 
   it('rejects an applied migration whose checksum changed without adding history', async () => {
     const run = await migrationRunner();

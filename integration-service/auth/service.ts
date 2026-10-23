@@ -423,22 +423,30 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
       assertCallerMatches(principal, current);
       const limit = page.limit ?? 20;
       if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new AuthError('AUTH_INPUT_INVALID');
-      let anchor: { created_at: Date | string; id: string } | undefined;
+      let anchorId: string | undefined;
       if (page.cursor !== undefined) {
         if (typeof page.cursor !== 'string' || !UUID.test(page.cursor)) throw new AuthError('AUTH_INPUT_INVALID');
-        const found = await authQuery(() => pool.query<{ created_at: Date | string; id: string }>(
-          `SELECT created_at,id FROM control.agent_credential WHERE id=$1 AND tenant_key=$2 AND user_id=$3`,
+        const found = await authQuery(() => pool.query<{ id: string }>(
+          `SELECT id FROM control.agent_credential WHERE id=$1 AND tenant_key=$2 AND user_id=$3`,
           [page.cursor, current.tenantId, current.userId],
         ));
-        anchor = found.rows[0];
-        if (!anchor) throw new AuthError('AUTH_INPUT_INVALID');
+        anchorId = found.rows[0]?.id;
+        if (!anchorId) throw new AuthError('AUTH_INPUT_INVALID');
       }
       const listed = await authQuery(() => pool.query<CredentialRow>(
-        `SELECT id,purpose,created_at,expires_at,revoked_at FROM control.agent_credential
-          WHERE tenant_key=$1 AND user_id=$2
-            AND ($3::timestamptz IS NULL OR (created_at,id)<($3::timestamptz,$4::uuid))
-          ORDER BY created_at DESC,id DESC LIMIT $5`,
-        [current.tenantId, current.userId, anchor?.created_at ?? null, anchor?.id ?? null, limit + 1],
+        `WITH anchor AS (
+           SELECT created_at,id FROM control.agent_credential
+            WHERE id=$3::uuid AND tenant_key=$1 AND user_id=$2
+         )
+         SELECT credential.id,credential.purpose,credential.created_at,credential.expires_at,credential.revoked_at
+           FROM control.agent_credential credential
+          WHERE credential.tenant_key=$1 AND credential.user_id=$2
+            AND ($3::uuid IS NULL OR EXISTS (
+              SELECT 1 FROM anchor
+               WHERE (credential.created_at,credential.id)<(anchor.created_at,anchor.id)
+            ))
+          ORDER BY credential.created_at DESC,credential.id DESC LIMIT $4`,
+        [current.tenantId, current.userId, anchorId ?? null, limit + 1],
       ));
       const hasMore = listed.rows.length > limit;
       const rows = hasMore ? listed.rows.slice(0, limit) : listed.rows;

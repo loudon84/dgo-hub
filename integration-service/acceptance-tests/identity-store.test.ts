@@ -11,7 +11,7 @@ import type { AuthScope } from '../auth/types.js';
 import { runMigrations } from '../migrations/runner.js';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
-const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/', import.meta.url));
+const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/round1/', import.meta.url));
 const evidenceFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
 const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 let fixture: OwnedPostgres;
@@ -141,6 +141,33 @@ describe('Task1 identity and credential persistence', () => {
     const all = await auth.listAgentCredentials(alice, { limit: 100 });
     expect(all.items).toHaveLength(3);
     expect(JSON.stringify(all)).not.toMatch(/secret|digest/i);
+  });
+
+  it('traverses every owned credential across submillisecond timestamp anchors', async () => {
+    const principal = await provisionUser();
+    const credentials: string[] = [];
+    for (const [index, timestamp] of [
+      '2026-10-23T00:00:00.000900Z',
+      '2026-10-23T00:00:00.000800Z',
+      '2026-10-23T00:00:00.000700Z',
+    ].entries()) {
+      const created = await auth.createAgentCredential(principal, { purpose: `microsecond ${index}` }, `microsecond-${index}`);
+      credentials.push(created.credential_id);
+      await fixture.pool.query('UPDATE control.agent_credential SET created_at=$2::timestamptz WHERE id=$1', [created.credential_id, timestamp]);
+    }
+
+    const all = await auth.listAgentCredentials(principal, { limit: 100 });
+    expect(all.items.map(item => item.credential_id)).toEqual(credentials);
+
+    const traversed: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await auth.listAgentCredentials(principal, { limit: 1, ...(cursor ? { cursor } : {}) });
+      traversed.push(...page.items.map(item => item.credential_id));
+      cursor = page.next_cursor ?? undefined;
+    } while (cursor);
+
+    expect(traversed).toEqual(credentials);
   });
 
   it('revokes atomically and idempotently, invalidates in-flight snapshots, and allows fresh other credentials', async () => {

@@ -48,11 +48,58 @@ function dollarDelimiterAt(sql: string, index: number): string | undefined {
   return match?.[0];
 }
 
-function scanMigrationSql(sql: string): { transactionControl: boolean; stringModeChange: boolean } {
+function scanQuotedString(sql: string, quoteIndex: number, escapeBackslashes: boolean): { end: number; value: string } {
+  const start = quoteIndex + 1;
+  let index = start;
+  while (index < sql.length) {
+    if (escapeBackslashes && sql[index] === '\\') { index += 2; continue; }
+    if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
+    if (sql[index] === "'") return { end: index + 1, value: sql.slice(start, index) };
+    index += 1;
+  }
+  return { end: sql.length, value: sql.slice(start) };
+}
+
+function continuedStringAfterNewline(sql: string, from: number): { quoteIndex: number } | undefined {
+  let index = from;
+  let sawNewline = false;
+  while (index < sql.length) {
+    if (/\s/.test(sql[index])) {
+      if (sql[index] === '\n' || sql[index] === '\r') sawNewline = true;
+      index += 1;
+      continue;
+    }
+    if (sql[index] === '-' && sql[index + 1] === '-') {
+      index += 2;
+      while (index < sql.length && sql[index] !== '\n' && sql[index] !== '\r') index += 1;
+      if (index < sql.length) sawNewline = true;
+      continue;
+    }
+    if (sql[index] === '/' && sql[index + 1] === '*') {
+      index += 2;
+      let depth = 1;
+      while (index < sql.length && depth > 0) {
+        if (sql[index] === '\n' || sql[index] === '\r') sawNewline = true;
+        if (sql[index] === '/' && sql[index + 1] === '*') { depth += 1; index += 2; }
+        else if (sql[index] === '*' && sql[index + 1] === '/') { depth -= 1; index += 2; }
+        else index += 1;
+      }
+      continue;
+    }
+    break;
+  }
+  if (!sawNewline) return undefined;
+  if (sql[index] === "'") return { quoteIndex: index };
+  if ((sql[index] === 'E' || sql[index] === 'e') && sql[index + 1] === "'") return { quoteIndex: index + 1 };
+  return undefined;
+}
+
+function scanMigrationSql(sql: string): { transactionControl: boolean; stringModeChange: boolean; unsupportedLexing: boolean } {
   const statements: Array<{ words: string[]; values: string[] }> = [];
   let words: string[] = [];
   let values: string[] = [];
   let index = 0;
+  let unsupportedLexing = false;
   const finishStatement = () => {
     if (words.length || values.length) statements.push({ words, values });
     words = [];
@@ -79,24 +126,26 @@ function scanMigrationSql(sql: string): { transactionControl: boolean; stringMod
       continue;
     }
     if ((char === 'E' || char === 'e') && next === "'" && (index === 0 || !isWordPart(sql[index - 1]))) {
-      index += 2;
-      const start = index;
-      while (index < sql.length) {
-        if (sql[index] === '\\') { index += 2; continue; }
-        if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
-        if (sql[index] === "'") { values.push(sql.slice(start, index).toUpperCase()); index += 1; break; }
-        index += 1;
+      let literal = scanQuotedString(sql, index + 1, true);
+      values.push(literal.value.toUpperCase());
+      index = literal.end;
+      while (true) {
+        const continuation = continuedStringAfterNewline(sql, index);
+        if (!continuation) break;
+        literal = scanQuotedString(sql, continuation.quoteIndex, true);
+        values.push(literal.value.toUpperCase());
+        // PostgreSQL's escape-string continuation can carry escape semantics into the
+        // adjacent literal. Reject this form explicitly instead of guessing at quote
+        // boundaries and risking a hidden top-level transaction control statement.
+        if (literal.value.includes('\\')) unsupportedLexing = true;
+        index = literal.end;
       }
       continue;
     }
     if (char === "'") {
-      index += 1;
-      const start = index;
-      while (index < sql.length) {
-        if (sql[index] === "'" && sql[index + 1] === "'") { index += 2; continue; }
-        if (sql[index] === "'") { values.push(sql.slice(start, index).toUpperCase()); index += 1; break; }
-        index += 1;
-      }
+      const literal = scanQuotedString(sql, index, false);
+      values.push(literal.value.toUpperCase());
+      index = literal.end;
       continue;
     }
     if (char === '"') {
@@ -142,7 +191,7 @@ function scanMigrationSql(sql: string): { transactionControl: boolean; stringMod
     const changesStringMode = statementValues.includes('STANDARD_CONFORMING_STRINGS') && (first === 'SET' || first === 'RESET');
     if (changesStringMode || statementValues.includes('SET_CONFIG') || (first === 'RESET' && second === 'ALL')) stringModeChange = true;
   }
-  return { transactionControl, stringModeChange };
+  return { transactionControl, stringModeChange, unsupportedLexing };
 }
 
 function invalid(code: string, migration?: Migration): MigrationRunnerError {
@@ -196,6 +245,7 @@ async function discoverMigrations(directory: string): Promise<Migration[]> {
     const safety = scanMigrationSql(sql);
     if (safety.transactionControl) throw new MigrationRunnerError('MIGRATION_TRANSACTION_CONTROL_FORBIDDEN', item.versionText, item.name);
     if (safety.stringModeChange) throw new MigrationRunnerError('MIGRATION_SQL_MODE_UNSUPPORTED', item.versionText, item.name);
+    if (safety.unsupportedLexing) throw new MigrationRunnerError('MIGRATION_SQL_LEXING_UNSUPPORTED', item.versionText, item.name);
     migrations.push({
       ...item,
       sql,
