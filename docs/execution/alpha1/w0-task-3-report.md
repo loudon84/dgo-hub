@@ -30,3 +30,12 @@
 ## Report location
 
 The committed copy is docs/execution/alpha1/w0-task-3-report.md.
+
+## Review fix round 1 (I1–I3)
+
+- Review base: `6c41a5f46ea46158194c9b798200f099a33f74ed`. Fix commit: `29b81b9a8512c9c90d80e225972432d915ec8fbf`.
+- RED: `npm test -- acceptance-tests/evidence/gate.test.ts -t 'unique fixture|empty Oracle assertion|falsey Oracle|expected and actual Oracle references|path aliases'` exited 1. It reproduced duplicate CRM replacing orders while returning PASS; referenced `null`, empty string/object/array returning PASS; and Golden plus result Oracle slash/backslash/case aliases referring to the same file without an independence failure. Positive `false` and `0` assertions from distinct files passed before the fix.
+- GREEN: `npm test -- acceptance-tests/evidence/gate.test.ts` exited 0 (22 tests passed). `npm run typecheck` exited 0. `npm run build` exited 0.
+- Fixture validation now requires unique source IDs and exact equality with approved source-contract IDs, with one artifact reference per source (the artifact content may still contain multiple batches). Oracle references are safely loaded before concrete-value validation and assertion comparison; false and zero remain valid. Golden artifact and expected/actual reference independence uses filesystem identity (device/inode with canonical path fallback), so slash, backslash, and Windows case aliases cannot stand in for independent files; different files with equal assertion values remain valid.
+- No full recorder was repeated. The preserved full run remains tied to source SHA `f9abd03f968590ee8fac50ad7916b49453fbb735`; its typecheck/test/build result is unchanged historical evidence, not verification of this fix SHA. No production acceptance result changed.
+- Final committed report location: `docs/execution/alpha1/w0-task-3-report.md`; the ignored `.superpowers/sdd/alpha1/task-3-report.md` scratch copy remains local.
