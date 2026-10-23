@@ -1,6 +1,6 @@
 # M0 Task 3 — Strict MCP and source boundary
 
-**Status:** Local implementation and engineering verification complete. Independent GPT-6.1 Sol review is pending at product commit `bc40035b4398e68d9514a498b3c0fb3c842a4304`.
+**Status:** Task3 implementation/fix1 local checks complete; independent Sol review leaves I1 open (deep raw-argument digest can bypass audit/safe errors). I2–I5 are addressed. I1 is the first blocking prerequisite of Task4 under the user instruction to continue the next implementation; no Task3 approval is claimed. See the retained initial/scoped reviews in docs/execution/alpha1/reviews/.
 
 ## Provenance
 

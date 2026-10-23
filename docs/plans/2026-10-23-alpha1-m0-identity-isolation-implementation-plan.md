@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** Task0/1/2本地实现及GPT-6.1 Sol Spec、Quality review已通过。Task2审查HEAD为 `7ed0fe59d717b3582141b45aeff2dce7d4074bda`，请求ID关联与日志输入问题经一轮修复关闭；见[Task2报告](../execution/alpha1/m0-task-2-report.md)与[复审](../execution/alpha1/reviews/m0-task-2-rereview-1.md)。W0-R1、Task0 I1/I2与Task1分页问题已关闭。下一步Task3 MCP。正式现场验收仍BLOCKED；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
+**状态:** Task0/1/2本地实现与Sol Spec/Quality已通过。Task3修复源码a7ce7d4的20项定向测试/typecheck/build通过；Sol复审关闭I2–I5，深层参数摘要绕过审计的I1仍未关闭。按用户“继续下一个实施”指令，Task4首先修复I1，再完成独立部署/权限/TLS探测；Task3工程gate待组合review确认。现场与远端Hermes v0.22.1仍BLOCKED/未观察。
 
 ## Global Constraints
 
@@ -90,6 +90,8 @@
 - [ ] 本地协议/受控查询边界 focused、typecheck/test/build、commit → Sol review；完整两角色GraphQL授权留M2。
 
 ## Task 4：独立 Alpha 部署与拒绝探测
+
+**首个前置项（用户继续下一实施裁定）：** 承接Task3复审I1，先修复深度嵌套参数在安全边界外计算摘要导致无审计/原始错误的问题，补充正常审计与审计失败的定向回归并独立提交。Task3未宣布Approved；Task4独立Sol审查必须明确确认I1关闭。随后修复共享fixture证据路径，按新run集中保存全部当前资源记录，保留旧证据；不重建Task3丢失记录。销售前端网络与proxy→MCP私有网络分离，验证不能绕过TLS直接连接MCP。
 
 **refs:** REQ-ARCH/AUTH/OPS。**files:** deploy/alpha1/compose.yaml、最小权限SQL/启动脚本、deploy/scripts/probe-sales-network.ps1、.env.example/README、部署测试。
 

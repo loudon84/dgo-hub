@@ -1,6 +1,6 @@
 # Alpha.1 execution status
 
-Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 have passed local GPT-6.1 Sol Spec and Quality review. Task2 final reviewed HEAD is `7ed0fe59d717b3582141b45aeff2dce7d4074bda`; its request-ID and log-input findings are closed. Next: Task3 MCP isolation. This status is local engineering progress, not product release.
+Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 passed local GPT-6.1 Sol Spec/Quality review. Task3 source a7ce7d4 passed20 focused tests/typecheck/build; Sol closed I2–I5 but I1 remains open for deeply nested argument digest/audit handling. Per user instruction to continue the next implementation, Task4 starts with that blocking correction before isolated deployment/probes. No Task3 gate approval or product release is asserted.
 
 ## W0 disposition
 
@@ -15,7 +15,7 @@ See [W0 handoff](w0-closure.md), [scoped review](reviews/w0-final-fix-review.md)
 
 ## M0 local implementation
 
-Six detailed tasks prepared: prerequisite/versions migration runner; identity and credential storage; OIDC/current-user APIs; strict MCP/source boundaries; independent deployment and rejection probes; evidence/M1 handoff. [Published plan](../../plans/2026-10-23-alpha1-m0-identity-isolation-implementation-plan.md) governs. [Task1 report](m0-task-1-report.md) and [scoped review](reviews/m0-task-1-rereview-1.md) close migration, cleanup and credential pagination findings. [Task2 report](m0-task-2-report.md) records initial168 full tests and14 fix-focused tests at their respective source versions; its [scoped review](reviews/m0-task-2-rereview-1.md) approves OIDC/current-user APIs after request-ID/logging fixes. Task3 is next. No M0 behavior is called verified merely because its plan exists.
+Six detailed tasks prepared: prerequisite/versions migration runner; identity and credential storage; OIDC/current-user APIs; strict MCP/source boundaries; independent deployment and rejection probes; evidence/M1 handoff. [Published plan](../../plans/2026-10-23-alpha1-m0-identity-isolation-implementation-plan.md) governs. [Task1 report](m0-task-1-report.md) and [scoped review](reviews/m0-task-1-rereview-1.md) close migration, cleanup and credential pagination findings. [Task2 report](m0-task-2-report.md) records initial168 full tests and14 fix-focused tests at their respective source versions; its [scoped review](reviews/m0-task-2-rereview-1.md) approves OIDC/current-user APIs after request-ID/logging fixes. [Task3 report](m0-task-3-report.md) separates the original185 full tests from20 fix-focused tests. Its [scoped review](reviews/m0-task-3-rereview-1.md) leaves I1 open; Task4 carries it as the first prerequisite, then implements isolated deployment and least privilege. No M0 behavior is called verified merely because its plan exists.
 
 ## Product gate
 
