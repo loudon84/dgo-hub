@@ -132,14 +132,43 @@ describe('strict sales MCP authentication and audit boundary', () => {
       expect(bad.status).toBe(403);
       expect(authCalls).toBe(0);
       expect(queryCalls).toBe(0);
+      const malformedBadOrigin = await fetch(url, { method: 'POST', headers: { origin: 'https://evil.example', authorization: `Bearer ${credential}`, 'content-type': 'application/json' }, body: '{' });
+      expect(malformedBadOrigin.status).toBe(403);
+      expect(await malformedBadOrigin.text()).toContain('ORIGIN_FORBIDDEN');
+      const malformedMissingAuth = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
+      expect(malformedMissingAuth.status).toBe(401);
+      expect(await malformedMissingAuth.text()).toContain('AUTH_INVALID');
+      const unsupportedMissingAuth = await fetch(url, { method: 'POST', headers: { authorization: '', 'content-type': 'text/plain' }, body: 'not-json' });
+      expect(unsupportedMissingAuth.status).toBe(401);
+      const oversizedMissingAuth = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: ' '.repeat(1024 * 1024 + 1) });
+      expect(oversizedMissingAuth.status).toBe(401);
       const badGet = await fetch(url, { method: 'GET', headers: { origin: 'https://evil.example', authorization: `Bearer ${credential}` } });
       expect(badGet.status).toBe(403);
+      const badDelete = await fetch(url, { method: 'DELETE', headers: { origin: 'https://evil.example', authorization: `Bearer ${credential}` } });
+      expect(badDelete.status).toBe(403);
+      const badOptions = await fetch(url, { method: 'OPTIONS', headers: { origin: 'https://evil.example', authorization: `Bearer ${credential}` } });
+      expect(badOptions.status).toBe(403);
       expect(authCalls).toBe(0);
       const allowed = await fetch(url, { method: 'POST', headers: { origin: 'https://hermes.example.test', authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(rpc('initialize', 1)) });
       expect(allowed.status).toBe(200);
       const absent = await fetch(url, { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(rpc('initialize', 1)) });
       expect(absent.status).toBe(200);
+      expect(authCalls).toBe(2);
+      expect(queryCalls).toBe(0);
     } finally { await originApp.close(); }
+  });
+
+  it('formats authenticated malformed JSON as a safe correlated JSON-RPC parse error', async () => {
+    const before = queryCalls;
+    const response = await fetch(`${baseUrl}/mcp/sales`, {
+      method: 'POST', headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: '{"jsonrpc":"parser-secret-sentinel",',
+    });
+    expect(response.status).toBe(400);
+    const body = await response.json() as { jsonrpc?: string; id?: unknown; request_id?: string; error?: { code?: number; message?: string } };
+    expect(body).toMatchObject({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } });
+    expect(body.request_id).toBeTruthy();
+    expect(JSON.stringify(body)).not.toContain('parser-secret-sentinel');
+    expect(queryCalls).toBe(before);
   });
 
   it('advertises exactly five fixed tools and audits all five as not ready by default', async () => {
@@ -160,7 +189,13 @@ describe('strict sales MCP authentication and audit boundary', () => {
         expect(response.status).toBe(200);
         const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
         expect(result.result?.isError).toBe(true);
-        expect(result.result?.content?.[0]?.text).toContain('ALPHA_POLICY_NOT_READY');
+        const errorText = result.result?.content?.[0]?.text ?? '';
+        expect(errorText).toContain('ALPHA_POLICY_NOT_READY');
+        const toolError = JSON.parse(errorText) as { code?: string; request_id?: string };
+        expect(toolError.code).toBe('ALPHA_POLICY_NOT_READY');
+        expect(toolError.request_id).toBeTruthy();
+        const audit = await fixture.pool.query('SELECT outcome,error_code,request_id::text AS request_id FROM control.agent_audit WHERE request_id=$1 AND tool_name=$2', [toolError.request_id, name]);
+        expect(audit.rows).toEqual([{ outcome: 'denied', error_code: 'ALPHA_POLICY_NOT_READY', request_id: toolError.request_id }]);
       }
       expect(queryCalls).toBe(0);
       const audits = await fixture.pool.query("SELECT count(*)::int AS n FROM control.agent_audit WHERE tool_name IN ('get_sales_context','find_customers','get_customer_orders','get_order_detail','get_sales_summary') AND error_code='ALPHA_POLICY_NOT_READY'");
@@ -209,10 +244,13 @@ describe('strict sales MCP authentication and audit boundary', () => {
       const response = await pending;
       const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
       expect(result.result?.isError).toBe(true);
-      expect(result.result?.content?.[0]?.text).toContain('AUTH_CONTEXT_CHANGED');
-      expect(JSON.stringify(result)).not.toContain('must-not-escape');
+      const errorText = result.result?.content?.[0]?.text ?? '';
+      expect(errorText).toContain('AUTH_CONTEXT_CHANGED');
       credential = active.secret;
       agent = active.agent;
+      const toolError = JSON.parse(errorText) as { code?: string; request_id?: string };
+      expect(toolError.request_id).toBeTruthy();
+      expect(JSON.stringify(result)).not.toContain('must-not-escape');
       const freshApp = createApp({ queryExecutor: async () => ({ customer: [{ id: 'fresh-request-row' }] }) });
       await freshApp.listen({ host: '127.0.0.1', port: 0 });
       const freshAddress = freshApp.server.address();
@@ -251,13 +289,17 @@ describe('strict sales MCP authentication and audit boundary', () => {
       finishAudit();
       const result = await (await pending).json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
       expect(result.result?.isError).toBe(true);
-      expect(result.result?.content?.[0]?.text).toContain('AUTH_CONTEXT_CHANGED');
+      const errorText = result.result?.content?.[0]?.text ?? '';
+      expect(errorText).toContain('AUTH_CONTEXT_CHANGED');
+      const toolError = JSON.parse(errorText) as { code?: string; request_id?: string };
+      expect(toolError.request_id).toBeTruthy();
       expect(JSON.stringify(result)).not.toContain('audit-race-row');
       const auditEvents = await fixture.pool.query("SELECT request_id::text AS request_id,stage,outcome,error_code,result_count FROM control.agent_audit WHERE credential_id=$1 AND tool_name='find_customers' ORDER BY id", [active.agent.credentialId]);
       expect(auditEvents.rows).toHaveLength(2);
       expect(auditEvents.rows[0]).toMatchObject({ stage: 'audit_checkpoint', outcome: 'success', result_count: 1 });
       expect(auditEvents.rows[1]).toMatchObject({ stage: 'return_check', outcome: 'denied', error_code: 'AUTH_CONTEXT_CHANGED', result_count: null });
       expect(auditEvents.rows[1].request_id).toBe(auditEvents.rows[0].request_id);
+      expect(toolError.request_id).toBe(auditEvents.rows[1].request_id);
     } finally { finishAudit(); await queryApp.close(); }
   });
 
@@ -286,7 +328,11 @@ describe('strict sales MCP authentication and audit boundary', () => {
       finishAudit();
       const result = await (await pending).json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
       expect(result.result?.isError).toBe(true);
-      expect(result.result?.content?.[0]?.text).toContain('AUDIT_UNAVAILABLE');
+      const errorText = result.result?.content?.[0]?.text ?? '';
+      expect(errorText).toContain('AUDIT_UNAVAILABLE');
+      const toolError = JSON.parse(errorText) as { code?: string; request_id?: string };
+      expect(toolError).toMatchObject({ code: 'AUDIT_UNAVAILABLE' });
+      expect(toolError.request_id).toBeTruthy();
       expect(JSON.stringify(result)).not.toContain('final-audit-failure-row');
     } finally { finishAudit(); await queryApp.close(); }
   });
@@ -350,9 +396,40 @@ describe('strict sales MCP authentication and audit boundary', () => {
     try {
       const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
       expect(result.result?.isError).toBe(true);
-      expect(result.result?.content?.[0]?.text).toContain('AUDIT_UNAVAILABLE');
+      const text = result.result?.content?.[0]?.text ?? '';
+      expect(text).toContain('AUDIT_UNAVAILABLE');
+      const toolError = JSON.parse(text) as { code?: string; request_id?: string };
+      expect(toolError.code).toBe('AUDIT_UNAVAILABLE');
+      expect(toolError.request_id).toBeTruthy();
       expect(JSON.stringify(result)).not.toContain('audit-failure-row');
       expect(JSON.stringify(result)).not.toContain('private storage detail');
+    } finally { await queryApp.close(); }
+  });
+
+  it('returns a correlated safe query error linked to its audit and request log', async () => {
+    let output = '';
+    const stream = new Writable({ write(chunk, _encoding, callback) { output += String(chunk); callback(); } });
+    const queryApp = createApp({ logger: createHubLoggerOptions(stream), queryExecutor: async () => { throw new Error('raw-upstream-query-detail'); } });
+    await queryApp.listen({ host: '127.0.0.1', port: 0 });
+    const address = queryApp.server.address();
+    if (!address || typeof address === 'string') throw new Error('query error server failed to bind');
+    try {
+      const response = await fetch(`http://127.0.0.1:${address.port}/mcp/sales?raw-query-path-sentinel=1`, { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(rpc('tools/call', 13, { name: 'find_customers', arguments: { term: 'raw-query-argument-sentinel' } })) });
+      const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
+      expect(result.result?.isError).toBe(true);
+      const text = result.result?.content?.[0]?.text ?? '';
+      const toolError = JSON.parse(text) as { code?: string; request_id?: string };
+      expect(toolError).toMatchObject({ code: 'QUERY_FAILED' });
+      expect(toolError.request_id).toBeTruthy();
+      await new Promise(resolve => setTimeout(resolve, 10));
+      const logEvents = output.split('\n').filter(Boolean).map(line => JSON.parse(line) as { reqId?: string });
+      expect(logEvents.some(event => event.reqId === toolError.request_id)).toBe(true);
+      const audit = await fixture.pool.query('SELECT outcome,error_code,request_id::text AS request_id FROM control.agent_audit WHERE request_id=$1', [toolError.request_id]);
+      expect(audit.rows).toEqual([{ outcome: 'error', error_code: 'QUERY_FAILED', request_id: toolError.request_id }]);
+      expect(output).not.toContain(credential);
+      expect(output).not.toContain('raw-query-argument-sentinel');
+      expect(output).not.toContain('raw-query-path-sentinel');
+      expect(output).not.toContain('raw-upstream-query-detail');
     } finally { await queryApp.close(); }
   });
 
@@ -389,14 +466,69 @@ describe('strict sales MCP authentication and audit boundary', () => {
     } finally { await logApp.close(); }
   });
 
-  it('rejects forged tool identity fields and manager credentials without a department', async () => {
+  it('rejects forged tool identity fields with safe audited validation and blocks managers without a department', async () => {
+    const before = queryCalls;
     const forged = await callTool('get_sales_context', { tenantId: 'other', userId: 'root', businessRole: 'sales_manager' });
     expect(forged.status).toBe(200);
     const forgedBody = await forged.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
     expect(forgedBody.result?.isError).toBe(true);
     expect(JSON.stringify(forgedBody)).not.toContain('root');
+    const errorText = forgedBody.result?.content?.[0]?.text ?? '';
+    expect(errorText).not.toContain('Input validation error');
+    const toolError = JSON.parse(errorText) as { code?: string; request_id?: string };
+    expect(toolError.code).toBe('TOOL_INPUT_INVALID');
+    expect(toolError.request_id).toBeTruthy();
+    const audit = await fixture.pool.query("SELECT outcome,error_code,request_id::text AS request_id,result_count FROM control.agent_audit WHERE request_id=$1", [toolError.request_id]);
+    expect(audit.rows).toEqual([{ outcome: 'error', error_code: 'TOOL_INPUT_INVALID', request_id: toolError.request_id, result_count: null }]);
+    expect(queryCalls).toBe(before);
     const manager = await createUser('manager', 'sales_manager', null);
     await expect(makeCredential(manager)).rejects.toMatchObject({ code: 'AUTH_FORBIDDEN', status: 403 });
+  });
+
+  it('validates known-tool arguments inside the audited application boundary without reflecting input', async () => {
+    const before = queryCalls;
+    for (const [name, args, sentinel] of [
+      ['find_customers', { term: '', echoSecretValue: 'invalid-field-sentinel' }, 'invalid-field-sentinel'],
+      ['get_customer_orders', { customerId: 'not-a-uuid', echoSecretValue: 'bad-id-sentinel' }, 'bad-id-sentinel'],
+    ] as const) {
+      const response = await callTool(name, args);
+      const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
+      expect(result.result?.isError).toBe(true);
+      const text = result.result?.content?.[0]?.text ?? '';
+      expect(text).not.toContain(sentinel);
+      expect(text).not.toContain('Input validation error');
+      const envelope = JSON.parse(text) as { code?: string; request_id?: string };
+      expect(envelope).toMatchObject({ code: 'TOOL_INPUT_INVALID' });
+      expect(envelope.request_id).toBeTruthy();
+      const audit = await fixture.pool.query('SELECT outcome,error_code,request_id::text AS request_id,result_count FROM control.agent_audit WHERE request_id=$1', [envelope.request_id]);
+      expect(audit.rows).toEqual([{ outcome: 'error', error_code: 'TOOL_INPUT_INVALID', request_id: envelope.request_id, result_count: null }]);
+    }
+    expect(queryCalls).toBe(before);
+  });
+
+  it('returns correlated AUDIT_UNAVAILABLE when an invalid-argument audit insert fails', async () => {
+    const before = queryCalls;
+    const failedAuditPool = {
+      query: (...args: Parameters<typeof fixture.pool.query>) => {
+        if (String(args[0]).includes('INSERT INTO control.agent_audit')) throw new Error('private validation audit detail');
+        return fixture.pool.query(...args);
+      },
+    } as unknown as typeof fixture.pool;
+    const validationApp = createApp({ pool: failedAuditPool });
+    await validationApp.listen({ host: '127.0.0.1', port: 0 });
+    const address = validationApp.server.address();
+    if (!address || typeof address === 'string') throw new Error('validation audit failure server failed to bind');
+    try {
+      const response = await fetch(`http://127.0.0.1:${address.port}/mcp/sales`, { method: 'POST', headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }, body: JSON.stringify(rpc('tools/call', 12, { name: 'find_customers', arguments: { term: '' } })) });
+      const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
+      expect(result.result?.isError).toBe(true);
+      const text = result.result?.content?.[0]?.text ?? '';
+      expect(text).not.toContain('private validation audit detail');
+      const envelope = JSON.parse(text) as { code?: string; request_id?: string };
+      expect(envelope.code).toBe('AUDIT_UNAVAILABLE');
+      expect(envelope.request_id).toBeTruthy();
+      expect(queryCalls).toBe(before);
+    } finally { await validationApp.close(); }
   });
 
   it('restores the old /mcp demo route only for explicit local_lab legacy configuration', async () => {

@@ -3,6 +3,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import type { Pool } from 'pg';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { CallToolRequestSchema, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { AuthError } from '../auth/errors.js';
 import type { AgentPrincipal, AuthService } from '../auth/types.js';
 import { createHubLoggerOptions } from '../ingestion-api/logging.js';
@@ -36,18 +37,21 @@ export type McpServerOptions = Readonly<{
 type AuditOutcome = 'success' | 'denied' | 'error';
 type AuditStage = 'audit_checkpoint' | 'return_check';
 type GateRow = { state: string; epoch: string };
-type ToolError = Readonly<{ code: string; message: string }>;
+type ToolError = Readonly<{ code: string; message: string; request_id: string }>;
 class BoundaryError extends Error { constructor(readonly code: string) { super(code); } }
 
 const defaultNotReady: AlphaReadinessResolver = async () => ({
   ready: false, reason: 'ALPHA_POLICY_NOT_READY', bindingVersion: null, policyVersion: null,
 });
 
-function safeError(error: unknown): ToolError {
-  if (error instanceof AuthError) return { code: error.code, message: error.code };
-  if (error instanceof BoundaryError) return { code: error.code, message: error.code };
-  if (error instanceof Error && error.message === 'TOOL_INPUT_INVALID') return { code: 'TOOL_INPUT_INVALID', message: 'TOOL_INPUT_INVALID' };
-  return { code: 'QUERY_FAILED', message: 'QUERY_FAILED' };
+function safeError(error: unknown, requestId: string): ToolError {
+  if (error instanceof AuthError) return { code: error.code, message: error.code, request_id: requestId };
+  if (error instanceof BoundaryError) return { code: error.code, message: error.code, request_id: requestId };
+  if (error instanceof Error && error.message === 'TOOL_INPUT_INVALID') return { code: 'TOOL_INPUT_INVALID', message: 'TOOL_INPUT_INVALID', request_id: requestId };
+  return { code: 'QUERY_FAILED', message: 'QUERY_FAILED', request_id: requestId };
+}
+function toolErrorResult(code: string, requestId: string): CallToolResult {
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify({ code, message: code, request_id: requestId }) }] };
 }
 function safeArgsDigest(value: unknown): Buffer { return createHash('sha256').update(JSON.stringify(value)).digest(); }
 function resultCount(value: unknown): number {
@@ -116,9 +120,10 @@ function buildMcpServer(options: {
   queryExecutor: SalesQueryExecutor; readinessResolver: AlphaReadinessResolver; requestId: string; protocolVersion: string | null;
 }) {
   const server = new McpServer({ name: 'sales-data-mcp', version: '1.0.0' });
+  const handlers = new Map<string, (rawArgs: unknown) => Promise<CallToolResult>>();
   for (const definition of toolDefinitions) {
     const name = definition.name as SalesToolName;
-    server.registerTool(name, { description: definition.description, inputSchema: definition.inputSchema, annotations: { readOnlyHint: true } }, async (rawArgs: unknown) => {
+    const execute = async (rawArgs: unknown): Promise<CallToolResult> => {
       const startedAt = Date.now();
       const args = rawArgs as Record<string, unknown>;
       const digest = safeArgsDigest(args);
@@ -133,7 +138,7 @@ function buildMcpServer(options: {
         requireUnchangedBoundary(afterQuery, startBoundary);
         requireReadyBoundary(afterQuery);
       } catch (error) { caught = error; }
-      const failure = caught === undefined ? null : safeError(caught);
+      const failure = caught === undefined ? null : safeError(caught, options.requestId);
       caught = undefined;
       const auditRow = {
         requestId: options.requestId, principal: options.principal, name,
@@ -148,7 +153,7 @@ function buildMcpServer(options: {
       try {
         await persistAudit(options.pool, auditRow);
       } catch {
-        return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify({ code: 'AUDIT_UNAVAILABLE', message: 'AUDIT_UNAVAILABLE' }) }] };
+        return toolErrorResult('AUDIT_UNAVAILABLE', options.requestId);
       }
       // Recheck after durable audit so changes during the write discard all query data.
       try {
@@ -157,17 +162,25 @@ function buildMcpServer(options: {
         if (!failure) requireReadyBoundary(afterAudit);
       } catch (error) { caught = error; }
       if (caught !== undefined) {
-        const error = safeError(caught);
+        const error = safeError(caught, options.requestId);
         const outcome = error.code.includes('NOT_READY') || error.code.startsWith('AUTH_') ? 'denied' : 'error';
         try { await persistAudit(options.pool, { ...auditRow, stage: 'return_check', outcome, errorCode: error.code, resultCount: null }); }
-        catch { return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify({ code: 'AUDIT_UNAVAILABLE', message: 'AUDIT_UNAVAILABLE' }) }] }; }
+        catch { return toolErrorResult('AUDIT_UNAVAILABLE', options.requestId); }
         return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify(error) }] };
       }
       if (failure) return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify(failure) }] };
       const structuredContent = { data };
       return { structuredContent, content: [{ type: 'text' as const, text: JSON.stringify(structuredContent) }] };
-    });
+    };
+    handlers.set(name, execute);
+    server.registerTool(name, { description: definition.description, inputSchema: definition.inputSchema, annotations: { readOnlyHint: true } }, execute);
   }
+  // Preserve the SDK-advertised schemas while validating arguments inside the audited application boundary.
+  server.server.setRequestHandler(CallToolRequestSchema, async request => {
+    const handler = handlers.get(request.params.name);
+    if (!handler) return toolErrorResult('TOOL_NOT_FOUND', options.requestId);
+    return handler(request.params.arguments ?? {});
+  });
   return server;
 }
 
@@ -179,11 +192,13 @@ function authStatus(error: unknown): { status: number; code: string } {
 export function createMcpApp(options: McpServerOptions): FastifyInstance {
   const origins = options.allowedOrigins ?? [];
   const app = Fastify({ logger: options.logger ?? createHubLoggerOptions(), requestIdHeader: false, genReqId: () => randomUUID(), bodyLimit: 1024 * 1024 });
+  const authenticatedPrincipals = new WeakMap<object, AgentPrincipal>();
   if (options.runtime?.environmentKind === 'local_lab' && options.runtime.legacyLabEnabled) {
     if (!options.legacyMcp) throw new Error('MCP_CONFIG_INVALID');
     registerLegacyMcpRoute(app, options.pool, options.legacyMcp);
   }
-  app.all('/mcp/sales', async (request, reply) => {
+  app.addHook('onRequest', async (request, reply) => {
+    if ((request.raw.url ?? '').split('?', 1)[0] !== '/mcp/sales') return;
     const origin = request.headers.origin;
     if (origin !== undefined && (typeof origin !== 'string' || !origins.includes(origin))) {
       return reply.code(403).send({ request_id: request.id, error: { code: 'ORIGIN_FORBIDDEN', message: 'ORIGIN_FORBIDDEN' } });
@@ -191,12 +206,15 @@ export function createMcpApp(options: McpServerOptions): FastifyInstance {
     const header = request.headers.authorization;
     const match = typeof header === 'string' ? /^Bearer ([A-Za-z0-9_-]{43})$/.exec(header) : null;
     if (!match) return reply.code(401).send({ request_id: request.id, error: { code: 'AUTH_INVALID', message: 'AUTH_INVALID' } });
-    let principal: AgentPrincipal;
-    try { principal = await options.authService.authenticateAgent(match[1]); }
+    try { authenticatedPrincipals.set(request, await options.authService.authenticateAgent(match[1])); }
     catch (error) {
       const safe = authStatus(error);
       return reply.code(safe.status).send({ request_id: request.id, error: { code: safe.code, message: safe.code } });
     }
+  });
+  app.all('/mcp/sales', async (request, reply) => {
+    const principal = authenticatedPrincipals.get(request);
+    if (!principal) return reply.code(401).send({ request_id: request.id, error: { code: 'AUTH_INVALID', message: 'AUTH_INVALID' } });
     const rawVersion = request.headers['mcp-protocol-version'];
     const protocolVersion = typeof rawVersion === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawVersion) ? rawVersion : null;
     const server = buildMcpServer({
@@ -215,6 +233,14 @@ export function createMcpApp(options: McpServerOptions): FastifyInstance {
   app.setErrorHandler((error, request, reply) => {
     const statusCode = error && typeof error === 'object' && 'statusCode' in error ? error.statusCode : undefined;
     const status = typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500 ? statusCode : 400;
+    if (authenticatedPrincipals.has(request)) {
+      const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+      const parseError = code === 'FST_ERR_CTP_INVALID_JSON_BODY';
+      return reply.code(status).send({
+        jsonrpc: '2.0', id: null, request_id: request.id,
+        error: { code: parseError ? -32700 : -32600, message: parseError ? 'Parse error' : 'Invalid request' },
+      });
+    }
     void reply.code(status).send({ request_id: request.id, error: { code: 'MCP_PROTOCOL_ERROR', message: 'MCP_PROTOCOL_ERROR' } });
   });
   return app;
