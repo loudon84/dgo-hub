@@ -6,6 +6,10 @@ export function createHubLoggerOptions(stream?: NodeJS.WritableStream): NonNulla
   return {
     level: 'info',
     redact: { paths: REDACTED_HEADERS, censor: '[Redacted]' },
+    serializers: {
+      req: request => ({ id: request.id, method: request.method, route: request.routeOptions?.url ?? 'unmatched' }),
+      res: response => ({ statusCode: response.statusCode }),
+    },
     ...(stream ? { stream } : {}),
   } as NonNullable<FastifyServerOptions['logger']>;
 }

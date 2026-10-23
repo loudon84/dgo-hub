@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AuthError } from '../auth/errors.js';
 import type { AgentCredentialMetadata, AuthService, CreateAgentCredentialInput, UserPrincipal } from '../auth/types.js';
@@ -11,8 +10,8 @@ export type IdentityRouteOptions = Readonly<{
 
 type HubErrorCode = AuthError['code'] | 'AUTH_INVALID' | 'AUTH_UNAVAILABLE';
 
-function envelope(data: unknown) {
-  return { request_id: randomUUID(), data };
+function envelope(request: FastifyRequest, data: unknown) {
+  return { request_id: request.id, data };
 }
 
 function statusFor(error: unknown): number {
@@ -25,18 +24,18 @@ function codeFor(error: unknown): HubErrorCode {
   return 'AUTH_UNAVAILABLE';
 }
 
-function sendFailure(reply: FastifyReply, error: unknown) {
+function sendFailure(request: FastifyRequest, reply: FastifyReply, error: unknown) {
   const code = codeFor(error);
   const status = statusFor(error);
   return reply.code(status).send({
-    request_id: randomUUID(),
+    request_id: request.id,
     error: { code, message: code, retryable: status === 503, details: {} },
   });
 }
 
-function sendNotFound(reply: FastifyReply) {
+function sendNotFound(request: FastifyRequest, reply: FastifyReply) {
   return reply.code(404).send({
-    request_id: randomUUID(),
+    request_id: request.id,
     error: { code: 'NOT_FOUND', message: 'NOT_FOUND', retryable: false, details: {} },
   });
 }
@@ -95,19 +94,19 @@ function pageQuery(query: unknown): { cursor?: string; limit?: number } {
 /** Register only APIs whose actor is derived from the configured, verified OIDC subject. */
 export async function registerIdentityRoutes(app: FastifyInstance, options: IdentityRouteOptions): Promise<void> {
   app.register(async identity => {
-    identity.setErrorHandler((error, _request, reply) => {
+    identity.setErrorHandler((error, request, reply) => {
       const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : '';
       const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number' ? error.statusCode : 0;
       if (code.startsWith('FST_ERR_CTP_') || statusCode === 400) {
-        return sendFailure(reply, new AuthError('AUTH_INPUT_INVALID'));
+        return sendFailure(request, reply, new AuthError('AUTH_INPUT_INVALID'));
       }
-      return sendFailure(reply, error);
+      return sendFailure(request, reply, error);
     });
-    identity.setNotFoundHandler((_request, reply) => sendNotFound(reply));
+    identity.setNotFoundHandler((request, reply) => sendNotFound(request, reply));
 
   identity.get('/hub/v1/me', async (request, reply) => {
-    try { return reply.send(envelope(safeUser(await currentUser(request, options.authenticator)))); }
-    catch (error) { return sendFailure(reply, error); }
+    try { return reply.send(envelope(request, safeUser(await currentUser(request, options.authenticator)))); }
+    catch (error) { return sendFailure(request, reply, error); }
   });
 
   identity.post<{ Body: unknown }>('/hub/v1/me/agent-credentials', async (request, reply) => {
@@ -125,16 +124,16 @@ export async function registerIdentityRoutes(app: FastifyInstance, options: Iden
         replayed: result.replayed,
         ...(result.secret === null ? {} : { secret: result.secret }),
       };
-      return reply.code(201).send(envelope(data));
-    } catch (error) { return sendFailure(reply, error); }
+      return reply.code(201).send(envelope(request, data));
+    } catch (error) { return sendFailure(request, reply, error); }
   });
 
   identity.get<{ Querystring: Record<string, unknown> }>('/hub/v1/me/agent-credentials', async (request, reply) => {
     try {
       const principal = await currentUser(request, options.authenticator);
       const result = await options.authService.listAgentCredentials(principal, pageQuery(request.query));
-      return reply.send(envelope({ items: result.items.map(metadataOnly), next_cursor: result.next_cursor }));
-    } catch (error) { return sendFailure(reply, error); }
+      return reply.send(envelope(request, { items: result.items.map(metadataOnly), next_cursor: result.next_cursor }));
+    } catch (error) { return sendFailure(request, reply, error); }
   });
 
   identity.delete<{ Params: { id: string } }>('/hub/v1/me/agent-credentials/:id', async (request, reply) => {
@@ -142,7 +141,7 @@ export async function registerIdentityRoutes(app: FastifyInstance, options: Iden
       const principal = await currentUser(request, options.authenticator);
       await options.authService.revokeAgentCredential(principal, request.params.id);
       return reply.code(204).send();
-    } catch (error) { return sendFailure(reply, error); }
+    } catch (error) { return sendFailure(request, reply, error); }
   });
   });
 }

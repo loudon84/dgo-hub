@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IdentityRouteOptions } from './ingestion-api/identity-routes.js';
@@ -12,7 +13,7 @@ export type BuildAppOptions = Readonly<{
 /** Build an injectable Fastify app; importing this module does not listen or access runtime configuration. */
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const logger = options.logger ?? createHubLoggerOptions();
-  const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false });
+  const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false, genReqId: () => randomUUID() });
   const { registerRoutes } = await import('./ingestion-api/routes.js');
   await registerRoutes(app, { identity: options.identity });
   return app;

@@ -1,9 +1,10 @@
 import { createServer, type Server } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
-import Fastify, { type FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exportJWK, generateKeyPair, generateSecret, SignJWT } from 'jose';
 import { createAuthService } from '../auth/service.js';
@@ -11,12 +12,11 @@ import { buildApp } from '../app.js';
 import { AuthError } from '../auth/errors.js';
 import type { AuthService, UserPrincipal } from '../auth/types.js';
 import { createOidcAuthenticator, readOidcConfiguration, type OidcConfiguration } from '../auth/oidc.js';
-import { registerIdentityRoutes } from '../ingestion-api/identity-routes.js';
 import { createHubLoggerOptions } from '../ingestion-api/logging.js';
 import { runMigrations } from '../migrations/runner.js';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
-const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-2-evidence/', import.meta.url));
+const evidenceDirectory = join(fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-2-evidence/review-round1/', import.meta.url)), randomUUID());
 const evidenceFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
 const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 const audience = 'hub-api';
@@ -118,17 +118,16 @@ async function principal(input: { tenantId?: string; userId?: string; subject?: 
   return authService.resolveOidc(selectedIssuer, subject);
 }
 
-async function identityApp(options: { service?: AuthService; logger?: boolean } = {}): Promise<FastifyInstance> {
+async function identityApp(options: { service?: AuthService } = {}): Promise<FastifyInstance> {
   const service = options.service ?? authService;
   const authenticator = createOidcAuthenticator(configuration(), service);
   const output = new Writable({ write(chunk, _encoding, callback) { logOutput += String(chunk); callback(); } });
-  const server = Fastify({ logger: options.logger === false ? false : createHubLoggerOptions(output), bodyLimit: 2 * 1024 * 1024, requestIdHeader: false });
-  await registerIdentityRoutes(server, { authenticator, authService: service });
-  return server;
+  return buildApp({ identity: { authenticator, authService: service }, logger: createHubLoggerOptions(output) });
 }
 
 function bearer(value: string): Record<string, string> { return { authorization: `Bearer ${value}` }; }
 function responseJson(response: { body: string }): Record<string, any> { return JSON.parse(response.body) as Record<string, any>; }
+function parsedLogs(): Record<string, unknown>[] { return logOutput.trim().split('\n').filter(Boolean).map(line => JSON.parse(line) as Record<string, unknown>); }
 function unsignedToken(alg: string): string {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
   return `${encode({ alg, typ: 'JWT' })}.${encode({ iss: `${mainServer.url}/issuer`, aud: audience, sub: 'alice-sub', exp: NOW + 300 })}.`;
@@ -283,6 +282,61 @@ describe('M0 Task2 OIDC and current identity APIs', () => {
     expect(body.data).not.toHaveProperty('issuer');
     expect(body.data).not.toHaveProperty('subject');
     expect(body.data).not.toHaveProperty('authEpoch');
+  });
+
+  it('uses one trusted request ID in envelopes and logs while excluding rejected input and client headers', async () => {
+    await principal({ subject: 'alice-sub' });
+    app = await identityApp();
+    const jwt = await token(rsa);
+    const success = await app.inject({ method: 'GET', url: '/hub/v1/me', headers: { ...bearer(jwt), 'request-id': 'client-request-id-sentinel' } });
+    expect(success.statusCode).toBe(200);
+    const successRequestId = responseJson(success).request_id as string;
+    expect(successRequestId).not.toBe('client-request-id-sentinel');
+
+    const failure = await app.inject({ method: 'GET', url: '/hub/v1/me', headers: { authorization: 'Bearer malformed-token-sentinel' } });
+    expect(failure.statusCode).toBe(401);
+    const failureRequestId = responseJson(failure).request_id as string;
+
+    const absent = await app.inject({ method: 'GET', url: '/hub/v1/me/no-route' });
+    expect(absent.statusCode).toBe(404);
+    const absentRequestId = responseJson(absent).request_id as string;
+
+    const deleted = await app.inject({ method: 'DELETE', url: '/hub/v1/me/agent-credentials/private-path-sentinel', headers: bearer(jwt) });
+    expect(deleted.statusCode).toBe(422);
+    const deletedRequestId = responseJson(deleted).request_id as string;
+    const noContent = await app.inject({ method: 'DELETE', url: '/hub/v1/me/agent-credentials/00000000-0000-4000-8000-000000000000', headers: bearer(jwt) });
+    expect(noContent.statusCode).toBe(204);
+    expect(noContent.body).toBe('');
+
+    const invalidQuery = await app.inject({
+      method: 'GET', url: '/hub/v1/me/agent-credentials?unexpected=private-query-sentinel',
+      headers: { ...bearer(jwt), host: 'private-host-sentinel.invalid', 'accept-version': 'private-version-sentinel' },
+    });
+    expect(invalidQuery.statusCode).toBe(422);
+    const invalidBody = await app.inject({
+      method: 'POST', url: '/hub/v1/me/agent-credentials',
+      headers: { ...bearer(jwt), 'idempotency-key': 'logging-test' },
+      payload: { purpose: 'safe', private_body_sentinel: 'private-body-sentinel' },
+    });
+    expect(invalidBody.statusCode).toBe(422);
+
+    const logs = parsedLogs();
+    for (const sentinel of [
+      'client-request-id-sentinel', 'private-query-sentinel', 'private-path-sentinel',
+      'private-host-sentinel.invalid', 'private-version-sentinel', 'private-body-sentinel',
+      'malformed-token-sentinel',
+    ]) expect(logOutput).not.toContain(sentinel);
+    const loggedIds = logs.flatMap(log => [log.reqId, (log.req as Record<string, unknown> | undefined)?.id]).filter((id): id is string => typeof id === 'string');
+    expect(loggedIds).toContain(successRequestId);
+    expect(loggedIds).toContain(failureRequestId);
+    expect(loggedIds).toContain(absentRequestId);
+    expect(loggedIds).toContain(deletedRequestId);
+    const deleteRequestIds = logs.filter(log => {
+      const request = log.req as Record<string, unknown> | undefined;
+      return request?.method === 'DELETE' && request.route === '/hub/v1/me/agent-credentials/:id';
+    }).map(log => log.reqId).filter((id): id is string => typeof id === 'string');
+    expect(deleteRequestIds.length).toBeGreaterThan(0);
+    expect(logs.some(log => deleteRequestIds.includes(log.reqId as string) && log.res && (log.res as Record<string, unknown>).statusCode === 204)).toBe(true);
   });
 
   it('creates personal credentials once, omits replay secrets, rejects forged bodies, and redacts logs', async () => {
