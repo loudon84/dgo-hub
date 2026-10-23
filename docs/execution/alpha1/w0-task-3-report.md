@@ -26,3 +26,7 @@
 - `node dist/acceptance-tests/evidence/run-gate.js --run-dir C:\Users\Administrator\AppData\Local\Temp\alpha1-task3-runs\task3-final-20261023` emitted stable JSON with `status=BLOCKED`, `product_ready=false`, and a nonzero exit. The seven missing fixed inputs are `environment-inputs.json`, `signoffs.json`, `upstream-pins.json`, `deployment.lock.json`, `source-contracts.json`, `fixture-manifest.json`, and `golden-consumer/manifest.json`. All 48 canonical product rows remain `NOT_RUN`.
 - A complete synthetic fixture can pass `validateEvidenceStructure`; it is never product-ready. Formal release still requires observed site inputs, approved real CRM and order material, site signoffs, deployment lock identity, actual Hermes version, three distinct environment actors and independent Golden Consumer Oracle/trace/answer evidence.
 - The checker validates declared provenance, approval references, identity consistency, file paths and digests. It cannot independently prove real-world approver identity or remote runtime execution. Run directories must not be modified concurrently while validation is in progress.
+
+## Report location
+
+The committed copy is docs/execution/alpha1/w0-task-3-report.md.
