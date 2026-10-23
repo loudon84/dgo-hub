@@ -77,7 +77,7 @@ export type EvidenceCheckResult = { status: GateStatus; issues: string[] };
 export type ReleaseGateResult = EvidenceCheckResult & { product_ready: boolean };
 
 function hasNonrealAuthorityScheme(reference: string): boolean {
-  return /^(?:synthetic|example|fixture):/i.test(reference);
+  return /^(?:synthetic|example|fixture):/i.test(reference.trim());
 }
 
 function nonrealAuthorityIssues(data: Record<string, any>): string[] {

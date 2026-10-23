@@ -84,8 +84,12 @@ describe('evidence release gate', () => {
     ['consumer', 'synthetic://hermes'],
     ['consumer', 'ExAmPlE://hermes'],
     ['consumer', 'fixture://hermes'],
+    ['consumer', ' synthetic://hermes'],
+    ['consumer', '\tExAmPlE://hermes'],
     ['approval', 'synthetic:approval:crm'],
+    ['approval', ' fixture://approval:crm'],
     ['owner', 'fixture:owner:crm'],
+    ['owner', ' fixture://owner'],
   ])('blocks explicit nonreal %s authority reference %s in a release-shaped bundle', async (field, value) => {
     const run = await runDirectory();
     await createSyntheticFixture(run, true, true);
@@ -114,6 +118,23 @@ describe('evidence release gate', () => {
     await refreshDigests(run);
 
     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BLOCKED', product_ready: false });
+  });
+
+  it('accepts legitimate authority schemes whose names contain nonreal scheme words', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true, true);
+    const goldenPath = join(run, 'golden-consumer', 'manifest.json');
+    const golden = JSON.parse(await readFile(goldenPath, 'utf8'));
+    golden.consumer.deployment_ref = 'site://example/synthetic/fixture';
+    await writeFile(goldenPath, JSON.stringify(golden));
+    const sourcePath = join(run, 'source-contracts.json');
+    const source = JSON.parse(await readFile(sourcePath, 'utf8'));
+    source.contracts[0].owner_ref = 'cmdb://fixture.example/synthetic-owner';
+    await writeFile(sourcePath, JSON.stringify(source));
+    await refreshDigests(run);
+
+    expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PASS', product_ready: true, issues: [] });
+    expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
   });
 
   it('requires one unique fixture input artifact for each approved source contract', async () => {
