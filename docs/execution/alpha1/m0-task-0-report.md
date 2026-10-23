@@ -1,6 +1,6 @@
 # M0 Task 0 — Versioned migration runner
 
-**Status: DONE**
+**Status: IMPLEMENTED; I1/I2 review corrections pending combined Task1 review**
 **Branch:** feat/alpha1-implementation
 **Dispatch base:** 17d3d28ffe87ebb23e47f167cfe10fe298e6c45c
 **Tested implementation commit:** 86b5458e697e296d848086714d581d19d13239b7
@@ -53,6 +53,10 @@ Three test-run containers were created. For each, the complete container ID and 
 - 6d009245-bdc3-4a05-a5a6-3013e27e894e — 705a84188e8fd45c2f28eb1ead0d8719d1281f723a1ec6b2cc48b9fd0cb6afe6
 
 The final filtered Docker inventory for codex.m0.task=task0 was (none). The JSONL lifecycle log, final resource summary, runtime image evidence, and inventory are under m0-task-0-evidence/.
+
+## Review follow-up
+
+GPT-6.1 Sol confirmed W0-R1 as ADDRESSED. Its Task0 review also identified two implementation concerns: a migration file could issue transaction control outside the runner's transaction, and failed fixture startup/removal could leave an untracked owned container. Both were corrected in Task1 prerequisite commit `2549a13cb48c815cd5553c23a015e0946d561407`, with pre-connect SQL boundary tests and Docker command-seam cleanup fault tests. The runner requires `standard_conforming_strings=on`, rejects direct top-level SET/RESET/RESET ALL and `set_config` calls, and enforces the documented migration-file contract; this is not a general SQL sandbox. The helper verifies labels before removing an exact recorded ID and retains `cleanup_unconfirmed` evidence when absence cannot be confirmed. These corrections await the combined Task1 Sol review, so Task0's review gate is not marked closed here.
 
 ## Limits
 

@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** IMPLEMENTING（开始分派Task0）。W0整体评审已完成；Important W0-R1由Task0第一前置承接，修复通过review前不称W0全部批准。用户授权先做本地实现；Hermes v0.22.1为用户报告值，远端握手/构建未观察。
+**状态:** Task1本地实现和验证完成，等待GPT-6.1 Sol独立review。W0-R1已由Task0修正并经Sol确认ADDRESSED；Task0 review发现的M0-T0-I1/I2由基础提交 `2549a13cb48c815cd5553c23a015e0946d561407` 修正，Task0门禁等待本次整体review确认。Task1实现提交与验证证据见[Task1报告](../execution/alpha1/m0-task-1-report.md)。Task2 OIDC和Task3 MCP未开始。Hermes v0.22.1为用户报告值，远端握手/构建未观察。
 
 ## Global Constraints
 
@@ -18,7 +18,7 @@
 - 代码检索与实现由 GPT-6 Luna subagent 完成；每任务 GPT-6.1 Sol review。主会话只编排计划、文档和证据，不直接修产品代码。
 - 不读取/回显 .env、token、密码；示例不含可用默认秘密。Secret只在明确的一次性创建响应中返回；不进入日志/Git/制品。
 - 管理 OIDC 绑定 (issuer,sub)；业务角色 sales / sales_manager 独立于 managementScopes。客户端 tenant/role/department/header 不成为授权事实。
-- 个人凭据256位随机、仅存SHA256、TTL默认3600秒/最大86400秒；短期HasuraJWT audience=hasura-sales、TTL60秒，MCP无admin secret。
+- 个人凭据为恰好32个随机字节的无前缀canonical unpadded base64url（43字符），仅存解码字节的SHA256，TTL默认3600秒/最大86400秒；短期Hasura JWT使用 `hub_<tenant_key>_<business_role>` execution role、audience=hasura-sales、TTL60秒，MCP无admin secret。
 - 影响授权的变更与相关auth_epoch同事务；开始和交付前复核；变化丢弃未交付结果，审计失败不交付业务数据。
 - local_lab 合成测试只能记工程验证；M0正式验收仍需真实IdP/映射、网络/TLS/账号/批准与运行锁。48项产品验收不因单测通过自动变PASS。
 - 数据库/容器测试仅使用本次创建且记录资源ID的独立资源；禁止迁移、清空或删除现存用户hub库/卷/容器。
@@ -48,13 +48,15 @@
 
 **refs:** REQ-ARCH/AUTH；架构基础验证，不单独关闭A-ARCH。**files:** migrate.ts、可选migrations/runner.ts、acceptance-tests/migrations.test.ts、helpers/postgres.ts、README.md。
 
-**前置承接W0-R1：** 先使formal Gate的authority scheme判断与schema使用同样trim语义，覆盖带空白的consumer/source owner/approval；保持结构helper和合法引用行为。该修正独立提交、focused Gate验证，纳入本任务Solreview。另见[交接裁定](../execution/alpha1/w0-closure.md)。
+**前置承接W0-R1：** 已使formal Gate的authority scheme判断与schema使用同样trim语义，覆盖带空白的consumer/source owner/approval；保持结构helper和合法引用行为。该修正独立提交并通过focused Gate验证，Sol确认ADDRESSED。另见[交接裁定](../execution/alpha1/w0-closure.md)。
 
 **Produces:** runMigrations(pool, {directory,environmentKind,adoptLegacy001?}) -> {applied:string[],skipped:string[]}；可导入不自动执行；测试helper返回本次pool与close。
 
-- [ ] RED：空库/重复、两个并发runner、失败002、checksum改变/本地已应用文件缺失/版本重名缺序号、legacy默认拒绝与local_lab显式基线、导入无副作用。
-- [ ] GREEN：UTF8 LF规范化checksum；001起三位连续版本；单连接session advisory锁；每SQL和ledger同事务；不修改001。历史库默认LEGACY_BASELINE_REQUIRED，仅local_lab显式adoptLegacy001允许受控001重放；site禁止。
-- [ ] 真实独立PG focused、typecheck/test/build；记录资源边界和输出；commit → Sol review。
+- [x] RED：空库/重复、两个并发runner、失败002、checksum改变/本地已应用文件缺失/版本重名缺序号、legacy默认拒绝与local_lab显式基线、导入无副作用。
+- [x] GREEN：UTF8 LF规范化checksum；001起三位连续版本；单连接session advisory锁；每SQL和ledger同事务；不修改001。历史库默认LEGACY_BASELINE_REQUIRED，仅local_lab显式adoptLegacy001允许受控001重放；site禁止。
+- [x] 真实独立PG focused、typecheck/test/build；记录资源边界和输出；实现已提交；Sol review 随Task1整体review待执行。
+
+**Review follow-up：** Task0 review发现 I1 顶层事务逃逸与 I2 fixture 清理证据不足。核心修复已在 Task1 真实PG前以 `2549a13` 独立提交；受支持合同要求迁移运行期间 `standard_conforming_strings=on`，runner 检查连接会话并拒绝直接顶层 `SET`/`RESET`、`RESET ALL` 和 `set_config` 调用。扫描只覆盖 SQL 文件边界，不是任意恶意SQL/routine副作用 sandbox。I2 按 label 与完整 ID 验证归属，rm 后只有能确认资源不存在才标 removed；daemon 失败保留 `cleanup_unconfirmed` 和 cidfile locator。补充回归在 `98b726b`，两项等本任务Sol整体review确认后关闭Task0 review gate。
 
 ## Task 1：身份持久合同与凭据生命周期
 
@@ -62,9 +64,9 @@
 
 **Produces:** createAuthService({pool,clock?}) 的 resolveOidc(issuer,subject)、createAgentCredential(principal,input,idempotencyKey)、listAgentCredentials(principal,page)、revokeAgentCredential(principal,id)、authenticateAgent(token)、authenticateSource(token,entity)、assertCurrentAgent(snapshot)；对外抛稳定安全AuthError，不抛连接串。Repository提供授权变更/撤销与epoch同事务的方法，禁止业务路由直接改授权表。
 
-- [ ] RED：32bytes随机载荷/摘要非明文、默认/最大TTL、同key重试无secret/异内容409/并发单凭据、本人分页无secret/跨租户不可见、撤销与epoch同事务/重复幂等、过期/停用/无业务角色拒绝、来源个人token互拒。
-- [ ] GREEN：按下方精确合同建表、服务和安全回执；不自动注册/激活/授角色；来源注册只接部署提供secret与secret_ref，不开放匿名API。
-- [ ] 真实独立PG focused、typecheck/test/build、commit → Sol review。
+- [x] RED：32bytes随机载荷/摘要非明文、默认/最大TTL、同key重试无secret/异内容409/并发单凭据、本人分页无secret/跨租户不可见、撤销与epoch同事务/重复幂等、过期/停用/无业务角色拒绝、来源个人token互拒。
+- [x] GREEN：按下方精确合同建表、服务和安全回执；不自动注册/激活/授角色；来源注册只接部署提供secret与secret_ref，不开放匿名API。
+- [x] 真实独立PG focused、typecheck/test/build、实现与文档精确提交 → Sol review（待独立review）。
 
 ## Task 2：可信 OIDC 与本人 HTTP API
 
@@ -84,7 +86,7 @@
 **Consumes:** Task1/2主体与认证；**Produces:** Alpha /mcp/sales opaque入口、前后凭据/epoch/gate检查与审计拒绝。来源resolver供M1消费，M0不开放未实现的正式batch入口。
 
 - [ ] RED：个人/来源/管理token不可互用；HTTP认证失败不执行工具；5工具含context都检查gate；查询在途撤销/epoch变化丢弃；审计失败无业务data；JWT中body身份不能扩大范围。
-- [ ] GREEN：strict默认，旧/mcp HSJWT、/v1/ingest共享key及/admin只能local_lab+显式legacy开关；Alpha不注册旧路由。Hasura内部JWT只用sales或sales_manager，不降级sales_reader；权限尚未M2发布时安全拒绝。
+- [ ] GREEN：strict默认，旧/mcp HSJWT、/v1/ingest共享key及/admin只能local_lab+显式legacy开关；Alpha不注册旧路由。Hasura execution role由可信tenant_key和business_role精确派生为 `hub_<tenant_key>_<business_role>`，仅设置该一个allowed role；不得将sales/sales_manager直接作为execution role，也不降级到sales_reader；权限尚未M2发布时安全拒绝。
 - [ ] 本地协议/受控查询边界 focused、typecheck/test/build、commit → Sol review；完整两角色GraphQL授权留M2。
 
 ## Task 4：独立 Alpha 部署与拒绝探测
@@ -108,14 +110,14 @@
 
 - UserPrincipal 字段：userId、tenantId、departmentId:string|null、businessRole:'sales'|'sales_manager'|null、managementScopes:string[]、authEpoch（非负 bigint 的十进制字符串）、businessTimezone、issuer、subject；AgentPrincipal 在此基础上附 credentialId、credentialEpoch、expiresAt。SourcePrincipal 独立，只有 sourceId、tenantId、allowedEntities:customer|order、credentialId、revision，不能结构性当作 UserPrincipal。
 - 管理 scope 独立于业务角色；初期只允许当前绑定租户。固定 scope 枚举：source:read/write/approve、mapping:write、governance:read/write、ontology:write/publish、binding:read/write/approve/publish、policy:read/write/approve/publish/revoke、access:preview、agent:read/revoke、audit:read、operation:read、ops:read（斜杠展开为各完整字符串）。管理角色不隐式拥有任何销售范围，sales_manager 缺 departmentId 不具业务查询能力。M1及后续接口复用这些 scope，不信任 body/header 的 tenant 或 role。
-- 持久对象：control.tenant（租户启用/时区）、control.auth_subject（tenant_id+user_id、部门、业务角色、scope、enabled、auth_epoch）、control.identity_binding（issuer+subject 唯一指向 auth_subject、enabled）、control.agent_credential（digest、过期/撤销、创建元数据、epoch）、control.source_credential（独立digest/来源/实体/状态/配置revision），以及个人创建凭据的幂等回执。禁止自动注册、自动激活或授予角色；管理员 provisioning 属受控 DB/部署输入，不开放匿名注册。
-- opaque token 使用明确个人/来源不同前缀 +32bytes随机base64url载荷；保存完整token的SHA256（不保存secret），不同存储/解析器拒绝另一前缀，不能互认。日志始终遮蔽 Authorization、Cookie、x-source-key 及创建响应 secret，错误不回显原 token。
+- 持久对象：control.tenant（不可变tenant_key、启用/时区）、control.auth_subject（tenant_key+user_id、部门、业务角色、scope、enabled、auth_epoch）、control.identity_binding（issuer+subject 唯一指向 auth_subject、enabled）、control.agent_credential（digest、过期/撤销、创建元数据、epoch）、control.source_credential（独立digest/来源/实体/状态/配置revision）、全局control.credential_digest_registry（digest唯一且kind不可复用），以及个人创建凭据的幂等回执。禁止自动注册、自动激活或授予角色；管理员 provisioning 属受控 DB/部署输入，不开放匿名注册。
+- opaque token 恰好是32bytes随机载荷的43字符canonical unpadded base64url，不带个人/来源前缀；严格解码并以原始32bytes计算SHA256。全局digest-kind注册表和个人/来源分开的表及resolver防止类型复用；管理JWT不能当opaque credential。tenantId就是不可变的tenant_key，格式 `[a-z][a-z0-9_]{0,31}`，不由请求/claims派生或清洗。日志始终遮蔽 Authorization、Cookie、x-source-key 及创建响应secret，错误不回显原token。
 - 个人凭据 POST 必须 Idempotency-Key，body 只允许 purpose 与 ttl_seconds。相同用户+key+请求摘要重试返回原 credential_id/expires_at 等回执、secret 不再返回；同key异内容409；并发相同key仅一份凭据。客户端丢失首次秘密需创建新key并撤销旧凭据，不能从服务端恢复秘密。凭据列表分页默认20/上限100，稳定游标/排序；拒绝越权凭据ID时404/不披露存在。
 - DELETE 本人凭据幂等204（未知/他人返回同等不可见语义，不能撤销他人），有 agent:revoke 的当前租户管理员可撤销本租户目标；同事务将目标凭据revoked/credential_epoch+1与 auth_subject.auth_epoch+1。每次认证从DB读取当前主体和epoch；auth_epoch用于请求开始/交付前比较，不把所有其他有效凭据永久判失效。撤销只使目标凭据后续认证失败；同用户其他凭据的在途请求因epoch变化被丢弃，后续新请求可按当前授权重新认证。已撤销重复操作不反复提升epoch。
 - auth_subject 部门/角色/启停、tenant启停及来源凭据替换由后续受控工作流更新；所有影响销售授权的变更必须使用同事务 epoch bump，测试直接调用受控 repository 方法，不靠请求体自选。OIDC principal 每次从DB重读，Agent 每次认证及返回前重读；数据库不可用拒绝，不缓存过期授权事实。
 - OIDC 配置固定受控issuer/audience/JWKS与算法 RS256/ES256；不允许 HS、none、客户端jku/x5u动态地址。生产HTTPS；本机测试显式 local_lab 允许loopbackHTTP。jose校验 exp/iss/aud/sub必填和nbf，不使用JWT中的tenant/role/dept/scope覆盖DB。未知kid/错误签名/过期/JWKS不可用返回AUTH_INVALID且0业务查询；未绑定PRINCIPAL_MAPPING_MISSING；停用/撤销AUTH_REVOKED。
 - API统一envelope/request_id；每请求由服务端生成可追踪ID，不将任意来访字符串直接写日志。服务日志不记录body/headers；仅最小状态。GET /me 返回用户/租户/部门/业务角色/管理scope/时区，不返回token、digest、issuer秘密或内部连接。
-- M0将strict MCP映射到 sales 或 sales_manager 的短期Hasura JWT（audience=hasura-sales，60秒）。M2尚未发布对应权限时请求被Hasura拒绝；不能为了演示成功静默降为sales_reader或admin。local_lab旧路径需独立显式开关，Alpha默认禁用。M0只接入身份与gate/epoch/审计边界；完整查询语义、关系过滤与role权限归M2。
+- M0将strict MCP映射到恰好一个 `hub_<tenant_key>_<business_role>` Hasura execution role的短期JWT（audience=hasura-sales，60秒）；business_role只能是sales或sales_manager，tenant_key来自当前数据库绑定。M2尚未发布对应权限时请求被Hasura拒绝；不能为了演示成功静默降为sales_reader或admin。local_lab旧路径需独立显式开关，Alpha默认禁用。M0只接入身份与gate/epoch/审计边界；完整查询语义、关系过滤与role权限归M2。
 - 查询开始与交付前校验credential、auth_subject/tenant启用和epoch、query_gate epoch/open；get_sales_context同样受检查。工具层审计成功后才交付，审计失败OBS_AUDIT_UNAVAILABLE且不返回业务数据；错误审计不得带原始业务payload或秘密。M2负责客户转交epoch与关系一致性，M0本地先证明撤销在途结果丢弃（FI-10子集）与审计失败（FI-12子集）。
 - M0的新来源resolver不等于来源可接入：旧/v1/ingest和/admin不能在Alpha默认注册；正式/hub/v1/ingest由M1接入来源配置、映射、批次后开放。明确返回不可用/404，不能继续接受共享key和自报owner。M1之前Alpha仅开放/me/credentials及健康和认证MCP边界。
 - 独立测试数据库/容器必须有本次run的不可猜测名称，记录资源ID再清理；测试finally只删除本次创建资源。对现存hub服务、容器或卷无隐式迁移/清理。真正OIDC/网络/TLS/现场用户映射仍BLOCKED，不从本机测试推断。
