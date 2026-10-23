@@ -99,3 +99,70 @@ JSON Schema/example 解析检查输出：`SCHEMA_SOURCE_SHA_REQUIRED=True`、`SC
 - 没有八个组件的现场观察，也没有真实 OM/Helix 部署观察；未生成真实 lock PASS。上游 pin 只代表参考版本。
 - 示例和测试中的摘要均为 synthetic；`image_id` 是补充运行身份，不能代替 OCI `manifest_digest`。`source_sha`、manifest 和 probe 身份的一致性是对输入声明的纯校验，不证明观察来自真实运行现场。
 - 采集说明只列出 Docker 镜像引用、image ID 和 repo digests 等安全元数据，不读取容器环境变量、`.env` 或秘密值。参考 clone HEAD 不作为运行源码 SHA。
+
+## Review Round 1 修复
+
+- 修复基线：`84052a77ae1ef38bd78ae39b7fc6a809460ff71c`；实现提交：`42fe6616a49f755998442337cd733304235ae1c8`（`fix(alpha1): close deployment lock review gaps`）。只修改 deployment-lock 合同、JSON Schema、生成 CLI 和对应测试。
+
+### I1：拒绝把已知 image ID 当 manifest digest
+
+新增完整 `site` + `observed` lock 用例，仅把 hub-api 的 image ID 复制进 image/runtime/probe 的 manifest 字段。
+
+RED：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'copying a known config image ID'`
+
+```text
+FAIL: expected 'PASS' to be 'BLOCKED'
+Tests 1 failed | 18 skipped
+EXIT_CODE=1
+```
+
+GREEN：同一命令在校验器拒绝 manifest 与 runtime config image ID 相同后通过，`Tests 1 passed | 18 skipped`，退出码 0。外部观测真实性仍不由纯校验器证明。
+
+### I2：严格 repository:tag 镜像引用并同步 JSON Schema
+
+用例拒绝 `:fixed`、`repo:tag:again`、`https://example.test/repo:1` 和带空白引用，同时接受 `registry.example.test:5000/repo:tag`。
+
+RED：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'repository:fixed-tag image syntax'`
+
+```text
+FAIL: :fixed expected 'BLOCKED', received 'PASS'
+Tests 1 failed | 19 skipped
+EXIT_CODE=1
+```
+
+JSON Schema RED：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'same repository and tag restrictions'`
+
+```text
+FAIL: repo:tag:again expected false, received true
+Tests 1 failed | 20 skipped
+EXIT_CODE=1
+```
+
+GREEN：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'repository:fixed-tag image syntax|same repository and tag restrictions'` 输出 `Tests 2 passed | 19 skipped`，退出码 0。Schema pattern 与运行校验器共享相同仓库组件、tag 和 registry port 限制。
+
+### I3：输出文件写入失败使用机器 JSON
+
+测试用有效 synthetic observations 把 `--output` 指向已存在目录。
+
+RED：`npm test -- acceptance-tests/deployment-lock.test.ts -t 'requested output cannot be written'`
+
+```text
+FAIL: EISDIR while opening the output directory
+Tests 1 failed | 21 skipped
+EXIT_CODE=1
+```
+
+GREEN：同一命令输出 `Tests 1 passed | 21 skipped`，退出码 0；CLI 返回稳定 `{"error":"output_write","message":"Validated lock could not be written to the requested output file","product_ready":false}`，进程码 1。
+
+### 修复后验证
+
+```text
+npm test -- acceptance-tests/deployment-lock.test.ts
+Test Files 1 passed (1); Tests 22 passed (22); EXIT_CODE=0
+
+npm run typecheck
+tsc --noEmit -p tsconfig.json; EXIT_CODE=0
+
+npm run build
+tsc -p tsconfig.json; EXIT_CODE=0
+```
