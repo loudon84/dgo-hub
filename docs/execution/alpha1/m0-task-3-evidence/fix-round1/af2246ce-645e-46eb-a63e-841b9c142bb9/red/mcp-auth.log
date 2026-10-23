@@ -1,0 +1,254 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/mcp-auth.test.ts (20 tests | 13 failed) 12942ms
+     × keeps present invalid Origin at 403 and accepts absent or exact allowed Origin 15ms
+     × formats authenticated malformed JSON as a safe correlated JSON-RPC parse error 6ms
+     × advertises exactly five fixed tools and audits all five as not ready by default 39ms
+     × discards query data after credential revocation and lets another live credential make a fresh request 29ms
+     × rechecks authorization after durable audit and returns no data when the audit write overlaps revocation 25ms
+     × discards a query result when the gate epoch changes during execution 5006ms
+     × discards a query result when the credential expires while the query is in flight 5004ms
+     × returns AUDIT_UNAVAILABLE without business data when durable audit fails 7ms
+     × returns a correlated safe query error linked to its audit and request log 41ms
+     × keeps raw request, credential, argument, and result values out of logs and audit 7ms
+     × rejects forged tool identity fields with safe audited validation and blocks managers without a department 4ms
+     × validates known-tool arguments inside the audited application boundary without reflecting input 3ms
+     × returns correlated AUDIT_UNAVAILABLE when an invalid-argument audit insert fails 5ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > keeps present invalid Origin at 403 and accepts absent or exact allowed Origin
+AssertionError: expected 400 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 400
+
+ ❯ acceptance-tests/mcp-auth.test.ts:136:41
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > formats authenticated malformed JSON as a safe correlated JSON-RPC parse error
+AssertionError: expected { …(2) } to match object { jsonrpc: '2.0', id: null, …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "error": {
+-     "code": -32700,
+-     "message": "Parse error",
++     "code": "MCP_PROTOCOL_ERROR",
++     "message": "MCP_PROTOCOL_ERROR",
+    },
+-   "id": null,
+-   "jsonrpc": "2.0",
+  }
+
+ ❯ acceptance-tests/mcp-auth.test.ts:168:18
+    166|     expect(response.status).toBe(400);
+    167|     const body = await response.json() as { jsonrpc?: string; id?: unk…
+    168|     expect(body).toMatchObject({ jsonrpc: '2.0', id: null, error: { co…
+       |                  ^
+    169|     expect(body.request_id).toBeTruthy();
+    170|     expect(JSON.stringify(body)).not.toContain('jsonrpc":');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > advertises exactly five fixed tools and audits all five as not ready by default
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:196:38
+    194|         const toolError = JSON.parse(errorText) as { code?: string; re…
+    195|         expect(toolError.code).toBe('ALPHA_POLICY_NOT_READY');
+    196|         expect(toolError.request_id).toBeTruthy();
+       |                                      ^
+    197|         const audit = await fixture.pool.query('SELECT outcome,error_c…
+    198|         expect(audit.rows).toEqual([{ outcome: 'denied', error_code: '…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards query data after credential revocation and lets another live credential make a fresh request
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:250:36
+    248|       expect(errorText).toContain('AUTH_CONTEXT_CHANGED');
+    249|       const toolError = JSON.parse(errorText) as { code?: string; requ…
+    250|       expect(toolError.request_id).toBeTruthy();
+       |                                    ^
+    251|       expect(JSON.stringify(result)).not.toContain('must-not-escape');
+    252|       credential = active.secret;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > rechecks authorization after durable audit and returns no data when the audit write overlaps revocation
+AssertionError: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:295:36
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards a query result when the gate epoch changes during execution
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ acceptance-tests/mcp-auth.test.ts:336:3
+    334|   });
+    335|
+    336|   it('discards a query result when the gate epoch changes during execu…
+       |   ^
+    337|     let entered!: () => void;
+    338|     let release!: () => void;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards a query result when the credential expires while the query is in flight
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ acceptance-tests/mcp-auth.test.ts:357:3
+    355|   });
+    356|
+    357|   it('discards a query result when the credential expires while the qu…
+       |   ^
+    358|     let now = new Date();
+    359|     const expiringAuth = createAuthService({ pool: fixture.pool, clock…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns AUDIT_UNAVAILABLE without business data when durable audit fails
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:394:38
+    392|     try {
+    393|       const result = await response.json() as { result?: { isError?: b…
+    394|       expect(result.result?.isError).toBe(true);
+       |                                      ^
+    395|       const text = result.result?.content?.[0]?.text ?? '';
+    396|       expect(text).toContain('AUDIT_UNAVAILABLE');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns a correlated safe query error linked to its audit and request log
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:415:38
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > keeps raw request, credential, argument, and result values out of logs and audit
+AssertionError: expected 401 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 401
+
+ ❯ acceptance-tests/mcp-auth.test.ts:448:31
+    446|     });
+    447|     try {
+    448|       expect(response.status).toBe(200);
+       |                               ^
+    449|       await response.text();
+    450|       await new Promise(resolve => setTimeout(resolve, 10));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > rejects forged tool identity fields with safe audited validation and blocks managers without a department
+AssertionError: expected 401 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 401
+
+ ❯ acceptance-tests/mcp-auth.test.ts:468:27
+    466|     const before = queryCalls;
+    467|     const forged = await callTool('get_sales_context', { tenantId: 'ot…
+    468|     expect(forged.status).toBe(200);
+       |                           ^
+    469|     const forgedBody = await forged.json() as { result?: { isError?: b…
+    470|     expect(forgedBody.result?.isError).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > validates known-tool arguments inside the audited application boundary without reflecting input
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:492:38
+    490|       const response = await callTool(name, args);
+    491|       const result = await response.json() as { result?: { isError?: b…
+    492|       expect(result.result?.isError).toBe(true);
+       |                                      ^
+    493|       const text = result.result?.content?.[0]?.text ?? '';
+    494|       expect(text).not.toContain(sentinel);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/13]⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns correlated AUDIT_UNAVAILABLE when an invalid-argument audit insert fails
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/mcp-auth.test.ts:520:38
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/13]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  13 failed | 7 passed (20)
+   Start at  23:12:56
+   Duration  13.70s (transform 167ms, setup 0ms, import 579ms, tests 12.94s, environment 0ms)
+

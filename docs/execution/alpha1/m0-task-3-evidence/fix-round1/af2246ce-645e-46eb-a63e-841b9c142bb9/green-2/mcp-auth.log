@@ -1,0 +1,30 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/mcp-auth.test.ts (20 tests | 17 skipped) 1732ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary
+OwnedPostgresError: OWNED_POSTGRES_POOL_UNAVAILABLE at pool_check: pool_unavailable
+ ❯ startOwnedPostgres acceptance-tests/helpers/postgres.ts:122:13
+    120|       await pool.query('SELECT 1');
+    121|     } catch {
+    122|       throw new OwnedPostgresError('OWNED_POSTGRES_POOL_UNAVAILABLE', …
+       |             ^
+    123|     }
+    124|
+ ❯ acceptance-tests/mcp-auth.test.ts:85:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 passed | 17 skipped (20)
+   Start at  23:17:11
+   Duration  2.49s (transform 153ms, setup 0ms, import 581ms, tests 1.73s, environment 0ms)
+

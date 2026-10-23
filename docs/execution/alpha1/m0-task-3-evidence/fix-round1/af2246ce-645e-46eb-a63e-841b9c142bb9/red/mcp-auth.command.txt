@@ -1,0 +1,6 @@
+cd integration-service; npm test -- --run acceptance-tests/mcp-auth.test.ts
+started_utc=2026-10-23T15:12:56.1401743Z
+exit=1
+HEAD=cb0130c5b87897ee320ccf81c26f661baaf6ebeb
+acceptance_test_sha256=2953c0693d45378cd5d8ad3bc7a81f6c071989a9792a017701499dfa83f29eab
+observed=20 tests; 7 passed; 13 failed; includes expected I1-I4 regressions and 2 timeout failures to investigate

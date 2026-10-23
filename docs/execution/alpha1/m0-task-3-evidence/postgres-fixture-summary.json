@@ -1,5 +1,5 @@
 {
-  "suite": "M0 Task3 final full test",
+  "suite": "M0 Task3 accumulated fixture inventory",
   "fixtures": [
     {
       "taskLabel": "task3",
@@ -157,5 +157,15 @@
       "dockerTaskLabel": "codex.m0.task=task3",
       "dockerRunLabel": "codex.m0.run=28a09ad5-4445-4874-ae73-a39c27d447c9"
     }
-  ]
+  ],
+  "finalFullRun": {
+    "testStartedAtUtc": "2026-10-23T14:45:24Z",
+    "durationSeconds": 5.36,
+    "task3Fixture": {
+      "runLabel": "4da4ff25-ae40-4524-bba8-a59a3861c6c5",
+      "containerId": "74a510b47d5bb68a3762bdf33a4cb5e25122dab8cf76800e3e02e971c55c2147",
+      "createdAtUtc": "2026-10-23T14:45:25.759Z",
+      "removedAtUtc": "2026-10-23T14:45:28.291Z"
+    }
+  }
 }

@@ -1,0 +1,6 @@
+cd integration-service; npm test -- --run acceptance-tests/mcp-auth.test.ts
+started_utc=2026-10-23T15:17:10.6102297Z
+exit=1
+HEAD=cb0130c5b87897ee320ccf81c26f661baaf6ebeb
+acceptance_test_sha256=266bd74a11a9109445989c9f7d86eac4383ebb5e79517b62864532364996f6dd
+server_sha256=f350124605d3bc9e3977e6ced4b84afbbfcabb9b12a9ea8285f81f9a745dc92e

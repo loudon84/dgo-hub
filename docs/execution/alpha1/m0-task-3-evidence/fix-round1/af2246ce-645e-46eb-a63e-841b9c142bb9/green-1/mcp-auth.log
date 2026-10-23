@@ -1,0 +1,34 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/mcp-auth.test.ts (20 tests | 1 failed) 2684ms
+     × formats authenticated malformed JSON as a safe correlated JSON-RPC parse error 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > formats authenticated malformed JSON as a safe correlated JSON-RPC parse error
+AssertionError: expected '{"jsonrpc":"2.0","id":null,"request_i…' not to contain 'jsonrpc":'
+
+Expected: "jsonrpc":"
+Received: "{"jsonrpc":"2.0","id":null,"request_id":"d2ff25ca-5172-4b25-a72c-0ea4be0168df","error":{"code":-32700,"message":"Parse error"}}"
+
+ ❯ acceptance-tests/mcp-auth.test.ts:170:38
+    168|     expect(body).toMatchObject({ jsonrpc: '2.0', id: null, error: { co…
+    169|     expect(body.request_id).toBeTruthy();
+    170|     expect(JSON.stringify(body)).not.toContain('jsonrpc":');
+       |                                      ^
+    171|     expect(queryCalls).toBe(before);
+    172|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 19 passed (20)
+   Start at  23:16:41
+   Duration  3.44s (transform 161ms, setup 0ms, import 580ms, tests 2.68s, environment 0ms)
+
