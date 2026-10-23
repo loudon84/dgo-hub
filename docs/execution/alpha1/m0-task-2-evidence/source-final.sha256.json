@@ -1,0 +1,30 @@
+[
+  {
+    "file": "integration-service/auth/oidc.ts",
+    "sha256": "2ee2ce3757a1563902b5d95750fd2e183148abb2988249b6eef15f4a1e1aee86"
+  },
+  {
+    "file": "integration-service/ingestion-api/identity-routes.ts",
+    "sha256": "130a825f6e9acb25f159c1896415f45f7b9acda69712b0039fb011874b11d6ea"
+  },
+  {
+    "file": "integration-service/ingestion-api/logging.ts",
+    "sha256": "2752554f72e424c2e1a320de8cf073f446fd46fcedba5fde77d932058f7c034e"
+  },
+  {
+    "file": "integration-service/ingestion-api/routes.ts",
+    "sha256": "fea05d5783d15ad9f4c245ebf5aba81f50855c4418c7813eb79b1f0a5873e414"
+  },
+  {
+    "file": "integration-service/app.ts",
+    "sha256": "127abffe527856bcc021fd50ebd62535bb9936d72c4b2781b01cdfa8729b0407"
+  },
+  {
+    "file": "integration-service/acceptance-tests/identity-http.test.ts",
+    "sha256": "0f8cb0467a45e56c954f41547121963ef606506c2a2009f17b3c78bd5653a707"
+  },
+  {
+    "file": "integration-service/acceptance-tests/helpers/postgres.ts",
+    "sha256": "56f8ef32cbb3001e8aabde93ed474d6452cd6a5764d557c8dd99da574e2814de"
+  }
+]
