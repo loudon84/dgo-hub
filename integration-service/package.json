@@ -1,0 +1,30 @@
+{
+  "name": "data-governance-integration-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/app.js",
+    "worker": "node dist/etl-worker/worker.js",
+    "publisher": "node dist/permission-publish/worker.js",
+    "mcp": "node dist/sales-mcp/main.js",
+    "migrate": "node dist/migrate.js",
+    "test": "vitest run",
+    "acceptance:live": "node --env-file=.env dist/acceptance-tests/live.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "fastify": "^5.6.0",
+    "jose": "^6.1.0",
+    "pg": "^8.16.3",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

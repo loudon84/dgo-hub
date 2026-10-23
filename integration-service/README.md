@@ -1,0 +1,98 @@
+# 数据治理与本体集成中台 · 交付件 A
+
+本工程是 OpenMetadata + Helix Foundry + Hasura V2 方案的**可运行验证实现**。CRM 与订单系统通过 REST 或 PostgreSQL ETL 写入标准模型；Hasura 在 SQL 查询层执行行列权限；销售 MCP 只提供五个固定只读工具。OpenMetadata 与 Helix 通过只读适配器核验资产和已发布模型，不作为销售数据查询旁路。项目基线以 `E:\git\dgo-hub\docs\数据治理与本体集成中台_产品架构与二开说明_v1.0.md` 为准：OpenMetadata `2.0.6-release`、Hasura `v2.51.1`、Helix Foundry `00d7927d7c08e16c58316e006959f052427e7fa1`。
+
+## 目录
+
+| 目录 | 内容 |
+|---|---|
+| `ingestion-api/` | REST 写入及四页所需管理 API |
+| `etl-worker/` | CRM、订单库增量抽取，水位与钩子重试 |
+| `normalization/` | Zod 标准模型、版本比较、幂等、客户映射与整单事务 |
+| `ontology-binding/` | Helix 活动发布代次读取、OpenMetadata 表核验、字段映射验证 |
+| `permission-publish/` | Hasura 表跟踪、行列 Select 权限、草稿审批发布 |
+| `sales-mcp/` | 五个固定查询工具、JWT 验证、Hasura 查询及审计 |
+| `acceptance-tests/` | 单元和在线闭环验收 |
+
+## 快速启动
+
+需要 Docker Compose、Node.js 24。示例密码仅用于本机验证，正式部署应替换并置于密钥管理系统。
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build
+docker compose ps
+npm ci
+npm test
+npm run build
+npm run acceptance:live
+```
+
+服务地址：接入与管理 API `http://127.0.0.1:3100`，MCP `http://127.0.0.1:3101/mcp`，Hasura Console `http://127.0.0.1:8088`。PostgreSQL 不发布主机端口，避免与现有实例冲突。容器首次启动由 API 执行迁移，由独立 Publisher 执行 Hasura 表跟踪和权限初始化。运行 `docker compose logs api worker publisher mcp hasura` 查看状态。Publisher 完成后查询闸门打开。
+
+OpenMetadata 与 Helix Foundry 属于外部部署，配置 `OPENMETADATA_*` 与 `HELIX_*` 后才会启用适配器。Helix Foundry 当前官方安全模型是本机单用户；应在受信网络内使用只读工作区令牌，正式多用户方案需单独评估身份边界。它的 `/ingest` 是**整批快照替换**，本工程不把订单增量事件直接推到该接口。
+
+## REST 对接
+
+`POST /v1/ingest/customer`、`POST /v1/ingest/order` 需要 `x-source-key`、`x-source-system`、`idempotency-key`。同一事件与内容重试返回 `duplicate`；同键异内容失败；旧版本返回 `stale`。订单头及**完整明细**按一个事务提交；订单须包含 `customerSourceSystem`（跨源时，例如 `crm`）与 `customerSourceId`。删除使用更高版本的 `deleted:true`，订单明细在同一事务清空。
+
+```powershell
+$h=@{'x-source-key'='change-me-ingest-key';'x-source-system'='crm';'idempotency-key'='crm-c1-v1'}
+$customer=@{sourceId='c1';tenantId='t1';ownerUserId='u1';version=1;name='Acme';email='a@acme.test'} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:3100/v1/ingest/customer -Headers $h -ContentType application/json -Body $customer
+$h['x-source-system']='orders';$h['idempotency-key']='erp-o1-v1'
+$order=@{sourceId='o1';customerSourceSystem='crm';customerSourceId='c1';tenantId='t1';ownerUserId='u1';version=1;total=40;status='paid';items=@(@{sku='A';quantity=2;unitPrice=20})} | ConvertTo-Json -Depth 5
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:3100/v1/ingest/order -Headers $h -ContentType application/json -Body $order
+```
+
+## 数据库 ETL
+
+示例源表见 `examples/source-schema.sql`。配置 `CRM_DB_URL`、`ORDER_DB_URL` 后，worker 按 `(updated_at, source_id)` 顺序抽取，每成功一行再前移水位；出错记录不前移，下一轮自动重试。源库需在更新时可靠地递增 `version` 和 `updated_at`。CRM 数据须先于关联订单可用。`GET /admin/etl/watermarks` 展示水位和错误，`POST /admin/etl/{source}/retry` 清除错误状态；实际重试由轮询执行。上游源表和游标方案是本演示约定，真实 CRM/订单库应做字段映射与快照一致性评审。
+
+本地 ETL 冒烟验证：
+
+```powershell
+Get-Content examples/source-schema.sql -Raw | docker compose exec -T postgres psql -U hub -d hub
+Get-Content examples/etl-seed.sql -Raw | docker compose exec -T postgres psql -U hub -d hub
+docker compose run --rm -e CRM_DB_URL=postgres://hub:hub_dev_password@postgres:5432/hub -e ORDER_DB_URL=postgres://hub:hub_dev_password@postgres:5432/hub -e WORKER_ONCE=1 worker
+docker compose exec -T postgres psql -U hub -d hub -c "SELECT source_system,last_status FROM control.etl_watermark"
+```
+
+## 管理 API 与权限
+
+所有 `/admin/*` 需要 `x-admin-key`。`x-actor` 用于草稿创建、独立审批、发布操作的操作人标识。
+
+| 操作 | API |
+|---|---|
+| 接入事件与 ETL 水位 | `GET /admin/ingestion/events`、`GET /admin/etl/watermarks` |
+| 手动重试 | `POST /admin/etl/:source/retry` |
+| Helix 模型、绑定列表与验证保存 | `GET /admin/ontology/helix`、`GET/POST /admin/ontology/bindings` |
+| 权限草稿、审批、发布 | `GET/POST /admin/permissions`、`POST /admin/permissions/:id/approve`、`POST /admin/permissions/:id/publish` |
+| MCP 工具与审计 | `GET /admin/agent/tools`、`GET /admin/agent/audit`、`GET /admin/agent/errors` |
+
+Hasura 策略使用 `tenant_id = X-Hasura-Tenant-Id` 且 `owner_user_id = X-Hasura-User-Id`，列为明确白名单。客户邮箱和电话只通过 `api.customer` 脱敏视图提供，原始列不跟踪。`api.sales_summary` 与 `api.customer_sales` 在数据库聚合后再由 Hasura 按会话变量过滤。示例启动会自动发布默认 `sales_reader` 权限以便联调。权限发布由独立 Publisher 执行：先关闭查询闸门，导出 Hasura metadata 与资源版本，修改受管权限后用 `replace_metadata` 原子提交，再读回核对并打开闸门。发布失败时闸门保持关闭。API 返回 `queued` 表示已排队，须轮询策略状态确认 `published`。撤权、漂移自动纠正与多实例发布锁仍需接入企业控制平面。正式环境应移除默认权限自动发布。
+
+## Hermes MCP 对接
+
+HTTP Streamable MCP 地址为 `http://<trusted-host>:3101/mcp`。调用须带 `Authorization: Bearer <JWT>`；JWT 使用 HS256，含 `sub`、`tenant_id`、`role=sales_reader`、`iss=data-hub`、`aud=sales-mcp`、过期时间。生产应改用企业身份提供方的非对称签名/JWKS，并在网关验证 Hermes 用户与令牌绑定。工具名称对齐 PRD：`get_sales_context`、`find_customers`、`get_customer_orders`、`get_order_detail`、`get_sales_summary`。MCP 验证用户令牌后签发 60 秒 Hasura JWT，只发送固定的 `sales_reader` GraphQL 查询，不接受任意 SQL/GraphQL。MCP 容器没有 Hasura Admin Secret。
+
+Hermes 配置示意（按实际版本的远程 MCP 配置格式调整）：
+
+```json
+{ "url": "http://trusted-host:3101/mcp", "headers": { "Authorization": "Bearer <per-user-short-lived-jwt>" } }
+```
+
+## 验证与边界
+
+`npm test` 覆盖金额一致性、标准化、列白名单、行过滤表达式、五个工具、绑定验证及重试。`npm run acceptance:live` 需启动本机 Compose，覆盖 REST 写入、幂等、MCP 握手与五工具调用、跨用户行隔离、原始列拒绝。真实 OpenMetadata、Helix Foundry、CRM、订单库与 Hermes 环境未纳入本地验收。
+
+正式上线前仍需：企业 SSO 与双人审批身份可信化；源库字段映射和 CDC/补数；OpenMetadata 自定义属性与血缘写回方案；Helix 发布版本固定与部署隔离；Hasura 撤权和权限漂移处理；管理页面实现、监控告警与备份恢复。这里交付的是完整可运行的**集成验证代码**，不是已完成生产认证的企业平台。
+
+## 已核对的上游接口
+
+- [Hasura V2 Metadata API](https://hasura.io/docs/2.0/api-reference/metadata-api/index/) 与 [权限规则](https://hasura.io/docs/2.0/auth/authorization/permissions/)
+- [OpenMetadata 表 REST API](https://docs.open-metadata.org/latest/api-reference/data-assets/tables)（以本地 `2.0.6-release` 实例 OpenAPI 核对最终字段）
+- [Helix Foundry API](https://github.com/HelixDB/helix-foundry/blob/main/docs/API.md) 与 [安全/快照说明](https://github.com/HelixDB/helix-foundry/blob/main/README.md)
+
+
+
