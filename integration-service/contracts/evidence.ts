@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, readFile, realpath } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { evaluateM0Entry, signoffRecordSchema } from './signoff.js';
 import { upstreamPinsFileSchema, validateDeploymentLock } from './deployment-lock.js';
@@ -75,6 +76,50 @@ export type GateStatus = 'PASS' | 'FAIL' | 'BLOCKED';
 export type EvidenceCheckResult = { status: GateStatus; issues: string[] };
 export type ReleaseGateResult = EvidenceCheckResult & { product_ready: boolean };
 
+function hasNonrealAuthorityScheme(reference: string): boolean {
+  return /^(?:synthetic|example|fixture):/i.test(reference);
+}
+
+function nonrealAuthorityIssues(data: Record<string, any>): string[] {
+  const references: Array<[string, unknown]> = [];
+  const env = data['environment-inputs.json'];
+  const signoffs = data['signoffs.json'];
+  const sourceContracts = data['source-contracts.json'];
+  const fixture = data['fixture-manifest.json'];
+  const golden = data['golden-consumer/manifest.json'];
+  references.push(['golden-consumer/manifest.json: consumer.deployment_ref', golden?.consumer?.deployment_ref]);
+  for (const [index, contract] of (sourceContracts?.contracts ?? []).entries()) {
+    references.push([`source-contracts.json: contracts[${index}].approval_ref`, contract.approval_ref]);
+    references.push([`source-contracts.json: contracts[${index}].owner_ref`, contract.owner_ref]);
+  }
+  for (const [index, input] of (fixture?.inputs ?? []).entries()) {
+    references.push([`fixture-manifest.json: inputs[${index}].approval_ref`, input.approval_ref]);
+  }
+  for (const [index, approval] of (signoffs?.approvals ?? []).entries()) {
+    references.push([`signoffs.json: approvals[${index}].actor_ref`, approval.actor_ref]);
+  }
+  for (const [index, identity] of (env?.test_identities ?? []).entries()) {
+    references.push([`environment-inputs.json: test_identities[${index}].actor_ref`, identity.actor_ref]);
+  }
+  references.push(['environment-inputs.json: identity_mapping_ref', env?.identity_mapping_ref]);
+  references.push(['environment-inputs.json: backup_ref', env?.backup_ref]);
+  for (const [index, source] of (env?.sources ?? []).entries()) {
+    references.push([`environment-inputs.json: sources[${index}].mapping_ref`, source.mapping_ref]);
+    references.push([`environment-inputs.json: sources[${index}].replica_authorization_ref`, source.replica_authorization_ref]);
+    references.push([`environment-inputs.json: sources[${index}].deletion_contract_ref`, source.deletion_contract_ref]);
+  }
+  return references.filter((entry): entry is [string, string] => typeof entry[1] === 'string' && hasNonrealAuthorityScheme(entry[1]))
+    .map(([path]) => `${path}: explicit synthetic/example/fixture authority references cannot satisfy release`);
+}
+
+function controlledPinsPath(): string {
+  const moduleDirectory = dirname(fileURLToPath(import.meta.url));
+  const projectRoot = basename(dirname(moduleDirectory)) === 'dist'
+    ? resolve(moduleDirectory, '../..')
+    : resolve(moduleDirectory, '..');
+  return resolve(projectRoot, 'deploy/upstream-pins.json');
+}
+
 export async function safeReadEvidenceFile(runDir: string, filePath: string): Promise<{ bytes: Buffer; sha256: string; absolutePath: string; identity: string }> {
   if (filePath.includes('\0') || filePath.startsWith('/') || filePath.startsWith('\\') || /^[A-Za-z]:/.test(filePath) || isAbsolute(filePath)) {
     throw new Error(`unsafe evidence path: ${filePath}`);
@@ -97,10 +142,12 @@ export async function safeReadEvidenceFile(runDir: string, filePath: string): Pr
   const actual = await realpath(absolutePath);
   const actualRelative = relative(base, actual);
   if (actualRelative === '..' || actualRelative.startsWith(`..${sep}`) || isAbsolute(actualRelative)) throw new Error(`evidence path escapes run directory: ${filePath}`);
-  const fileInfo = await lstat(absolutePath);
+  const fileInfo = await lstat(absolutePath, { bigint: true });
   const bytes = await readFile(absolutePath);
   const canonicalPath = process.platform === 'win32' ? actual.toLocaleLowerCase('en-US') : actual;
-  const identity = fileInfo.ino !== 0 ? `file:${fileInfo.dev}:${fileInfo.ino}` : `path:${canonicalPath}`;
+  const identity = fileInfo.ino !== 0n && fileInfo.dev !== 0n
+    ? `file:${fileInfo.dev}:${fileInfo.ino}`
+    : `path:${canonicalPath}`;
   return { bytes, sha256: `sha256:${createHash('sha256').update(bytes).digest('hex')}`, absolutePath: actual, identity };
 }
 
@@ -316,11 +363,16 @@ export async function evaluateReleaseGate(runDir: string): Promise<ReleaseGateRe
     const run = runManifestSchema.parse(d['run.json']);
     const env = (await import('./environment.js')).environmentInputSchema.parse(d['environment-inputs.json']);
     const entry = evaluateM0Entry(d['signoffs.json'], env, { expectedKind: 'site', allowExample: false });
-    const lock = validateDeploymentLock(d['deployment.lock.json'], d['upstream-pins.json'], { release: true });
+    const controlledPinsRaw = JSON.parse(await readFile(controlledPinsPath(), 'utf8')) as unknown;
+    const controlledPins = upstreamPinsFileSchema.parse(controlledPinsRaw);
+    const embeddedPins = upstreamPinsFileSchema.parse(d['upstream-pins.json']);
+    const lock = validateDeploymentLock(d['deployment.lock.json'], controlledPins, { release: true });
     const blocked: string[] = [];
+    if (stable(embeddedPins.source_pins) !== stable(controlledPins.source_pins)) blocked.push('upstream-pins.json: source pins do not match the repository-controlled approved pins');
     if (run.kind !== 'observed') blocked.push('run.json: release requires an observed run');
     if (entry.status !== 'PASS') blocked.push(...entry.missing.map(item => `M0 entry: ${item}`));
     if (lock.status !== 'PASS') blocked.push(...lock.issues.map(item => `deployment.lock.json: ${item}`));
+    blocked.push(...nonrealAuthorityIssues(d));
     if (d['source-contracts.json'].input_kind !== 'real' || d['fixture-manifest.json'].input_kind !== 'real' || d['golden-consumer/manifest.json'].input_kind !== 'real') blocked.push('source, fixture, and Golden Consumer inputs must be approved real inputs');
     if (d['acceptance-results.json'].results.some((item: any) => item.status !== 'PASS')) blocked.push('all 48 canonical acceptance results must be PASS');
     if (blocked.length) return { status: 'BLOCKED', product_ready: false, issues: [...new Set(blocked)].sort() };

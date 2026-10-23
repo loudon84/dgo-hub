@@ -53,6 +53,13 @@ const runtimeIdentitySchema = z.object({
 
 const imageSchema = z.object({
   reference: z.string().min(1),
+  digest_source: z.enum(['repo_digest', 'descriptor']),
+  descriptor_media_type: z.enum([
+    'application/vnd.oci.image.index.v1+json',
+    'application/vnd.oci.image.manifest.v1+json',
+    'application/vnd.docker.distribution.manifest.list.v2+json',
+    'application/vnd.docker.distribution.manifest.v2+json',
+  ]).optional(),
   manifest_digest: sha256Value,
   image_id: sha256Value.optional(),
 }).strict();
@@ -80,10 +87,6 @@ const componentSchema = z.object({
     || component.runtime_identity.config_digest !== component.config.digest
     || (component.image.image_id !== undefined && component.runtime_identity.image_id !== component.image.image_id)) {
     ctx.addIssue({ code: 'custom', path: ['runtime_identity'], message: 'Runtime identity must match the declared image and config digests' });
-  }
-  if (component.image.manifest_digest === component.runtime_identity.image_id
-    || component.runtime_identity.manifest_digest === component.runtime_identity.image_id) {
-    ctx.addIssue({ code: 'custom', path: ['image', 'manifest_digest'], message: 'manifest_digest must not be populated with the config image_id' });
   }
   if (component.capability_probe.runtime_identity.image_id !== component.runtime_identity.image_id
     || component.capability_probe.runtime_identity.manifest_digest !== component.runtime_identity.manifest_digest

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { evaluateReleaseGate, validateEvidenceStructure } from '../../contracts/evidence.js';
+import { evaluateReleaseGate, safeReadEvidenceFile, validateEvidenceStructure } from '../../contracts/evidence.js';
 import { platformNpmInvocation, runRecordLocalChecks } from '../../scripts/record-local-checks.js';
 import { runGateCli } from './run-gate.js';
 
@@ -48,6 +48,71 @@ describe('evidence release gate', () => {
     const run = await runDirectory();
     await createSyntheticFixture(run, true);
     expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
+    expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BLOCKED', product_ready: false });
+  });
+
+  it('allows a complete unit-only release-shaped bundle through the final release branch', async () => {
+    const run = await runDirectory();
+    // Every byte here is artificial unit-test material; this is never saved as site evidence.
+    await createSyntheticFixture(run, true, true);
+    expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
+    expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PASS', product_ready: true, issues: [] });
+  });
+
+  it('anchors bundle pins to the controlled repository pins even when bundle files are self-consistent', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true, true);
+    expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'PASS', product_ready: true });
+
+    const altered = { ...JSON.parse(await readFile(join(run, 'upstream-pins.json'), 'utf8')) };
+    altered.source_pins.hasura = { tag: 'unapproved-99', revision: 'e'.repeat(40) };
+    await writeFile(join(run, 'upstream-pins.json'), JSON.stringify(altered));
+    const lockPath = join(run, 'deployment.lock.json');
+    const lock = JSON.parse(await readFile(lockPath, 'utf8'));
+    lock.source_pins.hasura = structuredClone(altered.source_pins.hasura);
+    lock.components.hasura.source_sha = altered.source_pins.hasura.revision;
+    await writeFile(lockPath, JSON.stringify(lock));
+    await refreshDigests(run);
+
+    const gate = await evaluateReleaseGate(run);
+    expect(gate.status).toBe('BLOCKED');
+    expect(gate.product_ready).toBe(false);
+    expect(gate.issues.join(' ')).toMatch(/approved|pinned|source_pins/i);
+  });
+
+  it.each([
+    ['consumer', 'synthetic://hermes'],
+    ['consumer', 'ExAmPlE://hermes'],
+    ['consumer', 'fixture://hermes'],
+    ['approval', 'synthetic:approval:crm'],
+    ['owner', 'fixture:owner:crm'],
+  ])('blocks explicit nonreal %s authority reference %s in a release-shaped bundle', async (field, value) => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true, true);
+    const goldenPath = join(run, 'golden-consumer', 'manifest.json');
+    const golden = JSON.parse(await readFile(goldenPath, 'utf8'));
+    if (field === 'consumer') golden.consumer.deployment_ref = value;
+    await writeFile(goldenPath, JSON.stringify(golden));
+    if (field !== 'consumer') {
+      const sourcePath = join(run, 'source-contracts.json');
+      const source = JSON.parse(await readFile(sourcePath, 'utf8'));
+      source.contracts[0][field === 'approval' ? 'approval_ref' : 'owner_ref'] = value;
+      await writeFile(sourcePath, JSON.stringify(source));
+      if (field === 'approval') {
+        const fixturePath = join(run, 'fixture-manifest.json');
+        const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
+        fixture.inputs[0].approval_ref = value;
+        await writeFile(fixturePath, JSON.stringify(fixture));
+        const acceptancePath = join(run, 'acceptance-results.json');
+        const acceptance = JSON.parse(await readFile(acceptancePath, 'utf8'));
+        const fixtureBytes = await readFile(fixturePath);
+        const fixtureDigest = `sha256:${createHash('sha256').update(fixtureBytes).digest('hex')}`;
+        for (const result of acceptance.results) result.input_manifest.sha256 = fixtureDigest;
+        await writeFile(acceptancePath, JSON.stringify(acceptance));
+      }
+    }
+    await refreshDigests(run);
+
     expect(await evaluateReleaseGate(run)).toMatchObject({ status: 'BLOCKED', product_ready: false });
   });
 
@@ -107,6 +172,37 @@ describe('evidence release gate', () => {
     await writeFile(join(run, 'file-digests.json'), JSON.stringify(digests));
     await refreshDigests(run);
     expect(await validateEvidenceStructure(run)).toMatchObject({ status: 'PASS', issues: [] });
+  });
+
+  it('uses exact filesystem identity for distinct files and rejects hardlink aliases', async () => {
+    const run = await runDirectory();
+    await createSyntheticFixture(run, true);
+    const firstPath = 'golden-consumer/calls/oracle-0.json';
+    const secondPath = 'golden-consumer/calls/answer-0.json';
+    const [first, second] = await Promise.all([
+      safeReadEvidenceFile(run, firstPath),
+      safeReadEvidenceFile(run, secondPath),
+    ]);
+    expect(first.identity).not.toBe(second.identity);
+
+    const aliasPath = 'golden-consumer/calls/oracle-0-hardlink.json';
+    await link(join(run, firstPath), join(run, aliasPath));
+    const alias = await safeReadEvidenceFile(run, aliasPath);
+    expect(alias.identity).toBe(first.identity);
+
+    const manifestPath = join(run, 'golden-consumer', 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest.calls[0].final_answer = { path: aliasPath, sha256: alias.sha256 };
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const digestsPath = join(run, 'file-digests.json');
+    const digests = JSON.parse(await readFile(digestsPath, 'utf8')) as Record<string, string>;
+    digests[aliasPath] = alias.sha256;
+    await writeFile(digestsPath, JSON.stringify(digests));
+    await refreshDigests(run);
+
+    const result = await validateEvidenceStructure(run);
+    expect(result.status).toBe('FAIL');
+    expect(result.issues).toContain('golden-consumer/manifest.json: Oracle, trace, and answer files must be distinct');
   });
 
   it.each(['null', '""', '{}', '[]'])('rejects empty Oracle assertion values loaded from references: %s', async value => {
@@ -300,7 +396,7 @@ describe('fixed local check recorder', () => {
   });
 });
 
-async function createSyntheticFixture(run: string, complete = false): Promise<void> {
+async function createSyntheticFixture(run: string, complete = false, releaseShaped = false): Promise<void> {
   const repository = join(process.cwd(), '..');
   const environment = JSON.parse(await readFile(join(repository, 'docs', 'approvals', 'environment-inputs.example.json'), 'utf8'));
   environment.environment_kind = 'site';
@@ -313,6 +409,16 @@ async function createSyntheticFixture(run: string, complete = false): Promise<vo
   const pins = JSON.parse(await readFile(join(process.cwd(), 'deploy', 'upstream-pins.json'), 'utf8'));
   const runId = 'synthetic-fixture-1';
   lock.run_id = runId;
+  if (releaseShaped) {
+    lock.environment_kind = 'site';
+    lock.input_kind = 'observed';
+    environment.example = false;
+    signoffs.status = 'APPROVED_FOR_PLAN';
+    signoffs.example = false;
+    signoffs.approvals = ['product', 'architecture', 'data_owner', 'security', 'test'].map((role, index) => ({
+      role, status: 'APPROVED', actor_ref: `urn:unit:approver:${index + 1}`, approved_at: '2026-10-23T00:00:00Z',
+    }));
+  }
   const gitSha = lock.components['hub-api'].source_sha;
   const imageDigests = Object.fromEntries(Object.entries(lock.components).map(([id, component]: [string, any]) => [id, component.image.manifest_digest]));
   const put = async (path: string, value: string | unknown): Promise<{ path: string; sha256: string }> => {
@@ -327,14 +433,14 @@ async function createSyntheticFixture(run: string, complete = false): Promise<vo
   const crmInput = await put('inputs/crm.json', [{ id: 'synthetic-crm-1' }]);
   const ordersInput = await put('inputs/orders.json', [{ id: 'synthetic-order-1' }]);
   const schemaDigest = `sha256:${'1'.repeat(64)}`;
-  const approvalRef = (system: string) => `synthetic-approval:${system}`;
+  const approvalRef = (system: string) => releaseShaped ? `approval://unit/${system}` : `synthetic-approval:${system}`;
   const sourceContracts = {
-    schema_version: 'alpha1.v1', run_id: runId, input_kind: 'synthetic', contracts: [
-      { source_id: environment.sources[0].source_id, system: 'crm', interface_version: 'synthetic-v1', schema_digest: schemaDigest, approval_ref: approvalRef('crm'), owner_ref: 'synthetic:owner:crm', approval_evidence: crmApproval },
-      { source_id: environment.sources[1].source_id, system: 'orders', interface_version: 'synthetic-v1', schema_digest: schemaDigest, approval_ref: approvalRef('orders'), owner_ref: 'synthetic:owner:orders', approval_evidence: ordersApproval },
+    schema_version: 'alpha1.v1', run_id: runId, input_kind: releaseShaped ? 'real' : 'synthetic', contracts: [
+      { source_id: environment.sources[0].source_id, system: 'crm', interface_version: 'synthetic-v1', schema_digest: schemaDigest, approval_ref: approvalRef('crm'), owner_ref: releaseShaped ? 'cmdb://unit/crm-owner' : 'synthetic:owner:crm', approval_evidence: crmApproval },
+      { source_id: environment.sources[1].source_id, system: 'orders', interface_version: 'synthetic-v1', schema_digest: schemaDigest, approval_ref: approvalRef('orders'), owner_ref: releaseShaped ? 'cmdb://unit/orders-owner' : 'synthetic:owner:orders', approval_evidence: ordersApproval },
     ],
   };
-  const fixture = { schema_version: 'alpha1.v1', run_id: runId, input_kind: 'synthetic', inputs: [
+  const fixture = { schema_version: 'alpha1.v1', run_id: runId, input_kind: releaseShaped ? 'real' : 'synthetic', inputs: [
     { source_id: environment.sources[0].source_id, schema_digest: schemaDigest, approval_ref: approvalRef('crm'), file: crmInput },
     { source_id: environment.sources[1].source_id, schema_digest: schemaDigest, approval_ref: approvalRef('orders'), file: ordersInput },
   ] };
@@ -357,7 +463,7 @@ async function createSyntheticFixture(run: string, complete = false): Promise<vo
     status: 'NOT_RUN',
   }));
   const fixed = {
-    'run.json': { schema_version: 'alpha1.v1', run_id: runId, kind: 'synthetic', git_sha: gitSha, captured_at: '2026-10-23T00:03:00Z', image_digests: imageDigests },
+    'run.json': { schema_version: 'alpha1.v1', run_id: runId, kind: releaseShaped ? 'observed' : 'synthetic', git_sha: gitSha, captured_at: '2026-10-23T00:03:00Z', image_digests: imageDigests },
     'environment-inputs.json': environment,
     'signoffs.json': signoffs,
     'upstream-pins.json': pins,
@@ -366,8 +472,8 @@ async function createSyntheticFixture(run: string, complete = false): Promise<vo
     'fixture-manifest.json': fixture,
     'acceptance-results.json': { schema_version: 'alpha1.v1', run_id: runId, results },
     'golden-consumer/manifest.json': {
-      schema_version: 'alpha1.v1', run_id: runId, input_kind: 'synthetic',
-      consumer: { name: 'Hermes synthetic', actual_version: environment.hermes.actual_version, deployment_ref: 'synthetic://hermes' },
+      schema_version: 'alpha1.v1', run_id: runId, input_kind: releaseShaped ? 'real' : 'synthetic',
+      consumer: { name: 'Hermes synthetic unit fixture', actual_version: environment.hermes.actual_version, deployment_ref: releaseShaped ? 'site://unit-test' : 'synthetic://hermes' },
       mcp: { git_sha: lock.components['sales-mcp'].source_sha, manifest_digest: lock.components['sales-mcp'].image.manifest_digest },
       approved_source_inputs: [crmInput, ordersInput], profiles, calls,
     },

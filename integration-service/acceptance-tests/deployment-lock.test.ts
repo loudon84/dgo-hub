@@ -11,6 +11,7 @@ const pins = JSON.parse(readFileSync(resolve('deploy/upstream-pins.json'), 'utf8
 const jsonSchema = JSON.parse(readFileSync(resolve('deploy/deployment.lock.schema.json'), 'utf8')) as {
   '$defs': { component: { properties: { image: { properties: { reference: { pattern: string } } } } } };
 };
+const lockJsonSchema = JSON.parse(readFileSync(resolve('deploy/deployment.lock.schema.json'), 'utf8')) as any;
 
 const digest = `sha256:${'a'.repeat(64)}`;
 const hubSourceSha = 'b'.repeat(40);
@@ -36,7 +37,7 @@ function validLock() {
             ? upstream.helix.revision
             : undefined;
     return [id, {
-      image: { reference: `registry.example.test/${id}:1.0.0`, manifest_digest: digest, image_id: `sha256:${'c'.repeat(64)}` },
+      image: { reference: `registry.example.test/${id}:1.0.0`, digest_source: 'repo_digest', manifest_digest: digest, image_id: `sha256:${'c'.repeat(64)}` },
       ...(sourceSha ? { source_sha: sourceSha } : {}),
       config: { schema: 'alpha1.v1', digest: `sha256:${'d'.repeat(64)}` },
       captured_at: '2026-10-23T00:00:00Z',
@@ -83,6 +84,18 @@ describe('deployment lock contract', () => {
     });
   });
 
+  it('keeps the exported contract aligned with distribution digest provenance fields', () => {
+    const image = lockJsonSchema.$defs.component.properties.image;
+    expect(image.required).toContain('digest_source');
+    expect(image.properties.digest_source.enum).toEqual(['repo_digest', 'descriptor']);
+    expect(image.properties.descriptor_media_type.enum).toEqual([
+      'application/vnd.oci.image.index.v1+json',
+      'application/vnd.oci.image.manifest.v1+json',
+      'application/vnd.docker.distribution.manifest.list.v2+json',
+      'application/vnd.docker.distribution.manifest.v2+json',
+    ]);
+  });
+
   it('accepts a syntactically complete synthetic example but blocks release', () => {
     const example = { ...validLock(), input_kind: 'synthetic' };
     expect(deploymentLockSchema.safeParse(example).success).toBe(true);
@@ -102,7 +115,7 @@ describe('deployment lock contract', () => {
     expect(blocked(lock).join(' ')).toMatch(/hub-api.*manifest_digest|manifest_digest.*hub-api/i);
   });
 
-  it('blocks copying a known config image ID into manifest fields on a complete site observation', () => {
+  it('accepts Docker engine identity equal to a declared distribution descriptor', () => {
     const lock = validLock();
     lock.environment_kind = 'site';
     lock.input_kind = 'observed';
@@ -117,8 +130,25 @@ describe('deployment lock contract', () => {
     component.capability_probe.runtime_identity.manifest_digest = configImageId;
 
     const result = validateDeploymentLock(lock, pins, { release: true });
-    expect(result.status).toBe('BLOCKED');
-    expect(result.issues.join(' ')).toMatch(/hub-api.*manifest_digest.*image_id/i);
+    expect(result).toEqual({ status: 'PASS', issues: [] });
+  });
+
+  it('requires an explicit distribution digest source and valid optional media type', () => {
+    const lock = validLock();
+    lock.environment_kind = 'site';
+    lock.input_kind = 'observed';
+    const image = lock.components['hub-api'].image as Record<string, unknown>;
+    delete image.digest_source;
+    expect(blocked(lock).join(' ')).toMatch(/digest_source/i);
+
+    image.digest_source = 'image_id';
+    expect(blocked(lock).join(' ')).toMatch(/digest_source/i);
+
+    image.digest_source = 'descriptor';
+    image.descriptor_media_type = 'application/vnd.oci.image.index.v1+json';
+    expect(validateDeploymentLock(lock, pins, { release: true }).status).toBe('PASS');
+    image.descriptor_media_type = 'application/x-unknown';
+    expect(blocked(lock).join(' ')).toMatch(/descriptor_media_type/i);
   });
 
   it('blocks floating latest image references', () => {

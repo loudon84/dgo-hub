@@ -97,7 +97,7 @@ Hermes 配置示意（按实际版本的远程 MCP 配置格式调整）：
 
 ## 部署版本锁
 
-`deploy/upstream-pins.json` 固定 Helix Foundry、OpenMetadata 和 Hasura 的参考源码版本。`deploy/deployment.lock.schema.json` 描述每个部署组件的镜像引用、OCI manifest digest、适用时的源码 revision、配置 schema 与摘要，以及采集时间和能力探测记录。八个必需组件是 hub-api、hub-worker、hub-publisher、sales-mcp、hasura、postgres、openmetadata 和 helix-foundry；现场声明的额外组件也必须提供完整观测。`image_id` 是本地镜像配置身份，不能替代仓库 manifest digest。
+`deploy/upstream-pins.json` 固定 Helix Foundry、OpenMetadata 和 Hasura 的参考源码版本。`deploy/deployment.lock.schema.json` 描述每个部署组件的镜像引用、分发 descriptor 摘要、摘要来源、适用时的 descriptor media type、源码 revision、应用配置 schema 与摘要，以及采集时间和能力探测记录。八个必需组件是 hub-api、hub-worker、hub-publisher、sales-mcp、hasura、postgres、openmetadata 和 helix-foundry；现场声明的额外组件也必须提供完整观测。`manifest_digest` 保留原字段名，表示 registry RepoDigest 或解析出的 OCI/Docker descriptor，可对应 index 或单平台 manifest；`digest_source` 必须是 `repo_digest` 或 `descriptor`。可选 `descriptor_media_type` 仅接受 OCI index/manifest 与 Docker manifest-list/manifest media type。`image_id` 是 Docker 引擎报告的身份，不能普遍解释为 OCI config blob；它仍是独立字段，不能补足缺少的分发摘要。`config.digest` 继续表示应用配置摘要。
 
 生成器只读显式提供的观测 JSON 与 pins 文件，不连接 Docker、上游 checkout 或运行现场，也不读取容器环境变量。命令参数为 `--observations <file> --pins <file>`，可选 `--output <file>` 写出通过结构检查的锁，`--release` 增加正式部署条件。结构检查通过只说明声明字段和内部身份一致，输出仍为 `product_ready: false`；release 模式要求 `input_kind=observed`、`environment_kind=site`、全部组件探测为 PASS，且版本和运行身份匹配。
 
@@ -108,7 +108,7 @@ docker inspect --format '{{.Config.Image}} {{.Image}} {{.Id}}' <container>
 docker image inspect --format '{{json .RepoDigests}}' <image>
 ```
 
-从实际构建记录或可信制品元数据取得组件 `source_sha`；参考 clone 的 HEAD 只作为参考 clone 观察，不能代表运行镜像的源码身份。manifest digest 从 registry 的 repo digest/OCI manifest 记录取得，Docker image ID 单独记入可选 `image.image_id`。如果本地镜像没有 registry manifest digest，保留缺失并记录 image ID，正式校验会 BLOCKED。能力探测必须记录被探测的运行 image ID、manifest digest、配置摘要和 UTC 时间。
+从实际构建记录或可信制品元数据取得组件 `source_sha`；参考 clone 的 HEAD 只作为参考 clone 观察，不能代表运行镜像的源码身份。分发摘要从 registry RepoDigest 或 descriptor 观察取得，并声明相应 `image.digest_source`；可观察到时记录 `image.descriptor_media_type`。Docker `image_id` 单独记入可选 `image.image_id`，即使它与分发摘要相同也有效，只要声明的摘要来源存在且 runtime/probe 身份相符。如果没有 RepoDigest 或 descriptor，保留分发摘要/来源缺失，正式校验会 BLOCKED，不能使用 image ID 回退。来源字段是声明的 provenance，不是加密证明。能力探测必须记录被探测的运行 image ID、manifest digest、应用配置摘要和 UTC 时间。
 
 样例可用如下命令检查 JSON 形状；它会通过结构检查并明确保持 `product_ready: false`：
 

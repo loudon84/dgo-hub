@@ -16,6 +16,10 @@
 | Task 3 | evidence contract, local-check recorder, safe file/digest checks, 48-row release gate | recorder run `task3-final-20261023` recorded `typecheck=0`, `test=0` (63 tests), `build=0` at source SHA `f9abd03f968590ee8fac50ad7916b49453fbb735`; later focused changes are separate commits. See [Task 3 report](../../docs/execution/alpha1/w0-task-3-report.md). | Gate BLOCKED; 48 acceptance rows NOT_RUN |
 | Task 4 | documentation matrix, readiness outputs, plan copy and status reconciliation | documentation ID/link checks and three specified CLI checks; Task 4 is implemented, pending Sol review | BLOCKED; no product PASS |
 
+## W0 final fix wave
+
+The final local engineering wave addresses W0-I1–I4 and W0-M1/M2. The deployment lock records required distribution digest provenance and accepts a Docker engine ID equal to the resolved descriptor when runtime and probe identities match. The release Gate anchors its expected source pins to the repository-controlled file and rejects explicit `synthetic:`, `example:`, and `fixture:` authority schemes. The entry CLI has a missing-path regression, and the recorder reads Git path lists with NUL delimiters. Vitest/mocker are pinned to 4.1.12; the final fix report records install, audit, focused portability checks, and current source SHA. W0 engineering remains pending the one scoped Sol review; product M0–M6 remains BLOCKED/NOT_RUN.
+
 The W0 tools validate input shape, internal identity consistency, recorded local checks, and evidence structure. They do not establish remote runtime truth, approver identity, production API completion, or product acceptance. The prior local check records are bound to their captured source SHA; they are not rerun evidence for later commits.
 
 ## Test coverage and uncovered behavior
@@ -31,11 +35,9 @@ Site inputs are not ready. Missing: endpoint/auth/profile bindings, CRM and orde
 
 Formal M0 remains BLOCKED. Synthetic/example inputs are useful for schema checks only. The product gate is independent of W0 engineering readiness.
 
-## Open backlog retained for W0 broad review / later fix waves
+## Remaining product backlog
 
-- Task 2 lock validator rejects equality between Docker `.Id` and registry descriptor digest. The focused Docker 29/containerd report confirms this equality can be legitimate for an OCI index. Keep an actual distribution digest mandatory and do not substitute `.Id`; correct the compatibility assumption in the final review/fix wave.
-- Dependency audit reports 1 moderate and 2 critical entries through Vitest development tooling (`@vitest/mocker` and `tinypool`); current `--omit=dev` audit is zero and normalized lock comparison has all 255 entries identical. This is a test-tool advisory classification, not a claim that all dependencies are safe; no dependency auto-upgrade is authorized or performed.
-- Task 1 review deferred a nonexistent-path case for unreadable input testing. Carry it into the W0 broad-review checklist.
+- The local fix wave closes the retained W0 lock identity, Gate pins, explicit nonreal authority, test-tool advisory, missing-path coverage, and Git path decoding findings. See [W0 final fix report](../../docs/execution/alpha1/w0-final-fix-report.md) for exact commits and evidence.
 - Keep the existing static backlog for identity and same-version conflict, relationship authorization/deletion, restart gate behavior, concurrent publication, and overlapping ETL. These are regression/fix-wave items, not resolved by documentation or W0 readiness CLIs.
 
 ## Phase map

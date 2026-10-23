@@ -322,4 +322,27 @@ describe('M0 entry CLI', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('returns stable unreadable_input JSON for a genuinely missing signoff path', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'alpha1-entry-'));
+    try {
+      const environmentPath = join(dir, 'environment.json');
+      writeFileSync(environmentPath, JSON.stringify(validEnvironment()));
+      const missingPath = join(dir, 'missing-signoffs.json');
+      const result = await runCheckM0Entry([
+        '--signoffs', missingPath,
+        '--environment', environmentPath,
+        '--expected-kind', 'site',
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(JSON.parse(result.output)).toEqual({
+        error: 'unreadable_input',
+        message: 'Input files must be readable JSON documents',
+        product_ready: false,
+      });
+      expect(result.output).not.toContain(missingPath);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

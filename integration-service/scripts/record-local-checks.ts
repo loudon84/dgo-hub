@@ -61,10 +61,10 @@ async function gitOutput(args: string[], cwd: string): Promise<string> {
     child.once('close', code => code === 0 ? resolveResult(stdout) : reject(new Error(`git ${args[0]} failed`)));
   });
 }
-async function worktreeSnapshot(cwd: string, sourceSha: string): Promise<{ bytes: string; dirty: boolean }> {
+export async function worktreeSnapshot(cwd: string, sourceSha: string): Promise<{ bytes: string; dirty: boolean }> {
   const root = (await gitOutput(['rev-parse', '--show-toplevel'], cwd)).trim();
-  const tracked = (await gitOutput(['diff', '--name-only', '--diff-filter=ACMRD', 'HEAD'], root)).split(/\r?\n/).filter(Boolean);
-  const untracked = (await gitOutput(['ls-files', '--others', '--exclude-standard'], root)).split(/\r?\n/).filter(Boolean);
+  const tracked = (await gitOutput(['diff', '--name-only', '-z', '--diff-filter=ACMRD', 'HEAD'], root)).split('\0').filter(Boolean);
+  const untracked = (await gitOutput(['ls-files', '--others', '--exclude-standard', '-z'], root)).split('\0').filter(Boolean);
   const paths = [...new Set([...tracked, ...untracked])].filter(path => {
     const normalized = path.replace(/\\/g, '/');
     return !normalized.split('/').some(segment => segment.toLowerCase() === '.env' || segment === 'node_modules' || segment === 'dist' || segment === 'deliverables');

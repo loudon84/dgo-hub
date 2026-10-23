@@ -10,7 +10,8 @@ Updated 2026-10-23. Root repo `E:\git\dgo-hub`, branch `feat/alpha1-implementati
 | Task 1 M0 input contracts/entry checker | implemented | approved, concerns carried | BLOCKED |
 | Task 2 deployment lock checker | implemented | approved, concerns carried | BLOCKED |
 | Task 3 evidence recorder/gate | implemented | approved, concerns carried | BLOCKED |
-| Task 4 API/page matrix and W0 docs | implemented | pending Sol review; W0 broad review pending | NOT_RUN |
+| Task 4 API/page matrix and W0 docs | implemented | pending scoped Sol review | NOT_RUN |
+| W0 final fix wave | implemented locally; exact commits and checks in [final fix report](w0-final-fix-report.md) | pending one scoped Sol review | BLOCKED / NOT_RUN |
 
 Task 0–3 engineering reports are under this directory. W0 code review is not the same as product acceptance. Task 4 makes no self-claim of review approval.
 
@@ -22,6 +23,8 @@ Task 0–3 engineering reports are under this directory. W0 code review is not t
 - The Task 2 release CLI consumed the synthetic deployment lock example; result BLOCKED, exit 2 because it is `local_lab`/`synthetic`, not `site`/`observed`.
 - The Task 3 Gate consumed the previously recorded `local_check` run at source SHA `f9abd03f968590ee8fac50ad7916b49453fbb735`; result BLOCKED, exit 2, seven required input/manifests absent. No examples were substituted into that run. Exact stdout and command inputs are in [Task 4 report](w0-task-4-report.md).
 - All 48 required A/N/FI acceptance rows remain `NOT_RUN`; no product PASS is inferred from unit tests, local build, example syntax, or tool output.
+- The final fix regression suite includes an artificial release-shaped bundle that exercises the Gate's final PASS branch. It is unit-test material only and is not a site run or product acceptance. The Gate now anchors expected source pins outside the run bundle and rejects explicit `synthetic:`, `example:`, and `fixture:` authority references.
+- The local W0 final fix is awaiting its one scoped Sol review. No M0 implementation was started in this wave.
 
 ## Documentation and next phase
 

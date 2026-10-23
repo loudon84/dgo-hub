@@ -13,4 +13,6 @@ Date: 2026-10-23. Source: read-only pinned-source discovery in `.superpowers/sdd
 
 The pins and route/schema citations are static source evidence only. They do not prove current runtime version, endpoint availability, authentication, tenant isolation, or behavior. Do not infer an installed deployment's revision from a reference clone's HEAD. No upstream checkout, branch, index, service or source file was changed for this report.
 
+The Alpha.1 release Gate compares the run bundle's source pins with the repository-controlled `deploy/upstream-pins.json` before validating its deployment lock. A bundle cannot act as its own approval baseline. Image digest source labels describe the declared collection path (`repo_digest` or `descriptor`); they do not cryptographically attest a running image. Runtime pin and image observations remain `NOT_RUN` until collected from the target deployment.
+
 Primary local source: `.superpowers/sdd/alpha1/m3-api-discovery.md`, including source-file and schema citations for each behavior. UI/auth insertion seams and toolchain are separately recorded in `.superpowers/sdd/alpha1/ui-seam-discovery.md`; no enterprise OpenMetadata UI build or patch was performed. See the short Hermes note for M4 compatibility evidence and probe gaps.
