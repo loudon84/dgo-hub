@@ -43,3 +43,13 @@ Formal M0 remains BLOCKED. Synthetic/example inputs are useful for schema checks
 ## Phase map
 
 The authoritative M0–M6 requirements and dependencies are in the [phase gate checklist](../../docs/plans/phase-gates-alpha1.md). API classification, UI page coverage, and all 48 A/N/FI rows are in the linked matrix above. No phase is marked product-verified by this snapshot.
+
+## M0 Task5 reconciliation (2026-10-24)
+
+The historical W0 review snapshot above is retained as historical provenance. Current M0 local engineering status is recorded in [execution status](../../docs/execution/alpha1/status.md) and the [Task5 consolidated report](../../docs/execution/alpha1/m0-task-5-report.md). Tasks0–4 each have local Spec/Quality PASS dispositions; the controller's whole-M0 stage review remains a separate pending gate.
+
+The Task4 fixed-run record remains attached to the 24 source/evidence path manifest and the source bytes subsequently committed as 135b7f1. Before reuse, Task5 matched all six current integration-service runtime/test/migration manifest entries (6/6, zero mismatches); this subset check does not change the run's recorded starting HEAD 9724f627 or transfer 191 tests to a new SHA. Task4 probe fix1 is separately bound to source f9ede840 and review/evidence commit 73d9ce92; its 2 focused tests and exact-address/TLS fixture do not replace or repeat the full suite.
+
+M0 local implementation now covers API-001 and API-046–048, plus the authenticated /mcp/sales identity/origin boundary for API-059. These statuses mean local implementation/test scope only. Site IdP and user bindings, remote Hermes v0.22.1, site network/ACL/TLS, real deployment observations, approvals and the Golden Consumer were not available. The Task5 site-kind entry, release-lock and Gate validators all returned BLOCKED/exit 2 using the retained example/synthetic/local-check inputs. All 48 A/N/FI product rows remain NOT_RUN and formal M0 remains BLOCKED.
+
+The 59 original PRD APIs remain inventoried. M1 plans API-060 as a single explicit extension for hard-delete approval bound to exact run/candidate identity and a persisted per-source same-tenant Data Owner subject. It is planned only, not implemented; no new auth scope is added. See the [M1 detailed plan](../../docs/plans/2026-10-24-alpha1-m1-source-ingestion-implementation-plan.md).

@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** Task0/1/2本地实现与Sol Spec/Quality已通过。Task3修复源码a7ce7d4的20项定向测试/typecheck/build通过；Sol复审关闭I2–I5，深层参数摘要绕过审计的I1仍未关闭。按用户“继续下一个实施”指令，Task4首先修复I1，再完成独立部署/权限/TLS探测；Task3工程gate待组合review确认。现场与远端Hermes v0.22.1仍BLOCKED/未观察。
+**状态:** Task0–4均已完成各自本地实现与独立 GPT-6.1 Sol Spec/Quality review。Task4 fix1 source `f9ede840` and evidence `73d9ce92` close I1/I2/I3; see [Task4 re-review](../execution/alpha1/reviews/m0-task-4-rereview-1.md). Task5 evidence reconciliation and M1 handoff are recorded in [Task5 report](../execution/alpha1/m0-task-5-report.md). Whole-M0 stage review remains pending. Site/remote Hermes v0.22.1 remains BLOCKED/unobserved.
 
 ## Global Constraints
 
@@ -85,9 +85,9 @@
 
 **Consumes:** Task1/2主体与认证；**Produces:** Alpha /mcp/sales opaque入口、前后凭据/epoch/gate检查与审计拒绝。来源resolver供M1消费，M0不开放未实现的正式batch入口。
 
-- [ ] RED：个人/来源/管理token不可互用；HTTP认证失败不执行工具；5工具含context都检查gate；查询在途撤销/epoch变化丢弃；审计失败无业务data；JWT中body身份不能扩大范围。
-- [ ] GREEN：strict默认，旧/mcp HSJWT、/v1/ingest共享key及/admin只能local_lab+显式legacy开关；Alpha不注册旧路由。Hasura execution role由可信tenant_key和business_role精确派生为 `hub_<tenant_key>_<business_role>`，仅设置该一个allowed role；不得将sales/sales_manager直接作为execution role，也不降级到sales_reader；权限尚未M2发布时安全拒绝。
-- [ ] 本地协议/受控查询边界 focused、typecheck/test/build、commit → Sol review；完整两角色GraphQL授权留M2。
+- [x] RED：个人/来源/管理token不可互用；HTTP认证失败不执行工具；5工具含context都检查gate；查询在途撤销/epoch变化丢弃；审计失败无业务data；JWT中body身份不能扩大范围。
+- [x] GREEN：strict默认，旧/mcp HSJWT、/v1/ingest共享key及/admin只能local_lab+显式legacy开关；Alpha不注册旧路由。Hasura execution role由可信tenant_key和business_role精确派生为 `hub_<tenant_key>_<business_role>`，仅设置该一个allowed role；不得将sales/sales_manager直接作为execution role，也不降级到sales_reader；权限尚未M2发布时安全拒绝。
+- [x] 本地协议/受控查询边界 focused、typecheck/test/build、commit → Sol review；Task4 initial review closed carried I1 and the Task4 report records 185 original full tests plus 20 fix-focused tests at their own source identities.
 
 ## Task 4：独立 Alpha 部署与拒绝探测
 
@@ -95,18 +95,18 @@
 
 **refs:** REQ-ARCH/AUTH/OPS。**files:** deploy/alpha1/compose.yaml、最小权限SQL/启动脚本、deploy/scripts/probe-sales-network.ps1、.env.example/README、部署测试。
 
-- [ ] RED：定义API/worker/publisher/MCP/Hasura账号能力矩阵并实际探测禁用动作；销售入口无法访问管理/数据库/Hasura admin；缺秘密/IdP/TLS配置启动或探测返回BLOCKED非假PASS。
-- [ ] GREEN：migrator一次性DDL、API启动不迁移；最小账号；Hasura业务只读api视图和独立metadata DB；只有publisher拥有admin secret；销售仅入口代理/MCP，不与DB/管理面同网。原演示Compose保留显式lab，Alpha配置独立。
-- [ ] 独立Compose project/本次资源ID；本机TLS可用受控自签证书验证链路，真实DNS/TLS与现场网络仍BLOCKED。不得对现存项目down或删卷。
-- [ ] focused配置/真实DB拒绝/网络探测、typecheck/test/build、commit → Sol review；记录实测拓扑而非仅静态yaml。
+- [x] RED：定义API/worker/publisher/MCP/Hasura账号能力矩阵并实际探测禁用动作；销售入口无法访问管理/数据库/Hasura admin；缺秘密/IdP/TLS配置启动或探测返回BLOCKED非假PASS。
+- [x] GREEN：migrator一次性DDL、API启动不迁移；最小账号；Hasura业务只读api视图和独立metadata DB；只有publisher拥有admin secret；销售仅入口代理/MCP，不与DB/管理面同网。原演示Compose保留显式lab，Alpha配置独立。
+- [x] 独立Compose project/本次资源ID；本机TLS可用受控自签证书验证链路，真实DNS/TLS与现场网络仍BLOCKED。不得对现存项目down或删卷。
+- [x] focused配置/真实DB拒绝/网络探测、typecheck/test/build、commit → Sol review；Task4 scoped fix re-review closes I1/I2/I3. Fixed-run results (12 files / 191 tests) belong to dirty source bytes captured at recorder base `9724f627` and later source commit `135b7f1`; fix1 separately has 2 focused tests and live evidence. Runtime source bytes did not change in fix1.
 
 ## Task 5：本地证据与阶段交接
 
 **refs:** REQ-EVID、所有M0子集。**files:** docs/execution/alpha1/status.md、implementation-baseline.md、API矩阵、M0报告/本地run说明；随后M1细计划。
 
-- [ ] 合并各任务工程证据与准确commit/测试数量；用W0记录器新建run并执行entry/lock/Gate，预期缺真实材料仍BLOCKED。
-- [ ] API001/046–048及legacy边界状态更新；列明已本地验证与缺现场项，Hermes版本不再列未知。
-- [ ] Sol阶段整体review，处理遗留；创建M1细计划继续实现来源/批次/规范化/ETL及接入页，不等待现场输入。
+- [x] 合并各任务工程证据与准确commit/测试数量；复用 Task4 fixed run only after matching the six current `integration-service` runtime/test/migration entries against its manifest (zero mismatches); record honest site entry, lock and Gate BLOCKED results.
+- [x] API-001/046–048 and strict legacy-boundary local status updated with test/report evidence; site status remains NOT_RUN/BLOCKED. Hermes v0.22.1 is recorded as user-reported remote installation with handshake/Profile/tool registration unobserved.
+- [ ] GPT-6.1 Sol whole-M0 stage review and any single bounded fix wave remain the controller's next gate. M1 detailed plan and first implementation brief are prepared; no M1 source code has been started.
 
 ## 精确身份合同与裁定
 

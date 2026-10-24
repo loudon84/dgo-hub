@@ -1,0 +1,4 @@
+build=0
+entry=2
+lock=2
+gate=2

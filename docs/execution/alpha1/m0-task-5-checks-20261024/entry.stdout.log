@@ -1,0 +1,1 @@
+{"status":"BLOCKED","missing":["signoffs:status_not_approved_for_plan","environment:kind_mismatch","example:formal_readiness_rejected"],"example":true,"product_ready":false,"scope":"entry-input-validation"}

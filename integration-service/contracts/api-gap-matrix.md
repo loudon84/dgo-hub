@@ -1,10 +1,10 @@
 # Alpha.1 API gap matrix
 
-基准：主 PRD 附录 A（API-001–059，来源行 1872–1950）；当前实现源 `integration-service/`；静态核对日期 2026-10-23，HEAD `1ffd8824b1c00108373823e6239ea63eb23216dc`。分类描述目标 API 合同：**复用**=相同合同可直接复用；**适配**=有相邻能力但仍需调整路径、输入、身份、状态或证据合同；**缺失**=没有对应目标端点/完整流程。静态代码与单测不自动证明正式 API 已实现或产品验收 PASS。
+基准：主 PRD 附录 A（原始 API-001–059，来源行 1872–1950）；M1 planned extension adds API-060 for the specific hard-delete Owner approval action absent from those 59 rows. Current M0 evidence was reconciled 2026-10-24 against the reports linked below; the remaining M1–M6 rows retain their 2026-10-23 static classifications until implemented. Classification describes the target API contract: **复用**=same contract directly reusable; **适配**=adjacent capability exists but route/input/identity/state/evidence needs change; **缺失**=no corresponding target endpoint or complete workflow. Static code and unit tests do not prove formal API completion or product acceptance PASS.
 
 | API | PRD method/path | REQ references | Classification | Code evidence / gap | Phase | Existing test coverage |
 |---|---|---|---|---|---|---|
-| API-001 | GET `/hub/v1/me` | REQ-AUTH-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0 | No canonical API contract test. |
+| API-001 | GET `/hub/v1/me` | REQ-AUTH-001 | Implemented locally | `ingestion-api/identity-routes.ts`: verified OIDC `issuer/sub` resolves through M0 auth store; tenant/role come from DB; strict envelope and safe logger. Site identity binding/IdP acceptance remains blocked. | M0 | Fastify HTTP injection, real local RSA/EC JWKS and PostgreSQL; see [Task2 report](../../docs/execution/alpha1/m0-task-2-report.md) and [Task5 M0 report](../../docs/execution/alpha1/m0-task-5-report.md). |
 | API-002 | GET `/hub/v1/admin/sources` | REQ-SRC-001 | Missing | No corresponding Hub endpoint or complete workflow. | M1 | No canonical API contract test. |
 | API-003 | POST `/hub/v1/admin/sources` | REQ-SRC-001 | Missing | No corresponding Hub endpoint or complete workflow. | M1 | No canonical API contract test. |
 | API-004 | GET `/hub/v1/admin/sources/{id}` | REQ-SRC-001 | Missing | No corresponding Hub endpoint or complete workflow. | M1 | No canonical API contract test. |
@@ -28,6 +28,7 @@
 | API-022 | POST `/hub/v1/admin/etl-runs/{id}/retry` | REQ-ETL-001 | Adapt | POST /admin/etl/:source/retry; lacks approved revision/reliable cursor contract. | M1 | Adjacent logic has tests; no canonical endpoint contract test. |
 | API-023 | GET `/hub/v1/admin/quarantine` | REQ-DATA-001 | Adapt | GET /admin/ingestion/failures; not quarantine. | M1 | Adjacent logic has tests; no canonical endpoint contract test. |
 | API-024 | POST `/hub/v1/admin/quarantine/{id}/retry` | REQ-DATA-001 | Missing | No corresponding Hub endpoint or complete workflow. | M1 | No canonical API contract test. |
+| API-060 (planned extension) | POST `/hub/v1/admin/etl-runs/{id}/deletion-approval` | REQ-ETL-001, REQ-DATA-001 | Missing (planned contract) | This single planned extension binds a hard-delete approval to the exact source/run/candidate digest and current bound Data Owner. The original API-001–059 inventory has no operation with these semantics. It is not implemented. | M1 | No API-060 implementation/test; contract and owner-binding tests are specified in the [M1 plan](../../docs/plans/2026-10-24-alpha1-m1-source-ingestion-implementation-plan.md). |
 | API-025 | POST `/hub/v1/admin/governance/sync` | REQ-GOV-001 | Missing | No corresponding Hub endpoint or complete workflow. | M3 | No canonical API contract test. |
 | API-026 | GET `/hub/v1/admin/assets/{id}/context` | REQ-GOV-001 | Missing | No corresponding Hub endpoint or complete workflow. | M3 | No canonical API contract test. |
 | API-027 | GET `/hub/v1/admin/ontologies/{workspaceId}` | REQ-ONT-001 | Adapt | GET /admin/ontology/helix and ontology-binding/binding.ts read active generation. | M3 | integration tests cover read-only model/field-validation subset. |
@@ -49,9 +50,9 @@
 | API-043 | POST `/hub/v1/admin/policies/{id}/revoke` | REQ-POL-001 | Missing | No corresponding Hub endpoint or complete workflow. | M2/M5 | No canonical API contract test. |
 | API-044 | GET `/hub/v1/admin/policies/{id}/status` | REQ-POL-001 | Missing | No corresponding Hub endpoint or complete workflow. | M2/M5 | No canonical API contract test. |
 | API-045 | POST `/hub/v1/admin/access-previews` | REQ-UI-001, REQ-SEC-001 | Adapt | `POST /admin/permissions/preview` accepts caller-supplied tenantId/userId and columns; it echoes requested columns and counts rows from the Hub API view using tenant_id/owner_user_id. Response labels this a pre-release estimate and says Hasura must reverify after application. No authorized principal resolution, fixed template ID, or read of applied Hasura policy. | M2/M5 | No route-level preview or applied-policy verification test; core.test.ts tests policy helpers only. |
-| API-046 | POST `/hub/v1/me/agent-credentials` | REQ-AUTH-001, REQ-AGENT-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
-| API-047 | GET `/hub/v1/me/agent-credentials` | REQ-AUTH-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
-| API-048 | DELETE `/hub/v1/me/agent-credentials/{id}` | REQ-AUTH-001 | Missing | No corresponding Hub endpoint or complete workflow. | M0/M4 | No canonical API contract test. |
+| API-046 | POST `/hub/v1/me/agent-credentials` | REQ-AUTH-001, REQ-AGENT-001 | Implemented locally | `ingestion-api/identity-routes.ts`: strict body and idempotency header; one-time secret response, replay omits secret; caller principal resolved from OIDC binding. | M0/M4 | Fastify injection and real PostgreSQL concurrency/replay; see [Task2 report](../../docs/execution/alpha1/m0-task-2-report.md) and [Task5 M0 report](../../docs/execution/alpha1/m0-task-5-report.md). |
+| API-047 | GET `/hub/v1/me/agent-credentials` | REQ-AUTH-001 | Implemented locally | `ingestion-api/identity-routes.ts`: server-side owner scope, metadata-only stable pagination; no secret/digest or caller tenant filter. | M0/M4 | Fastify injection and real PostgreSQL pagination/privacy; see [Task2 report](../../docs/execution/alpha1/m0-task-2-report.md) and [Task5 M0 report](../../docs/execution/alpha1/m0-task-5-report.md). |
+| API-048 | DELETE `/hub/v1/me/agent-credentials/{id}` | REQ-AUTH-001 | Implemented locally | `ingestion-api/identity-routes.ts` + `auth/service.ts`: bodyless idempotent 204; self/authorized same-tenant revoke; credential and subject epochs update transactionally. | M0/M4 | Fastify injection, real PostgreSQL revoke/epoch tests and Task4 live credential sequence; see [Task1](../../docs/execution/alpha1/m0-task-1-report.md), [Task2](../../docs/execution/alpha1/m0-task-2-report.md), [Task4](../../docs/execution/alpha1/m0-task-4-report.md), and [Task5 M0 report](../../docs/execution/alpha1/m0-task-5-report.md). |
 | API-049 | GET `/hub/v1/admin/agent-tools` | REQ-MCP-001 | Adapt | GET /admin/agent/tools returns name/description; schema/version/health fields absent. | M5/M6 | integration tests cover tool-definition subset. |
 | API-050 | GET `/hub/v1/admin/audit` | REQ-OBS-001 | Adapt | GET /admin/agent/audit; complete redaction/pagination/request_id contract absent. | M5/M6 | integration tests cover parts of audit write/read. |
 | API-051 | GET `/hub/v1/admin/operations/{id}` | REQ-OBS-001 | Missing | No corresponding Hub endpoint or complete workflow. | M5/M6 | No canonical API contract test. |
@@ -62,7 +63,7 @@
 | API-056 | POST `/hub/v1/sales/customer-orders` | REQ-API-001 | Missing | sales-mcp/queries.ts has query logic; shared Sales REST route is absent. | M2/M4 | integration tests cover MCP queries, not REST endpoints. |
 | API-057 | POST `/hub/v1/sales/order-detail` | REQ-API-001 | Missing | sales-mcp/queries.ts has query logic; shared Sales REST route is absent. | M2/M4 | integration tests cover MCP queries, not REST endpoints. |
 | API-058 | POST `/hub/v1/sales/summary` | REQ-API-001 | Missing | sales-mcp/queries.ts has query logic; shared Sales REST route is absent. | M2/M4 | integration tests cover MCP queries, not REST endpoints. |
-| API-059 | MCP Streamable HTTP `/mcp/sales` | REQ-MCP-001 | Adapt | sales-mcp/server.ts uses SDK at /mcp and permits POST only; /mcp/sales, identity and complete Streamable HTTP contract are not implemented. | M4 | integration tests cover tool subset; Task3 gate tests do not verify MCP protocol. |
+| API-059 | MCP Streamable HTTP `/mcp/sales` | REQ-MCP-001 | Adapt (M0 identity boundary) | `sales-mcp/server.ts` registers `/mcp/sales`, authenticates current personal-agent credentials, rejects invalid Origin before auth/query, and preserves the five-tool M0 closed-gate boundary. Full remote Hermes interoperability and the complete M4 protocol/consumer acceptance are not established. | M0/M4 | Fastify protocol/auth boundary, query/audit barriers, and Task4 local TLS/closed-gate probes; remote Hermes v0.22.1 remains unobserved. See [Task3](../../docs/execution/alpha1/m0-task-3-report.md), [Task4](../../docs/execution/alpha1/m0-task-4-report.md), and [Task5 M0 report](../../docs/execution/alpha1/m0-task-5-report.md). |
 
 ## REQ coverage
 
@@ -72,8 +73,8 @@
 | REQ-AUTH-001 | M0, M4 | A/N-AUTH-001; API-001, API-046–048 |
 | REQ-SRC-001 | M1 | A/N-SRC-001; API-002–014 |
 | REQ-ING-001 | M1 | A/N-ING-001; API-015–018 |
-| REQ-ETL-001 | M1 | A/N-ETL-001; API-019–022 |
-| REQ-DATA-001 | M1 | A/N-DATA-001; API-011–014, API-016, API-023–024 |
+| REQ-ETL-001 | M1 | A/N-ETL-001; API-019–022, planned API-060 |
+| REQ-DATA-001 | M1 | A/N-DATA-001; API-011–014, API-016, API-023–024, planned API-060 |
 | REQ-GOV-001 | M3 | A/N-GOV-001; API-025–026 |
 | REQ-ONT-001 | M3 | A/N-ONT-001; API-027–030 |
 | REQ-PUB-001 | M3 | A/N-PUB-001; API-031–036 |
