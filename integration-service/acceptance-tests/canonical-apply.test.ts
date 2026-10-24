@@ -736,6 +736,91 @@ describe('canonical migration 006', () => {
     }
   });
 
+  it('rejects direct-helper owner changes after M0 withdraws the business role to NULL', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-direct-null-role-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const firstPayload={source_pk:'direct-helper-null-role',customer_name:'Direct helper null role',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const initial=await database.connect();
+    const worker=await database.connect();
+    try {
+      await initial.query('BEGIN');
+      await initial.query('SET LOCAL ROLE hub_worker');
+      const first=await applyCustomer(initial,frozen,firstPayload);
+      await initial.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+
+      await database.query('UPDATE control.auth_subject SET business_role=NULL WHERE tenant_key=$1 AND user_id=$2',
+        [context.tenantId,newOwner]);
+      const withdrawn=await database.query<{enabled:boolean;business_role:string|null;department_id:string}>(
+        'SELECT enabled,business_role,department_id FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2',
+        [context.tenantId,newOwner]);
+      expect(withdrawn.rows[0]).toEqual({enabled:true,business_role:null,department_id:'sales-east'});
+
+      const customerId=requireApplied(first).objectId;
+      const captureState=async () => (await database.query<{
+        core:unknown;identity_refs:unknown;receipt:unknown;outbox:unknown;audit:unknown;epochs:unknown;
+      }>(`SELECT
+        (SELECT to_jsonb(c) FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$2) AS core,
+        (SELECT jsonb_agg(to_jsonb(r) ORDER BY r.kind) FROM control.canonical_identity_reference r
+          WHERE r.tenant_key=$1 AND r.source_id=$3 AND r.entity='customer' AND r.source_pk=$4) AS identity_refs,
+        (SELECT to_jsonb(r) FROM control.source_version_receipt r
+          WHERE r.tenant_key=$1 AND r.source_id=$3 AND r.entity='customer' AND r.source_pk=$4) AS receipt,
+        (SELECT COALESCE(jsonb_agg(to_jsonb(o) ORDER BY o.id),'[]'::jsonb) FROM control.canonical_apply_outbox o
+          WHERE o.tenant_key=$1 AND o.source_id=$3 AND o.entity='customer' AND o.canonical_object_id=$2) AS outbox,
+        (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.id),'[]'::jsonb) FROM control.canonical_ownership_audit a
+          WHERE a.tenant_key=$1 AND a.source_id=$3 AND a.entity='customer' AND a.source_pk=$4) AS audit,
+        (SELECT jsonb_agg(jsonb_build_array(s.user_id,s.auth_epoch) ORDER BY s.user_id) FROM control.auth_subject s
+          WHERE s.tenant_key=$1 AND s.user_id=ANY(ARRAY[$5,$6]::text[])) AS epochs`,
+      [context.tenantId,customerId,context.sourceId,firstPayload.source_pk,context.ownerUserId,newOwner])).rows[0];
+      const before=await captureState();
+
+      await worker.query('BEGIN');
+      await worker.query('SET LOCAL ROLE hub_worker');
+      const secondPayload={...firstPayload,owner_external_id:'ext-B',source_version:'2'};
+      const sourceDigest=Buffer.from(sourceContentDigest(secondPayload),'hex');
+      const revision=(await worker.query<{revision:string}>("SELECT nextval('control.canonical_hub_revision_seq')::text AS revision")).rows[0].revision;
+      const projection=(await worker.query<{digest:Buffer}>(`SELECT control.canonical_projection_digest($1,$2::uuid,
+        $3::jsonb) AS digest`,[sourceDigest,customerId,
+        JSON.stringify({owner_user_id:newOwner,department_id:'sales-east'})])).rows[0].digest;
+      await worker.query(`UPDATE hub.canonical_customer SET owner_user_id=$3,source_version=2,hub_revision=$4
+        WHERE tenant_id=$1 AND id=$2`,[context.tenantId,customerId,newOwner,revision]);
+      await worker.query(`UPDATE control.source_version_receipt SET source_version=2,source_content_digest=$4,projection_digest=$5,deleted=false
+        WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3`,[context.tenantId,context.sourceId,firstPayload.source_pk,sourceDigest,projection]);
+      await worker.query(`INSERT INTO control.canonical_apply_outbox(tenant_key,source_id,channel_id,channel_epoch,version_domain,entity,
+        canonical_object_id,hub_revision,operation,projection_digest,source_content_digest)
+        VALUES($1,$2,$3,$4,$5,'customer',$6,$7,'UPSERT',$8,$9)`,[context.tenantId,context.sourceId,frozen.channelId,
+        frozen.channelEpoch,frozen.versionDomain,customerId,revision,projection,sourceDigest]);
+      await expect(worker.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,firstPayload.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,
+        frozen.versionDomain,frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,
+        frozen.identityMappingRevision,JSON.stringify([{kind:'user',external_id:'ext-B'}]),
+      ])).rejects.toMatchObject({code:'42501'});
+      await worker.query('ROLLBACK');
+
+      const after=await captureState();
+      expect(after).toEqual(before);
+      const roleAfterRollback=await database.query<{enabled:boolean;business_role:string|null;department_id:string}>(
+        'SELECT enabled,business_role,department_id FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2',
+        [context.tenantId,newOwner]);
+      expect(roleAfterRollback.rows[0]).toEqual({enabled:true,business_role:null,department_id:'sales-east'});
+    } finally {
+      await worker.query('ROLLBACK').catch(()=>undefined);
+      await initial.query('ROLLBACK').catch(()=>undefined);
+      initial.release(); worker.release();
+    }
+  });
+
   it('enforces typed barriers and newer remap fences through direct worker helper calls', async () => {
     const context=await seedCustomerApplyProof();
     const newOwner=`owner-helper-fences-${randomBytes(3).toString('hex')}`;

@@ -557,13 +557,13 @@ BEGIN
     IF v_change.kind='user' THEN
       SELECT enabled,business_role,department_id INTO v_subject_enabled,v_subject_role,v_subject_department
         FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_new_target;
-      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role<>'sales' OR v_subject_department IS DISTINCT FROM v_department THEN
+      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role IS DISTINCT FROM 'sales' OR v_subject_department IS DISTINCT FROM v_department THEN
         RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
       END IF;
     ELSE
       SELECT enabled,business_role,department_id INTO v_subject_enabled,v_subject_role,v_subject_department
         FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_owner;
-      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role<>'sales' OR v_subject_department IS DISTINCT FROM v_new_target THEN
+      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role IS DISTINCT FROM 'sales' OR v_subject_department IS DISTINCT FROM v_new_target THEN
         RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
       END IF;
     END IF;
