@@ -82,9 +82,9 @@ describe('M1 source admission authorization', () => {
   });
 
   it('applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat', async () => {
-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'],skipped:[]});
+    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'],skipped:[]});
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'] });
+    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'] });
     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
     );
@@ -721,7 +721,7 @@ describe('M1 source admission authorization', () => {
     const role=`m1_reader_${suffix}`;
     await fixture.pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
     await fixture.pool.query(`CREATE SCHEMA ${schema}`);
-    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,deleted_at timestamptz)`);
+    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,updated_at timestamptz,deleted_at timestamptz)`);
     await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
     await fixture.pool.query(`GRANT SELECT ON ${schema}.customer_data TO ${role}`);
     try {
@@ -729,17 +729,17 @@ describe('M1 source admission authorization', () => {
         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
+          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
       });
       expect(result).toMatchObject({passed:true,checks:expect.arrayContaining(['ENDPOINT_REACHABLE','SOURCE_IDENTITY_VALID','READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'])});
-      await fixture.pool.query(`CREATE TABLE ${schema}.bad_customer(customer_id text,source_version text,deleted_at text)`);
+      await fixture.pool.query(`CREATE TABLE ${schema}.bad_customer(customer_id text,source_version text,updated_at text,deleted_at text)`);
       await fixture.pool.query(`GRANT SELECT ON ${schema}.bad_customer TO ${role}`);
       const badType=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'bad_customer',version_field:'source_version',delete_field:'deleted_at'}}},
+          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'bad_customer',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
       });
       expect(badType).toMatchObject({passed:false,checks:expect.arrayContaining(['VERSION_DELETE_CONTRACT_INVALID'])});
@@ -755,7 +755,7 @@ describe('M1 source admission authorization', () => {
     const role=`m1_reader_${suffix}`;
     await fixture.pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
     await fixture.pool.query(`CREATE SCHEMA ${schema}`);
-    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,deleted_at timestamptz)`);
+    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,updated_at timestamptz,deleted_at timestamptz)`);
     await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
     await fixture.pool.query(`GRANT SELECT ON ${schema}.customer_data TO ${role}`);
     await fixture.pool.query(`GRANT INSERT(customer_id) ON ${schema}.customer_data TO ${role}`);
@@ -765,7 +765,7 @@ describe('M1 source admission authorization', () => {
         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
+          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
       });
       expect(result).toMatchObject({passed:false,checks:expect.arrayContaining(['READ_ONLY_PERMISSION_INVALID'])});
@@ -921,7 +921,7 @@ function managerService(pool: typeof fixture.pool = fixture.pool) {
     if(reference==='crm-prod') return {revision:'fixture-v1',connector:'rest',host:'127.0.0.1',port:capabilityPort,protocol:'http:',allow_loopback_http:true,path:'/',
       schema_version:'customer-v1',source_identity:'fixture-crm',entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}};
     if(reference==='pg-prod') return {revision:'fixture-pg-v1',connector:'postgresql',host:'db.fixture.invalid',port:5432,protocol:'postgres:',
-      database:'source',user:'source_reader',schema:'public',entities:{customer:{table:'customers',version_field:'source_version',delete_field:'deleted_at'}}};
+      database:'source',user:'source_reader',schema:'public',entities:{customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}};
     if(reference==='sql-prod') return {revision:'fixture-sql-v1',connector:'sqlserver',host:'sql.fixture.invalid',port:1433,protocol:'mssql:',entities:{}};
     throw new Error('unapproved');
   }};

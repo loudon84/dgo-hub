@@ -6,6 +6,7 @@ import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from '../co
 import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-contract.js';
 import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
 import { durableRetryDelayMs } from './retry.js';
+import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
 
 type Source = { name: string; url: string; table: string; kind: 'customer' | 'order' };
 type LegacyDependencies = {
@@ -373,12 +374,14 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
   return claims.length;
 }
 
-export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.ProcessEnv = process.env): Promise<void> {
+export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.ProcessEnv = process.env,
+  snapshotDependencies?: SnapshotWorkerDependencies): Promise<void> {
   const once=environment.HUB_STRICT_INGESTION_WORKER_ONCE==='true';
   const interval=Number(environment.HUB_STRICT_INGESTION_WORKER_INTERVAL_MS ?? 1000);
   if (!Number.isInteger(interval) || interval<100 || interval>60_000) throw new Error('WORKER_OPTIONS_INVALID');
   do {
     await runDurableWorkerOnce(pool);
+    if (snapshotDependencies) await runSnapshotWorkerOnce(pool, snapshotDependencies);
     if (once) return;
     await new Promise(resolve => setTimeout(resolve,interval));
   } while (true);
@@ -435,14 +438,15 @@ async function runLegacyWorker(environment: NodeJS.ProcessEnv, sources: readonly
   setInterval(() => { void tick(); }, Number(environment.WORKER_INTERVAL_MS ?? 15000));
 }
 
-export async function startWorker(environment: NodeJS.ProcessEnv = process.env): Promise<'not_ready' | 'local_lab' | 'strict'> {
+export async function startWorker(environment: NodeJS.ProcessEnv = process.env,
+  snapshotDependencies?: SnapshotWorkerDependencies): Promise<'not_ready' | 'local_lab' | 'strict'> {
   const runtime = readHubRuntimeConfiguration(environment);
   if (environment.HUB_ENABLE_STRICT_INGESTION_WORKER === 'true') {
     if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
     const { pool } = await import('../db.js');
     const role = await pool.query<{ current_user: string }>('SELECT current_user');
     if (role.rows[0]?.current_user !== 'hub_worker') throw new Error('WORKER_DATABASE_ROLE_INVALID');
-    await runDurableWorkerLoop(pool, environment);
+    await runDurableWorkerLoop(pool, environment, snapshotDependencies);
     return 'strict';
   }
   const sources = resolveWorkerSources(environment, runtime);

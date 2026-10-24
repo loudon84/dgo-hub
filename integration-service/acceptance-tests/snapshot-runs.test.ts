@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,9 @@ import { createSourceRegistryService, type SourceRegistryService } from '../sour
 import { runMigrations } from '../migrations/runner.js';
 import { buildApp } from '../app.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+import { createLocalLabPostgresSourceConnectionFactory, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
+import { runSnapshotWorkerOnce } from '../etl-worker/snapshot-worker.js';
+import type { EndpointProfile } from '../source-registry/capability-probe.js';
 
 const evidenceRoot = fixtureEvidenceRootFromEnvironment();
 const localEvidence = join(fileURLToPath(new URL('../../docs/execution/alpha1/m1-task-5a-evidence/', import.meta.url)), 'postgres-lifecycle.jsonl');
@@ -21,12 +25,14 @@ let owner = { userId: 'snapshot_owner', tenantId: 'snapshot_tenant', departmentI
   managementScopes: ['source:read','source:write','source:approve','mapping:write'] as const, authEpoch: '0',
   businessTimezone: 'UTC', issuer: 'https://idp.example.test', subject: 'snapshot-owner' };
 
+let e2eEndpointProfile: EndpointProfile | undefined;
 const endpointAllowlist = { resolve: async (reference: string) => {
   if (reference !== 'pg-test') throw new Error('endpoint not approved');
-  return { revision: 'pg-v1', connector: 'postgresql' as const, protocol: 'postgres:' as const, host: 'source.fixture.invalid',
+  return e2eEndpointProfile ?? { revision: 'pg-v1', connector: 'postgresql' as const, protocol: 'postgres:' as const, host: 'source.fixture.invalid',
     port: 5432, database: 'source_db', user: 'source_reader', schema: 'public',
-    entities: { customer: { table: 'customers', version_field: 'source_version' },
-      order: { table: 'orders', version_field: 'source_version' } } };
+    entities: { customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at', version_field: 'source_version' },
+      order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', version_field: 'source_version', aggregate_version_covers_lines: true,
+        lines: { table: 'order_lines', order_fk: 'order_id' } } } };
 } };
 function makeService(pool: typeof fixture.pool): SourceRegistryService {
   return createSourceRegistryService({ pool, auth, environmentKind: 'local_lab',
@@ -100,6 +106,233 @@ describe('durable snapshot run admission', () => {
         .rejects.toMatchObject({code:'42501'});
       await apiClient.query('RESET ROLE');
     } finally { await apiClient.query('RESET ROLE').catch(()=>undefined); apiClient.release(); }
+  });
+
+  it('claims, starts, stages and publishes one immutable EXTRACTED manifest under the worker role', async () => {
+    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+    const { createSnapshotStageStore, snapshotManifestDigest } = await import('../etl-worker/snapshot-stage-store.js');
+    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','stage-manifest');
+    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
+    const [claim, duplicateClaim] = await Promise.all([
+      store.claim(owner.tenantId,'pg-main',60),store.claim(owner.tenantId,'pg-main',60),
+    ]);
+    expect([claim,duplicateClaim].filter(Boolean)).toHaveLength(1);
+    const activeClaim = claim ?? duplicateClaim!;
+    const proof = await store.loadFrozenProof(owner.tenantId,'pg-main',run.run_id);
+    expect(proof).toMatchObject({ run_id:run.run_id,expected_entities:['customer'],endpoint_profile_digest:expect.any(String) });
+    const attempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,activeClaim.claim_token,60);
+    expect(attempt.ordinal).toBe(1);
+    const row = { entity:'customer' as const,relation:'customer' as const,source_pk:'C-1',parent_source_pk:'',source_version:null,
+      facts:{customer_name:'Acme',source_updated_at:'2026-10-25 10:00:00.123456+00'} };
+    const pageDigest = createHash('sha256').update(JSON.stringify(row)).digest('hex');
+    await store.writePage(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,activeClaim.claim_token,{ entity:'customer',relation:'customer',
+      page_no:1,rows:[row],first_key:'C-1',last_key:'C-1',page_digest:pageDigest });
+    const manifest = { state:'EXTRACTED',relations:['customer'],relation_counts:[{relation:'customer',row_count:1,page_count:1,page_digests:[pageDigest]}],
+      row_count:1,page_count:1,source_snapshot_identity:'a'.repeat(64),attempt_id:attempt.attempt_id,operation_id:attempt.operation_id,
+      profile_digest:proof.endpoint_profile_digest,mapping_digest:proof.mapping_digest,config_digest:proof.config_digest,
+      identity_mapping_digest:proof.identity_mapping_digest };
+    await expect(store.complete(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,activeClaim.claim_token,
+      manifest,snapshotManifestDigest(manifest))).resolves.toBe(1);
+    const state = await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest_digest,
+      (SELECT count(*)::int FROM control.etl_snapshot_stage_record s WHERE s.run_id=r.run_id) AS records
+      FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+      WHERE r.run_id=$1`,[run.run_id]);
+    expect(state.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'1',state:'EXTRACTED',records:1});
+  });
+
+  it('restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan', async () => {
+    const sourceEvidence = join(fileURLToPath(new URL('../../docs/execution/alpha1/m1-task-5b-source-lifecycle.jsonl', import.meta.url)));
+    const sourceFixture = await startOwnedPostgres({ evidenceFile:sourceEvidence,evidenceRoot,taskLabel:'m1task5',imageReference:postgresImage });
+    const suffix = randomUUID().replaceAll('-','').slice(0,14);
+    const sourceSchema = `m1_e2e_${suffix}`;
+    const sourceOwner = `m1_e2eo_${suffix}`;
+    const sourceReader = `m1_e2er_${suffix}`;
+    const { default: pg } = await import('pg');
+    const ownerPool = new pg.Pool({host:'127.0.0.1',port:sourceFixture.hostPort,database:'postgres',user:sourceOwner,max:1});
+    try {
+      await sourceFixture.pool.query(`CREATE ROLE ${sourceOwner} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+      await sourceFixture.pool.query(`CREATE ROLE ${sourceReader} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+      await sourceFixture.pool.query(`CREATE SCHEMA ${sourceSchema} AUTHORIZATION ${sourceOwner}`);
+      const ownerClient=await sourceFixture.pool.connect();
+      try {
+        await ownerClient.query(`SET ROLE ${sourceOwner}`);
+        await ownerClient.query(`CREATE TABLE ${sourceSchema}.customers(customer_id text PRIMARY KEY,customer_name text NOT NULL,owner_id text NOT NULL,
+          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL)`);
+        await ownerClient.query(`CREATE TABLE ${sourceSchema}.orders(order_id bigint PRIMARY KEY,customer_id text NOT NULL,order_no text NOT NULL,
+          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(30,12) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
+        await ownerClient.query(`CREATE TABLE ${sourceSchema}.order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL REFERENCES ${sourceSchema}.orders(order_id),
+          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(30,12) NOT NULL,unit_price numeric(30,12) NOT NULL,line_amount numeric(30,12) NOT NULL)`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-1','Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:00.123456+00')`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
+          123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456789012,
+          123456789012.123456789012,138636548569.222222221445)`);
+      } finally { await ownerClient.query('RESET ROLE').catch(()=>undefined); ownerClient.release(); }
+      await sourceFixture.pool.query(`GRANT USAGE ON SCHEMA ${sourceSchema} TO ${sourceReader}`);
+      await sourceFixture.pool.query(`GRANT SELECT ON ${sourceSchema}.customers,${sourceSchema}.orders,${sourceSchema}.order_lines TO ${sourceReader}`);
+      await ownerPool.query('SELECT 1');
+      e2eEndpointProfile={revision:'owned-source-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:sourceFixture.hostPort,
+        allow_loopback_plaintext:true,database:'postgres',user:sourceReader,schema:sourceSchema,entities:{
+          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'},
+          order:{table:'orders',source_pk:'order_id',updated_at_field:'updated_at',lines:{table:'order_lines',order_fk:'order_id'}},
+        }};
+      await auth.repository.provisionSourceCredential({sourceId:'pg-e2e',tenantId:owner.tenantId,token:createCredential().secret,
+        secretRef:'vault:/snapshot/source',allowedEntities:['customer','order'],revision:'1'});
+      const allowedEntities=['customer','order'] as const;
+      await service.create(owner,{source_id:'pg-e2e',data_owner_user_id:owner.userId,config:{name:'Owned order snapshot',connector:'postgresql',
+        mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
+        allowed_entities:allowedEntities,delete_contract:'hard_delete'}});
+      await service.writeMappings(owner,'pg-e2e','1',[
+        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
+        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
+        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
+        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
+        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
+        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
+        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
+        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
+      ]);
+      const tested=await service.test(owner,'pg-e2e','1');
+      expect(tested.status).toBe('PASS');
+      const approved=await service.approve(owner,'pg-e2e','1',tested.test_report_id,tested.data_contract_ref);
+      await service.activate(owner,'pg-e2e','1',approved.approval_id);
+      const { createSnapshotRun }=await import('../etl-worker/snapshot-runs.js');
+      const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','owned-e2e-run');
+      const realFactory=createLocalLabPostgresSourceConnectionFactory();
+      let loseSourceOnce=true;
+      let ownedReaderPid:number|undefined;
+      const interruptedFactory: PostgresSourceConnectionFactory={connect:async input=>{
+        const connection=await realFactory.connect(input);
+        return {query:async(sql:string)=>{
+          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_order')) {
+            loseSourceOnce=false;
+            if (!ownedReaderPid) throw new Error('owned source reader PID was not captured');
+            const terminated=await sourceFixture.pool.query(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
+              WHERE pid=$1 AND usename=$2 AND datname='postgres' AND client_addr IS NOT NULL`,[ownedReaderPid,sourceReader]);
+            if (terminated.rows[0]?.terminated !== true) throw new Error('owned source reader backend identity changed before termination');
+          }
+          if (!ownedReaderPid) {
+            const identity=await connection.query('SELECT pg_backend_pid() AS pid');
+            ownedReaderPid=Number(identity.rows[0]?.pid);
+            if (!Number.isSafeInteger(ownedReaderPid) || ownedReaderPid < 1) throw new Error('invalid owned source reader PID');
+            const owned=await sourceFixture.pool.query(`SELECT 1 FROM pg_stat_activity
+              WHERE pid=$1 AND usename=$2 AND datname='postgres' AND client_addr IS NOT NULL`,[ownedReaderPid,sourceReader]);
+            if (owned.rowCount !== 1) throw new Error('source backend is not the owned read-only fixture reader');
+          }
+          return connection.query(sql);
+        },close:async()=>connection.close()};
+      }};
+      const workerDependencies={secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-password'},
+        egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
+      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBe(1);
+      const incomplete=await fixture.pool.query(`SELECT r.status,a.ordinal,a.status AS attempt_status,a.error_code,
+        count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
+        LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
+        WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
+      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:1}]);
+      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBe(0);
+      await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
+      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBe(1);
+      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
+        array_agg(s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+        JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
+        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,m.state,m.manifest`,[run.run_id]);
+      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'3',state:'EXTRACTED',relations:['customer','order','order_line']});
+      expect(staged.rows[0].counts).toMatchObject([{relation:'customer',row_count:1},{relation:'order',row_count:1},{relation:'order_line',row_count:1}]);
+      const attempts=await fixture.pool.query(`SELECT a.ordinal,a.status,count(s.source_pk)::int AS staged FROM control.etl_run_attempt a
+        LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id) WHERE a.run_id=$1
+        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[run.run_id]);
+      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:1},{ordinal:2,status:'COMPLETE',staged:3}]);
+    } finally {
+      await ownerPool.end();
+      await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
+      await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceReader}`);
+      await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceOwner}`);
+      await sourceFixture.close();
+      e2eEndpointProfile=undefined;
+    }
+  });
+
+  it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
+    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+    const { createSnapshotStageStore } = await import('../etl-worker/snapshot-stage-store.js');
+    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','retry-fence');
+    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
+    const firstClaim = await store.claim(owner.tenantId,'pg-main',60);
+    expect(firstClaim).toBeTruthy();
+    const firstAttempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,firstClaim!.claim_token,60);
+    await expect(store.fail(owner.tenantId,'pg-main',run.run_id,firstAttempt.attempt_id,firstClaim!.claim_token,
+      'SNAPSHOT_SOURCE_UNAVAILABLE',true)).resolves.toBe('RETRY');
+    const retryState = await fixture.pool.query(`SELECT r.status,r.snapshot_available_at>clock_timestamp() AS delayed,a.status AS attempt_status,
+      a.available_at>clock_timestamp() AS attempt_delayed FROM control.etl_run r JOIN control.etl_run_attempt a USING(run_id)
+      WHERE r.run_id=$1`,[run.run_id]);
+    expect(retryState.rows[0]).toMatchObject({status:'SCANNING',delayed:true,attempt_status:'INCOMPLETE',attempt_delayed:true});
+    await expect(store.claim(owner.tenantId,'pg-main',60)).resolves.toBeUndefined();
+    await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
+    const secondClaim = await store.claim(owner.tenantId,'pg-main',60);
+    expect(secondClaim).toBeTruthy();
+    const secondAttempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,secondClaim!.claim_token,60);
+    expect(secondAttempt.ordinal).toBe(2);
+    const page = {entity:'customer' as const,relation:'customer' as const,page_no:1,first_key:'C-STALE',last_key:'C-STALE',
+      page_digest:'0'.repeat(64),rows:[{entity:'customer' as const,relation:'customer' as const,source_pk:'C-STALE',parent_source_pk:'',
+        source_version:null,facts:{customer_name:'stale'}}]};
+    await expect(store.writePage(owner.tenantId,'pg-main',run.run_id,firstAttempt.attempt_id,firstClaim!.claim_token,page))
+      .rejects.toMatchObject({code:'40001'});
+  });
+
+  it('counts crash-after-start recovery toward the four durable start limit', async () => {
+    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+    const { createSnapshotStageStore } = await import('../etl-worker/snapshot-stage-store.js');
+    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','crash-start-budget');
+    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
+    const ordinals: number[] = [];
+    for (let expectedOrdinal=1; expectedOrdinal<=4; expectedOrdinal+=1) {
+      const claim = await store.claim(owner.tenantId,'pg-main',60);
+      expect(claim).toBeTruthy();
+      const attempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,claim!.claim_token,60);
+      ordinals.push(attempt.ordinal);
+      await fixture.pool.query(`UPDATE control.etl_run SET snapshot_lease_expires_at=clock_timestamp()-interval '1 second',
+        snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
+      await expect(store.claim(owner.tenantId,'pg-main',60)).resolves.toBeUndefined();
+      const recovered = await fixture.pool.query(`SELECT status,snapshot_available_at>clock_timestamp() AS delayed FROM control.etl_run WHERE run_id=$1`,[run.run_id]);
+      if (expectedOrdinal < 4) {
+        expect(recovered.rows[0]).toMatchObject({status:'SCANNING',delayed:true});
+        await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
+      } else expect(recovered.rows[0]).toMatchObject({status:'FAILED',delayed:false});
+    }
+    expect(ordinals).toEqual([1,2,3,4]);
+    const attempts = await fixture.pool.query(`SELECT ordinal,status,error_code FROM control.etl_run_attempt WHERE run_id=$1 ORDER BY ordinal`,[run.run_id]);
+    expect(attempts.rows).toEqual([1,2,3,4].map(ordinal=>({ordinal,status:'INCOMPLETE',error_code:'SNAPSHOT_LEASE_EXPIRED'})));
+  });
+
+  it('rejects page and manifest publication behind a newer typed tenant barrier', async () => {
+    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+    const { createSnapshotStageStore, snapshotManifestDigest } = await import('../etl-worker/snapshot-stage-store.js');
+    const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','stage-barrier-fence');
+    const store=createSnapshotStageStore(roleScopedPool('hub_worker'));
+    const claim=await store.claim(owner.tenantId,'pg-main',60);
+    const attempt=await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,claim!.claim_token,60);
+    await auth.repository.setTenantEnabled(owner.tenantId,false);
+    await auth.repository.setTenantEnabled(owner.tenantId,true);
+    const row={entity:'customer' as const,relation:'customer' as const,source_pk:'C-BARRIER',parent_source_pk:'',source_version:null,facts:{}};
+    const page={entity:'customer' as const,relation:'customer' as const,page_no:1,rows:[row],first_key:'C-BARRIER',last_key:'C-BARRIER',page_digest:'1'.repeat(64)};
+    await expect(store.writePage(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,claim!.claim_token,page))
+      .rejects.toMatchObject({code:'42501'});
+    const manifest={state:'EXTRACTED',relations:['customer'],relation_counts:[{relation:'customer',row_count:0,page_count:0}],row_count:0,
+      page_count:0,source_snapshot_identity:'b'.repeat(64),profile_digest:'0'.repeat(64),mapping_digest:'0'.repeat(64)};
+    await expect(store.complete(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,claim!.claim_token,manifest,snapshotManifestDigest(manifest)))
+      .rejects.toMatchObject({code:'42501'});
+    const state=await fixture.pool.query(`SELECT r.status,(SELECT count(*)::int FROM control.etl_snapshot_stage_record s WHERE s.run_id=r.run_id) AS records,
+      (SELECT count(*)::int FROM control.etl_snapshot_manifest m WHERE m.run_id=r.run_id) AS manifests FROM control.etl_run r WHERE r.run_id=$1`,[run.run_id]);
+    expect(state.rows[0]).toEqual({status:'SCANNING',records:0,manifests:0});
   });
 
   it('activates, pauses, and resumes the PostgreSQL snapshot schedule as hub_api', async () => {
@@ -227,7 +460,7 @@ describe('durable snapshot run admission', () => {
     expect(count.rows[0].count).toBe(1);
   });
 
-  it('fails closed for order snapshots until the approved line relation contract exists', async () => {
+  it('fails closed when order line mappings are missing from the approved mapping revision', async () => {
     const orderConfig = { name: 'Order snapshot', connector: 'postgresql', mode: 'FULL_SNAPSHOT', version_domain: 'SNAPSHOT_OBSERVATION',
       endpoint_allowlist_ref: 'pg-test', secret_ref: 'vault:/snapshot/source', allowed_entities: ['customer','order'], delete_contract: 'hard_delete' };
     await auth.repository.provisionSourceCredential({ sourceId: 'pg_order', tenantId: owner.tenantId, token: createCredential().secret,
@@ -246,11 +479,10 @@ describe('durable snapshot run admission', () => {
       { entity:'order',source_field:'currency',target_field:'currency',transform:'identity' },
     ]);
     const tested = await service.test(owner,'pg_order','1');
-    const approval = await service.approve(owner,'pg_order','1',tested.test_report_id,tested.data_contract_ref);
-    await service.activate(owner,'pg_order','1',approval.approval_id);
-    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
-    await expect(createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg_order','1','order-run'))
-      .rejects.toMatchObject({ code:'SOURCE_CONTRACT_INVALID' });
+    expect(tested.status).toBe('FAIL');
+    expect(tested.report.checks).toContain('MAPPING_REQUIRED:order:lines.source_line_id');
+    await expect(service.approve(owner,'pg_order','1',tested.test_report_id,tested.data_contract_ref))
+      .rejects.toMatchObject({ code:'SOURCE_CONFLICT' });
     const runs = await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg_order'`,[owner.tenantId]);
     expect(runs.rows[0].count).toBe(0);
   });

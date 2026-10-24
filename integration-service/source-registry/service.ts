@@ -57,6 +57,7 @@ const TARGET_FIELDS: Readonly<Record<SourceEntity, ReadonlySet<string>>> = {
   customer:new Set(['customer_name','owner_user_id','dept_id','status','phone','source_updated_at','source_version','deleted_at']),
   order:new Set(['customer_id','order_no','status','order_at','amount','currency','source_updated_at','source_version','deleted_at']),
 };
+const POSTGRES_ORDER_LINE_TARGETS = ['lines.source_line_id','lines.product_code','lines.product_name','lines.quantity','lines.unit_price','lines.line_amount'] as const;
 const REQUIRED_TARGET_FIELDS: Readonly<Record<SourceEntity, readonly string[]>> = {
   customer:['customer_name','owner_user_id','dept_id','status'],
   order:['customer_id','order_no','status','order_at','amount','currency'],
@@ -121,21 +122,29 @@ function parseMappings(input: unknown): readonly FieldMapping[] {
   if (new Set(keys).size !== keys.length) fail('AUTH_INPUT_INVALID');
   return Object.freeze(result);
 }
-function mappingContractErrors(entities: readonly SourceEntity[], mappings: readonly FieldMapping[]): string[] {
+function mappingContractErrors(entities: readonly SourceEntity[], mappings: readonly FieldMapping[], postgresSnapshot = false): string[] {
   const errors:string[]=[];
   for(const entity of entities) {
     const entityMappings=mappings.filter(mapping=>mapping.entity===entity);
     for(const mapping of entityMappings) {
-      if(!TARGET_FIELDS[entity].has(mapping.target_field)) errors.push(`MAPPING_TARGET_UNSUPPORTED:${entity}:${mapping.target_field}`);
-      else if(mapping.target_field==='amount' && mapping.transform!=='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
-      else if(mapping.target_field!=='amount' && mapping.transform==='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      if(!TARGET_FIELDS[entity].has(mapping.target_field) && !(postgresSnapshot && entity==='order' && POSTGRES_ORDER_LINE_TARGETS.includes(mapping.target_field as typeof POSTGRES_ORDER_LINE_TARGETS[number])))
+        errors.push(`MAPPING_TARGET_UNSUPPORTED:${entity}:${mapping.target_field}`);
+      else if((mapping.target_field==='amount' || mapping.target_field.startsWith('lines.') &&
+          ['lines.quantity','lines.unit_price','lines.line_amount'].includes(mapping.target_field)) && mapping.transform!=='decimal-string')
+        errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      else if(mapping.target_field!=='amount' && !['lines.quantity','lines.unit_price','lines.line_amount'].includes(mapping.target_field) &&
+          mapping.transform==='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
       else if(['customer_name','phone','order_no','status','currency'].includes(mapping.target_field) &&
         !['identity','trim'].includes(mapping.transform)) errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
-      else if(['owner_user_id','dept_id','customer_id'].includes(mapping.target_field) && mapping.transform!=='source-id' && mapping.transform!=='identity')
+      else if(['owner_user_id','dept_id','customer_id','lines.source_line_id'].includes(mapping.target_field) && mapping.transform!=='source-id' && mapping.transform!=='identity')
+        errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      else if(['lines.product_code','lines.product_name'].includes(mapping.target_field) && !['identity','trim'].includes(mapping.transform))
         errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
     }
     const targets=new Set(entityMappings.map(mapping=>mapping.target_field));
     for(const required of REQUIRED_TARGET_FIELDS[entity]) if(!targets.has(required)) errors.push(`MAPPING_REQUIRED:${entity}:${required}`);
+    if(postgresSnapshot && entity==='order') for(const required of POSTGRES_ORDER_LINE_TARGETS)
+      if(!targets.has(required)) errors.push(`MAPPING_REQUIRED:${entity}:${required}`);
   }
   return errors;
 }
@@ -369,7 +378,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       if (decimal(row.mapping_revision) !== revisionInput) fail('SOURCE_CONFLICT');
       const maps = await loadMappings(client,principal.tenantId,sourceId,revisionInput,decimal(row.identity_mapping_revision));
       const configuredEntities = row.allowed_entities as SourceEntity[];
-      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings);
+      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings,row.connector==='postgresql');
       return { revision: revisionInput, valid: errors.length === 0, errors };
     });
   }
@@ -423,7 +432,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
     const safeChecks: string[] = [];
     let passed = false;
-    const mappingErrors=mappingContractErrors(snapshot.config.allowed_entities,snapshot.maps.fieldMappings);
+    const mappingErrors=mappingContractErrors(snapshot.config.allowed_entities,snapshot.maps.fieldMappings,snapshot.config.connector==='postgresql');
     let reportCode = mappingErrors.length ? 'MAPPING_CONTRACT_INVALID' : 'SOURCE_PROBE_UNAVAILABLE';
     if (mappingErrors.length) {
       safeChecks.push(...mappingErrors);

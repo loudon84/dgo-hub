@@ -114,10 +114,18 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
   const credentialEntities = Array.isArray(source.allowed_entities) ? [...source.allowed_entities].sort() as SourceEntity[] : [];
   if (config.connector !== 'postgresql' || config.mode !== 'FULL_SNAPSHOT' || entities.length === 0 ||
       stable(entities) !== stable(credentialEntities)) fail('SOURCE_CONTRACT_INVALID');
-  // The current registry has no approved line relation/key/order-FK proof. A is customer-only.
-  if (entities.includes('order')) fail('SOURCE_CONTRACT_INVALID');
   const endpoint = config.endpoint_profile as Record<string, any> | undefined;
   if (!endpoint || typeof endpoint !== 'object') fail('SOURCE_CONTRACT_INVALID');
+  for (const entity of entities) {
+    const profileEntity = endpoint.entities?.[entity];
+    if (!profileEntity || typeof profileEntity.source_pk !== 'string' ||
+        (config.version_domain === 'SOURCE_VERSION' && typeof profileEntity.version_field !== 'string')) fail('SOURCE_CONTRACT_INVALID');
+  }
+  if (entities.includes('order')) {
+    const order = endpoint.entities?.order;
+    if (!order.lines || typeof order.lines.table !== 'string' || typeof order.lines.order_fk !== 'string' ||
+        (config.version_domain === 'SOURCE_VERSION' && order.aggregate_version_covers_lines !== true)) fail('SOURCE_CONTRACT_INVALID');
+  }
   if (config.delete_contract === 'tombstone' && entities.some(entity => typeof endpoint.entities?.[entity]?.delete_field !== 'string')) {
     fail('SOURCE_CONTRACT_INVALID');
   }
@@ -255,7 +263,7 @@ export async function admitDueSnapshotRun(pool: Pool, tenantId: string, sourceId
       WHERE r.tenant_key=$1 AND r.source_id=$2`, [tenantId,sourceId]);
     const entities = (base.rows[0]?.entities ?? []).slice().sort((a: string,b: string) => ENTITY_ORDER.indexOf(a as SourceEntity)-ENTITY_ORDER.indexOf(b as SourceEntity));
     for (const entity of entities) await client.query('SELECT * FROM control.lock_source_channel($1,$2,$3)', [tenantId,sourceId,entity]);
-    const schedule = await client.query<RunRow>(`SELECT * FROM control.etl_snapshot_schedule
+    const schedule = await client.query<RunRow>(`SELECT schedule_revision,next_due_at FROM control.etl_snapshot_schedule
       WHERE tenant_key=$1 AND source_id=$2 AND enabled AND next_due_at<=clock_timestamp() FOR UPDATE SKIP LOCKED`, [tenantId,sourceId]);
     if (!schedule.rowCount) return null;
     const active = await client.query<RunRow>(`SELECT status FROM control.etl_run WHERE tenant_key=$1 AND source_id=$2

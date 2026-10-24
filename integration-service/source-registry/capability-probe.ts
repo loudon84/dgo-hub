@@ -4,7 +4,14 @@ import type { SourceConfig, CapabilityProbe } from './service.js';
 
 type EntityProfile = Readonly<{
   table?: string;
-  version_field: string;
+  source_pk?: string;
+  updated_at_field?: string;
+  version_field?: string;
+  aggregate_version_covers_lines?: boolean;
+  // External identity of the customer source when orders are extracted alone.
+  // This is a source ID value, never a SQL identifier.
+  customer_source_id?: string;
+  lines?: Readonly<{ table: string; order_fk: string }>;
   delete_field?: string;
   version_type?: 'integer' | 'number' | 'text';
   delete_type?: 'boolean' | 'timestamp';
@@ -31,6 +38,7 @@ export type ProbeEnvironment = Readonly<{ environmentKind: 'site' | 'local_lab' 
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
 const SCHEMA_VERSION = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
 const LOOPBACK = new Set(['127.0.0.1','::1','localhost']);
 const MAX_REST_BODY_BYTES = 32 * 1024;
 const PROBE_TIMEOUT_MS = 3_000;
@@ -60,8 +68,19 @@ function checkProfile(config: SourceConfig, profile: EndpointProfile, environmen
   }
   for (const entity of config.allowed_entities) {
     const item = profile.entities[entity];
-    if (!item || !IDENTIFIER.test(item.version_field) || (item.delete_field !== undefined && !IDENTIFIER.test(item.delete_field)) ||
-        (profile.connector === 'postgresql' && (typeof item.table !== 'string' || !IDENTIFIER.test(item.table)))) throw new Error('PROFILE_INVALID');
+    if (!item || (item.version_field !== undefined && !IDENTIFIER.test(item.version_field)) ||
+        (config.version_domain === 'SOURCE_VERSION' && typeof item.version_field !== 'string') ||
+        (item.delete_field !== undefined && !IDENTIFIER.test(item.delete_field)) ||
+        (profile.connector === 'postgresql' && (typeof item.table !== 'string' || !IDENTIFIER.test(item.table) ||
+          typeof item.source_pk !== 'string' || !IDENTIFIER.test(item.source_pk) ||
+          typeof item.updated_at_field !== 'string' || !IDENTIFIER.test(item.updated_at_field)))) throw new Error('PROFILE_INVALID');
+    if (profile.connector === 'postgresql' && entity === 'order') {
+      if (!item.lines || !IDENTIFIER.test(item.lines.table) || !IDENTIFIER.test(item.lines.order_fk)) throw new Error('PROFILE_INVALID');
+      if (config.version_domain === 'SOURCE_VERSION' && item.aggregate_version_covers_lines !== true) throw new Error('PROFILE_INVALID');
+      if (config.allowed_entities.includes('customer')) {
+        if (item.customer_source_id !== undefined && (typeof item.customer_source_id !== 'string' || !SOURCE_ID.test(item.customer_source_id))) throw new Error('PROFILE_INVALID');
+      } else if (typeof item.customer_source_id !== 'string' || !SOURCE_ID.test(item.customer_source_id)) throw new Error('PROFILE_INVALID');
+    } else if (item.lines !== undefined || item.aggregate_version_covers_lines !== undefined || item.customer_source_id !== undefined) throw new Error('PROFILE_INVALID');
   }
 }
 
@@ -109,8 +128,8 @@ function assertRestContract(config: SourceConfig, profile: EndpointProfile, resp
     const fieldTypes=value.field_types;
     if (!Array.isArray(fields) || fields.some(field => typeof field !== 'string') ||
         !fieldTypes || typeof fieldTypes!=='object' || Array.isArray(fieldTypes) ||
-        value.version_field !== expected.version_field || value.delete_contract !== config.delete_contract ||
-        !fields.includes(expected.version_field) ||
+      value.version_field !== expected.version_field || value.delete_contract !== config.delete_contract ||
+      !expected.version_field || !fields.includes(expected.version_field) ||
         !['integer','number','text'].includes(String((fieldTypes as Record<string,unknown>)[expected.version_field])) ||
         (config.delete_contract === 'tombstone' && (typeof expected.delete_field !== 'string' || value.delete_field !== expected.delete_field || !fields.includes(expected.delete_field)))) {
       throw new Error('CONTRACT_INVALID');
@@ -139,7 +158,7 @@ async function probeRest(config: SourceConfig, profile: EndpointProfile, secret:
 }
 
 async function probePostgres(config: SourceConfig, profile: EndpointProfile, secret: string,
-  mappings: readonly { entity: SourceEntity; source_field: string }[]): Promise<void> {
+  mappings: readonly { entity: SourceEntity; source_field: string; target_field: string }[]): Promise<void> {
   const client = new Client({ host: profile.host, port: profile.port, database: profile.database, user: profile.user,
     password: secret, ssl: profile.allow_loopback_plaintext ? false : { rejectUnauthorized: true },
     connectionTimeoutMillis: PROBE_TIMEOUT_MS, query_timeout: PROBE_TIMEOUT_MS, statement_timeout: PROBE_TIMEOUT_MS,
@@ -162,20 +181,30 @@ async function probePostgres(config: SourceConfig, profile: EndpointProfile, sec
     }
     for (const entity of config.allowed_entities) {
       const item = profile.entities[entity]!;
+      const explicitTimeMappings=mappings.filter(mapping=>mapping.entity===entity &&
+        ['source_updated_at','deleted_at'].includes(mapping.target_field));
+      if(explicitTimeMappings.some(mapping=>mapping.source_field!==
+        (mapping.target_field==='source_updated_at'?item.updated_at_field:item.delete_field))) throw new Error('MAPPING_INVALID');
       const columns = await client.query<{ column_name: string;data_type:string;udt_name:string }>(
         `SELECT column_name,data_type,udt_name FROM information_schema.columns WHERE table_catalog=$1 AND table_schema=$2 AND table_name=$3`,
         [profile.database,profile.schema,item.table],
       );
       const names = new Set(columns.rows.map(row => row.column_name));
       const byName=new Map(columns.rows.map(row=>[row.column_name,row]));
-      const required = [item.version_field,...(config.delete_contract === 'tombstone' ? [item.delete_field!] : []),
-        ...mappings.filter(mapping => mapping.entity === entity).map(mapping => mapping.source_field)];
+      const required = [item.source_pk!,item.updated_at_field!,...(item.version_field ? [item.version_field] : []),...(config.delete_contract === 'tombstone' ? [item.delete_field!] : []),
+        ...mappings.filter(mapping => mapping.entity === entity && !mapping.target_field.startsWith('lines.')).map(mapping => mapping.source_field)];
       if (!columns.rowCount || required.some(name => !names.has(name))) throw new Error('MAPPING_INVALID');
-      const versionType=byName.get(item.version_field)?.data_type;
+      const versionType=item.version_field ? byName.get(item.version_field)?.data_type : undefined;
+      const updatedAtType=byName.get(item.updated_at_field!)?.data_type;
+      const updatedAtTypes=new Set(['timestamp with time zone']);
       const versionTypes=new Set(['smallint','integer','bigint','numeric','character varying','text']);
       const deleteType=item.delete_field?byName.get(item.delete_field)?.data_type:undefined;
-      const deleteTypes=new Set(['boolean','timestamp without time zone','timestamp with time zone']);
-      if(!versionType || !versionTypes.has(versionType) || (config.delete_contract==='tombstone' && (!deleteType || !deleteTypes.has(deleteType))))
+      const deleteTypes=new Set(['boolean','timestamp with time zone']);
+      const mappedTimes=mappings.filter(mapping=>mapping.entity===entity && ['order_at','source_updated_at'].includes(mapping.target_field));
+      if(!updatedAtType || !updatedAtTypes.has(updatedAtType) || (item.version_field && (!versionType || !versionTypes.has(versionType))) ||
+          mappedTimes.some(mapping=>byName.get(mapping.source_field)?.data_type!=='timestamp with time zone') ||
+          (config.version_domain === 'SOURCE_VERSION' && !item.version_field) ||
+          (config.delete_contract==='tombstone' && (!deleteType || !deleteTypes.has(deleteType))))
         throw new Error('VERSION_DELETE_CONTRACT_INVALID');
       const qualified = `${quoteIdentifier(profile.schema!)}.${quoteIdentifier(item.table!)}`;
       const permission = await client.query<{ can_read: boolean; can_write: boolean; column_write: boolean }>(
@@ -187,6 +216,27 @@ async function probePostgres(config: SourceConfig, profile: EndpointProfile, sec
       if (!permission.rows[0]?.can_read || permission.rows[0].can_write || permission.rows[0].column_write) throw new Error('READ_ONLY_PERMISSION_INVALID');
       const selected = required.map(quoteIdentifier).join(',');
       await client.query(`SELECT ${selected} FROM ${qualified} LIMIT 0`);
+      if (entity === 'order') {
+        const lines = item.lines!;
+        const lineColumns = await client.query<{ column_name: string }>(
+          `SELECT column_name FROM information_schema.columns WHERE table_catalog=$1 AND table_schema=$2 AND table_name=$3`,
+          [profile.database,profile.schema,lines.table],
+        );
+        const lineNames = new Set(lineColumns.rows.map(row => row.column_name));
+        const lineSources = mappings.filter(mapping => mapping.entity === 'order' && mapping.target_field.startsWith('lines.')).map(mapping => mapping.source_field);
+        const lineRequired = [lines.order_fk, ...lineSources];
+        if (!lineColumns.rowCount || lineRequired.some(name => !IDENTIFIER.test(name) || !lineNames.has(name))) throw new Error('MAPPING_INVALID');
+        const lineQualified = `${quoteIdentifier(profile.schema!)}.${quoteIdentifier(lines.table)}`;
+        const linePermission = await client.query<{ can_read: boolean; can_write: boolean; column_write: boolean }>(
+          `SELECT has_table_privilege(current_user,$1::regclass,'SELECT') AS can_read,
+            has_table_privilege(current_user,$1::regclass,'INSERT,UPDATE,DELETE,TRUNCATE') AS can_write,
+            has_any_column_privilege(current_user,$1::regclass,'INSERT') OR has_any_column_privilege(current_user,$1::regclass,'UPDATE') AS column_write`,
+          [`${profile.schema}.${lines.table}`],
+        );
+        if (!linePermission.rows[0]?.can_read || linePermission.rows[0].can_write || linePermission.rows[0].column_write)
+          throw new Error('READ_ONLY_PERMISSION_INVALID');
+        await client.query(`SELECT ${[...new Set(lineRequired)].map(quoteIdentifier).join(',')} FROM ${lineQualified} LIMIT 0`);
+      }
     }
   } finally {
     if (inTransaction) await client.query('ROLLBACK').catch(() => undefined);
