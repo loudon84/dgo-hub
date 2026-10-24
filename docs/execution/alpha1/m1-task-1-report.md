@@ -111,3 +111,47 @@ Commit `6cf6f8ee5442f6fad04d9ccf3e185b08a7ca0715` changes only the five files in
 ### Limits
 
 The PostgreSQL and REST probes were exercised against explicitly owned local fixtures. Production credentials, external egress, a configured source or IdP, SQL Server, remote Hermes, and the site runtime remain unverified. No full snapshot completeness or ingestion/apply behavior is claimed. M1-2 canonical apply, batch worker, durable snapshot engine, and UI remain outside this task.
+
+## Independent re-review fix round 2
+
+Fix-round 2 began at `7dedc3f77094b4c6cb56ecfd8c70dad80765e56c` and source changes are commit `75d6640a57939791477203b7a196abbdde34dcee`. The earlier source findings I1/I3/I4/I6/I7/I8/I9 remain closed and were not broadened.
+
+### Remaining findings addressed
+
+- **I2:** `update_source_credential` and `upsert_source_credential` now detect effective credential/config applicability changes (secret/ref, enabled state, entity scope, or revision). A real change advances `source_epoch` and `credential_generation` exactly once, and invalidates registry applicability in the same transaction when a registry row exists. ACTIVE/PAUSED sources become PAUSED; other lifecycle states become DRAFT. No-op updates return without changing either generation or epoch. Ordinary manager pause/resume does not mutate credential generation and retains a valid approval. Credential scope expansion/removal, enable changes, and revision changes invalidate applicability. Upsert emits lifecycle effects only when the corresponding registry row exists, preserving pre-onboarding credential rotation and the composite FK.
+- **I2 admission:** `lock_current_source` now locks credential, tenant, registry and active channel rows together. Admission requires the current credential revision to equal the registry's current config revision, the entity to appear in both credential scope and the current config's `allowed_entities`, and an active channel whose connector/mode/version domain match that config. Thus an entity added only to the credential scope remains inadmissible even after the supported config is retested, reapproved and reactivated.
+- **I5:** Unsupported `sample_ref` returns a sanitized Hub error envelope with HTTP 422. Malformed JSON remains 400; unsupported media remains 415; oversized body remains 413.
+- **I10:** Credential rotation before source registry onboarding succeeds and advances epoch/generation. Registry lifecycle effects are skipped when no registry row exists; registered active rotation coverage remains in the focused suite.
+
+### RED and GREEN evidence
+
+Fresh evidence root: `docs/execution/alpha1/m1-task-1-fix2-evidence-20261024-0eb98c9e4866453d9a38c3ad465038fa/` (absolute root pointer in `m1-task-1-fix2-evidence-root.txt`).
+
+In `E:\git\dgo-hub\integration-service`:
+
+| Command | Evidence | Exit | Result |
+|---|---|---:|---|
+| `npm test -- --run acceptance-tests/source-registry.test.ts` before implementation | `red-fix2-regressions.log` | 1 | 26 passed, 3 failed at the intended I2, I5, and I10 regressions |
+| `npm test -- --run acceptance-tests/source-registry.test.ts` after implementation | `green-fix2-regressions.log` | 0 | 29/29 passed |
+| `npm run typecheck` | `final-typecheck.log` | 0 | TypeScript passed |
+| `npm run build` | `final-build.log` | 0 | Build passed |
+
+The I2 regression covers credential entity extension, stale approval rejection, order admission denial before and after current-config reapproval, continued customer admission, no-op generation stability, and entity-scope removal. Existing tests cover valid pause/resume and registered active secret rotation. I10 covers new source credentials rotated before registry creation and exact generation/epoch increments. The actual migration chain 001–005 runs in both RED and GREEN test processes. Migrations 001–004 are unchanged.
+
+The RED and GREEN test runs each used an owned `postgres:16.10-alpine` fixture. Both exact IDs were confirmed absent after removal; both local HTTP fixtures were closed and their ports released. The IDs, run labels, image digest, timestamps and cleanup outcomes are in this root's `m1task1/<runLabel>/postgres-lifecycle.jsonl`, `postgres-resource-summary.json`, and `capability-http-resource-summary.json`. RED used run label `1e061809-db85-4ed4-972c-52afbb58f57a`, container `9446d70999b0e1d7376b89edfaa2ad6226d34bb03062035d23748c190ab931b4`; GREEN used run label `a77603b0-01a6-4f6e-b493-00c9876ad704`, container `04697093c9d76d735a6605f2c25eb87bc18a0f260a84869fd3b2de9842e1398b`. Both used repo/runtime digest `sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`.
+
+### Tested source identity
+
+These are the source bytes used for the final focused suite, typecheck and build. The test file contains one CRLF and 820 bare LF line endings.
+
+| File | Raw SHA-256 | LF-normalized SHA-256 | Bytes | Git blob |
+|---|---|---|---:|---|
+| `integration-service/migrations/005_source_registry.sql` | `7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f` | same | 22627 | `b59b25d1e9b08790eec943e9b159e39ee3593158` |
+| `integration-service/source-registry/routes.ts` | `29cee7ca7773e0042037ce0ec12f101ee45119bb5d1ad9e655cabe69e0504069` | same | 10180 | `d1b36862bae0ac5ce33f8759813afff58f3c92d1` |
+| `integration-service/acceptance-tests/source-registry.test.ts` | `4df59596929563c42bf37307fa80dde548418e6fc52a667552b5c5ce1cec4183` | `76b9b14f43b147b22a078e36ad1f12bf737a41a9714c411d8d1fd7d28484968e` | 61561 | `f4328fc799037d714c9d6697fdf88b85ad55cc2b` |
+
+Migration 005 raw and LF SQL digest is `7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f`. No migration 001–004 changes are present in the fix commit.
+
+### Limits
+
+The tests use explicitly owned local PostgreSQL and loopback HTTP fixtures. No production source, IdP, external egress, SQL Server, remote Hermes or site runtime was exercised. Current-source checks establish entity/config/channel applicability, not full snapshot completeness or ingestion/apply behavior. M1-2 remains gated on independent scoped re-review.

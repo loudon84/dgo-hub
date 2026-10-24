@@ -1,0 +1,6 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+EXIT=0

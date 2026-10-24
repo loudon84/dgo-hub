@@ -1,0 +1,87 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (29 tests | 3 failed) 4518ms
+     × invalidates credential scope changes and admits only the approved config channels after reapproval 81ms
+     × rotates a provisioned source credential before registry onboarding 31ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 339ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates credential scope changes and admits only the approved config channels after reapproval
+AssertionError: expected { lifecycle: 'ACTIVE', …(2) } to match object { lifecycle: 'PAUSED', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "allowed_entities": [
+      "customer",
+      "order",
+    ],
+-   "lifecycle": "PAUSED",
++   "lifecycle": "ACTIVE",
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:354:30
+    352|     const extended=await fixture.pool.query<{lifecycle:string;allowed_…
+    353|       `SELECT r.lifecycle,c.allowed_entities,c.credential_generation F…
+    354|     expect(extended.rows[0]).toMatchObject({lifecycle:'PAUSED',allowed…
+       |                              ^
+    355|     expect(BigInt(extended.rows[0].credential_generation)-BigInt(befor…
+    356|     await expect(service.activate(owner,'crm-new','1',firstApproval.ap…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rotates a provisioned source credential before registry onboarding
+AssertionError: promise rejected "AuthError: AUTH_INPUT_INVALID { …(2) }" instead of resolving
+ ❯ acceptance-tests/source-registry.test.ts:405:88
+    403|     const next=createCredential();
+    404|     await expect(auth.repository.provisionSourceCredential({sourceId:'…
+    405|       secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'…
+       |                                                                                        ^
+    406|     const rotated=await fixture.pool.query<{credential_generation:stri…
+    407|       "SELECT credential_generation,source_epoch FROM control.source_c…
+
+Caused by: AuthError: AUTH_INPUT_INVALID
+ ❯ auth/service.ts:317:21
+ ❯ withAuthTransaction auth/repository.ts:31:20
+ ❯ provisionSourceCredential auth/service.ts:313:3
+ ❯ acceptance-tests/source-registry.test.ts:404:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'AUTH_INPUT_INVALID', status: 400 }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+AssertionError: expected 400 to be 422 // Object.is equality
+
+- Expected
++ Received
+
+- 422
++ 400
+
+ ❯ acceptance-tests/source-registry.test.ts:506:44
+    504|       const unsupportedSample=await app.inject({method:'POST',url:'/hu…
+    505|         headers:{authorization:'Bearer owner-token'},payload:{revision…
+    506|       expect(unsupportedSample.statusCode).toBe(422);
+       |                                            ^
+    507|       expect(unsupportedSample.json()).toMatchObject({request_id:expec…
+    508|       const tested=await service.test(owner,'crm-new',created.json().d…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 26 passed (29)
+   Start at  14:33:21
+   Duration  4.99s (transform 162ms, setup 0ms, import 298ms, tests 4.52s, environment 0ms)
+
+
+EXIT=1
