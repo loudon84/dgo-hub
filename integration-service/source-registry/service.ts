@@ -177,7 +177,10 @@ async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Pro
 
 async function sourceRow(client: PoolClient, tenantId: string, sourceId: string, lock = false) {
   if (!SOURCE_ID.test(sourceId)) fail('AUTH_INPUT_INVALID');
-  if (lock) await client.query('SELECT * FROM control.lock_source_credential($1,$2)',[tenantId,sourceId]);
+  if (lock) {
+    await client.query('SELECT control.lock_security_barrier_fence()');
+    await client.query('SELECT * FROM control.lock_source_credential($1,$2)',[tenantId,sourceId]);
+  }
   const result = await client.query<Record<string, unknown>>(
     `SELECT r.*,c.enabled AS credential_enabled,c.allowed_entities,c.revision AS credential_revision,c.source_epoch,
        cr.config_digest,cr.config,cr.config->>'name' AS name,cr.config->>'connector' AS connector,
@@ -603,7 +606,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     requireScope(principal,'source:approve');
     if(kind!==undefined || externalId!==undefined) {
       if(!sourceId || !['user','department','customer'].includes(String(kind)) || typeof externalId!=='string' ||
-        externalId.length<1 || externalId.length>256 || /[\u0000-\u001f\u007f]/.test(externalId)) fail('AUTH_INPUT_INVALID');
+        externalId.length<1 || externalId.length>128 || /[\u0000-\u001f\u007f]/.test(externalId)) fail('AUTH_INPUT_INVALID');
       const source=await transaction(pool,async client=>sourceRow(client,principal.tenantId,sourceId));
       if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
       await currentOwnerForRead(principal);
@@ -613,9 +616,10 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
         : kind==='department'
           ? await pool.query<{target_id:string;label:string}>(`SELECT DISTINCT department_id AS target_id,department_id AS label FROM control.auth_subject
               WHERE tenant_key=$1 AND enabled AND department_id IS NOT NULL ORDER BY department_id LIMIT 50`,[principal.tenantId])
-          : {rows:[],rowCount:0};
+          : await pool.query<{target_id:string;label:string}>(`SELECT id::text AS target_id,customer_name AS label FROM api.canonical_customer_identity
+              WHERE tenant_id=$1 ORDER BY customer_name,id LIMIT 50`,[principal.tenantId]);
       return {source_id:sourceId,kind,external_id:externalId,id:Buffer.from(`${sourceId}\0${kind}\0${externalId}`,'utf8').toString('base64url'),
-        resolved:kind!=='customer',candidates:candidates.rows};
+        resolved:kind!=='customer' || candidates.rows.length>0,candidates:candidates.rows};
     }
     const result = await pool.query<{ source_id:string;revision:string|number;mappings:IdentityMapping[];data_owner_user_id:string }>(
       `SELECT r.source_id,r.identity_mapping_revision AS revision,i.mappings,r.data_owner_user_id
@@ -635,7 +639,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
 
   async function updateIdentityMapping(principal: UserPrincipal, opaqueId: string, expected: string, targetId: string, reason: string) {
     requireScope(principal,'source:approve');
-    if (!/^(?:0|[1-9][0-9]*)$/.test(expected) || typeof targetId!=='string' || targetId.length<1 || targetId.length>256 || /[\u0000-\u001f\u007f]/.test(targetId) ||
+    if (!/^(?:0|[1-9][0-9]*)$/.test(expected) || typeof targetId!=='string' || targetId.length<1 || targetId.length>128 || /[\u0000-\u001f\u007f]/.test(targetId) ||
         typeof reason !== 'string' || reason.trim().length < 1 || reason.length > 256) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const decoded = Buffer.from(opaqueId,'base64url').toString('utf8').split('\0');
@@ -653,8 +657,15 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       } else if(kind==='department') {
         const target=await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND department_id=$2 AND enabled',[principal.tenantId,targetId]);
         if(!target.rowCount) fail('SOURCE_NOT_FOUND');
+      } else if(kind==='customer') {
+        const target=await client.query('SELECT 1 FROM api.canonical_customer_identity WHERE tenant_id=$1 AND id::text=$2',[principal.tenantId,targetId]);
+        if(!target.rowCount) fail('SOURCE_NOT_FOUND');
       } else fail('SOURCE_NOT_FOUND');
       const data = await loadMappings(client,principal.tenantId,mappingSourceId,decimal(row.mapping_revision),currentDbRevision);
+      const unchanged = data.identityMappings.find(mapping => mapping.kind===kind && mapping.external_id===externalId);
+      if (unchanged?.target_id===targetId) {
+        return {source_id:mappingSourceId,revision:expected,identity_mappings:data.identityMappings};
+      }
       const revised = [...data.identityMappings.filter(mapping => !(mapping.kind===kind && mapping.external_id===externalId)),
         {kind:kind as IdentityMapping['kind'],external_id:externalId,target_id:targetId}];
       const revision = (BigInt(currentDbRevision)+1n).toString();
@@ -666,6 +677,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       await auth.repository.advanceSourceEpoch(mappingSourceId,principal.tenantId,client);
       await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,details)
         VALUES($1,$2,$3,'IDENTITY_MAPPING_CONFIRMED',jsonb_build_object('reason',$4::text,'revision',$5::text))`,[principal.tenantId,mappingSourceId,principal.userId,reason.trim(),revision]);
+      await client.query('SELECT control.remap_canonical_identity($1,$2,$3,$4,$5,$6,$7,$8)',
+        [principal.tenantId,mappingSourceId,kind,externalId,targetId,revision,principal.userId,reason.trim()]);
       return { source_id:mappingSourceId,revision:expected==='0'?'1':(BigInt(expected)+1n).toString(),identity_mappings:revised };
     });
   }

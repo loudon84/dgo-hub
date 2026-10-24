@@ -3,6 +3,9 @@ import type pg from 'pg';
 import { withTransaction } from '../db.js';
 import { normalizeCustomer, normalizeOrder } from './models.js';
 
+export { applyCustomer, applyOrderAggregate } from './apply.js';
+export type { ApplyContext, ApplyResult } from './apply.js';
+
 type Kind = 'customer' | 'order';
 export async function ingest(kind: Kind, sourceSystem: string, eventId: string, payload: unknown) {
   const record = kind === 'customer' ? normalizeCustomer(payload) : normalizeOrder(payload);

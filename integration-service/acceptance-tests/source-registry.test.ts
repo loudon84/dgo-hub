@@ -81,10 +81,10 @@ describe('M1 source admission authorization', () => {
     expect((auth as unknown as { assertCurrentSource?: unknown }).assertCurrentSource).toBeTypeOf('function');
   });
 
-  it('applies migration 005 from the clean M0 chain and skips it with the same checksum on repeat', async () => {
-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry'],skipped:[]});
+  it('applies migrations 005 and 006 from the clean M0 chain and skips them with the same checksums on repeat', async () => {
+    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts'],skipped:[]});
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry'] });
+    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts'] });
     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
     );
@@ -178,7 +178,7 @@ describe('M1 source admission authorization', () => {
       let blocked=false;
       while(Date.now()<deadline) {
         const waiting=await fixture.pool.query<{waiting:boolean}>(
-          `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE 'SELECT * FROM control.lock_source_credential%') AS waiting`,
+          `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE 'SELECT control.lock_security_barrier_fence()%') AS waiting`,
         );
         if(waiting.rows[0].waiting) { blocked=true; break; }
         await new Promise(resolve=>setTimeout(resolve,10));
@@ -459,7 +459,9 @@ describe('M1 source admission authorization', () => {
 
   it('exposes the source registry through the OIDC principal tenant and redacts internal references', async () => {
     const owner=await prepareOwner();
-    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:'new-owner',departmentId:'dept-sales',managementScopes:['source:read','source:write','source:approve','mapping:write']});
+    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:'new-owner',departmentId:'dept-sales',businessRole:'sales',managementScopes:['source:read','source:write','source:approve','mapping:write']});
+    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'dept-sales',businessRole:'sales',
+      managementScopes:['source:read','source:write','source:approve','mapping:write']});
     const {service}=managerService();
     const app=await buildApp({logger:false,sourceRegistry:{
       authenticator:async token=>token==='owner-token'?owner:token==='approve-token'?{...owner,managementScopes:['source:approve']}
@@ -495,11 +497,27 @@ describe('M1 source admission authorization', () => {
       const departmentConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${departmentCandidate.json().data.id}`,
         headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'1',target_id:'dept-sales',reason:'confirm source department mapping'}});
       expect(departmentConfirmation.statusCode).toBe(200);
+      const customerTargetId='8a2efdd5-3d59-4f5f-97f9-298a68006001';
+      await fixture.pool.query(`INSERT INTO hub.canonical_customer
+        (tenant_id,id,customer_name,owner_user_id,dept_id,status,source_updated_at,source_version,version_domain,channel_epoch,hub_revision)
+        VALUES($1,$2,'Existing customer',$3,'dept-sales','ACTIVE','2026-01-01T00:00:00Z',1,'SOURCE_VERSION',1,1)`,
+        [owner.tenantId,customerTargetId,owner.userId]);
       const customerCandidate=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?source_id=crm-new&kind=customer&external_id=customer-ext',headers:{authorization:'Bearer approve-token'}});
-      expect(customerCandidate.json().data).toMatchObject({resolved:false,candidates:[]});
+      expect(customerCandidate.json().data).toMatchObject({resolved:true,candidates:expect.arrayContaining([expect.objectContaining({target_id:customerTargetId})])});
       const customerConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${customerCandidate.json().data.id}`,
-        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'2',target_id:'8a2efdd5-3d59-4f5f-97f9-298a68006001',reason:'unresolved customer target'}});
-      expect(customerConfirmation.statusCode).toBe(404);
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'2',target_id:customerTargetId,reason:'confirm canonical customer target'}});
+      expect(customerConfirmation.statusCode).toBe(200);
+      const beforeNoop=await fixture.pool.query(`SELECT c.source_epoch,r.identity_mapping_revision,
+        (SELECT jsonb_agg(jsonb_build_array(user_id,auth_epoch) ORDER BY user_id) FROM control.auth_subject WHERE tenant_key=$1 AND user_id IN ('owner','new-owner')) AS epochs
+        FROM control.source_credential c JOIN control.source_registry r USING(tenant_key,source_id) WHERE c.tenant_key=$1 AND c.source_id='crm-new'`,[owner.tenantId]);
+      const noopCustomerConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${customerCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'3',target_id:customerTargetId,reason:'same target confirmation'}});
+      expect(noopCustomerConfirmation.statusCode).toBe(200);
+      expect(noopCustomerConfirmation.json().data.revision).toBe('3');
+      const afterNoop=await fixture.pool.query(`SELECT c.source_epoch,r.identity_mapping_revision,
+        (SELECT jsonb_agg(jsonb_build_array(user_id,auth_epoch) ORDER BY user_id) FROM control.auth_subject WHERE tenant_key=$1 AND user_id IN ('owner','new-owner')) AS epochs
+        FROM control.source_credential c JOIN control.source_registry r USING(tenant_key,source_id) WHERE c.tenant_key=$1 AND c.source_id='crm-new'`,[owner.tenantId]);
+      expect(afterNoop.rows).toEqual(beforeNoop.rows);
       const mapping=await service.writeMappings(owner,'crm-new','1',customerMappings());
       const unsupportedSample=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/mappings/validate',
         headers:{authorization:'Bearer owner-token'},payload:{revision:mapping.revision,sample_ref:'sample-1'}});
@@ -514,6 +532,41 @@ describe('M1 source admission authorization', () => {
         revision:created.json().data.revision,approval_id:approved.json().data.approval_id,
       }});
       expect(activated.statusCode).toBe(200);
+      const activeChannel=await fixture.pool.query<{id:string;channel_epoch:string|number}>(`SELECT id,channel_epoch FROM control.source_channel
+        WHERE tenant_key=$1 AND source_id='crm-new' AND entity='customer' AND state='active'`,[owner.tenantId]);
+      await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+        VALUES($1,'crm-new','customer','existing-customer',$2,$2)`,[owner.tenantId,customerTargetId]);
+      await fixture.pool.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
+        VALUES($1,'crm-new','customer','existing-customer','user','owner-ext',$2),
+          ($1,'crm-new','customer','existing-customer','department','dept-ext','dept-sales')`,[owner.tenantId,owner.userId]);
+      const preservedContentDigest=Buffer.alloc(32,0x51);
+      await fixture.pool.query(`INSERT INTO control.source_version_receipt(tenant_key,source_id,channel_id,channel_epoch,entity,source_pk,
+        version_domain,source_version,source_content_digest,projection_digest,canonical_object_id,deleted)
+        VALUES($1,'crm-new',$2,$3,'customer','existing-customer','SOURCE_VERSION',1,$4,$5,$6,false)`,
+        [owner.tenantId,activeChannel.rows[0].id,activeChannel.rows[0].channel_epoch,preservedContentDigest,Buffer.alloc(32,0x61),customerTargetId]);
+      const epochsBeforeRemap=await fixture.pool.query<{user_id:string;auth_epoch:string|number}>(
+        `SELECT user_id,auth_epoch FROM control.auth_subject WHERE tenant_key=$1 AND user_id IN ($2,'new-owner') ORDER BY user_id`,[owner.tenantId,owner.userId]);
+      const mappingStateBeforeRemap=await fixture.pool.query<{object_id:string;source_version:string;source_content_digest:Buffer;outbox_count:string}>(
+        `SELECT r.canonical_object_id::text AS object_id,r.source_version::text,r.source_content_digest,
+          (SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key AND o.source_id=r.source_id AND o.canonical_object_id=r.canonical_object_id) AS outbox_count
+         FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id='crm-new' AND r.source_pk='existing-customer'`,[owner.tenantId]);
+      const ownerRemap=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${userCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'3',target_id:'new-owner',reason:'correct confirmed source owner'}});
+      expect(ownerRemap.statusCode).toBe(200);
+      const remapped=await fixture.pool.query<{owner_user_id:string;source_version:string;canonical_object_id:string;source_content_digest:Buffer;outbox_count:string;audit_count:string;fence_revision:string;auth_epoch:string|number}>(`
+        SELECT c.owner_user_id,r.source_version::text,r.canonical_object_id::text,r.source_content_digest,
+          (SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key AND o.source_id=r.source_id AND o.canonical_object_id=r.canonical_object_id) AS outbox_count,
+          (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=r.tenant_key AND a.source_id=r.source_id AND a.source_pk=r.source_pk) AS audit_count,
+          (SELECT identity_mapping_revision::text FROM control.source_identity_remap_fence f WHERE f.tenant_key=r.tenant_key AND f.source_id=r.source_id AND f.kind='user' AND f.external_id='owner-ext') AS fence_revision,
+          (SELECT auth_epoch FROM control.auth_subject s WHERE s.tenant_key=r.tenant_key AND s.user_id='new-owner') AS auth_epoch
+        FROM control.source_version_receipt r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE r.tenant_key=$1 AND r.source_id='crm-new' AND r.source_pk='existing-customer'`,[owner.tenantId]);
+      expect(remapped.rows[0]).toMatchObject({owner_user_id:'new-owner',source_version:'1',canonical_object_id:mappingStateBeforeRemap.rows[0].object_id,
+        source_content_digest:preservedContentDigest,outbox_count:'1',audit_count:'1',fence_revision:'5',auth_epoch:expect.anything()});
+      expect(remapped.rows[0].source_content_digest).toEqual(mappingStateBeforeRemap.rows[0].source_content_digest);
+      expect(BigInt(remapped.rows[0].auth_epoch)).toBe(BigInt(epochsBeforeRemap.rows.find(row=>row.user_id==='new-owner')!.auth_epoch)+1n);
+      const ownerEpochAfter=await fixture.pool.query<{auth_epoch:string|number}>(`SELECT auth_epoch FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2`,[owner.tenantId,owner.userId]);
+      expect(BigInt(ownerEpochAfter.rows[0].auth_epoch)).toBe(BigInt(epochsBeforeRemap.rows.find(row=>row.user_id===owner.userId)!.auth_epoch)+1n);
       const malformed=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:'{' });
       expect(malformed.statusCode).toBe(400);
       expect(malformed.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
