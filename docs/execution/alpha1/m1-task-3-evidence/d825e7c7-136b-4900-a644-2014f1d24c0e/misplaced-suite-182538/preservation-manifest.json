@@ -1,0 +1,44 @@
+{
+  "format": "task3-misplaced-suite-preservation-v1",
+  "cause": "First npm test invocation omitted M0_RUN_EVIDENCE_ROOT",
+  "base": "ca32853e931ff8e0c2fdf147bd2e0c962ddf656c",
+  "restoration": "Six explicit tracked PostgreSQL lifecycle/summary files restored to exact base Git blob bytes after hash-verified preservation; no product files or untracked paths restored/deleted",
+  "files": [
+    {
+      "originalPath": "docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-lifecycle.jsonl",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-lifecycle.jsonl",
+      "sha256": "f57f4373adf8d52ebd9cfc842e6db446c297990b55b5a0835a095bf47e67cddb",
+      "baseGitBlob": "3a959e330d2b59879a489e8986252c3f46435dbc"
+    },
+    {
+      "originalPath": "docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-resource-summary.json",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-resource-summary.json",
+      "sha256": "321e62f7091bfb8e555b79a07122df66c2ca05cb45a871c28d2b7bbe5dbf121b",
+      "baseGitBlob": "cb5bc60b835a9aca0c2c070a50ba07ea1ae1a6cf"
+    },
+    {
+      "originalPath": "docs/execution/alpha1/m0-task-1-evidence/round1/postgres-lifecycle.jsonl",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/postgres-lifecycle.jsonl",
+      "sha256": "cc3eee7d749c93f293da1fd7a1e854eab65edaae4c6c2d43b7cadd17e15aff57",
+      "baseGitBlob": "98627eb95148132b512d9e5965dcb71cb65e758d"
+    },
+    {
+      "originalPath": "docs/execution/alpha1/m0-task-1-evidence/round1/postgres-resource-summary.json",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/postgres-resource-summary.json",
+      "sha256": "02f8029b01afc93b5769e8253c0095e60836bfb47e8b7164f644999c8e4e5e01",
+      "baseGitBlob": "36390b7d95df7729cced05efadf545aea2b7a336"
+    },
+    {
+      "originalPath": "docs/execution/alpha1/m1-task-1-evidence/postgres-lifecycle.jsonl",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m1-task-1-evidence/postgres-lifecycle.jsonl",
+      "sha256": "ca469856cf5f96e20f704c0de87d53726a417c6f228beea4638eff0595cc8cd7",
+      "baseGitBlob": "060dd9e33b455ef74edfa5c8816b9db32ed1f958"
+    },
+    {
+      "originalPath": "docs/execution/alpha1/m1-task-1-evidence/postgres-resource-summary.json",
+      "preservedPath": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m1-task-1-evidence/postgres-resource-summary.json",
+      "sha256": "95950c531526e05bf4e52d02cf4ded00df68e22ccf0d1cb049a1225de7fdbae3",
+      "baseGitBlob": "eb42bf15f808f31655d60ecd8422e47747d239c4"
+    }
+  ]
+}

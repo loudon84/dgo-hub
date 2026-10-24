@@ -1,0 +1,1470 @@
+{
+  "schema": "m1-task-3-evidence-file-whitelist.v1",
+  "base": "ca32853e931ff8e0c2fdf147bd2e0c962ddf656c",
+  "evidence_root": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e",
+  "self_hash_excluded": true,
+  "pg_lifecycle": {
+    "explicit_root_runs": 21,
+    "no_env_default_runs": 6,
+    "total_unique_runs": 27,
+    "unique_containers": 27,
+    "created": 27,
+    "image_observed": 27,
+    "removed": 27,
+    "confirmed_exact_id_removal_and_absence": 27,
+    "error_events": 0,
+    "new_no_env_run_labels": [
+      "4852d06e-9dfa-483d-ba5d-2df1f0b31bff",
+      "738613a7-d18d-4e3b-9d1b-bd99c5e84343",
+      "742f7d48-cd03-4e59-8041-5c418e35edec",
+      "9558e0b7-3250-48ca-93df-d2e17c9f16a6",
+      "9ed56b7b-e433-41a9-8f64-7c3b3a5734fb",
+      "ab778678-c440-4929-82ce-4b80c8ea752f"
+    ]
+  },
+  "no_env_side_effects": {
+    "new_files_copied": [
+      "docs/execution/alpha1/m0-task-2-evidence/review-round1/9da20160-dea9-4575-93c5-4ae7a6666fc4/postgres-lifecycle.jsonl",
+      "docs/execution/alpha1/m0-task-2-evidence/review-round1/9da20160-dea9-4575-93c5-4ae7a6666fc4/postgres-resource-summary.json",
+      "docs/execution/alpha1/m0-task-3-evidence/db927681-3930-4d6a-b8f8-078f4739277e/postgres-lifecycle.jsonl",
+      "integration-service/acceptance-tests/evidence/m1-task-2/postgres-lifecycle.jsonl",
+      "integration-service/acceptance-tests/evidence/m1-task-2/postgres-resource-summary.json",
+      "docs/execution/alpha1/m1-task-1-evidence/capability-http-resource-summary.json"
+    ],
+    "original_untracked_sources_left_in_place": true,
+    "postgres_new_runs_have_complete_lifecycle": true
+  },
+  "files": [
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/43376541-de74-4496-aa10-1d30fac0e8b9/capability-http-resource-summary.json",
+      "sha256": "faa823c6a12e889a0e85368a856c23882c81843bc07d0751229e5e9a7ccdedbc",
+      "size_bytes": 168,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "fixtureId": "18ea0c5f-3ad3-457b-aff0-e40c27b3a988",
+        "host": "127.0.0.1",
+        "port": 55164,
+        "protocol": "http",
+        "cleanup": "server closed and port released"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/43376541-de74-4496-aa10-1d30fac0e8b9/postgres-lifecycle.jsonl",
+      "sha256": "2c25f12b8520a90fe28544794d29a56760baae1c118dd8df41ad1e5b93c50c90",
+      "size_bytes": 930,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "43376541-de74-4496-aa10-1d30fac0e8b9"
+      ],
+      "task_labels": [
+        "m1task1"
+      ],
+      "container_ids": [
+        "17bd794d492114f38f808ad0403f353dbbb08e7fb8bf89dbe867c050a3ad21bb"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "m1task1",
+          "run_label": "43376541-de74-4496-aa10-1d30fac0e8b9",
+          "container_id": "17bd794d492114f38f808ad0403f353dbbb08e7fb8bf89dbe867c050a3ad21bb",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/43376541-de74-4496-aa10-1d30fac0e8b9/postgres-resource-summary.json",
+      "sha256": "97cb3d2b3577a548ff807798c0544e95d0022ca55f489fa823bb4eb09b5f9e38",
+      "size_bytes": 491,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "m1task1",
+        "runLabel": "43376541-de74-4496-aa10-1d30fac0e8b9",
+        "containerId": "17bd794d492114f38f808ad0403f353dbbb08e7fb8bf89dbe867c050a3ad21bb",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55149,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/f94623b6-2925-40b7-885d-f8cae1e90099/capability-http-resource-summary.json",
+      "sha256": "16bf54064db107ee8b1ab757e1a18d54ae5d6b64a4a3941693f3724279e17fbb",
+      "size_bytes": 168,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "fixtureId": "534045ac-f10c-44d8-82d5-8176e078f6fc",
+        "host": "127.0.0.1",
+        "port": 55003,
+        "protocol": "http",
+        "cleanup": "server closed and port released"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/f94623b6-2925-40b7-885d-f8cae1e90099/postgres-lifecycle.jsonl",
+      "sha256": "33d98de868abbf0fc7bbd95da9220cb8bb49b7a1fa186efd5601b857b14dea0d",
+      "size_bytes": 930,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "f94623b6-2925-40b7-885d-f8cae1e90099"
+      ],
+      "task_labels": [
+        "m1task1"
+      ],
+      "container_ids": [
+        "71ef1273f2c10dfb78dba002d8da3a5d33e37b87aa1ce5284923155f9a9167ae"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "m1task1",
+          "run_label": "f94623b6-2925-40b7-885d-f8cae1e90099",
+          "container_id": "71ef1273f2c10dfb78dba002d8da3a5d33e37b87aa1ce5284923155f9a9167ae",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/m1task1/f94623b6-2925-40b7-885d-f8cae1e90099/postgres-resource-summary.json",
+      "sha256": "bca5010debac4232276567cf9e52d2bbf0aa3c30f6bd177d4cc197ece51ab5c5",
+      "size_bytes": 491,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "m1task1",
+        "runLabel": "f94623b6-2925-40b7-885d-f8cae1e90099",
+        "containerId": "71ef1273f2c10dfb78dba002d8da3a5d33e37b87aa1ce5284923155f9a9167ae",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54994,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-lifecycle.jsonl",
+      "sha256": "f57f4373adf8d52ebd9cfc842e6db446c297990b55b5a0835a095bf47e67cddb",
+      "size_bytes": 2784,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "e59632d6-133e-4df4-acbe-ce04ca42a587",
+        "1462f684-eb54-4957-a2de-730199b101ea",
+        "742f7d48-cd03-4e59-8041-5c418e35edec"
+      ],
+      "task_labels": [
+        "task0"
+      ],
+      "container_ids": [
+        "dd6e3c83714ecc9ddc36c7ea078c0f127ddcbfd6e86b8aa64a4da411ce949672",
+        "1e23a0abdf1eb1bf1ec6af8be88ad19409a5f6b39716ad9143cc0f11e82dcd4c",
+        "ca57f94e4b12a6044974357a99593429728fccbe058eae0d16504f3a92e26ca0"
+      ],
+      "event_counts": {
+        "created": 3,
+        "image_observed": 3,
+        "removed": 3
+      },
+      "fixtures": [
+        {
+          "task_label": "task0",
+          "run_label": "e59632d6-133e-4df4-acbe-ce04ca42a587",
+          "container_id": "dd6e3c83714ecc9ddc36c7ea078c0f127ddcbfd6e86b8aa64a4da411ce949672",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        },
+        {
+          "task_label": "task0",
+          "run_label": "1462f684-eb54-4957-a2de-730199b101ea",
+          "container_id": "1e23a0abdf1eb1bf1ec6af8be88ad19409a5f6b39716ad9143cc0f11e82dcd4c",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        },
+        {
+          "task_label": "task0",
+          "run_label": "742f7d48-cd03-4e59-8041-5c418e35edec",
+          "container_id": "ca57f94e4b12a6044974357a99593429728fccbe058eae0d16504f3a92e26ca0",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/foundation-postgres-resource-summary.json",
+      "sha256": "321e62f7091bfb8e555b79a07122df66c2ca05cb45a871c28d2b7bbe5dbf121b",
+      "size_bytes": 465,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "runLabel": "742f7d48-cd03-4e59-8041-5c418e35edec",
+        "containerId": "ca57f94e4b12a6044974357a99593429728fccbe058eae0d16504f3a92e26ca0",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54523,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/postgres-lifecycle.jsonl",
+      "sha256": "cc3eee7d749c93f293da1fd7a1e854eab65edaae4c6c2d43b7cadd17e15aff57",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "ab778678-c440-4929-82ce-4b80c8ea752f"
+      ],
+      "task_labels": [
+        "task1"
+      ],
+      "container_ids": [
+        "9af73074fc00b8bdb21ec5605fd03373aa49f8572a71322617f34100e286e052"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task1",
+          "run_label": "ab778678-c440-4929-82ce-4b80c8ea752f",
+          "container_id": "9af73074fc00b8bdb21ec5605fd03373aa49f8572a71322617f34100e286e052",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-1-evidence/round1/postgres-resource-summary.json",
+      "sha256": "02f8029b01afc93b5769e8253c0095e60836bfb47e8b7164f644999c8e4e5e01",
+      "size_bytes": 489,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task1",
+        "runLabel": "ab778678-c440-4929-82ce-4b80c8ea752f",
+        "containerId": "9af73074fc00b8bdb21ec5605fd03373aa49f8572a71322617f34100e286e052",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54524,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-2-evidence/review-round1/9da20160-dea9-4575-93c5-4ae7a6666fc4/postgres-lifecycle.jsonl",
+      "sha256": "f3debce84e117f6ed64b605fcc94ad048975c3fafb5c1dc0e217166513816043",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "4852d06e-9dfa-483d-ba5d-2df1f0b31bff"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "9f6e0053ccf516b83effbbd13d805adf41c35ddb25edeaa993eb479de14826ec"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "4852d06e-9dfa-483d-ba5d-2df1f0b31bff",
+          "container_id": "9f6e0053ccf516b83effbbd13d805adf41c35ddb25edeaa993eb479de14826ec",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-2-evidence/review-round1/9da20160-dea9-4575-93c5-4ae7a6666fc4/postgres-resource-summary.json",
+      "sha256": "f019c5d357568bc77359a5b48f24eb57f090bedbfa43b0efaab887592b65dd06",
+      "size_bytes": 489,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "4852d06e-9dfa-483d-ba5d-2df1f0b31bff",
+        "containerId": "9f6e0053ccf516b83effbbd13d805adf41c35ddb25edeaa993eb479de14826ec",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54529,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m0-task-3-evidence/db927681-3930-4d6a-b8f8-078f4739277e/postgres-lifecycle.jsonl",
+      "sha256": "c87953f26f5b18f70dc72e0f862cf6bc8e2c7410dbcd17a96c5d5f3ace3935e4",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "9558e0b7-3250-48ca-93df-d2e17c9f16a6"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "3cf4ecc233aa8f939e195292280e81ef3f88e4f646780cb42e698b10a9d98920"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "9558e0b7-3250-48ca-93df-d2e17c9f16a6",
+          "container_id": "3cf4ecc233aa8f939e195292280e81ef3f88e4f646780cb42e698b10a9d98920",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m1-task-1-evidence/capability-http-resource-summary.json",
+      "sha256": "b3b4b56346da66f4cfc847c2d26b71aaf76f06b2a4c7aabd8e7aaf160cd3a42a",
+      "size_bytes": 168,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "fixtureId": "4be12fca-bdab-4d04-8ddb-7a9803eb067f",
+        "host": "127.0.0.1",
+        "port": 54652,
+        "protocol": "http",
+        "cleanup": "server closed and port released"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m1-task-1-evidence/postgres-lifecycle.jsonl",
+      "sha256": "ca469856cf5f96e20f704c0de87d53726a417c6f228beea4638eff0595cc8cd7",
+      "size_bytes": 930,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "9ed56b7b-e433-41a9-8f64-7c3b3a5734fb"
+      ],
+      "task_labels": [
+        "m1task1"
+      ],
+      "container_ids": [
+        "756435adcb76249456a1e1f8d4589dcc750fc8859c484f5491528e8a804fa2cc"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "m1task1",
+          "run_label": "9ed56b7b-e433-41a9-8f64-7c3b3a5734fb",
+          "container_id": "756435adcb76249456a1e1f8d4589dcc750fc8859c484f5491528e8a804fa2cc",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/docs/execution/alpha1/m1-task-1-evidence/postgres-resource-summary.json",
+      "sha256": "95950c531526e05bf4e52d02cf4ded00df68e22ccf0d1cb049a1225de7fdbae3",
+      "size_bytes": 491,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "m1task1",
+        "runLabel": "9ed56b7b-e433-41a9-8f64-7c3b3a5734fb",
+        "containerId": "756435adcb76249456a1e1f8d4589dcc750fc8859c484f5491528e8a804fa2cc",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54531,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/integration-service/acceptance-tests/evidence/m1-task-2/postgres-lifecycle.jsonl",
+      "sha256": "f572303cc79f1017c1e26a46d2081c86026fb09317ee5b3546a7c0f8d6984ba4",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "738613a7-d18d-4e3b-9d1b-bd99c5e84343"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "3eb3078a041fe6ee2f0326f180f58910d092ca278989976b4cbf7aa9ff6b87f3"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "738613a7-d18d-4e3b-9d1b-bd99c5e84343",
+          "container_id": "3eb3078a041fe6ee2f0326f180f58910d092ca278989976b4cbf7aa9ff6b87f3",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/integration-service/acceptance-tests/evidence/m1-task-2/postgres-resource-summary.json",
+      "sha256": "ec43957a139e2bd5f3b329ca639b281e74515b47f6b556d0d1a389e35d3f9f2e",
+      "size_bytes": 558,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "738613a7-d18d-4e3b-9d1b-bd99c5e84343",
+        "containerId": "3eb3078a041fe6ee2f0326f180f58910d092ca278989976b4cbf7aa9ff6b87f3",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54528,
+        "ownershipConfirmed": true,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/misplaced-suite-182538/preservation-manifest.json",
+      "sha256": "3b29c1210ace36157af5ab7091d4c1c377c55704a6086c0c2a06de229890e63f",
+      "size_bytes": 3247,
+      "kind": "base-evidence-preservation-manifest",
+      "base": "ca32853e931ff8e0c2fdf147bd2e0c962ddf656c",
+      "file_count": 6,
+      "metadata_sha256": "3b29c1210ace36157af5ab7091d4c1c377c55704a6086c0c2a06de229890e63f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/source-file-manifest.json",
+      "sha256": "65335795bcb54f4bf656ea07fb212c062bc8c8388eef636735664b281a51ee33",
+      "size_bytes": 8431,
+      "kind": "product-source-raw-lf-gitblob-manifest",
+      "source_commits": [
+        "ebd41c78df45e7c9affc25a76aa7d2dd9187b5f8",
+        "6a401bfd3c89dc37a1217e370ecbe423dbf3c26c",
+        "ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5"
+      ],
+      "product_path_count": 15,
+      "all_working_blob_ids_match": true,
+      "historical_migrations_001_006_unchanged": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task0/1a71280b-61aa-40f0-a397-27fb42bbffaf/foundation-postgres-resource-summary.json",
+      "sha256": "f2c5b887e7fb9a92a88d61bf04af457319f9631371cc6c47d367946a0cba2037",
+      "size_bytes": 465,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "runLabel": "1a71280b-61aa-40f0-a397-27fb42bbffaf",
+        "containerId": "db4bde7ff8ff4396ed2665f275c5208a83b5795fe0fee1299bcaa55605f5ef15",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55144,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task0/1a71280b-61aa-40f0-a397-27fb42bbffaf/postgres-lifecycle.jsonl",
+      "sha256": "11f89c338ab6f5c43d3455d668a9e2798befbd2105e914ad2070d9ab59cf8a27",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "1a71280b-61aa-40f0-a397-27fb42bbffaf"
+      ],
+      "task_labels": [
+        "task0"
+      ],
+      "container_ids": [
+        "db4bde7ff8ff4396ed2665f275c5208a83b5795fe0fee1299bcaa55605f5ef15"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task0",
+          "run_label": "1a71280b-61aa-40f0-a397-27fb42bbffaf",
+          "container_id": "db4bde7ff8ff4396ed2665f275c5208a83b5795fe0fee1299bcaa55605f5ef15",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task1/7f957983-1c67-4a0c-a4fa-f144d4e02bbd/postgres-lifecycle.jsonl",
+      "sha256": "c6a7e9d188a5e4317b8288591bd940665dc43c52cd863d2050fe32ed30dc7e18",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "7f957983-1c67-4a0c-a4fa-f144d4e02bbd"
+      ],
+      "task_labels": [
+        "task1"
+      ],
+      "container_ids": [
+        "1c32628b51355ab094dac20e0091602d05a74910462be00bf655830dd2cda820"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task1",
+          "run_label": "7f957983-1c67-4a0c-a4fa-f144d4e02bbd",
+          "container_id": "1c32628b51355ab094dac20e0091602d05a74910462be00bf655830dd2cda820",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task1/7f957983-1c67-4a0c-a4fa-f144d4e02bbd/postgres-resource-summary.json",
+      "sha256": "bb72e8b9ba7e8a3567cae598e7e37c565209e2245a297f564923fd5d360a492d",
+      "size_bytes": 489,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task1",
+        "runLabel": "7f957983-1c67-4a0c-a4fa-f144d4e02bbd",
+        "containerId": "1c32628b51355ab094dac20e0091602d05a74910462be00bf655830dd2cda820",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55145,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/13354232-d058-42c5-95a5-2023254feeaf/postgres-lifecycle.jsonl",
+      "sha256": "83bcad6d2d7305e60ef1ac29c35de11f485c123be41785086865bef1e914f9aa",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "13354232-d058-42c5-95a5-2023254feeaf"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "8ae37428335e82501fdda4a529600adc0c8817f5f9ffcd3f1bb09b21d81dce8d"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "13354232-d058-42c5-95a5-2023254feeaf",
+          "container_id": "8ae37428335e82501fdda4a529600adc0c8817f5f9ffcd3f1bb09b21d81dce8d",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/13354232-d058-42c5-95a5-2023254feeaf/postgres-resource-summary.json",
+      "sha256": "837de54e38cfb06a414502e2d90212c2a046d7bf864515fb541c20dd56e281d0",
+      "size_bytes": 558,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "13354232-d058-42c5-95a5-2023254feeaf",
+        "containerId": "8ae37428335e82501fdda4a529600adc0c8817f5f9ffcd3f1bb09b21d81dce8d",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55148,
+        "ownershipConfirmed": true,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/7365dcbb-4746-4f2e-a479-2bd7906bc812/postgres-lifecycle.jsonl",
+      "sha256": "718376cfac9bf9005c2b654af5b334ef3181ca1528ad986f4af34b5c5758dd14",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "7365dcbb-4746-4f2e-a479-2bd7906bc812"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "b3f1a53834f313fd04d66272342af2380cd8fcc269599b24309a2a47a06c0414"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "7365dcbb-4746-4f2e-a479-2bd7906bc812",
+          "container_id": "b3f1a53834f313fd04d66272342af2380cd8fcc269599b24309a2a47a06c0414",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/7365dcbb-4746-4f2e-a479-2bd7906bc812/postgres-resource-summary.json",
+      "sha256": "ae1302079c8ccde1e7fd3bb0b442cb6c52336e1999a71a30401b7110a56952bd",
+      "size_bytes": 489,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "7365dcbb-4746-4f2e-a479-2bd7906bc812",
+        "containerId": "b3f1a53834f313fd04d66272342af2380cd8fcc269599b24309a2a47a06c0414",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55147,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/a82d9f74-c27e-4415-aba7-b0dcdfd19201/postgres-lifecycle.jsonl",
+      "sha256": "e313a8154acd5d58e3ca753c5af7c7bdafedff90ef89ca49d2890e6da1257b2f",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "a82d9f74-c27e-4415-aba7-b0dcdfd19201"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "f108fc93f91fe781c70cd93e971b8c8d75dc0b7306a37c0d314c30d86382a4fd"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "a82d9f74-c27e-4415-aba7-b0dcdfd19201",
+          "container_id": "f108fc93f91fe781c70cd93e971b8c8d75dc0b7306a37c0d314c30d86382a4fd",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/a82d9f74-c27e-4415-aba7-b0dcdfd19201/postgres-resource-summary.json",
+      "sha256": "d4326cc52e1a71e75607a53694030bab88cee61d9da9bfb70996df4cf38479df",
+      "size_bytes": 558,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "a82d9f74-c27e-4415-aba7-b0dcdfd19201",
+        "containerId": "f108fc93f91fe781c70cd93e971b8c8d75dc0b7306a37c0d314c30d86382a4fd",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54995,
+        "ownershipConfirmed": true,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/e4ebff35-e111-48b2-b409-9fe8091527b0/postgres-lifecycle.jsonl",
+      "sha256": "f0abfa745d6a477fe86f4e40848e117a5d140203098416eb42b50bbde59b899c",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "e4ebff35-e111-48b2-b409-9fe8091527b0"
+      ],
+      "task_labels": [
+        "task2"
+      ],
+      "container_ids": [
+        "fbfeb13843f609ab7d1883140764fb70ba72e109369f19157706621aa8311fd0"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task2",
+          "run_label": "e4ebff35-e111-48b2-b409-9fe8091527b0",
+          "container_id": "fbfeb13843f609ab7d1883140764fb70ba72e109369f19157706621aa8311fd0",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task2/e4ebff35-e111-48b2-b409-9fe8091527b0/postgres-resource-summary.json",
+      "sha256": "bd076a31abc0289a5438219656aa4c714197c9338da29ec7a872ffd94426591b",
+      "size_bytes": 489,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task2",
+        "runLabel": "e4ebff35-e111-48b2-b409-9fe8091527b0",
+        "containerId": "fbfeb13843f609ab7d1883140764fb70ba72e109369f19157706621aa8311fd0",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54996,
+        "cleanup": "confirmed removed by exact owned container ID"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/33fce12e-8223-4410-92b2-6c77e0941c8b/postgres-lifecycle.jsonl",
+      "sha256": "2bc9fcacbcc366106a582b19d2cc7454f74deb67cc5ae38badc7fabd1c18133f",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "33fce12e-8223-4410-92b2-6c77e0941c8b"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "ab39ef00983c9ab57fa84aeb4b47ac873f39b16828d537ff34a2571be6984425"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "33fce12e-8223-4410-92b2-6c77e0941c8b",
+          "container_id": "ab39ef00983c9ab57fa84aeb4b47ac873f39b16828d537ff34a2571be6984425",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/33fce12e-8223-4410-92b2-6c77e0941c8b/postgres-resource-summary.json",
+      "sha256": "ed0a78346cbcf2c225b0255766788d06f0fd3cf5eafcd5295512b803cffbf19e",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "33fce12e-8223-4410-92b2-6c77e0941c8b",
+        "containerId": "ab39ef00983c9ab57fa84aeb4b47ac873f39b16828d537ff34a2571be6984425",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55146,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/39b4fdbd-daa9-4a9f-802c-d891222b053f/postgres-lifecycle.jsonl",
+      "sha256": "95764cf97a1ee1b127ccb2eb8d5fc08f1185f47f35355d8526763fbffc9a10f4",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "39b4fdbd-daa9-4a9f-802c-d891222b053f"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "2af873adfcbb1b995b64ee420f917879e6e5c4775016cc33b6f151b2271a7a61"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "39b4fdbd-daa9-4a9f-802c-d891222b053f",
+          "container_id": "2af873adfcbb1b995b64ee420f917879e6e5c4775016cc33b6f151b2271a7a61",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/39b4fdbd-daa9-4a9f-802c-d891222b053f/postgres-resource-summary.json",
+      "sha256": "58b39cf236608d382a0cd272f417918ec1d029761cf7d23cd18f2267345bd8e6",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "39b4fdbd-daa9-4a9f-802c-d891222b053f",
+        "containerId": "2af873adfcbb1b995b64ee420f917879e6e5c4775016cc33b6f151b2271a7a61",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53002,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/41ec850c-e259-41de-ad05-57174a544e42/postgres-lifecycle.jsonl",
+      "sha256": "8baa0fec8f138165f00a3a25d0fcb7ecfe06e6d85c3040f5bafda42d49667d99",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "41ec850c-e259-41de-ad05-57174a544e42"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "6d7cf5a35738f2f9a0f52d9680afe9e5358ac2c649afb960babdd1b5a90859e4"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "41ec850c-e259-41de-ad05-57174a544e42",
+          "container_id": "6d7cf5a35738f2f9a0f52d9680afe9e5358ac2c649afb960babdd1b5a90859e4",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/41ec850c-e259-41de-ad05-57174a544e42/postgres-resource-summary.json",
+      "sha256": "5fee5bd714bfc664c25485d37eb9907466b635b76107cc43b306bddcd64d224a",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "41ec850c-e259-41de-ad05-57174a544e42",
+        "containerId": "6d7cf5a35738f2f9a0f52d9680afe9e5358ac2c649afb960babdd1b5a90859e4",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53471,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4bbd4ab9-698c-4da8-af3c-8b39d3fb228a/postgres-lifecycle.jsonl",
+      "sha256": "cb6d2dbe0bbe9b1156dbd07348a05e2c5309228a186339796ad14db121cbf34d",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "4bbd4ab9-698c-4da8-af3c-8b39d3fb228a"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "1a801b4e2a07dec5cf1ea6b98d91f2c10f93b60e315e65a403cff89ffbf13268"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "4bbd4ab9-698c-4da8-af3c-8b39d3fb228a",
+          "container_id": "1a801b4e2a07dec5cf1ea6b98d91f2c10f93b60e315e65a403cff89ffbf13268",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4bbd4ab9-698c-4da8-af3c-8b39d3fb228a/postgres-resource-summary.json",
+      "sha256": "0029ee4b35345d64276f7055a3718f9340be99a9968ba8b09a03f421598430c4",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "4bbd4ab9-698c-4da8-af3c-8b39d3fb228a",
+        "containerId": "1a801b4e2a07dec5cf1ea6b98d91f2c10f93b60e315e65a403cff89ffbf13268",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53231,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4c4c1ebc-f8d7-453b-b634-d2838224d08d/postgres-lifecycle.jsonl",
+      "sha256": "587d90f2cbb19bfead3a78c30a60d7467a41d9e1bb7e475f04ded82bb94082f7",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "4c4c1ebc-f8d7-453b-b634-d2838224d08d"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "a7b3dd7086a7880af33d9ce96d7048e1ccc5c1e4229d3ef3fe386f1afa97a0f5"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "4c4c1ebc-f8d7-453b-b634-d2838224d08d",
+          "container_id": "a7b3dd7086a7880af33d9ce96d7048e1ccc5c1e4229d3ef3fe386f1afa97a0f5",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4c4c1ebc-f8d7-453b-b634-d2838224d08d/postgres-resource-summary.json",
+      "sha256": "a3f53baf67f13fa93540953087af831ec6268ad0e19f0900c76d90c0491e04c8",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "4c4c1ebc-f8d7-453b-b634-d2838224d08d",
+        "containerId": "a7b3dd7086a7880af33d9ce96d7048e1ccc5c1e4229d3ef3fe386f1afa97a0f5",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55588,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4ee7acf6-6d49-45e0-9f11-228f23610c42/postgres-lifecycle.jsonl",
+      "sha256": "b1f91eb32ac929d096c274162596972362bb80eb1d8aeceb64e4981ea8556cfa",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "4ee7acf6-6d49-45e0-9f11-228f23610c42"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "a3c86ff97e6b92cd07d5e3a71d3bedc73a2c49430ee3bf9cd4276517b9ec3334"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "4ee7acf6-6d49-45e0-9f11-228f23610c42",
+          "container_id": "a3c86ff97e6b92cd07d5e3a71d3bedc73a2c49430ee3bf9cd4276517b9ec3334",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/4ee7acf6-6d49-45e0-9f11-228f23610c42/postgres-resource-summary.json",
+      "sha256": "e0ca437792e7d9a9c3ed005e3be5bca7a1d375a214851cd6ae0b797a3b10b7ba",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "4ee7acf6-6d49-45e0-9f11-228f23610c42",
+        "containerId": "a3c86ff97e6b92cd07d5e3a71d3bedc73a2c49430ee3bf9cd4276517b9ec3334",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53776,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/72123994-74e1-4969-828d-14bbca09e39e/postgres-lifecycle.jsonl",
+      "sha256": "6335c6fc3a7328dafd93520949389b8703e6f25c2027ca53a732e26fcf1bf450",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "72123994-74e1-4969-828d-14bbca09e39e"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "2715fb3e30c053d215517159eb40f1784dd6c88a4e32d9afb9896004fe3e9053"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "72123994-74e1-4969-828d-14bbca09e39e",
+          "container_id": "2715fb3e30c053d215517159eb40f1784dd6c88a4e32d9afb9896004fe3e9053",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/72123994-74e1-4969-828d-14bbca09e39e/postgres-resource-summary.json",
+      "sha256": "894dc78f4004c4d85247905becb81d78953ae3d2d0f1c9a5027c5656d1bbfe67",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "72123994-74e1-4969-828d-14bbca09e39e",
+        "containerId": "2715fb3e30c053d215517159eb40f1784dd6c88a4e32d9afb9896004fe3e9053",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53424,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/9b6f83d0-c80e-4ea0-a753-873589d3d5f5/postgres-lifecycle.jsonl",
+      "sha256": "d11a5bdb402796fffa6da5c064214ff2868f8139bce5561ca374e1ccb96c2cff",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "9b6f83d0-c80e-4ea0-a753-873589d3d5f5"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "e3c2c83498114e9a3da821555faa1addbad43b714cafe040a156975a1f6c6332"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "9b6f83d0-c80e-4ea0-a753-873589d3d5f5",
+          "container_id": "e3c2c83498114e9a3da821555faa1addbad43b714cafe040a156975a1f6c6332",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/9b6f83d0-c80e-4ea0-a753-873589d3d5f5/postgres-resource-summary.json",
+      "sha256": "c1a420fa01ac4afee17fee2abc56d1947e5800ac7a5668975f3205181fb576ca",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "9b6f83d0-c80e-4ea0-a753-873589d3d5f5",
+        "containerId": "e3c2c83498114e9a3da821555faa1addbad43b714cafe040a156975a1f6c6332",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54525,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/9d4003dc-d28f-4730-9489-c4985a349bbf/postgres-lifecycle.jsonl",
+      "sha256": "667c2dfdea9b4229be236ced968bb6b46e8b46a32a8dcf301742cbc6f3c57896",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "9d4003dc-d28f-4730-9489-c4985a349bbf"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "e47558f55504429068a7468756761e2dc03a6246b6c17c6342da8e2f63707af2"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "9d4003dc-d28f-4730-9489-c4985a349bbf",
+          "container_id": "e47558f55504429068a7468756761e2dc03a6246b6c17c6342da8e2f63707af2",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/9d4003dc-d28f-4730-9489-c4985a349bbf/postgres-resource-summary.json",
+      "sha256": "d7e64d069789bca339ea2e977406c60311a2f7d888f27be5ef61c60880c898ec",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "9d4003dc-d28f-4730-9489-c4985a349bbf",
+        "containerId": "e47558f55504429068a7468756761e2dc03a6246b6c17c6342da8e2f63707af2",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55665,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/ddf4acf5-d90d-4930-9ead-c88c19ec8004/postgres-lifecycle.jsonl",
+      "sha256": "61cdd5a63a71522fb5d3d9241d78f633a97baa0e65349996d9358943d5500731",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "ddf4acf5-d90d-4930-9ead-c88c19ec8004"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "a475d45b5bc927118491993ad52afcb051239a5a1d9354e0b43e359ecf8e0d3e"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "ddf4acf5-d90d-4930-9ead-c88c19ec8004",
+          "container_id": "a475d45b5bc927118491993ad52afcb051239a5a1d9354e0b43e359ecf8e0d3e",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/e45559fa-3038-436b-a0cf-c947e0b3276a/postgres-lifecycle.jsonl",
+      "sha256": "ef07d4791c3e096899418a1d989870f19e08f40a64ec21104c6fc0d3f11efa0a",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "e45559fa-3038-436b-a0cf-c947e0b3276a"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "f42c51a43c03e1517bf57c6927bc198a19ff09019100a3ddb0e29a86a0290108"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "e45559fa-3038-436b-a0cf-c947e0b3276a",
+          "container_id": "f42c51a43c03e1517bf57c6927bc198a19ff09019100a3ddb0e29a86a0290108",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/e45559fa-3038-436b-a0cf-c947e0b3276a/postgres-resource-summary.json",
+      "sha256": "40614132f4fe8a08f9967bd0bb66fbab2c668455fe5d46b34d5208df546d68ff",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "e45559fa-3038-436b-a0cf-c947e0b3276a",
+        "containerId": "f42c51a43c03e1517bf57c6927bc198a19ff09019100a3ddb0e29a86a0290108",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 53383,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/f8149014-84b1-465f-9ff9-a1826d104cc4/postgres-lifecycle.jsonl",
+      "sha256": "18bae5d817465f7a521ae65cc07a2ba72f8b1c242cd7780992fd04686369e231",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "f8149014-84b1-465f-9ff9-a1826d104cc4"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "dbfbe5e62dbff285a78a3e275a42afb23d054b2479d7f5b303443ca7174c8d22"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "f8149014-84b1-465f-9ff9-a1826d104cc4",
+          "container_id": "dbfbe5e62dbff285a78a3e275a42afb23d054b2479d7f5b303443ca7174c8d22",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/f8149014-84b1-465f-9ff9-a1826d104cc4/postgres-resource-summary.json",
+      "sha256": "d60acb10f1dc86dfda053c3df8b52cd43eb6cb18be825479795814325beb73fd",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "f8149014-84b1-465f-9ff9-a1826d104cc4",
+        "containerId": "dbfbe5e62dbff285a78a3e275a42afb23d054b2479d7f5b303443ca7174c8d22",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 55116,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/fbbde63d-dde0-4719-b654-e82d4545a429/postgres-lifecycle.jsonl",
+      "sha256": "a6926c7e98430e478532373c4735e91982c1afe389093e85e58c83d6bd606eab",
+      "size_bytes": 926,
+      "kind": "owned-postgres-lifecycle-metadata",
+      "run_labels": [
+        "fbbde63d-dde0-4719-b654-e82d4545a429"
+      ],
+      "task_labels": [
+        "task3"
+      ],
+      "container_ids": [
+        "38d91d55d3b7532a0003a7bcc3cce5a66503991738b6c8f8451ca0b22d68d2d9"
+      ],
+      "event_counts": {
+        "created": 1,
+        "image_observed": 1,
+        "removed": 1
+      },
+      "fixtures": [
+        {
+          "task_label": "task3",
+          "run_label": "fbbde63d-dde0-4719-b654-e82d4545a429",
+          "container_id": "38d91d55d3b7532a0003a7bcc3cce5a66503991738b6c8f8451ca0b22d68d2d9",
+          "image_reference": "postgres:16.10-alpine",
+          "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+          "removed_by_same_id": true,
+          "ownership_confirmed": true,
+          "container_absent_after_removal": true
+        }
+      ],
+      "removed_owned_absent": true
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task3/fbbde63d-dde0-4719-b654-e82d4545a429/postgres-resource-summary.json",
+      "sha256": "5e2cba5d8f30ab8ba3088d6295a07860147fae5e099459b01ec233e5a859e9fb",
+      "size_bytes": 716,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "taskLabel": "task3",
+        "runLabel": "fbbde63d-dde0-4719-b654-e82d4545a429",
+        "containerId": "38d91d55d3b7532a0003a7bcc3cce5a66503991738b6c8f8451ca0b22d68d2d9",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 54484,
+        "ownershipConfirmed": true,
+        "removedByExactContainerId": true,
+        "absentAfterRemoval": true
+      }
+    }
+  ]
+}

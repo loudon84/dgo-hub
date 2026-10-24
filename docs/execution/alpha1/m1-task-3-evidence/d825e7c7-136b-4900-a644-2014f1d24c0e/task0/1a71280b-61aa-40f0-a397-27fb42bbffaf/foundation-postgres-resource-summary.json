@@ -1,0 +1,9 @@
+{
+  "runLabel": "1a71280b-61aa-40f0-a397-27fb42bbffaf",
+  "containerId": "db4bde7ff8ff4396ed2665f275c5208a83b5795fe0fee1299bcaa55605f5ef15",
+  "imageReference": "postgres:16.10-alpine",
+  "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "hostPort": 55144,
+  "cleanup": "confirmed removed by exact owned container ID"
+}
