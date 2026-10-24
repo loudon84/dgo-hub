@@ -1,0 +1,6 @@
+{
+  "command": "npx vitest run ingestion-api/strict-contract.test.ts -t 'rejects non-string order enums'",
+  "head": "bcfb34c167768a053250ccedefcb1f0759efe75f",
+  "exitCode": 1,
+  "utc": "2026-10-24T11:28:22.2124950Z"
+}

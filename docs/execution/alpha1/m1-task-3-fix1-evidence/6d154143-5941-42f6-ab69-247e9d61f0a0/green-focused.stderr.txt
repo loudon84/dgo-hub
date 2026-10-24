@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > does not reflect unknown or duplicate private property names in errors
+AssertionError: expected 503 to be 422 // Object.is equality
+
+- Expected
++ Received
+
+- 422
++ 503
+
+ ❯ ingestion-api/strict-intake.test.ts:35:35
+     33|       const response = await app.inject({ method: 'POST', url: '/hub/v…
+     34|         headers: { 'content-type': 'application/json', authorization: …
+     35|       expect(response.statusCode).toBe(422);
+       |                                   ^
+     36|       expect(response.json().error.retryable).toBe(false);
+     37|       expect(response.body).not.toContain('SYNTHETIC_PRIVATE_MARKER');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

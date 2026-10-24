@@ -1,0 +1,41 @@
+{
+  "head": "bcfb34c167768a053250ccedefcb1f0759efe75f",
+  "utc": "2026-10-24T11:30:22.8980792Z",
+  "files": [
+    {
+      "path": "integration-service/ingestion-api/strict-contract.ts",
+      "rawSha256": "f453f2a63f3d6bea04374d9e179ef65da175b183b0b53858ca1cec72d5a8f4c3",
+      "lfSha256": "f453f2a63f3d6bea04374d9e179ef65da175b183b0b53858ca1cec72d5a8f4c3",
+      "cleanBlob": "2843a17e6635a5b60a10b24472d0375ac2fca2b1",
+      "headBlob": "417d9486e39552c98aea29c1bb42e0911e92c22e"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-ingestion.ts",
+      "rawSha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+      "lfSha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+      "cleanBlob": "9f2d7d21df99035d427657731432820455b738ef",
+      "headBlob": "1e744f558c72c18205dc923024fae7238abd6217"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-contract.test.ts",
+      "rawSha256": "f76c0328a8b89af295a9d11178bac78bbbf5ffa32e260e0376feaf53e6aeb97a",
+      "lfSha256": "f76c0328a8b89af295a9d11178bac78bbbf5ffa32e260e0376feaf53e6aeb97a",
+      "cleanBlob": "46fb1a8771e2d13bf7b2cd5b3d4c0eebb262a72e",
+      "headBlob": "43771fae7cfe378b2d9efaad1fa676eafab6db78"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-intake.test.ts",
+      "rawSha256": "e1546f9735c3048e8692546cb74a7fd1c6feae7f7f23bd840477f383cd90b525",
+      "lfSha256": "7c01f6f203c269a471d5b08711fcc1024d2218539fe7fb8195fc494e66a33ca1",
+      "cleanBlob": "0e3259155c79f8c73c7df42f4e652c07b4222f38",
+      "headBlob": "8553afa37c61d6a3d5c023a18badb3f4e6dd5398"
+    },
+    {
+      "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+      "rawSha256": "8aa3765e477961402a793cc71119b49e7dc71ced1eea74b994a3fb57d9a2c053",
+      "lfSha256": "8aa3765e477961402a793cc71119b49e7dc71ced1eea74b994a3fb57d9a2c053",
+      "cleanBlob": "e43832cfd0b5c5062793a20e938c9ba559d26e36",
+      "headBlob": "860c244f30e9b25dad7e9eaf20a34aaa1fc45873"
+    }
+  ]
+}

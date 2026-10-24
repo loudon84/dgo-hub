@@ -1,0 +1,83 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"level":30,"time":1792841284344,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"f50d958d-e3a0-4975-9cec-4e472f8a12f1","req":{"id":"f50d958d-e3a0-4975-9cec-4e472f8a12f1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284426,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"f50d958d-e3a0-4975-9cec-4e472f8a12f1","res":{"statusCode":202},"responseTime":81.44839999999976,"msg":"request completed"}
+{"level":30,"time":1792841284435,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"bf0e9ebf-362e-4dfe-8675-0208a70d01d7","req":{"id":"bf0e9ebf-362e-4dfe-8675-0208a70d01d7","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284489,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"bf0e9ebf-362e-4dfe-8675-0208a70d01d7","res":{"statusCode":202},"responseTime":54.75660000000016,"msg":"request completed"}
+{"level":30,"time":1792841284490,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d79c2bc3-ff4b-4178-987d-ae9e142ac0b1","req":{"id":"d79c2bc3-ff4b-4178-987d-ae9e142ac0b1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284494,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d79c2bc3-ff4b-4178-987d-ae9e142ac0b1","res":{"statusCode":202},"responseTime":3.7283000000002176,"msg":"request completed"}
+{"level":30,"time":1792841284494,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"ceb03776-c6aa-4ea7-b53c-7c6417a849a6","req":{"id":"ceb03776-c6aa-4ea7-b53c-7c6417a849a6","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284498,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"ceb03776-c6aa-4ea7-b53c-7c6417a849a6","res":{"statusCode":409},"responseTime":4.058700000000044,"msg":"request completed"}
+{"level":30,"time":1792841284500,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"9709db8c-0e34-4a8a-a85b-435e3900c722","req":{"id":"9709db8c-0e34-4a8a-a85b-435e3900c722","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284500,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"83bb4425-10e7-4c85-98de-2dda31e50207","req":{"id":"83bb4425-10e7-4c85-98de-2dda31e50207","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284554,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"9709db8c-0e34-4a8a-a85b-435e3900c722","res":{"statusCode":202},"responseTime":54.064000000000306,"msg":"request completed"}
+{"level":30,"time":1792841284559,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"83bb4425-10e7-4c85-98de-2dda31e50207","res":{"statusCode":202},"responseTime":58.048699999999826,"msg":"request completed"}
+{"level":30,"time":1792841284561,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a68065b6-e063-44c1-a9f3-7a05fb498093","req":{"id":"a68065b6-e063-44c1-a9f3-7a05fb498093","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284563,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a68065b6-e063-44c1-a9f3-7a05fb498093","res":{"statusCode":422},"responseTime":1.6805999999996857,"msg":"request completed"}
+{"level":30,"time":1792841284563,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a6f11939-08e5-4719-9b21-b0401d31b7ff","req":{"id":"a6f11939-08e5-4719-9b21-b0401d31b7ff","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284565,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a6f11939-08e5-4719-9b21-b0401d31b7ff","res":{"statusCode":422},"responseTime":1.4819000000002234,"msg":"request completed"}
+{"level":30,"time":1792841284565,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"b9a196c1-df6f-4038-8ecf-d0d106f8acae","req":{"id":"b9a196c1-df6f-4038-8ecf-d0d106f8acae","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284565,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"b9a196c1-df6f-4038-8ecf-d0d106f8acae","res":{"statusCode":422},"responseTime":0.2824000000000524,"msg":"request completed"}
+{"level":30,"time":1792841284566,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"cce188d4-48ca-4864-944b-5fac57f9977c","req":{"id":"cce188d4-48ca-4864-944b-5fac57f9977c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284566,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"cce188d4-48ca-4864-944b-5fac57f9977c","res":{"statusCode":422},"responseTime":0.45509999999967476,"msg":"request completed"}
+{"level":30,"time":1792841284570,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"5fca35b5-d721-43c9-8e81-01b92d31b843","req":{"id":"5fca35b5-d721-43c9-8e81-01b92d31b843","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792841284572,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"5fca35b5-d721-43c9-8e81-01b92d31b843","res":{"statusCode":422},"responseTime":2.1529999999997926,"msg":"request completed"}
+{"level":30,"time":1792841284572,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"afff50ae-2d54-4737-a539-f89c703f2ed7","req":{"id":"afff50ae-2d54-4737-a539-f89c703f2ed7","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792841284575,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"afff50ae-2d54-4737-a539-f89c703f2ed7","res":{"statusCode":422},"responseTime":2.308600000000297,"msg":"request completed"}
+{"level":30,"time":1792841284576,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"9d85b897-a83e-4b90-a272-31f5d6f095b2","req":{"id":"9d85b897-a83e-4b90-a272-31f5d6f095b2","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792841284644,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"9d85b897-a83e-4b90-a272-31f5d6f095b2","res":{"statusCode":202},"responseTime":67.51699999999983,"msg":"request completed"}
+{"level":30,"time":1792841284644,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a1e36b58-3797-4246-bc70-b4594a7a8cb4","req":{"id":"a1e36b58-3797-4246-bc70-b4594a7a8cb4","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792841284701,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a1e36b58-3797-4246-bc70-b4594a7a8cb4","res":{"statusCode":202},"responseTime":56.210299999999734,"msg":"request completed"}
+{"level":30,"time":1792841284703,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"b0f25b07-c3c2-40eb-b90a-c4a7ebd1aeea","req":{"id":"b0f25b07-c3c2-40eb-b90a-c4a7ebd1aeea","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792841284764,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"b0f25b07-c3c2-40eb-b90a-c4a7ebd1aeea","res":{"statusCode":202},"responseTime":61.195700000000215,"msg":"request completed"}
+{"level":30,"time":1792841284770,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"47fed1cd-2544-4500-bd50-4856ea94790c","req":{"id":"47fed1cd-2544-4500-bd50-4856ea94790c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284823,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"47fed1cd-2544-4500-bd50-4856ea94790c","res":{"statusCode":503},"responseTime":53.16239999999971,"msg":"request completed"}
+{"level":30,"time":1792841284826,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"267de2a5-be9c-49c7-91ac-ef907776cbd8","req":{"id":"267de2a5-be9c-49c7-91ac-ef907776cbd8","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284827,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"267de2a5-be9c-49c7-91ac-ef907776cbd8","res":{"statusCode":422},"responseTime":1.366700000000037,"msg":"request completed"}
+{"level":30,"time":1792841284830,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d3535f41-6de2-4f0b-b5d6-317aa29142b1","req":{"id":"d3535f41-6de2-4f0b-b5d6-317aa29142b1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284948,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d3535f41-6de2-4f0b-b5d6-317aa29142b1","res":{"statusCode":202},"responseTime":118.38500000000022,"msg":"request completed"}
+{"level":30,"time":1792841284949,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"99a399c0-2439-468d-9132-13c357ab0fc6","req":{"id":"99a399c0-2439-468d-9132-13c357ab0fc6","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284950,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"99a399c0-2439-468d-9132-13c357ab0fc6","res":{"statusCode":422},"responseTime":1.4828999999999724,"msg":"request completed"}
+{"level":30,"time":1792841284951,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d2d41d4c-e780-4fed-ac91-45519d649c06","req":{"id":"d2d41d4c-e780-4fed-ac91-45519d649c06","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841284953,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d2d41d4c-e780-4fed-ac91-45519d649c06","res":{"statusCode":422},"responseTime":2.2381000000000313,"msg":"request completed"}
+{"level":30,"time":1792841284957,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"0881cdff-e602-4b99-9a03-d1b572e3cf87","req":{"id":"0881cdff-e602-4b99-9a03-d1b572e3cf87","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285143,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"0881cdff-e602-4b99-9a03-d1b572e3cf87","res":{"statusCode":202},"responseTime":185.17110000000002,"msg":"request completed"}
+{"level":30,"time":1792841285144,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a7fd1c9d-773d-4c3f-9188-c05b02d9a7d3","req":{"id":"a7fd1c9d-773d-4c3f-9188-c05b02d9a7d3","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285144,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"a7fd1c9d-773d-4c3f-9188-c05b02d9a7d3","res":{"statusCode":413},"responseTime":0.4768999999996595,"msg":"request completed"}
+{"level":30,"time":1792841285149,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"43cfdf40-9659-4d1c-870e-fcb37d8a323a","req":{"id":"43cfdf40-9659-4d1c-870e-fcb37d8a323a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285202,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"43cfdf40-9659-4d1c-870e-fcb37d8a323a","res":{"statusCode":503},"responseTime":53.13799999999992,"msg":"request completed"}
+{"level":30,"time":1792841285206,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"2e8e5f2f-fc6e-48a3-a59e-0c8c95a8b83b","req":{"id":"2e8e5f2f-fc6e-48a3-a59e-0c8c95a8b83b","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285262,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"2e8e5f2f-fc6e-48a3-a59e-0c8c95a8b83b","res":{"statusCode":202},"responseTime":55.82439999999997,"msg":"request completed"}
+{"level":30,"time":1792841285263,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"785d4183-4aef-4d16-8078-0c0c331dd26b","req":{"id":"785d4183-4aef-4d16-8078-0c0c331dd26b","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285266,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"785d4183-4aef-4d16-8078-0c0c331dd26b","res":{"statusCode":202},"responseTime":3.143000000000029,"msg":"request completed"}
+{"level":30,"time":1792841285266,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"c8ab2e1e-e4c7-4e10-9de2-d6a84ac8f400","req":{"id":"c8ab2e1e-e4c7-4e10-9de2-d6a84ac8f400","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285315,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"c8ab2e1e-e4c7-4e10-9de2-d6a84ac8f400","res":{"statusCode":409},"responseTime":48.83690000000024,"msg":"request completed"}
+{"level":30,"time":1792841285325,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"6a078059-2495-4be2-a8cb-d83ce61300a8","req":{"id":"6a078059-2495-4be2-a8cb-d83ce61300a8","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285326,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"6a078059-2495-4be2-a8cb-d83ce61300a8","res":{"statusCode":401},"responseTime":1.2242000000001099,"msg":"request completed"}
+{"level":30,"time":1792841285365,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"73ba9fe0-0761-4626-a9d4-d8052f8c610d","req":{"id":"73ba9fe0-0761-4626-a9d4-d8052f8c610d","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285418,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"73ba9fe0-0761-4626-a9d4-d8052f8c610d","res":{"statusCode":202},"responseTime":52.75849999999946,"msg":"request completed"}
+{"level":30,"time":1792841285420,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"184ef5a9-a565-4307-8932-03f799c7f2f1","req":{"id":"184ef5a9-a565-4307-8932-03f799c7f2f1","method":"GET","route":"/hub/v1/ingestion-jobs/:id"},"msg":"incoming request"}
+{"level":30,"time":1792841285423,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"184ef5a9-a565-4307-8932-03f799c7f2f1","res":{"statusCode":200},"responseTime":2.2354999999997744,"msg":"request completed"}
+{"level":30,"time":1792841285423,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"7dbdb9ae-5dc9-4dc9-add9-6d56656524aa","req":{"id":"7dbdb9ae-5dc9-4dc9-add9-6d56656524aa","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792841285427,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"7dbdb9ae-5dc9-4dc9-add9-6d56656524aa","res":{"statusCode":200},"responseTime":3.8265999999994165,"msg":"request completed"}
+{"level":30,"time":1792841285427,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"376706a0-20ac-4a38-b45c-5856fde321a6","req":{"id":"376706a0-20ac-4a38-b45c-5856fde321a6","method":"GET","route":"/hub/v1/ingestion-jobs/:id"},"msg":"incoming request"}
+{"level":30,"time":1792841285428,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"376706a0-20ac-4a38-b45c-5856fde321a6","res":{"statusCode":200},"responseTime":1.2313999999996668,"msg":"request completed"}
+{"level":30,"time":1792841285429,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"c21a89fa-e2f8-4e51-b52c-8c8ffff05011","req":{"id":"c21a89fa-e2f8-4e51-b52c-8c8ffff05011","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841285505,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"c21a89fa-e2f8-4e51-b52c-8c8ffff05011","res":{"statusCode":202},"responseTime":76.70640000000003,"msg":"request completed"}
+{"level":30,"time":1792841285506,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d4084ada-65c9-459c-838d-f7712171a89b","req":{"id":"d4084ada-65c9-459c-838d-f7712171a89b","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792841285508,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"d4084ada-65c9-459c-838d-f7712171a89b","res":{"statusCode":200},"responseTime":2.7736000000004424,"msg":"request completed"}
+{"level":30,"time":1792841285510,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"65bb5511-a7f9-4f83-aa26-d5211863bb05","req":{"id":"65bb5511-a7f9-4f83-aa26-d5211863bb05","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792841285512,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"65bb5511-a7f9-4f83-aa26-d5211863bb05","res":{"statusCode":200},"responseTime":2.780999999999949,"msg":"request completed"}
+{"level":30,"time":1792841285513,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"7c363842-73df-4e62-9a14-2c4f9bc2dadc","req":{"id":"7c363842-73df-4e62-9a14-2c4f9bc2dadc","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792841285514,"pid":36056,"hostname":"WIN-20231024AVS","reqId":"7c363842-73df-4e62-9a14-2c4f9bc2dadc","res":{"statusCode":422},"responseTime":1.0894000000007509,"msg":"request completed"}
+ ❯ acceptance-tests/strict-ingestion.test.ts (13 tests | 3 failed) 4266ms
+     × rejects invalid enum and identifier images without durable rows 69ms
+     × stores chronological source range across record order, offsets and microseconds 54ms
+     × rejects private-key and deep JSON over HTTP without durable writes 5ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 10 passed (13)
+   Start at  19:28:01
+   Duration  4.74s (transform 186ms, setup 0ms, import 293ms, tests 4.27s, environment 0ms)
+

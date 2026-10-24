@@ -1,0 +1,228 @@
+{
+  "purpose": "M1-3 fix1 explicit safe evidence whitelist",
+  "root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-fix1-evidence\\6d154143-5941-42f6-ab69-247e9d61f0a0",
+  "sourceCommit": "ccab1a043294a677db1c3ad54142bd2291c81e60",
+  "entryCount": 44,
+  "files": [
+    {
+      "path": "red-unit.command.json",
+      "sha256": "d1df7b1774912227db6a911cd9a31190588c9b7df1ce7b1927df9134e03d9397",
+      "bytes": 226
+    },
+    {
+      "path": "red-unit.stdout.txt",
+      "sha256": "e35a59d92125e9ecda781ea120759485f0da9fcb77efdbb08979ed6d5dee162d",
+      "bytes": 2163
+    },
+    {
+      "path": "red-unit.stderr.txt",
+      "sha256": "155772558d3843ef95843e0be31de429ed255ba19aeb2cb57f489d5dbd9016f0",
+      "bytes": 3748
+    },
+    {
+      "path": "red-enum.command.json",
+      "sha256": "e95ff9e5ecf80adbc4686e3c4bc8a52e4d7d2b1108496e56127186b3c5e31077",
+      "bytes": 226
+    },
+    {
+      "path": "red-enum.stdout.txt",
+      "sha256": "1b02084cf20f2a1076449215f4c3628ab7492d1496942e5f1299f3bc51289798",
+      "bytes": 403
+    },
+    {
+      "path": "red-enum.stderr.txt",
+      "sha256": "5dc917fb6a52202058141740034a881220d1a77638f7cd96720adb6952d40107",
+      "bytes": 780
+    },
+    {
+      "path": "red-acceptance.command.json",
+      "sha256": "605c1fe2e201017c44ab44d548a7c92e5754e780477d3d2c6e9ae3b3bbb78168",
+      "bytes": 194
+    },
+    {
+      "path": "red-acceptance.stdout.txt",
+      "sha256": "911817905b4e12b5bc548c53bd78aa7e56db0163928edc44049fb7fe0ee84f9f",
+      "bytes": 16768
+    },
+    {
+      "path": "red-acceptance.stderr.txt",
+      "sha256": "9396979367c8df8ca9398aedcfd8e276e1677b3922770ffbc8aa7fac511af001",
+      "bytes": 2631
+    },
+    {
+      "path": "green-focused.command.json",
+      "sha256": "a27a307061ed76fb51530d93a01320f67eac828b7398575adc508d8a2709f9d1",
+      "bytes": 268
+    },
+    {
+      "path": "green-focused.stdout.txt",
+      "sha256": "21f95bb08b0498abe098c6ff64990fc3fd948a3166470c7471a50b7dada0ddc6",
+      "bytes": 22603
+    },
+    {
+      "path": "green-focused.stderr.txt",
+      "sha256": "1514c77894856dd3fe6e3acc4c5168d2c750af7e6fdccaa8e2ad47b58e92c452",
+      "bytes": 873
+    },
+    {
+      "path": "green-focused2.command.json",
+      "sha256": "836529a87925cbf0aa9ef516021bd1f73279dcf7d1f72d4b43d7c5fb1a6f885a",
+      "bytes": 268
+    },
+    {
+      "path": "green-focused2.stdout.txt",
+      "sha256": "db5d09f6308a465e69fb0d96a272cdd538678536e4047a9b81bf9e55dcbcb104",
+      "bytes": 22337
+    },
+    {
+      "path": "green-focused2.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "gate-focused.command.json",
+      "sha256": "a84a1c13668b95790de25d3ce5d8351dd96a9892b1225a0ff8df7d4fe3ba83eb",
+      "bytes": 268
+    },
+    {
+      "path": "gate-focused.stdout.txt",
+      "sha256": "6153b234a110ac00b5230a5401be6a6c258db277d20755bc48bc9ce151c0b99d",
+      "bytes": 22428
+    },
+    {
+      "path": "gate-focused.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "typecheck.command.json",
+      "sha256": "0f6b712b36ab19ef24dee8d37410b06e914488621b998a373acd4c53b4d9fc87",
+      "bytes": 155
+    },
+    {
+      "path": "typecheck.stdout.txt",
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe",
+      "bytes": 92
+    },
+    {
+      "path": "typecheck.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "build.command.json",
+      "sha256": "29cbd83ddf3364d8a7962ce4dd59abf3405a8bed0dcf945f986caefbc6850ede",
+      "bytes": 151
+    },
+    {
+      "path": "build.stdout.txt",
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0",
+      "bytes": 79
+    },
+    {
+      "path": "build.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "gate-typecheck.command.json",
+      "sha256": "2b6b66971ab2c4ea9eb28fe80ccbf0c56641ae92c5b2013f64e44d64586f1957",
+      "bytes": 155
+    },
+    {
+      "path": "gate-typecheck.stdout.txt",
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe",
+      "bytes": 92
+    },
+    {
+      "path": "gate-typecheck.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "gate-build.command.json",
+      "sha256": "e10fbbddb8beb56c7d6bc48d36a55a8f83202b83e17a9172c28d7667ca0f8b1f",
+      "bytes": 151
+    },
+    {
+      "path": "gate-build.stdout.txt",
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0",
+      "bytes": 79
+    },
+    {
+      "path": "gate-build.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "source-pre-manifest.json",
+      "sha256": "c0cec265dcb6b40ee08feb211219fbaa787b7baf56744ac575c386030160f474",
+      "bytes": 2074
+    },
+    {
+      "path": "source-post-manifest.json",
+      "sha256": "b330945f782d0f1f9cb3a73bc42e10903a0ed147607ccd6bc57af1ade63a4556",
+      "bytes": 2074
+    },
+    {
+      "path": "source-gate-pre-manifest.json",
+      "sha256": "7cf97e67ef940bc63131e5516ae8f6e4864c17f810d56051c4efb8059b15a9ed",
+      "bytes": 2074
+    },
+    {
+      "path": "source-gate-post-manifest.json",
+      "sha256": "88ef5ff483e2c15701ed054273dc6661f1ea6a1132fb5cc6f1d6201b19fa31a7",
+      "bytes": 2074
+    },
+    {
+      "path": "migration-immutability.json",
+      "sha256": "710673d3522a4ccd79751e21df339f9c619ea2251fdf10eab9e1ad72fbdd7193",
+      "bytes": 2699
+    },
+    {
+      "path": "owned-postgres-inventory.json",
+      "sha256": "c3318b6a2aecd3667ac2f901d5a153a019cb499de29747ad65cd553032b0e5fc",
+      "bytes": 2854
+    },
+    {
+      "path": "misplaced-owned-runs/08d85c79-aaf5-43ef-8c31-db9801cfb234/postgres-lifecycle.jsonl",
+      "sha256": "b547a7fc2e8705435aa44b9e9b504ff54b2a1850f38f0e0b0759d7fc9b5de9bd",
+      "bytes": 926
+    },
+    {
+      "path": "misplaced-owned-runs/08d85c79-aaf5-43ef-8c31-db9801cfb234/postgres-resource-summary.json",
+      "sha256": "8bdf2e17d8a487b428c1e742598f5f96baf11b798440022b1ed293580743a87a",
+      "bytes": 716
+    },
+    {
+      "path": "misplaced-owned-runs/8d8adeb7-4ab5-4460-b8c4-6b3ab38daa5f/postgres-lifecycle.jsonl",
+      "sha256": "dc7e9d9565f3c50ae5d1133d8c933c28a1b4df4e6a07b7ad889e88e0b6f308e4",
+      "bytes": 926
+    },
+    {
+      "path": "misplaced-owned-runs/8d8adeb7-4ab5-4460-b8c4-6b3ab38daa5f/postgres-resource-summary.json",
+      "sha256": "62627f9f0de3a8d7c5b8a02ccbeec76a6ec4a25c2e66c58a8dc7afd65ab15c01",
+      "bytes": 716
+    },
+    {
+      "path": "misplaced-owned-runs/fb7203fd-e8bc-4e0b-993e-d6bc37e0bf4b/postgres-lifecycle.jsonl",
+      "sha256": "36e88ca8aa7ad441ebb40cf75896049fcc5045afba4da47099ff451a2757a246",
+      "bytes": 926
+    },
+    {
+      "path": "misplaced-owned-runs/fb7203fd-e8bc-4e0b-993e-d6bc37e0bf4b/postgres-resource-summary.json",
+      "sha256": "6f1e997e20595dc8f0aadae3dd11ca1ed0bd35c02077b42759b22b34d04c0cd0",
+      "bytes": 716
+    },
+    {
+      "path": "task3/5b1843bd-c589-494d-8acb-ab557808c744/postgres-lifecycle.jsonl",
+      "sha256": "47e6fd1f64f9c6c48ec8d3f08b8b419b052db6346e91e6e4ef1e117f4d7f3cd2",
+      "bytes": 926
+    },
+    {
+      "path": "task3/5b1843bd-c589-494d-8acb-ab557808c744/postgres-resource-summary.json",
+      "sha256": "84318d8b5045948c20b9638da516cf36cf4c8cd68cf5eb362052ac93fcc0c953",
+      "bytes": 721
+    }
+  ]
+}

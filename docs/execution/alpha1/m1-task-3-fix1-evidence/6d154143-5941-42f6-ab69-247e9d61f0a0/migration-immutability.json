@@ -1,0 +1,55 @@
+{
+  "base": "0a493f4c594b76f42adfea6bcfc2667705c37b05",
+  "head": "bcfb34c167768a053250ccedefcb1f0759efe75f",
+  "files": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "rawSha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "baseBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "headBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "workBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "rawSha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "baseBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "headBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "workBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "rawSha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "baseBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "headBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "workBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "rawSha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "baseBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "headBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "workBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "rawSha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "baseBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "headBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "workBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+    },
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "rawSha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "baseBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "headBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "workBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a"
+    },
+    {
+      "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+      "rawSha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "baseBlob": "7a5dca418542976a22cf786d302e36a617ee22df",
+      "headBlob": "7a5dca418542976a22cf786d302e36a617ee22df",
+      "workBlob": "7a5dca418542976a22cf786d302e36a617ee22df"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ingestion-api/strict-contract.test.ts > strict hub.v1 contract > rejects non-string order enums and enforces nonempty confirmed lines
+AssertionError: expected function to throw an error, but it didn't
+ ❯ ingestion-api/strict-contract.test.ts:113:76
+    111|       if (field === 'currency') body.records[0]!.data.status = 'DRAFT';
+    112|       (body.records[0]!.data as Record<string, unknown>)[field] = valu…
+    113|       expect(() => validateHubBatch(parseStrictJson(json(body)), 'orde…
+       |                                                                            ^
+    114|     }
+    115|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

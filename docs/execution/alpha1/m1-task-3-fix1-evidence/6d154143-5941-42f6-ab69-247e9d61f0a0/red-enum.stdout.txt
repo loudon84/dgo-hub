@@ -1,0 +1,11 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ ingestion-api/strict-contract.test.ts (17 tests | 1 failed | 16 skipped) 7ms
+     × rejects non-string order enums and enforces nonempty confirmed lines 5ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 skipped (17)
+   Start at  19:28:21
+   Duration  271ms (transform 39ms, setup 0ms, import 64ms, tests 7ms, environment 0ms)
+

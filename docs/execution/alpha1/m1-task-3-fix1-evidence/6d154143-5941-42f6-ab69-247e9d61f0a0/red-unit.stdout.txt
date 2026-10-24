@@ -1,0 +1,22 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ ingestion-api/strict-contract.test.ts (17 tests | 3 failed) 21ms
+     × rejects non-string order enums and enforces nonempty confirmed lines 3ms
+     × bounds customer external identifiers without changing accepted spelling 1ms
+     × bounds parser nesting before recursive descent 4ms
+{"level":30,"time":1792841276080,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"fa75fc05-0c8f-4705-bbe9-9afeda5a3402","req":{"id":"fa75fc05-0c8f-4705-bbe9-9afeda5a3402","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841276093,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"f64928ca-d7fb-4f49-a212-864f88b32d4e","req":{"id":"f64928ca-d7fb-4f49-a212-864f88b32d4e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841276087,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"fa75fc05-0c8f-4705-bbe9-9afeda5a3402","res":{"statusCode":422},"responseTime":5.021399999999971,"msg":"request completed"}
+{"level":30,"time":1792841276094,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"f64928ca-d7fb-4f49-a212-864f88b32d4e","res":{"statusCode":503},"responseTime":0.8867000000000189,"msg":"request completed"}
+{"level":30,"time":1792841276103,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"f575cc15-72f2-41e1-adab-3f0fc1162b29","req":{"id":"f575cc15-72f2-41e1-adab-3f0fc1162b29","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792841276106,"pid":38628,"hostname":"WIN-20231024AVS","reqId":"f575cc15-72f2-41e1-adab-3f0fc1162b29","res":{"statusCode":503},"responseTime":3.3192000000000235,"msg":"request completed"}
+ ❯ ingestion-api/strict-intake.test.ts (3 tests | 2 failed) 383ms
+     × does not reflect unknown or duplicate private property names in errors 9ms
+     × rejects deep JSON below the byte limit as a nonretryable client error 8ms
+
+ Test Files  2 failed (2)
+      Tests  5 failed | 15 passed (20)
+   Start at  19:27:55
+   Duration  754ms (transform 157ms, setup 0ms, import 245ms, tests 404ms, environment 0ms)
+

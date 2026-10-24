@@ -1,0 +1,6 @@
+{
+  "command": "npx vitest run acceptance-tests/strict-ingestion.test.ts",
+  "head": "bcfb34c167768a053250ccedefcb1f0759efe75f",
+  "exitCode": 1,
+  "utc": "2026-10-24T11:28:06.1140049Z"
+}

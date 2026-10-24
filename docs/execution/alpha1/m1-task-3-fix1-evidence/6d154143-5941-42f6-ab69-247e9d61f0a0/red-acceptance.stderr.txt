@@ -1,0 +1,57 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows
+AssertionError: expected 202 to be 422 // Object.is equality
+
+- Expected
++ Received
+
+- 422
++ 202
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:209:35
+    207|       (body.records[0]!.data as Record<string, unknown>)[field] = valu…
+    208|       const response = await post(JSON.stringify(body), `invalid-enum-…
+    209|       expect(response.statusCode).toBe(422);
+       |                                   ^
+    210|       expect(response.json().error.retryable).toBe(false);
+    211|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds
+AssertionError: expected 503 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 503
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:228:33
+    226|     body.records[2]!.source_updated_at = '2026-10-21T18:00:00.123456-0…
+    227|     const response = await post(JSON.stringify(body));
+    228|     expect(response.statusCode).toBe(202);
+       |                                 ^
+    229|     const id = response.json().data.job_id;
+    230|     const range = await fixture.pool.query<{ first: string; last: stri…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes
+AssertionError: expected '{"request_id":"267de2a5-be9c-49c7-91a…' not to contain 'SYNTHETIC_PRIVATE_MARKER'
+
+Expected: "SYNTHETIC_PRIVATE_MARKER"
+Received: "{"request_id":"267de2a5-be9c-49c7-91ac-ef907776cbd8","error":{"code":"INGEST_INPUT_INVALID","message":"INGEST_INPUT_INVALID","retryable":false,"details":{"path":"/SYNTHETIC_PRIVATE_MARKER"}}}"
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:250:33
+    248|       expect(response.statusCode).toBe(422);
+    249|       expect(response.json().error.retryable).toBe(false);
+    250|       expect(response.body).not.toContain('SYNTHETIC_PRIVATE_MARKER');
+       |                                 ^
+    251|     }
+    252|     expect((await rowCounts()).rows[0]).toEqual(before.rows[0]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+

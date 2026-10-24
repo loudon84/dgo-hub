@@ -1,0 +1,86 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ingestion-api/strict-contract.test.ts > strict hub.v1 contract > rejects non-string order enums and enforces nonempty confirmed lines
+AssertionError: expected function to throw an error, but it didn't
+ ❯ ingestion-api/strict-contract.test.ts:112:76
+    110|       const body = structuredClone(order);
+    111|       (body.records[0]!.data as Record<string, unknown>)[field] = valu…
+    112|       expect(() => validateHubBatch(parseStrictJson(json(body)), 'orde…
+       |                                                                            ^
+    113|     }
+    114|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  ingestion-api/strict-contract.test.ts > strict hub.v1 contract > bounds customer external identifiers without changing accepted spelling
+AssertionError: expected function to throw an error, but it didn't
+ ❯ ingestion-api/strict-contract.test.ts:121:81
+    119|         const body = structuredClone(validCustomer);
+    120|         body.records[0]!.data[field] = value;
+    121|         expect(() => validateHubBatch(parseStrictJson(json(body)), 'cu…
+       |                                                                                 ^
+    122|       }
+    123|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  ingestion-api/strict-contract.test.ts > strict hub.v1 contract > bounds parser nesting before recursive descent
+AssertionError: expected error to be instance of IngestInputError
+
+- Expected:
+[Function IngestInputError]
+
++ Received:
+RangeError {
+  "message": "Maximum call stack size exceeded",
+}
+
+ ❯ ingestion-api/strict-contract.test.ts:131:41
+    129|   it('bounds parser nesting before recursive descent', () => {
+    130|     const deep = Buffer.from('['.repeat(5000) + '0' + ']'.repeat(5000)…
+    131|     expect(() => parseStrictJson(deep)).toThrow(IngestInputError);
+       |                                         ^
+    132|   });
+    133| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > does not reflect unknown or duplicate private property names in errors
+AssertionError: expected 503 to be 422 // Object.is equality
+
+- Expected
++ Received
+
+- 422
++ 503
+
+ ❯ ingestion-api/strict-intake.test.ts:35:35
+     33|       const response = await app.inject({ method: 'POST', url: '/hub/v…
+     34|         headers: { 'content-type': 'application/json', authorization: …
+     35|       expect(response.statusCode).toBe(422);
+       |                                   ^
+     36|       expect(response.json().error.retryable).toBe(false);
+     37|       expect(response.body).not.toContain('SYNTHETIC_PRIVATE_MARKER');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > rejects deep JSON below the byte limit as a nonretryable client error
+AssertionError: expected 503 to be 422 // Object.is equality
+
+- Expected
++ Received
+
+- 422
++ 503
+
+ ❯ ingestion-api/strict-intake.test.ts:46:33
+     44|       headers: { 'content-type': 'application/json', authorization: 'B…
+     45|       payload: '['.repeat(5000) + '0' + ']'.repeat(5000) });
+     46|     expect(response.statusCode).toBe(422);
+       |                                 ^
+     47|     expect(response.json().error).toMatchObject({ code: 'INGEST_INPUT_…
+     48|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
