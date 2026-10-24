@@ -2,7 +2,7 @@
 
 ## Spec Compliance
 
-- **FAIL** — M1-T2-I1–I11 below are actionable contract/correctness gaps. M1-T2-I12 is a further input-contract gap.
+- **FAIL** — M1-T2-I1–I12 below are actionable contract/correctness gaps.
 - **Review scope:** BASE `2c053297685e1aabd7dfb8b681fc120f55c78f1b`, review HEAD `89c6f458d9b775abc8a67a17e05de3dfb8859227`, product source `6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e`. The supplied package's complete integration-service source diff was consumed in sequential ranges, without another Git diff or a separate reread of changed source hunks. Line references below are final-source line numbers mapped from package hunks. No product/Git/index/HEAD mutation, subagent, test, build, Compose command, resource creation, or cleanup was performed.
 - **Binding inputs:** complete task-2 brief including controller addenda; task-2-review-brief; implementation report; task-2-review-package; context/m1-task2-interface-preflight; public M1 plan's cross-task rules and M1-2 section; PRD §§8.6 and 9.1–9.4. Historical preflight sketches were interpreted using the later binding addenda, including the approved global guard and server admission fence.
 
@@ -92,13 +92,17 @@ None identified.
 - Existing guard/admission tests are useful but are not the required remap/apply or owner-eligibility race evidence. The retained logs show the tests that exist passed; they do not show these acceptance scenarios ran. The earlier `canonical-apply-red.log` is a fixture duplicate-tenant error; red2 reaches the missing apply export. Behavioral REDs for snapshot/no-op/numeric/null/ordering are real and retained, but are not evidence for the missing matrix.
 - **Fix:** add the explicit targeted acceptance cases with independently authored T0/header/representative-line/receipt/outbox/mapping/epoch expectations and meaningful row scopes; exercise actual service roles. Run the focused additions and then the required final gate for the repaired source, retaining exact fixture lifecycle evidence. This review did not regenerate broad validation.
 
-### Minor (Nice to Have)
-
 #### M1-T2-I12 — [P2] Canonical text and order identifiers omit PRD input limits
 
 - **Location:** `integration-service/normalization/models.ts:24`, `:31`, `:35`, `:48`, `:57`.
-- canonicalText has no 2,048-character maximum; phone is unbounded; order_no uses canonicalText rather than the 128-character, no-edge-whitespace business identifier validator. Oversized names/phone or a padded/129-character order number are accepted by this strict canonical boundary despite PRD §9.1. The future intake parser's total request limit does not enforce per-field limits for other callers.
+- **Binding requirements:** PRD §9.1 explicitly limits a single string field to 2,048 characters; this includes customer_name, product_name and a non-null phone. No narrower phone-specific maximum is requested by this finding. The task brief's identifier rule limits public/business identifiers to 128 characters and rejects edge whitespace. Applying that general rule to order_no follows PRD §9.2's description of order_no as the upstream order number/tenant display identifier; the field table itself does not separately repeat a length bound.
+- canonicalText has no 2,048-character maximum; phone is unbounded; order_no uses canonicalText rather than the business identifier validator. Oversized names/phone and padded/129-character order numbers therefore pass this strict canonical boundary. The future intake parser's total request limit does not enforce per-field limits for other callers.
 - **Fix:** encode the prescribed field maxima and classify order_no using its identifier contract. Add boundary examples without changing source identifier case or trimming input.
+- **Rubric correction:** Important / P2, not optional polish. The original placement under Minor was a classification error; the generic 2,048-character omission alone establishes a binding Spec gap, independently of the order_no interpretation. This requests only existing contract limits, with no additional phone format, shorter phone cap, or new validation policy.
+
+### Minor (Nice to Have)
+
+None identified.
 
 ## Focused unchanged-code checks
 
