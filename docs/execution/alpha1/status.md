@@ -53,7 +53,7 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 | M1-1 Source Registry / mappings / admission authority | Independent Spec/Quality PASS |
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
 | M1-3 strict REST / durable intake jobs | R1–R5 repaired; scoped Sol re-review PASS/Approved; post-fix focused 33/33 and typecheck/build exit 0; earlier assurance gaps retained |
-| M1-4 reliable worker / retry | Read-only implementation preflight prepared; coding awaits M1-3 review closure |
+| M1-4 reliable worker / retry | Luna implementation active at c616402; durable lease/retry contract finalized; independent review pending |
 | M1-5 PostgreSQL snapshot / recovery | Not started |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
 | M1-7 OpenMetadata UI / FI / Oracle | Not started |
