@@ -113,13 +113,15 @@ async function identityByOidc(
   lock = false,
 ): Promise<CurrentIdentity> {
   const result = await client.query<SubjectRow>(
-    `SELECT s.tenant_key, s.user_id, s.department_id, s.business_role, s.management_scopes,
-            s.auth_epoch, s.enabled, t.enabled AS tenant_enabled, t.business_timezone,
-            b.issuer, b.subject, b.enabled AS binding_enabled
-       FROM control.identity_binding b
-       JOIN control.auth_subject s ON (s.tenant_key, s.user_id) = (b.tenant_key, b.user_id)
-       JOIN control.tenant t ON t.tenant_key = s.tenant_key
-      WHERE b.issuer = $1 AND b.subject = $2${lock ? ' FOR UPDATE OF s, b, t' : ''}`,
+    lock
+      ? 'SELECT * FROM control.lock_api_identity($1,$2)'
+      : `SELECT s.tenant_key, s.user_id, s.department_id, s.business_role, s.management_scopes,
+                s.auth_epoch, s.enabled, t.enabled AS tenant_enabled, t.business_timezone,
+                b.issuer, b.subject, b.enabled AS binding_enabled
+           FROM control.identity_binding b
+           JOIN control.auth_subject s ON (s.tenant_key, s.user_id) = (b.tenant_key, b.user_id)
+           JOIN control.tenant t ON t.tenant_key = s.tenant_key
+          WHERE b.issuer = $1 AND b.subject = $2`,
     [issuer, subject],
   );
   const row = result.rows[0];
@@ -383,8 +385,7 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
         assertCallerMatches(principal, current);
         assertEligibleBusinessUser(current);
         const existing = await client.query<{ request_digest: Buffer; credential_id: string }>(
-          `SELECT request_digest,credential_id FROM control.agent_credential_idempotency
-            WHERE tenant_key=$1 AND user_id=$2 AND idempotency_key=$3 FOR UPDATE`,
+          'SELECT * FROM control.lock_agent_credential_idempotency($1,$2,$3)',
           [current.tenantId, current.userId, idempotencyKey],
         );
         if (existing.rowCount) {

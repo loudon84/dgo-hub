@@ -20,7 +20,7 @@ export async function startPermissionPublisher(environment: NodeJS.ProcessEnv = 
   if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
   const { pool } = await import('../db.js');
   const mode = await preparePermissionPublisher(runtime, async () => {
-    await pool.query("UPDATE control.query_gate SET state='closed',epoch=epoch+1,changed_at=now() WHERE id=1");
+    await pool.query('SELECT * FROM control.close_query_gate()');
   }, async () => {
     const { bootstrapHasura } = await import('./hasura.js');
     for (let attempt = 0; attempt < 30; attempt++) {
@@ -28,7 +28,10 @@ export async function startPermissionPublisher(environment: NodeJS.ProcessEnv = 
       catch (error) { if (attempt === 29) throw error; await new Promise(resolve => setTimeout(resolve, 2000)); }
     }
   });
-  if (mode === 'not_ready') return mode;
+  if (mode === 'not_ready') {
+    process.stdout.write('{"status":"BLOCKED","component":"publisher","code":"M0_PUBLISHER_NOT_READY","gate":"closed"}\n');
+    return mode;
+  }
   const { publishSavedPolicy } = await import('./hasura.js');
   while (true) {
     const pending = await pool.query("SELECT id,created_by,approved_by FROM control.permission_policy WHERE status='publish_pending' ORDER BY table_name LIMIT 1");

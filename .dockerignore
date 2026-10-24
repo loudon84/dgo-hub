@@ -1,0 +1,13 @@
+**
+!integration-service/
+!integration-service/**
+!deploy/
+!deploy/alpha1/
+!deploy/alpha1/*.mjs
+integration-service/node_modules/
+integration-service/dist/
+integration-service/.git/
+integration-service/.env
+integration-service/.npmrc
+deploy/alpha1/.env
+deploy/alpha1/.npmrc

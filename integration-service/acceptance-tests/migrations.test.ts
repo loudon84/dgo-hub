@@ -101,8 +101,28 @@ describe('versioned migration runner', () => {
       windowsHide: true,
       encoding: 'utf8',
     });
-    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary'], skipped: [] });
-    expect(await ledgerState()).toEqual({ exists: true, count: 3 });
+    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security'], skipped: [] });
+    expect(await ledgerState()).toEqual({ exists: true, count: 4 });
+    const grants = await postgres.pool.query<{ api_registry_digest_select: boolean; api_registry_kind_select: boolean; api_subject_business_role_update: boolean; api_business_read: boolean; mcp_source_read: boolean; publisher_gate_update: boolean; publisher_close_execute: boolean; no_public_default_acl: boolean }>(`SELECT
+      has_column_privilege('hub_api','control.credential_digest_registry','digest','SELECT') AS api_registry_digest_select,
+      has_column_privilege('hub_api','control.credential_digest_registry','kind','SELECT') AS api_registry_kind_select,
+      has_column_privilege('hub_api','control.auth_subject','business_role','UPDATE') AS api_subject_business_role_update,
+      has_table_privilege('hub_api','hub.customer','SELECT') AS api_business_read,
+      has_table_privilege('hub_mcp','control.source_credential','SELECT') AS mcp_source_read,
+      has_table_privilege('hub_publisher','control.query_gate','UPDATE') AS publisher_gate_update,
+      has_function_privilege('hub_publisher','control.close_query_gate()','EXECUTE') AS publisher_close_execute,
+      NOT EXISTS (SELECT 1 FROM pg_default_acl da CROSS JOIN LATERAL aclexplode(da.defaclacl) acl
+        WHERE da.defaclrole=(SELECT oid FROM pg_roles WHERE rolname=current_user) AND acl.grantee=0) AS no_public_default_acl`);
+    expect(grants.rows[0]).toEqual({
+      api_registry_digest_select: true,
+      api_registry_kind_select: false,
+      api_subject_business_role_update: false,
+      api_business_read: false,
+      mcp_source_read: false,
+      publisher_gate_update: false,
+      publisher_close_execute: true,
+      no_public_default_acl: true,
+    });
   });
 
   it('applies 001 to an empty database, skips it on repeat, and preserves migration data', async () => {

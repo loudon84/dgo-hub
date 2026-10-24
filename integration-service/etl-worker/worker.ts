@@ -73,4 +73,7 @@ export async function startWorker(environment: NodeJS.ProcessEnv = process.env):
   return 'local_lab';
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) await startWorker();
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  const mode = await startWorker();
+  if (mode === 'not_ready') process.stdout.write('{"status":"BLOCKED","component":"worker","code":"M0_WORKER_NOT_READY"}\n');
+}

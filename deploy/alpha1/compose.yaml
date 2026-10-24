@@ -1,0 +1,280 @@
+name: ${ALPHA1_PROJECT}
+
+services:
+  db:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+      - api_db_password
+      - mcp_db_password
+      - publisher_db_password
+      - hasura_read_db_password
+      - migrator_db_password
+      - hasura_metadata_db_password
+      - worker_db_password
+    volumes:
+      - alpha1-pgdata:/var/lib/postgresql/data
+      - ./db-init/00-roles.sh:/docker-entrypoint-initdb.d/00-roles.sh:ro
+    networks: [control_data, hasura_data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  migrator:
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [migrate, --environment-kind, site]
+    environment:
+      HUB_ENVIRONMENT_KIND: site
+      DATABASE_URL_FILE: /run/secrets/migrator_database_url
+    secrets: [migrator_database_url]
+    networks: [control_data]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [api]
+    environment:
+      HUB_ENVIRONMENT_KIND: ${ALPHA1_API_ENV_KIND:-site}
+      HUB_ENABLE_LEGACY_LAB: "false"
+      DATABASE_URL_FILE: /run/secrets/api_database_url
+      PORT: "3000"
+      HUB_AUTH_ISSUER: ${ALPHA1_OIDC_ISSUER:-}
+      HUB_AUTH_AUDIENCE: ${ALPHA1_OIDC_AUDIENCE:-}
+      HUB_AUTH_JWKS_URL: ${ALPHA1_OIDC_JWKS_URL:-}
+    secrets: [api_database_url]
+    networks: [management_back, control_data]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+    restart: "no"
+
+  mcp:
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [mcp]
+    environment:
+      HUB_ENVIRONMENT_KIND: site
+      HUB_ENABLE_LEGACY_LAB: "false"
+      HUB_MCP_ALLOWED_ORIGINS: https://sales.local
+      DATABASE_URL_FILE: /run/secrets/mcp_database_url
+      HASURA_URL: http://hasura:8080
+      HASURA_JWT_SECRET_FILE: /run/secrets/hasura_jwt_secret
+      MCP_PORT: "3001"
+    secrets: [mcp_database_url, hasura_jwt_secret]
+    networks: [sales_back, control_data, hasura_business]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+      hasura: {condition: service_started}
+    restart: unless-stopped
+
+  publisher:
+    profiles: [ops]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [publisher]
+    environment:
+      HUB_ENVIRONMENT_KIND: site
+      HUB_ENABLE_LEGACY_LAB: "false"
+      DATABASE_URL_FILE: /run/secrets/publisher_database_url
+      HASURA_URL: http://hasura:8080
+      HASURA_ADMIN_SECRET_FILE: /run/secrets/hasura_admin_secret
+    secrets: [publisher_database_url, hasura_admin_secret]
+    networks: [control_data, admin_publish]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+      hasura: {condition: service_started}
+    restart: "no"
+
+  worker:
+    profiles: [ops]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [worker]
+    environment:
+      HUB_ENVIRONMENT_KIND: site
+      HUB_ENABLE_LEGACY_LAB: "false"
+    networks: [control_data]
+    restart: "no"
+
+  seed-principal:
+    profiles: [verify]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [seed-principal]
+    environment:
+      MIGRATOR_DATABASE_URL_FILE: /run/secrets/migrator_database_url
+    secrets: [migrator_database_url]
+    networks: [control_data]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+    restart: "no"
+
+  grant-probe:
+    profiles: [verify]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [grant-probe]
+    environment:
+      API_DATABASE_URL_FILE: /run/secrets/api_database_url
+      MCP_DATABASE_URL_FILE: /run/secrets/mcp_database_url
+      PUBLISHER_DATABASE_URL_FILE: /run/secrets/publisher_database_url
+      HASURA_READ_DATABASE_URL_FILE: /run/secrets/hasura_read_database_url
+      HASURA_METADATA_DATABASE_URL_FILE: /run/secrets/hasura_metadata_database_url
+      HASURA_METADATA_BUSINESS_DATABASE_URL_FILE: /run/secrets/hasura_metadata_business_database_url
+      MIGRATOR_DATABASE_URL_FILE: /run/secrets/migrator_database_url
+      HASURA_URL: http://hasura:8080
+    secrets: [api_database_url, mcp_database_url, publisher_database_url, hasura_read_database_url, hasura_metadata_database_url, hasura_metadata_business_database_url, migrator_database_url]
+    networks: [control_data, hasura_data]
+    user: "0:0"
+    volumes: [probe-token:/run/probe]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+      hasura: {condition: service_started}
+    restart: "no"
+
+  sales-probe:
+    profiles: [verify]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [sales-probe]
+    user: "0:0"
+    environment:
+      SALES_URL: https://sales.local:443
+      SALES_CA_FILE: /run/alpha1/ca.pem
+      SALES_TOKEN_FILE: /run/probe/agent_token
+    volumes:
+      - ${ALPHA1_CERT_DIR}/ca.pem:/run/alpha1/ca.pem:ro
+      - probe-token:/run/probe:ro
+      - probe-audit:/run/audit
+    networks: [sales_ingress]
+    restart: "no"
+
+  verify-audit:
+    profiles: [verify]
+    build:
+      context: ../..
+      dockerfile: deploy/alpha1/Dockerfile
+    platform: linux/amd64
+    command: [verify-audit]
+    environment:
+      MIGRATOR_DATABASE_URL_FILE: /run/secrets/migrator_database_url
+    secrets: [migrator_database_url]
+    networks: [control_data]
+    volumes: [probe-audit:/run/audit:ro]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+    restart: "no"
+
+  hasura:
+    image: hasura/graphql-engine:v2.51.1@sha256:9c89fa691cff4171d24903b948b4c7d33207a28cc3a8ec96a088de2f6f40bed5
+    platform: linux/amd64
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - >-
+        export HASURA_GRAPHQL_ADMIN_SECRET="$$(cat /run/secrets/hasura_admin_secret)";
+        export HASURA_GRAPHQL_METADATA_DATABASE_URL="$$(cat /run/secrets/hasura_metadata_database_url)";
+        export HASURA_GRAPHQL_DATABASE_URL="$$(cat /run/secrets/hasura_read_database_url)";
+        export HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"HS256\",\"key\":\"$$(cat /run/secrets/hasura_jwt_secret)\"}";
+        exec graphql-engine serve
+    environment:
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
+      HASURA_GRAPHQL_DEV_MODE: "false"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup
+      HASURA_GRAPHQL_SERVER_PORT: "8080"
+    secrets: [hasura_admin_secret, hasura_metadata_database_url, hasura_read_database_url, hasura_jwt_secret]
+    networks: [hasura_business, hasura_data, admin_publish]
+    depends_on:
+      migrator: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  sales-proxy:
+    image: nginx:1.30.6-alpine@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11
+    platform: linux/amd64
+    ports: ["127.0.0.1:${ALPHA1_SALES_PORT}:443"]
+    volumes:
+      - ./nginx/sales.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${ALPHA1_CERT_DIR}/leaf.pem:/run/alpha1/leaf.pem:ro
+      - ${ALPHA1_CERT_DIR}/leaf-key.pem:/run/alpha1/leaf-key.pem:ro
+    networks:
+      sales_ingress: {aliases: [sales.local]}
+      sales_back: {}
+      sales_loopback_edge: {}
+    depends_on: [mcp]
+    restart: unless-stopped
+
+  management-proxy:
+    image: nginx:1.30.6-alpine@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11
+    platform: linux/amd64
+    ports: ["127.0.0.1:${ALPHA1_MANAGEMENT_PORT}:443"]
+    volumes:
+      - ./nginx/management.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${ALPHA1_CERT_DIR}/leaf.pem:/run/alpha1/leaf.pem:ro
+      - ${ALPHA1_CERT_DIR}/leaf-key.pem:/run/alpha1/leaf-key.pem:ro
+    networks:
+      management_ingress: {aliases: [management.local]}
+      management_back: {}
+      management_loopback_edge: {}
+    depends_on: [api]
+    restart: unless-stopped
+
+networks:
+  sales_ingress: {internal: true}
+  sales_back: {internal: true}
+  management_ingress: {internal: true}
+  management_back: {internal: true}
+  control_data: {internal: true}
+  hasura_business: {internal: true}
+  hasura_data: {internal: true}
+  admin_publish: {internal: true}
+  sales_loopback_edge: {}
+  management_loopback_edge: {}
+
+volumes:
+  alpha1-pgdata: {}
+  probe-token: {}
+  probe-audit: {}
+
+secrets:
+  postgres_password: {file: "${ALPHA1_SECRETS_DIR}/postgres_password"}
+  api_db_password: {file: "${ALPHA1_SECRETS_DIR}/api_db_password"}
+  mcp_db_password: {file: "${ALPHA1_SECRETS_DIR}/mcp_db_password"}
+  publisher_db_password: {file: "${ALPHA1_SECRETS_DIR}/publisher_db_password"}
+  hasura_read_db_password: {file: "${ALPHA1_SECRETS_DIR}/hasura_read_db_password"}
+  migrator_db_password: {file: "${ALPHA1_SECRETS_DIR}/migrator_db_password"}
+  hasura_metadata_db_password: {file: "${ALPHA1_SECRETS_DIR}/hasura_metadata_db_password"}
+  worker_db_password: {file: "${ALPHA1_SECRETS_DIR}/worker_db_password"}
+  api_database_url: {file: "${ALPHA1_SECRETS_DIR}/api_database_url"}
+  mcp_database_url: {file: "${ALPHA1_SECRETS_DIR}/mcp_database_url"}
+  publisher_database_url: {file: "${ALPHA1_SECRETS_DIR}/publisher_database_url"}
+  migrator_database_url: {file: "${ALPHA1_SECRETS_DIR}/migrator_database_url"}
+  hasura_metadata_database_url: {file: "${ALPHA1_SECRETS_DIR}/hasura_metadata_database_url"}
+  hasura_metadata_business_database_url: {file: "${ALPHA1_SECRETS_DIR}/hasura_metadata_business_database_url"}
+  hasura_read_database_url: {file: "${ALPHA1_SECRETS_DIR}/hasura_read_database_url"}
+  hasura_jwt_secret: {file: "${ALPHA1_SECRETS_DIR}/hasura_jwt_secret"}
+  hasura_admin_secret: {file: "${ALPHA1_SECRETS_DIR}/hasura_admin_secret"}
