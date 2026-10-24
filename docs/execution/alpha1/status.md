@@ -1,12 +1,13 @@
 # Alpha.1 execution status
 
-Updated 2026-10-24. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 passed local GPT-6.1 Sol Spec/Quality review. Task4 implementation and sanitized evidence handoff are complete at `419deec30912132afe94aa5195a324d5adec2cf1`; independent GPT-6.1 Sol review is in progress. The carried Task3 I1 correction is implemented but remains pending that review. No Task3/Task4 gate approval or product release is asserted.
+Updated 2026-10-24. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 passed local GPT-6.1 Sol Spec/Quality review. The [Task4 initial review](reviews/m0-task-4-review.md) confirmed the carried Task3 I1 correction and found three Task4 evidence/probe issues. At the user's request, GPT-6.1 Sol corrected these in source `f9ede840` and evidence `73d9ce92`; independent scoped re-review is in progress. No Task4 gate approval or product release is asserted.
 
 ## Current readiness
 
 - Final local checks: typecheck/test/build each exited 0; 12 test files and 191 tests passed. The recorder started at `9724f627` with Task4 changes present; identical pre/post byte manifests identify the code subsequently committed at `135b7f1`. See [Task4 report](m0-task-4-report.md).
 - Fresh PostgreSQL initialization applied migrations 001–004; 27 real runtime role checks passed. Local TLS, network isolation, five MCP tools, closed-gate auditing, and distinct-credential revocation have retained probe evidence.
-- Next local step: independent Task4 review, followed by Task5 evidence consolidation and M1 detailed handoff. M1 local implementation can begin after engineering review/closure; formal site acceptance remains blocked.
+- Fix1 verification: all 114 original raw logs are now durably tracked with unchanged hashes; focused probe tests passed 2/2. Correct-host TLS and classified certificate negatives passed; ten exact direct addresses were live from the allowed side before/after and denied from sales. These are fix-specific results, distinct from the earlier 191-test record.
+- Next local step: independent Task4 scoped re-review, followed by Task5 evidence consolidation and M1 detailed handoff. M1 local implementation can begin after engineering review/closure; formal site acceptance remains blocked.
 - Owned Docker resources were confirmed removed. Seven generated host secret/certificate/env paths remain after policy rejected deletion; the Task4 report lists them. They are excluded from tracked evidence and Docker context. Do not retry cleanup or include them in archives.
 
 ## W0 disposition
