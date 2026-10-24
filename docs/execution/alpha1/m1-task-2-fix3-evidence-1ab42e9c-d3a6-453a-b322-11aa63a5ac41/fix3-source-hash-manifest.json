@@ -1,0 +1,49 @@
+{
+  "expectedSourceBase": "06155415862691175c45f294d7ecb792b7dba713",
+  "migration006Sha256": "aa2eb3abdfcc7a8b457a7c9e7818487a524432f1b5a841dc65813deac34c92ae",
+  "unchangedMigrations001to005": [
+    {
+      "currentBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "path": "integration-service/migrations/001_init.sql",
+      "baseBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+    },
+    {
+      "currentBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "baseBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+    },
+    {
+      "currentBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "baseBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+    },
+    {
+      "currentBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "baseBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+    },
+    {
+      "currentBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "baseBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+    }
+  ],
+  "gateHead": "046b6e1d4ea356bee6ffbc68a4f535aa90a5bae6",
+  "sourceFiles": [
+    {
+      "gitBlob": "3f49dffc9d220f1cf24345b106ce76947e40b478",
+      "rawSha256": "41957c1d4e049bc0d22169366fb957149fdfdc4405dc1d713179790d09630462",
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "lfSha256": "41957c1d4e049bc0d22169366fb957149fdfdc4405dc1d713179790d09630462",
+      "committedBlob": "3f49dffc9d220f1cf24345b106ce76947e40b478"
+    },
+    {
+      "gitBlob": "f2824798c6d42840948a90fa76c73c272cbfb9d4",
+      "rawSha256": "aa2eb3abdfcc7a8b457a7c9e7818487a524432f1b5a841dc65813deac34c92ae",
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "lfSha256": "aa2eb3abdfcc7a8b457a7c9e7818487a524432f1b5a841dc65813deac34c92ae",
+      "committedBlob": "f2824798c6d42840948a90fa76c73c272cbfb9d4"
+    }
+  ],
+  "sourceCommit": "d69e9d7a505f3f593e4fb9bd209439cb221540c6"
+}

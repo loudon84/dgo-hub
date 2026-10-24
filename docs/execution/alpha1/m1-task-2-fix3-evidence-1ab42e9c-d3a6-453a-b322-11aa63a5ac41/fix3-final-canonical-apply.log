@@ -1,0 +1,118 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:33668) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 4)
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ acceptance-tests/canonical-apply.test.ts (30 tests | 5 failed) 5610ms
+     × fences old and new owner epochs with a source driven ownership change 51ms
+     × applies an owner change between two external keys in one frozen identity mapping 42ms
+     × finishes frozen owner work after an ordinary Data Owner binding change 39ms
+     × locks direct-helper owner eligibility before validating it under concurrent disable 2059ms
+     × enforces typed barriers and newer remap fences through direct worker helper calls 46ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > fences old and new owner epochs with a source driven ownership change
+error: for SELECT DISTINCT, ORDER BY expressions must appear in select list
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:321:5
+    319|   await writeOutbox(client,context,{objectId,revision,operation:custom…
+    320|   if(ownershipChanges.length) {
+    321|     await client.query(`SELECT control.record_canonical_customer_owner…
+       |     ^
+    322|       context.tenantId,context.sourceId,customerInput.source_pk,contex…
+    323|       context.versionDomain,context.securityBarrierFenceAtAdmission,co…
+ ❯ acceptance-tests/canonical-apply.test.ts:316:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping
+error: for SELECT DISTINCT, ORDER BY expressions must appear in select list
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:321:5
+    319|   await writeOutbox(client,context,{objectId,revision,operation:custom…
+    320|   if(ownershipChanges.length) {
+    321|     await client.query(`SELECT control.record_canonical_customer_owner…
+       |     ^
+    322|       context.tenantId,context.sourceId,customerInput.source_pk,contex…
+    323|       context.versionDomain,context.securityBarrierFenceAtAdmission,co…
+ ❯ acceptance-tests/canonical-apply.test.ts:361:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > finishes frozen owner work after an ordinary Data Owner binding change
+error: for SELECT DISTINCT, ORDER BY expressions must appear in select list
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:321:5
+    319|   await writeOutbox(client,context,{objectId,revision,operation:custom…
+    320|   if(ownershipChanges.length) {
+    321|     await client.query(`SELECT control.record_canonical_customer_owner…
+       |     ^
+    322|       context.tenantId,context.sourceId,customerInput.source_pk,contex…
+    323|       context.versionDomain,context.securityBarrierFenceAtAdmission,co…
+ ❯ acceptance-tests/canonical-apply.test.ts:472:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > locks direct-helper owner eligibility before validating it under concurrent disable
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ acceptance-tests/canonical-apply.test.ts:714:32
+    712|         if(!lockWaitObserved) await new Promise(resolve=>setTimeout(re…
+    713|       }
+    714|       expect(lockWaitObserved).toBe(true);
+       |                                ^
+    715|       await disable.query('COMMIT');
+    716|       await expect(helperPromise).rejects.toMatchObject({code:'42501'}…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > enforces typed barriers and newer remap fences through direct worker helper calls
+error: for SELECT DISTINCT, ORDER BY expressions must appear in select list
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:321:5
+    319|   await writeOutbox(client,context,{objectId,revision,operation:custom…
+    320|   if(ownershipChanges.length) {
+    321|     await client.query(`SELECT control.record_canonical_customer_owner…
+       |     ^
+    322|       context.tenantId,context.sourceId,customerInput.source_pk,contex…
+    323|       context.versionDomain,context.securityBarrierFenceAtAdmission,co…
+ ❯ acceptance-tests/canonical-apply.test.ts:762:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+error: for SELECT DISTINCT, ORDER BY expressions must appear in select list
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 389, severity: 'ERROR', code: '42P10', detail: undefined, hint: undefined, position: undefined, internalPosition: '69', internalQuery: 'SELECT DISTINCT u FROM unnest(v_lock_users) AS affected(u) ORDER BY u COLLATE "C"', where: 'PL/pgSQL function record_canonical_customer_owner_change(text,text,text,uuid,uuid,bigint,text,bigint,uuid,uuid,bigint,jsonb) line 168 at FOR over SELECT rows', schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'parse_clause.c', routine: 'transformDistinctClause' }
+This error originated in "acceptance-tests/canonical-apply.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "locks direct-helper owner eligibility before validating it under concurrent disable". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 25 passed (30)
+     Errors  1 error
+   Start at  17:46:07
+   Duration  6.07s (transform 119ms, setup 0ms, import 273ms, tests 5.61s, environment 0ms)
+

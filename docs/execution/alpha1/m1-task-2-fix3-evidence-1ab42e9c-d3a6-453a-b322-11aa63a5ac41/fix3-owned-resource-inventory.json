@@ -1,0 +1,71 @@
+{
+  "count": 5,
+  "fixtureType": "postgresql",
+  "fixtures": [
+    {
+      "taskLabel": "task2",
+      "runLabel": "4388a883-b7a2-495b-9b1d-54897584d53c",
+      "containerId": "9c4ffe264853405f7cf89c0e060b8df41065cb076bc6968a46ce0e5039cd83e2",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 57277,
+      "ownershipConfirmed": true,
+      "removed": true,
+      "containerAbsentAfterRemoval": true,
+      "summaryPath": "4388a883-b7a2-495b-9b1d-54897584d53c\\postgres-resource-summary.json",
+      "lifecyclePath": "4388a883-b7a2-495b-9b1d-54897584d53c\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "task2",
+      "runLabel": "6158596d-dc5b-448f-9824-3212a2bd80d9",
+      "containerId": "dff8742887a5c0dee865ff79db28657d74cae6b87be0131c9b65aaf64d11f43d",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 57691,
+      "ownershipConfirmed": true,
+      "removed": true,
+      "containerAbsentAfterRemoval": true,
+      "summaryPath": "6158596d-dc5b-448f-9824-3212a2bd80d9\\postgres-resource-summary.json",
+      "lifecyclePath": "6158596d-dc5b-448f-9824-3212a2bd80d9\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "task2",
+      "runLabel": "a511905d-a23c-4290-9fc8-1f37ffe682b1",
+      "containerId": "e460cfe9ab325a1065d4f1c42b6564b41695c26bbe70fd0f1a2006682e1b19a4",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 56975,
+      "ownershipConfirmed": true,
+      "removed": true,
+      "containerAbsentAfterRemoval": true,
+      "summaryPath": "a511905d-a23c-4290-9fc8-1f37ffe682b1\\postgres-resource-summary.json",
+      "lifecyclePath": "a511905d-a23c-4290-9fc8-1f37ffe682b1\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "task2",
+      "runLabel": "a6748a22-efb1-432f-820b-986514d12788",
+      "containerId": "001f0a6c9c5230bffeaf82d7fc288029d99cfe92718128779df434755e68bb7f",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 57357,
+      "ownershipConfirmed": true,
+      "removed": true,
+      "containerAbsentAfterRemoval": true,
+      "summaryPath": "a6748a22-efb1-432f-820b-986514d12788\\postgres-resource-summary.json",
+      "lifecyclePath": "a6748a22-efb1-432f-820b-986514d12788\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "task2",
+      "runLabel": "ad8cb6cc-2f9c-4ba8-9911-3de799e8db27",
+      "containerId": "2e21c5102f98a76a9a10ec3f8a1920ea09c29fb7758573b1d65054740ca32f18",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 57507,
+      "ownershipConfirmed": true,
+      "removed": true,
+      "containerAbsentAfterRemoval": true,
+      "summaryPath": "ad8cb6cc-2f9c-4ba8-9911-3de799e8db27\\postgres-resource-summary.json",
+      "lifecyclePath": "ad8cb6cc-2f9c-4ba8-9911-3de799e8db27\\postgres-lifecycle.jsonl"
+    }
+  ]
+}

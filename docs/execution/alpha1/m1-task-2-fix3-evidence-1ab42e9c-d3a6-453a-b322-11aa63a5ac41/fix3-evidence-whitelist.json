@@ -1,0 +1,127 @@
+{
+  "root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-2-fix3-evidence-1ab42e9c-d3a6-453a-b322-11aa63a5ac41",
+  "count": 24,
+  "files": [
+    {
+      "path": "fix3-attempt-exit-manifest.json",
+      "bytes": 2261,
+      "sha256": "51f1ab4c2b702b3beb600ea914d73683b71235a674a6706c908c7c8e47420fe1"
+    },
+    {
+      "path": "fix3-build.log",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "fix3-canonical-apply-green1.log",
+      "bytes": 339,
+      "sha256": "a7168531330659c9a4e4fd53fbe3ee7ff476d2277898665503256584906eac6a"
+    },
+    {
+      "path": "fix3-canonical-apply-green2.log",
+      "bytes": 339,
+      "sha256": "9a9f95df06c0e9be53e2508293b5e876cb8dd3601d5cb4876be7edf71d140426"
+    },
+    {
+      "path": "fix3-final-build.log",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "fix3-final-canonical-apply.log",
+      "bytes": 7056,
+      "sha256": "e2ee12851e55532e5a267b204ed40f5207cc8fd2051f3fd3c904c82b539e8c6f"
+    },
+    {
+      "path": "fix3-final-typecheck.log",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "fix3-owned-resource-inventory.json",
+      "bytes": 3374,
+      "sha256": "9e58956e09a76dfe82e1382166896fae6d41fa730799acfc094037a78b3d8def"
+    },
+    {
+      "path": "fix3-red-focused.log",
+      "bytes": 7599,
+      "sha256": "9f254bce14a2ae163c21ecc452e47b604b403dfe419501e6ec0dce32b01c7833"
+    },
+    {
+      "path": "fix3-source-hash-manifest.json",
+      "bytes": 2235,
+      "sha256": "b02ed1f25a2c774ed9d45c03cf3ea51f8be35775234386dbf131a50534f5666e"
+    },
+    {
+      "path": "fix3-typecheck.log",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "fix3-verified-build.log",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "fix3-verified-canonical-apply.log",
+      "bytes": 339,
+      "sha256": "4a2677f672f56f05f0b397a018efebe629713fe18b24aacfc4c91952c6c65c9d"
+    },
+    {
+      "path": "fix3-verified-typecheck.log",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "task2/4388a883-b7a2-495b-9b1d-54897584d53c/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "946ffb418e804b175c34957da5efb6fe78091bc8b82408206c57899fb93cbcfd"
+    },
+    {
+      "path": "task2/4388a883-b7a2-495b-9b1d-54897584d53c/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "3f63fa7b74f149513bd946cd47b4c5d1a9fd8066f1aa5ffe85336daf4490e556"
+    },
+    {
+      "path": "task2/6158596d-dc5b-448f-9824-3212a2bd80d9/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "6ba8352ffdc71f861966d246afba7dac755fab71518e46a66764caa9a032ecf4"
+    },
+    {
+      "path": "task2/6158596d-dc5b-448f-9824-3212a2bd80d9/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "2e029b77ec16e059a913f84ccf562ae2122aec7dcbf5c8e37129053e2db0fc37"
+    },
+    {
+      "path": "task2/a511905d-a23c-4290-9fc8-1f37ffe682b1/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "94e333b9972abd2583aec723ef6ba48df6148899bce21aa05077bd2a880b382b"
+    },
+    {
+      "path": "task2/a511905d-a23c-4290-9fc8-1f37ffe682b1/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "5f041de7d1c38e97aa26cd3d297d545993903ea5f0c542363edf2b9ea3208e82"
+    },
+    {
+      "path": "task2/a6748a22-efb1-432f-820b-986514d12788/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "dfdeb4de6042eba1175bd32ce2fbfba5a51f3644ef4a9d03a7a5a8637212c8bf"
+    },
+    {
+      "path": "task2/a6748a22-efb1-432f-820b-986514d12788/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "668e4c128d5162779bc21e46c88ff02978c00c3f01f373feb77fc2f5f912abc9"
+    },
+    {
+      "path": "task2/ad8cb6cc-2f9c-4ba8-9911-3de799e8db27/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "547bca05638aa94d58c65b5bf054f8bb7c942fc1a6db096484720bb565185bbb"
+    },
+    {
+      "path": "task2/ad8cb6cc-2f9c-4ba8-9911-3de799e8db27/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "2d9afd6f8c0ae9d8c489513d2d3266ce2aba62daac87e3c8bc0e7726276fa6b4"
+    }
+  ],
+  "excludes": "fix3-evidence-whitelist.json (self-reference)"
+}

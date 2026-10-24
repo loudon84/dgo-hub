@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+   Start at  17:45:34
+   Duration  4.01s (transform 112ms, setup 0ms, import 263ms, tests 3.57s, environment 0ms)
+

@@ -1,0 +1,68 @@
+[
+  {
+    "command": "npm test -- acceptance-tests/canonical-apply.test.ts -t \"rejects stale matching receipt|locks direct-helper owner eligibility\"",
+    "log": "fix3-red-focused.log",
+    "exit": 1,
+    "result": "Expected RED: both findings reproduced; stale helper resolved without current proof; lock waiter proceeded after disable and helper incorrectly resolved."
+  },
+  {
+    "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+    "log": "fix3-canonical-apply-green1.log",
+    "exit": 0,
+    "result": "30/30 passed before lock-collation adjustment."
+  },
+  {
+    "command": "npm run typecheck",
+    "log": "fix3-typecheck.log",
+    "exit": 0,
+    "result": "Passed before lock-collation adjustment."
+  },
+  {
+    "command": "npm run build",
+    "log": "fix3-build.log",
+    "exit": 0,
+    "result": "Passed before lock-collation adjustment."
+  },
+  {
+    "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+    "log": "fix3-canonical-apply-green2.log",
+    "exit": 0,
+    "result": "30/30 passed with both affected subjects locked."
+  },
+  {
+    "command": "npm run typecheck",
+    "log": "fix3-final-typecheck.log",
+    "exit": 0,
+    "result": "Passed before deterministic collation correction."
+  },
+  {
+    "command": "npm run build",
+    "log": "fix3-final-build.log",
+    "exit": 0,
+    "result": "Passed before deterministic collation correction."
+  },
+  {
+    "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+    "log": "fix3-final-canonical-apply.log",
+    "exit": 1,
+    "result": "Preserved failure: 42P10 SELECT DISTINCT ORDER BY expression missing from select list; 5 failed, 25 passed."
+  },
+  {
+    "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+    "log": "fix3-verified-canonical-apply.log",
+    "exit": 0,
+    "result": "Final source gate: 30/30 passed after SELECT DISTINCT u COLLATE \"C\" AS u ORDER BY u."
+  },
+  {
+    "command": "npm run typecheck",
+    "log": "fix3-verified-typecheck.log",
+    "exit": 0,
+    "result": "Final source gate passed."
+  },
+  {
+    "command": "npm run build",
+    "log": "fix3-verified-build.log",
+    "exit": 0,
+    "result": "Final source gate passed."
+  }
+]
