@@ -68,6 +68,46 @@ function hubWorkerPool(max = 4) {
     options:'-c role=hub_worker',max });
 }
 
+async function registerWorkerSourceAtLength(length:number):Promise<{sourceId:string;token:string}> {
+  const newSourceId='A'.repeat(length);
+  const token=createCredential().secret;
+  const auth=createAuthService({pool:fixture.pool});
+  await auth.repository.provisionSourceCredential({tenantId,sourceId:newSourceId,token,secretRef:'vault:/fixture/crm',
+    allowedEntities:['customer','order'],revision:'1'});
+  await fixture.pool.query(`INSERT INTO control.source_registry(tenant_key,source_id,lifecycle,current_config_revision,mapping_revision,
+      identity_mapping_revision,data_owner_user_id,owner_revision)
+    SELECT tenant_key,$3,lifecycle,current_config_revision,mapping_revision,identity_mapping_revision,data_owner_user_id,owner_revision
+      FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2`,[tenantId,sourceId,newSourceId]);
+  await fixture.pool.query(`INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
+    SELECT tenant_key,$3,revision,config_digest,config,created_by FROM control.source_config_revision WHERE tenant_key=$1 AND source_id=$2`,
+  [tenantId,sourceId,newSourceId]);
+  await fixture.pool.query(`INSERT INTO control.source_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+    SELECT tenant_key,$3,revision,mapping_digest,mappings,created_by FROM control.source_mapping_revision WHERE tenant_key=$1 AND source_id=$2`,
+  [tenantId,sourceId,newSourceId]);
+  await fixture.pool.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+    SELECT tenant_key,$3,revision,mapping_digest,mappings,created_by FROM control.source_identity_mapping_revision WHERE tenant_key=$1 AND source_id=$2`,
+  [tenantId,sourceId,newSourceId]);
+  const report=await fixture.pool.query<{id:string}>(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,
+      identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
+      endpoint_profile_digest,data_contract_ref,report,status,created_by)
+    SELECT tenant_key,$3,config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,
+      1,1,endpoint_profile_digest,data_contract_ref,report,status,created_by FROM control.source_test_report
+      WHERE tenant_key=$1 AND source_id=$2 ORDER BY created_at LIMIT 1 RETURNING id::text`,[tenantId,sourceId,newSourceId]);
+  const approval=await fixture.pool.query<{id:string}>(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,
+      config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,
+      credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
+    SELECT tenant_key,$3,owner_user_id,owner_revision,config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,
+      identity_mapping_digest,1,1,endpoint_profile_digest,data_contract_ref,$4 FROM control.source_owner_approval
+      WHERE tenant_key=$1 AND source_id=$2 ORDER BY created_at LIMIT 1 RETURNING id::text`,[tenantId,sourceId,newSourceId,report.rows[0]!.id]);
+  await fixture.pool.query(`INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
+    SELECT tenant_key,$3,entity,connector,mode,version_domain,channel_epoch,state FROM control.source_channel
+      WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' AND state='active'`,[tenantId,sourceId,newSourceId]);
+  await fixture.pool.query(`UPDATE control.source_registry SET lifecycle='ACTIVE' WHERE tenant_key=$1 AND source_id=$2`,[tenantId,newSourceId]);
+  expect(report.rowCount).toBe(1);
+  expect(approval.rowCount).toBe(1);
+  return {sourceId:newSourceId,token};
+}
+
 async function killWorkerAtBoundary(point: 'after_claim'|'after_commit', leaseMs = 500): Promise<void> {
   const serviceDirectory=dirname(dirname(fileURLToPath(import.meta.url)));
   const child=spawn(process.execPath,[join(serviceDirectory,'node_modules/vitest/vitest.mjs'),'run','--reporter=dot',
@@ -440,6 +480,35 @@ describe('M1-3 strict intake and durable job reads', () => {
 });
 
 describe('M1-4 durable strict worker', () => {
+  it('applies frozen HTTP jobs with 128, 129, and 256 character source IDs unchanged', async () => {
+    const jobs:string[]=[];
+    const sources:string[]=[];
+    for(const length of [128,129,256]) {
+      const registered=await registerWorkerSourceAtLength(length);
+      const batch=customerBatch();
+      batch.records[0]!.source_pk=`LONG-SOURCE-${length}`;
+      const accepted=await postAs(registered.token,JSON.stringify(batch),`long-source-${length}`);
+      expect(accepted.statusCode).toBe(202);
+      jobs.push(accepted.json().data.job_id as string);
+      sources.push(registered.sourceId);
+    }
+    await fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at='2099-01-01T00:00:00Z'::timestamptz WHERE acknowledged_at IS NULL`);
+    await fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp() WHERE job_id=ANY($1::uuid[])`,[jobs]);
+    const worker=hubWorkerPool();
+    const applyErrors:string[]=[];
+    try { await runDurableWorkerOnce(worker,{limit:10,hooks:{onApplyError:async error=>{
+      applyErrors.push(error instanceof Error?error.message:'NON_ERROR_APPLY_FAILURE');
+    }}}); }
+    finally { await worker.end(); }
+    expect(applyErrors).toEqual([]);
+    const outcomes=await fixture.pool.query<{source_id:string;source_pk:string;item_status:string;job_status:string;applied_count:number}>(`SELECT
+      j.source_id,i.source_pk,i.status AS item_status,j.status AS job_status,j.applied_count
+      FROM control.ingestion_job j JOIN control.ingestion_job_item i ON i.job_id=j.id WHERE j.id=ANY($1::uuid[])
+      ORDER BY j.source_id`,[jobs]);
+    expect(outcomes.rows).toEqual(sources.map((id,index)=>({source_id:id,source_pk:`LONG-SOURCE-${[128,129,256][index]}`,
+      item_status:'APPLIED',job_status:'SUCCEEDED',applied_count:1})).sort((a,b)=>a.source_id.localeCompare(b.source_id)));
+  });
+
   it('applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary', async () => {
     const batch = customerBatch();
     const sourcePk = batch.records[0]!.source_pk;
@@ -649,6 +718,40 @@ describe('M1-4 durable strict worker', () => {
       FROM control.ingestion_job j JOIN control.ingestion_job_item i ON i.job_id=j.id WHERE j.id=$1`,[accepted.json().data.job_id]);
     expect(state.rows[0]).toEqual({status:'RETRY_PENDING',attempts:1,applied_count:0,identities:'0',customers:'0',receipts:'0',events:eventsBefore});
   });
+
+  it('starts the full retry delay when a long database attempt fails and rolls back', async () => {
+    const batch=customerBatch();
+    batch.records[0]!.source_pk='LONG-FAILURE-RETRY-C1';
+    (batch.records[0]!.data as Record<string,unknown>).customer_name='Long Failure Customer';
+    const accepted=await post(JSON.stringify(batch),'long-failure-retry-delay');
+    expect(accepted.statusCode).toBe(202);
+    const jobId=accepted.json().data.job_id as string;
+    const operation=(await fixture.pool.query<{operation_id:string}>(
+      'SELECT operation_id::text FROM control.ingestion_job_item WHERE job_id=$1',[jobId])).rows[0]!.operation_id;
+    await fixture.pool.query(`CREATE FUNCTION control.test_long_worker_customer_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN PERFORM pg_sleep(5.5); RAISE EXCEPTION 'synthetic long worker failure'; END $$`);
+    await fixture.pool.query(`CREATE TRIGGER test_long_worker_customer_failure BEFORE INSERT ON hub.canonical_customer
+      FOR EACH ROW WHEN (NEW.customer_name='Long Failure Customer') EXECUTE FUNCTION control.test_long_worker_customer_failure()`);
+    const worker=hubWorkerPool();
+    try { await runDurableWorkerOnce(worker,{limit:100}); }
+    finally {
+      await worker.end();
+      await fixture.pool.query('DROP TRIGGER IF EXISTS test_long_worker_customer_failure ON hub.canonical_customer');
+      await fixture.pool.query('DROP FUNCTION IF EXISTS control.test_long_worker_customer_failure()');
+    }
+    const state=await fixture.pool.query<{status:string;attempts:number;operation_id:string;remaining_ms:number}>(`SELECT i.status,
+      i.attempts_started::integer AS attempts,i.operation_id::text,
+      round(extract(epoch FROM (i.next_retry_at-clock_timestamp()))*1000)::integer AS remaining_ms
+      FROM control.ingestion_job_item i WHERE i.job_id=$1`,[jobId]);
+    expect(state.rows[0]).toMatchObject({status:'RETRY_PENDING',attempts:1,operation_id:operation});
+    expect(state.rows[0]!.remaining_ms).toBeGreaterThan(4_000);
+    const retryWorker=hubWorkerPool();
+    try { await runDurableWorkerOnce(retryWorker,{limit:100}); }
+    finally { await retryWorker.end(); }
+    const after=await fixture.pool.query<{attempts:number;operation_id:string;status:string}>(
+      'SELECT attempts_started::integer AS attempts,operation_id::text,status FROM control.ingestion_job_item WHERE job_id=$1',[jobId]);
+    expect(after.rows[0]).toEqual({attempts:1,operation_id:operation,status:'RETRY_PENDING'});
+  }, 15_000);
 
   it('rolls back canonical state when item status or the pre-commit boundary fails', async () => {
     const worker=hubWorkerPool();

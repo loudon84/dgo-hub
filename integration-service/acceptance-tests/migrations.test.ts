@@ -13,6 +13,7 @@ const evidenceFile = join(evidenceDirectory, 'foundation-postgres-lifecycle.json
 const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
 const source002 = fileURLToPath(new URL('../migrations/002_identity_auth.sql', import.meta.url));
+const migrationsSourceDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 let postgres: OwnedPostgres;
 let runMigrations: (pool: pg.Pool, options: { directory: string; environmentKind: 'local_lab' | 'site'; adoptLegacy001?: boolean }) => Promise<{ applied: string[]; skipped: string[] }>;
 let migrationDirectories: string[] = [];
@@ -24,6 +25,20 @@ async function createMigrationDirectory(additional: Record<string, string | Buff
   await mkdir(directory);
   await copyFile(source001, join(directory, '001_init.sql'));
   for (const [name, contents] of Object.entries(additional)) await writeFile(join(directory, name), contents);
+  return directory;
+}
+
+async function createVersionedMigrationDirectory(lastVersion: number): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'm0-migration-m1t4-upgrade-'));
+  migrationDirectories.push(root);
+  const directory = join(root, 'migrations');
+  await mkdir(directory);
+  for (let version = 1; version <= lastVersion; version += 1) {
+    const name = (await (await import('node:fs/promises')).readdir(migrationsSourceDirectory))
+      .find(file => file.startsWith(`${String(version).padStart(3, '0')}_`) && file.endsWith('.sql'));
+    if (!name) throw new Error(`MIGRATION_FIXTURE_SOURCE_MISSING:${version}`);
+    await copyFile(join(migrationsSourceDirectory, name), join(directory, name));
+  }
   return directory;
 }
 
@@ -73,6 +88,82 @@ afterEach(async () => {
 });
 
 describe('versioned migration runner', () => {
+  it('upgrades accepted 007 ingestion facts through 008 and preserves them on repeat', async () => {
+    const run = await migrationRunner();
+    const version007 = await createVersionedMigrationDirectory(7);
+    const version008 = await createVersionedMigrationDirectory(8);
+    await run(postgres.pool, { directory: version007, environmentKind: 'local_lab' });
+    const tenant = 'm1t4_upgrade_tenant';
+    const source = 'm1t4-upgrade-source';
+    const owner = 'm1t4-upgrade-owner';
+    const digests = [Buffer.alloc(32, 0x11), Buffer.alloc(32, 0x22), Buffer.alloc(32, 0x33), Buffer.alloc(32, 0x44)];
+    const credentialDigest = Buffer.alloc(32, 0x55);
+    const jobId = '10000000-0000-4000-8000-000000000001';
+    const batchId = '10000000-0000-4000-8000-000000000002';
+    const proofIds = ['10000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000004'];
+    const channelId = '10000000-0000-4000-8000-000000000005';
+    await postgres.pool.query("INSERT INTO control.tenant(tenant_key,business_timezone) VALUES($1,'UTC')", [tenant]);
+    await postgres.pool.query("INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role) VALUES($1,$2,'sales','sales')", [tenant,owner]);
+    await postgres.pool.query("INSERT INTO control.credential_digest_registry(digest,kind) VALUES($1,'source')", [credentialDigest]);
+    const credential = await postgres.pool.query<{id:string}>(`INSERT INTO control.source_credential
+      (tenant_key,source_id,digest,secret_ref,allowed_entities,enabled,revision)
+      VALUES($1,$2,$3,'vault:/fixture',ARRAY['customer']::text[],true,1) RETURNING id`, [tenant,source,credentialDigest]);
+    await postgres.pool.query("INSERT INTO control.source_registry(tenant_key,source_id,data_owner_user_id,lifecycle) VALUES($1,$2,$3,'ACTIVE')", [tenant,source,owner]);
+    for (const [table, digest] of [['source_config_revision',digests[0]],['source_mapping_revision',digests[1]],['source_identity_mapping_revision',digests[2]]] as const) {
+      const mappings = table === 'source_config_revision' ? JSON.stringify({allowed_entities:['customer'],connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION'}) : '[]';
+      await postgres.pool.query(`INSERT INTO control.${table}(tenant_key,source_id,revision,${table === 'source_config_revision' ? 'config_digest,config' : 'mapping_digest,mappings'},created_by) VALUES($1,$2,1,$3,$4::jsonb,$5)`, [tenant,source,digest,mappings,owner]);
+    }
+    await postgres.pool.query(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,identity_mapping_revision,
+      config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,endpoint_profile_digest,
+      data_contract_ref,report,status,created_by) VALUES($1,$2,1,1,1,$3,$4,$5,1,1,$6,'hub.v1','{}','PASS',$7)`,
+    [tenant,source,...digests.slice(0,3),digests[3],owner]);
+    const reportId = (await postgres.pool.query<{id:string}>('SELECT id::text FROM control.source_test_report WHERE tenant_key=$1 AND source_id=$2',[tenant,source])).rows[0]!.id;
+    await postgres.pool.query(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,mapping_revision,
+      identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
+      endpoint_profile_digest,data_contract_ref,test_report_id) VALUES($1,$2,$3,1,1,1,1,$4,$5,$6,1,1,$7,'hub.v1',$8)`,
+    [tenant,source,owner,...digests,reportId]);
+    const approvalId=(await postgres.pool.query<{id:string}>('SELECT id::text FROM control.source_owner_approval WHERE tenant_key=$1 AND source_id=$2',[tenant,source])).rows[0]!.id;
+    await postgres.pool.query(`INSERT INTO control.source_channel(id,tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
+      VALUES($1,$2,$3,'customer','rest','INCREMENTAL','SOURCE_VERSION',1,'active')`,[channelId,tenant,source]);
+    const rawId=(await postgres.pool.query<{id:string}>(`INSERT INTO raw.ingestion_batch(tenant_key,source_id,route,body_bytes)
+      VALUES($1,$2,'/hub/v1/ingest/crm/customers',$3) RETURNING id::text`,[tenant,source,Buffer.from('{"records":[{"source_pk":"C-1"}]}')])).rows[0]!.id;
+    await postgres.pool.query(`INSERT INTO control.ingestion_job(id,tenant_key,source_id,entity,route,batch_id,raw_batch_id,idempotency_key,request_digest,
+      status,received_count,applied_count,credential_id,source_epoch_at_admission,credential_revision_at_admission,credential_generation_at_admission,
+      channel_id,channel_epoch,version_domain,owner_approval_id,owner_user_id,owner_revision,approval_security_fence,config_revision,config_digest,
+      mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,test_report_id,
+      security_barrier_fence_at_admission,first_source_updated_at,last_source_updated_at)
+      VALUES($1,$2,$3,'customer','/hub/v1/ingest/crm/customers',$4,$5,'upgrade-key',$6,'RECEIVED',1,0,$7,0,1,1,$8,1,'SOURCE_VERSION',
+      $9,$10,1,0,1,$11,1,$12,1,$13,$14,$15,0,'2026-10-22T00:00:00Z','2026-10-22T00:00:00Z')`,
+    [jobId,tenant,source,batchId,rawId,digests[0],credential.rows[0]!.id,channelId,approvalId,owner,...digests,reportId]);
+    const eventId='10000000-0000-4000-8000-000000000006';
+    await postgres.pool.query(`INSERT INTO control.ingestion_job_item(job_id,ordinal,event_id,source_pk,source_version,operation,source_updated_at,public_record,status)
+      VALUES($1,0,$2,'C-1',1,'UPSERT','2026-10-22T00:00:00Z','{"operation":"UPSERT","data":{"customer_name":"Accepted"}}','RECEIVED')`,[jobId,eventId]);
+    await postgres.pool.query('INSERT INTO control.ingestion_processing_outbox(job_id) VALUES($1)',[jobId]);
+    const before=(await postgres.pool.query<{raw:string;job:string;item:string;outbox:string}>(`SELECT
+      (SELECT encode(body_bytes,'hex') FROM raw.ingestion_batch WHERE id=$1) AS raw,
+      (SELECT to_jsonb(j)::text FROM control.ingestion_job j WHERE j.id=$2) AS job,
+      (SELECT jsonb_build_object('job_id',job_id,'ordinal',ordinal,'event_id',event_id,'source_pk',source_pk,'source_version',source_version,
+        'operation',operation,'source_updated_at',source_updated_at,'public_record',public_record,'status',status,'error_code',error_code,'updated_at',updated_at)::text
+        FROM control.ingestion_job_item WHERE job_id=$2) AS item,
+      (SELECT jsonb_build_object('job_id',job_id,'created_at',created_at) FROM control.ingestion_processing_outbox WHERE job_id=$2)::text AS outbox`,[rawId,jobId])).rows[0]!;
+    await expect(run(postgres.pool, { directory: version008, environmentKind: 'local_lab' })).resolves.toMatchObject({applied:['008_durable_worker_leases_and_retries']});
+    await expect(run(postgres.pool, { directory: version008, environmentKind: 'local_lab' })).resolves.toMatchObject({applied:[],skipped:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries']});
+    const after=(await postgres.pool.query<{raw:string;job:string;item:string;outbox:string;operation_id:string}>(`SELECT
+      (SELECT encode(body_bytes,'hex') FROM raw.ingestion_batch WHERE id=$1) AS raw,
+      (SELECT to_jsonb(j)::text FROM control.ingestion_job j WHERE j.id=$2) AS job,
+      (SELECT jsonb_build_object('job_id',job_id,'ordinal',ordinal,'event_id',event_id,'source_pk',source_pk,'source_version',source_version,
+        'operation',operation,'source_updated_at',source_updated_at,'public_record',public_record,'status',status,'error_code',error_code,'updated_at',updated_at)::text
+        FROM control.ingestion_job_item WHERE job_id=$2) AS item,
+      (SELECT jsonb_build_object('job_id',job_id,'created_at',created_at) FROM control.ingestion_processing_outbox WHERE job_id=$2)::text AS outbox,
+      (SELECT operation_id::text FROM control.ingestion_job_item WHERE job_id=$2) AS operation_id`,[rawId,jobId])).rows[0]!;
+    expect(after).toMatchObject({raw:before.raw,job:before.job,item:before.item,outbox:before.outbox});
+    expect(after.operation_id).toMatch(/^[0-9a-f-]{36}$/);
+    await postgres.pool.query(`UPDATE control.ingestion_job_item SET status='APPLYING',attempts_started=1,retries_used=0 WHERE job_id=$1`,[jobId]);
+    await postgres.pool.query(`UPDATE control.ingestion_job SET status='PROCESSING' WHERE id=$1`,[jobId]);
+    const repeatId=(await postgres.pool.query<{id:string}>('SELECT operation_id::text AS id FROM control.ingestion_job_item WHERE job_id=$1',[jobId])).rows[0]!.id;
+    expect(repeatId).toBe(after.operation_id);
+  });
+
   it('imports without connecting, querying, migrating, exiting, or closing a pool', async () => {
     const connect = vi.spyOn(pg.Pool.prototype, 'connect');
     const query = vi.spyOn(pg.Pool.prototype, 'query');

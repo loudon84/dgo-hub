@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 const IDENTIFIER = /^[^\u0000-\u001f\u007f]+$/u;
+const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
 const DECIMAL_FIELDS: Readonly<Record<string, number>> = Object.freeze({
   amount: 2,
   line_amount: 2,
@@ -46,6 +47,13 @@ export function validateCanonicalIdentifier(value: unknown): string {
   if (typeof value !== 'string' || value.length < 1 || value.length > 128 ||
       value.trim() !== value || !IDENTIFIER.test(value)) {
     throw new Error('CANONICAL_IDENTIFIER_INVALID');
+  }
+  return value;
+}
+
+export function validateCanonicalSourceId(value: unknown): string {
+  if (typeof value !== 'string' || !SOURCE_ID.test(value)) {
+    throw new Error('CANONICAL_SOURCE_ID_INVALID');
   }
   return value;
 }

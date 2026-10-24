@@ -11,15 +11,11 @@ CREATE INDEX ingestion_processing_outbox_available_idx
   WHERE acknowledged_at IS NULL;
 
 ALTER TABLE control.ingestion_job_item
-  ADD COLUMN operation_id uuid,
+  ADD COLUMN operation_id uuid NOT NULL DEFAULT gen_random_uuid(),
   ADD COLUMN attempts_started smallint NOT NULL DEFAULT 0 CHECK (attempts_started BETWEEN 0 AND 4),
   ADD COLUMN retries_used smallint NOT NULL DEFAULT 0 CHECK (retries_used BETWEEN 0 AND 3),
   ADD COLUMN next_retry_at timestamptz,
   ADD CONSTRAINT ingestion_job_item_retry_count_matches CHECK (retries_used = greatest(attempts_started - 1, 0));
-
-UPDATE control.ingestion_job_item SET operation_id=gen_random_uuid() WHERE operation_id IS NULL;
-ALTER TABLE control.ingestion_job_item ALTER COLUMN operation_id SET NOT NULL;
-ALTER TABLE control.ingestion_job_item ALTER COLUMN operation_id SET DEFAULT gen_random_uuid();
 
 CREATE OR REPLACE FUNCTION control.guard_ingestion_job_item_update() RETURNS trigger
 LANGUAGE plpgsql

@@ -212,14 +212,14 @@ async function startAttempt(pool: Pool, claim: DurableClaim, job: DurableJob, it
   return transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if (!await lockClaim(client, claim, leaseMs)) return undefined;
-    const current = await client.query<DurableItem>(`SELECT i.ordinal,i.event_id::text,i.source_pk,i.source_version::text,i.operation,
-      i.public_record,i.status,i.attempts_started::integer,i.retries_used::integer,i.next_retry_at,i.operation_id::text
+    const current = await client.query<DurableItem & { next_retry_due:boolean }>(`SELECT i.ordinal,i.event_id::text,i.source_pk,i.source_version::text,i.operation,
+      i.public_record,i.status,i.attempts_started::integer,i.retries_used::integer,i.next_retry_at,i.operation_id::text,
+      (i.next_retry_at IS NULL OR i.next_retry_at<=clock_timestamp()) AS next_retry_due
       FROM control.ingestion_job_item i JOIN control.ingestion_job j ON j.id=i.job_id
       WHERE i.job_id=$1 AND i.ordinal=$4 AND j.tenant_key=$2 AND j.source_id=$3 FOR UPDATE OF i`,
     [job.id,job.tenant_key,job.source_id,item.ordinal]);
     const row = current.rows[0];
-    if (!row || TERMINAL_ITEM_STATES.has(row.status)) return undefined;
-    if (row.next_retry_at && row.next_retry_at.getTime() > Date.now()) return undefined;
+    if (!row || TERMINAL_ITEM_STATES.has(row.status) || !row.next_retry_due) return undefined;
     if (row.status === 'APPLYING' && row.attempts_started >= 4) {
       await client.query(`UPDATE control.ingestion_job_item SET status='QUARANTINED',error_code='RETRY_BUDGET_EXHAUSTED',next_retry_at=NULL
         WHERE job_id=$1 AND ordinal=$2`, [job.id,row.ordinal]);
@@ -279,9 +279,11 @@ async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: Dura
     const row=current.rows[0];
     if (!row || TERMINAL_ITEM_STATES.has(row.status)) return;
     const exhausted=row.attempts_started>=4;
-    await client.query(`UPDATE control.ingestion_job_item SET status=$3,error_code=$4,next_retry_at=$5
+    const delay=durableRetryDelayMs(row.attempts_started);
+    await client.query(`UPDATE control.ingestion_job_item SET status=$3,error_code=$4,next_retry_at=CASE WHEN $5::integer IS NULL THEN NULL
+      ELSE clock_timestamp()+($5::integer*interval '1 millisecond') END
       WHERE job_id=$1 AND ordinal=$2`, [job.id,item.ordinal,exhausted?'QUARANTINED':'RETRY_PENDING',
-        exhausted?'RETRY_BUDGET_EXHAUSTED':'WORKER_TRANSIENT_FAILURE',exhausted?null:item.next_retry_at]);
+        exhausted?'RETRY_BUDGET_EXHAUSTED':'WORKER_TRANSIENT_FAILURE',exhausted?null:delay]);
     await updateJobSummary(client,job);
   });
 }

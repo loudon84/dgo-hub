@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
-import { canonicalVersion, sourceContentDigest, validateCanonicalIdentifier } from './canonical.js';
+import { canonicalVersion, sourceContentDigest, validateCanonicalIdentifier, validateCanonicalSourceId } from './canonical.js';
 import {
   canonicalCustomerSchema,
   canonicalDeleteSchema,
@@ -226,7 +226,7 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
   const fullInput = canonicalCustomerSchema.safeParse(inputValue);
   const input = fullInput.success ? fullInput.data : canonicalDeleteSchema.parse(inputValue);
   validateCanonicalIdentifier(context.tenantId);
-  validateCanonicalIdentifier(context.sourceId);
+  validateCanonicalSourceId(context.sourceId);
   const version = canonicalVersion(input.source_version);
   const sourceDigest = Buffer.from(sourceContentDigest(input),'hex');
   const proof = await verifyFrozenApplyContext(client,context);
@@ -336,7 +336,7 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
   const input = fullInput.success ? fullInput.data : canonicalOrderDeleteSchema.parse(inputValue);
   if (context.entity !== 'order') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
   validateCanonicalIdentifier(context.tenantId);
-  validateCanonicalIdentifier(context.sourceId);
+  validateCanonicalSourceId(context.sourceId);
   const version = canonicalVersion(input.source_version);
   const sourceDigest = Buffer.from(sourceContentDigest(input),'hex');
   const proof = await verifyFrozenApplyContext(client,context);

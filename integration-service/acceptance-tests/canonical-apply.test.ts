@@ -20,8 +20,8 @@ function requireApplied(result: ApplyResult): Extract<ApplyResult,{status:'APPLI
   return result;
 }
 
-async function seedCustomerApplyProof(versionDomain: 'SOURCE_VERSION' | 'SNAPSHOT_OBSERVATION' = 'SOURCE_VERSION', entity:'customer'|'order'='customer'): Promise<ApplyContext> {
-  const sourceId = `crm-${randomBytes(4).toString('hex')}`;
+async function seedCustomerApplyProof(versionDomain: 'SOURCE_VERSION' | 'SNAPSHOT_OBSERVATION' = 'SOURCE_VERSION', entity:'customer'|'order'='customer', sourceIdOverride?:string): Promise<ApplyContext> {
+  const sourceId = sourceIdOverride ?? `crm-${randomBytes(4).toString('hex')}`;
   const ownerId = `owner-${randomBytes(4).toString('hex')}`;
   const tenantId = `tenant_${randomBytes(3).toString('hex')}`;
   const configDigest = Buffer.alloc(32, 0x11);
@@ -1486,6 +1486,35 @@ describe('canonical migration 006', () => {
       const count=await database.query<{count:string}>(`SELECT count(*)::text AS count FROM hub.canonical_order_line
         WHERE tenant_id=$1 AND order_id=$2`,[context.tenantId,requireApplied(result).objectId]);
       expect(count.rows[0].count).toBe('200');
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('accepts source IDs through the registered 256-character limit without widening business IDs', async () => {
+    for (const length of [128,129,256]) {
+      const sourceId='A'.repeat(length);
+      const context=await seedCustomerApplyProof('SOURCE_VERSION','customer',sourceId);
+      const client=await database.connect();
+      const customer={source_pk:`source-id-${length}`,customer_name:'Source ID boundary',owner_external_id:'owner-ext',
+        dept_external_id:'dept-ext',status:'ACTIVE' as const,source_updated_at:'2026-02-03T00:00:00Z',source_version:'1'};
+      try {
+        await client.query('BEGIN');
+        expect((await applyCustomer(client,context,customer)).status).toBe('APPLIED');
+        await client.query('COMMIT');
+      } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+    }
+    const context=await seedCustomerApplyProof();
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      await expect(applyCustomer(client,{...context,sourceId:'A'.repeat(257)},{source_pk:'too-long-source',customer_name:'Invalid',
+        owner_external_id:'owner-ext',dept_external_id:'dept-ext',status:'ACTIVE',source_updated_at:'2026-02-03T00:00:00Z',source_version:'1'}))
+        .rejects.toThrow('CANONICAL_SOURCE_ID_INVALID');
+      await expect(applyCustomer(client,{...context,sourceId:'bad/source'},{source_pk:'business-id-129',customer_name:'Invalid',
+        owner_external_id:'owner-ext',dept_external_id:'dept-ext',status:'ACTIVE',source_updated_at:'2026-02-03T00:00:00Z',source_version:'1'}))
+        .rejects.toThrow('CANONICAL_SOURCE_ID_INVALID');
+      await expect(applyCustomer(client,context,{source_pk:'P'.repeat(129),customer_name:'Invalid',owner_external_id:'owner-ext',
+        dept_external_id:'dept-ext',status:'ACTIVE',source_updated_at:'2026-02-03T00:00:00Z',source_version:'1'}))
+        .rejects.toThrow();
     } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
   });
 });
