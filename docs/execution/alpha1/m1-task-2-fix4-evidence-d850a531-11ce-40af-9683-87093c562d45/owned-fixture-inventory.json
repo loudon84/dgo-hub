@@ -1,0 +1,62 @@
+[
+  {
+    "taskLabel": "task2",
+    "runLabel": "1e36dfa1-2b3a-4388-844c-9f8aaef1c725",
+    "containerId": "8f3b43fbec6133b7596c94bc19c3e2c289238e0eed8d1a3358953ae575bfbbbe",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "hostPort": 62396,
+    "ownershipConfirmed": true,
+    "removedEvent": "removed",
+    "removedByExactContainerId": true,
+    "containerAbsentAfterRemoval": true,
+    "cleanup": "confirmed removed by exact owned container ID",
+    "purpose": "Final verified canonical-apply suite"
+  },
+  {
+    "taskLabel": "task2",
+    "runLabel": "47620fe7-fe09-4149-8cb1-a0a932a807dc",
+    "containerId": "6832a6d33a7375dee82476b67361f6ed23b7977574be8c20b2e6bc1c9601e671",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "hostPort": 61112,
+    "ownershipConfirmed": true,
+    "removedEvent": "removed",
+    "removedByExactContainerId": true,
+    "containerAbsentAfterRemoval": true,
+    "cleanup": "confirmed removed by exact owned container ID",
+    "purpose": "RED direct helper NULL-role withdrawal using the original predicate"
+  },
+  {
+    "taskLabel": "task2",
+    "runLabel": "88ac0dd0-ca53-46ed-8e9b-baa25a4a7277",
+    "containerId": "6ac4b072d6c11e03a44271ebd72a65d5ea75ce6b8da432ecc375835c3ca874ec",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "hostPort": 62581,
+    "ownershipConfirmed": true,
+    "removedEvent": "removed",
+    "removedByExactContainerId": true,
+    "containerAbsentAfterRemoval": true,
+    "cleanup": "confirmed removed by exact owned container ID",
+    "purpose": "RED standalone direct-helper NULL-role regression using the original predicate"
+  },
+  {
+    "taskLabel": "task2",
+    "runLabel": "99a1eb41-6a01-4dc5-ba52-8f44f1a05779",
+    "containerId": "ebe6361ca54aa6b79fffece37c0dbaf2c8a59611f42a65c1a8313e7f2498bfae",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "hostPort": 61369,
+    "ownershipConfirmed": true,
+    "removedEvent": "removed",
+    "removedByExactContainerId": true,
+    "containerAbsentAfterRemoval": true,
+    "cleanup": "confirmed removed by exact owned container ID",
+    "purpose": "Preserved failed full-gate attempt with the intermediate parameterized race test"
+  }
+]

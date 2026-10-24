@@ -1,0 +1,111 @@
+{
+  "root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-2-fix4-evidence-d850a531-11ce-40af-9683-87093c562d45",
+  "includedFileCount": 21,
+  "files": [
+    {
+      "path": "final-build.log",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "final-canonical-apply.log",
+      "bytes": 3141,
+      "sha256": "edae70daf35adfd41b68c11c0c6cbb4aa155c2326124cbd59481d8f4cbba9592"
+    },
+    {
+      "path": "final-gate-manifest.json",
+      "bytes": 856,
+      "sha256": "b0bffa38baaea68853bd80305440f883a1c8d286b47415bd2cff248a29f8e630"
+    },
+    {
+      "path": "final-typecheck.log",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "owned-fixture-inventory.json",
+      "bytes": 3014,
+      "sha256": "ca5fa37da8e5466de43c7b08c254af5ff0faf63921cefa8295de25a58cef4522"
+    },
+    {
+      "path": "red-null-helper-effective.log",
+      "bytes": 4013,
+      "sha256": "a10bdbc6b8939c07f73c407eef247ab93bb9755458e79764a70652a4815f2604"
+    },
+    {
+      "path": "red-null-helper.log",
+      "bytes": 352,
+      "sha256": "2c4e90ca1c0b66689f3ab404a41a941378d5272bae77b3d8b4268d141ec08253"
+    },
+    {
+      "path": "red-null-role.log",
+      "bytes": 4072,
+      "sha256": "ea449a184cf6d85e0484926acebcaa2e84c1b95b38cf708049da6f5e45d0f459"
+    },
+    {
+      "path": "source-provenance.json",
+      "bytes": 1506,
+      "sha256": "8efb5bd65433875934a40059bcba000aae635d00ec01810e2759eeb3e31c014b"
+    },
+    {
+      "path": "task2/1e36dfa1-2b3a-4388-844c-9f8aaef1c725/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "7834ff60010af4319a56fb15a936c817df49b307545ff57fd8d0c44a1e946188"
+    },
+    {
+      "path": "task2/1e36dfa1-2b3a-4388-844c-9f8aaef1c725/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "1c52916d97e18efe13a78ff73e666d8cdeeda3f4ff4cf73425144e5fbb648fc3"
+    },
+    {
+      "path": "task2/47620fe7-fe09-4149-8cb1-a0a932a807dc/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "2edb72c3dc5f2c19a991c2232727f65a21a539873f62bbcca1004e995f79d867"
+    },
+    {
+      "path": "task2/47620fe7-fe09-4149-8cb1-a0a932a807dc/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "cc0ace365288be6612b69f66781fa1db87a4e6a1d8c3325692c6a1bdf71d7c05"
+    },
+    {
+      "path": "task2/88ac0dd0-ca53-46ed-8e9b-baa25a4a7277/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "a41ab1b871d195e4ab3155e1de0374829bfb4e9f0099d5d1e0e2e9e4ace0cbdd"
+    },
+    {
+      "path": "task2/88ac0dd0-ca53-46ed-8e9b-baa25a4a7277/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "ead3f295eeff34e58aeb6ceb6daba8fd796e2620d1ce2d21875f324a33e5b43e"
+    },
+    {
+      "path": "task2/99a1eb41-6a01-4dc5-ba52-8f44f1a05779/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "fbf19d8c56ad55d1f2f0e2682a66ca9d6e58e887daff93ed19415f6725223f62"
+    },
+    {
+      "path": "task2/99a1eb41-6a01-4dc5-ba52-8f44f1a05779/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "63746dc164994fab7d6c5aab6402c2f09253ba3759c8ed7e1d4ddd3bdf2227d1"
+    },
+    {
+      "path": "verified-build.log",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "verified-canonical-apply.log",
+      "bytes": 339,
+      "sha256": "0cb4bf48671ce8ed372261c20773717de56e56085f78d434418ab279ae2592c3"
+    },
+    {
+      "path": "verified-gate-manifest.json",
+      "bytes": 1316,
+      "sha256": "1fb8d12435e9c5d16a3321b9abbda86d904e619548843b5fc4b0626133a1ddd2"
+    },
+    {
+      "path": "verified-typecheck.log",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    }
+  ]
+}

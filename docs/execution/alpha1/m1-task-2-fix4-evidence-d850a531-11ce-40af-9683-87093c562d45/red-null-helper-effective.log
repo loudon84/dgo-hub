@@ -1,0 +1,139 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts -t withdraws the business role to NULL
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (31 tests | 1 failed | 30 skipped) 2293ms
+     × rejects direct-helper owner changes after M0 withdraws the business role to NULL 104ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects direct-helper owner changes after M0 withdraws the business role to NULL
+AssertionError: promise resolved "Result{ command: 'SELECT', …(9) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ Result {
++   "RowCtor": null,
++   "_parsers": [
++     [Function noParse],
++   ],
++   "_prebuiltEmptyResultObject": {
++     "record_canonical_customer_owner_change": null,
++   },
++   "_types": TypeOverrides {
++     "_types": {
++       "arrayParser": {
++         "create": [Function create],
++       },
++       "builtins": {
++         "ABSTIME": 702,
++         "ACLITEM": 1033,
++         "BIT": 1560,
++         "BOOL": 16,
++         "BPCHAR": 1042,
++         "BYTEA": 17,
++         "CHAR": 18,
++         "CID": 29,
++         "CIDR": 650,
++         "CIRCLE": 718,
++         "DATE": 1082,
++         "FLOAT4": 700,
++         "FLOAT8": 701,
++         "GTSVECTOR": 3642,
++         "INET": 869,
++         "INT2": 21,
++         "INT4": 23,
++         "INT8": 20,
++         "INTERVAL": 1186,
++         "JSON": 114,
++         "JSONB": 3802,
++         "MACADDR": 829,
++         "MACADDR8": 774,
++         "MONEY": 790,
++         "NUMERIC": 1700,
++         "OID": 26,
++         "PATH": 602,
++         "PG_DEPENDENCIES": 3402,
++         "PG_LSN": 3220,
++         "PG_NDISTINCT": 3361,
++         "PG_NODE_TREE": 194,
++         "POLYGON": 604,
++         "REFCURSOR": 1790,
++         "REGCLASS": 2205,
++         "REGCONFIG": 3734,
++         "REGDICTIONARY": 3769,
++         "REGNAMESPACE": 4089,
++         "REGOPER": 2203,
++         "REGOPERATOR": 2204,
++         "REGPROC": 24,
++         "REGPROCEDURE": 2202,
++         "REGROLE": 4096,
++         "REGTYPE": 2206,
++         "RELTIME": 703,
++         "SMGR": 210,
++         "TEXT": 25,
++         "TID": 27,
++         "TIME": 1083,
++         "TIMESTAMP": 1114,
++         "TIMESTAMPTZ": 1184,
++         "TIMETZ": 1266,
++         "TINTERVAL": 704,
++         "TSQUERY": 3615,
++         "TSVECTOR": 3614,
++         "TXID_SNAPSHOT": 2970,
++         "UUID": 2950,
++         "VARBIT": 1562,
++         "VARCHAR": 1043,
++         "XID": 28,
++         "XML": 142,
++       },
++       "getTypeParser": [Function getTypeParser],
++       "setTypeParser": [Function setTypeParser],
++     },
++     "binary": {},
++     "text": {},
++   },
++   "command": "SELECT",
++   "fields": [
++     Field {
++       "columnID": 0,
++       "dataTypeID": 2278,
++       "dataTypeModifier": -1,
++       "dataTypeSize": 4,
++       "format": "text",
++       "name": "record_canonical_customer_owner_change",
++       "tableID": 0,
++     },
++   ],
++   "oid": null,
++   "rowAsArray": false,
++   "rowCount": 1,
++   "rows": [
++     {
++       "record_canonical_customer_owner_change": "",
++     },
++   ],
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:808:10
+    806|         frozen.versionDomain,frozen.securityBarrierFenceAtAdmission,fr…
+    807|         frozen.identityMappingRevision,JSON.stringify([{kind:'user',ex…
+    808|       ])).rejects.toMatchObject({code:'42501'});
+       |          ^
+    809|       await worker.query('ROLLBACK');
+    810|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 skipped (31)
+   Start at  18:01:00
+   Duration  2.76s (transform 113ms, setup 0ms, import 286ms, tests 2.29s, environment 0ms)
+

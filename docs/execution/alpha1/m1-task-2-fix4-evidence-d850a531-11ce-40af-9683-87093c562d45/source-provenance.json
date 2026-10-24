@@ -1,0 +1,27 @@
+{
+  "gateHead": "911af6df65411cf6de8fa9cfaa8fe733b9996076",
+  "sourceCommit": "e6cfa2f5c1b777a18e65cacbb9b02702b7f727c0",
+  "sourceCommitParent": "911af6df65411cf6de8fa9cfaa8fe733b9996076",
+  "gateWasRunAtSourceCommit": false,
+  "gateRunSourceHashes": {
+    "integration-service/migrations/006_canonical_data_and_receipts.sql": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+    "integration-service/acceptance-tests/canonical-apply.test.ts": "dbdeccc4ff35cf9a1ec6a1de95b6eeeb7e02aa97926c7e2ac57907f06b998494"
+  },
+  "committedFiles": [
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "rawSha256AfterGateAndCommit": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "lfSha256AfterGateAndCommit": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "gitBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a"
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "rawSha256AfterGateAndCommit": "dbdeccc4ff35cf9a1ec6a1de95b6eeeb7e02aa97926c7e2ac57907f06b998494",
+      "lfSha256AfterGateAndCommit": "dbdeccc4ff35cf9a1ec6a1de95b6eeeb7e02aa97926c7e2ac57907f06b998494",
+      "gitBlob": "d4e905fc947321a085839eee4e3e0688fa14d1bc"
+    }
+  ],
+  "migrations001to005Changed": false,
+  "migration006RawSha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+  "verificationManifest": "verified-gate-manifest.json"
+}

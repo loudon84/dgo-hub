@@ -1,0 +1,24 @@
+{
+  "gateHead": "911af6df65411cf6de8fa9cfaa8fe733b9996076",
+  "commands": [
+    {
+      "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+      "exitCode": 1,
+      "result": "30 passed, 1 failed, 1 unhandled error",
+      "log": "final-canonical-apply.log"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "log": "final-typecheck.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "log": "final-build.log"
+    }
+  ],
+  "sourceHashCaptureStatus": "Not captured: the attempt used repository-root-prefixed file paths from the integration-service directory; Get-FileHash failed. The final verified gate has its own valid source hashes.",
+  "sourceBytesStableDuringGate": null,
+  "attemptStatus": "Failed intermediate gate; not the final verification result."
+}

@@ -1,0 +1,33 @@
+{
+  "gateHead": "911af6df65411cf6de8fa9cfaa8fe733b9996076",
+  "changedTrackedPathsAtGateStart": [
+    "integration-service/acceptance-tests/canonical-apply.test.ts",
+    "integration-service/migrations/006_canonical_data_and_receipts.sql"
+  ],
+  "commands": [
+    {
+      "command": "npm test -- acceptance-tests/canonical-apply.test.ts",
+      "exitCode": 0,
+      "log": "verified-canonical-apply.log"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "log": "verified-typecheck.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "log": "verified-build.log"
+    }
+  ],
+  "sourceSha256AtStart": {
+    "integration-service/migrations/006_canonical_data_and_receipts.sql": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+    "integration-service/acceptance-tests/canonical-apply.test.ts": "dbdeccc4ff35cf9a1ec6a1de95b6eeeb7e02aa97926c7e2ac57907f06b998494"
+  },
+  "sourceSha256AtEnd": {
+    "integration-service/migrations/006_canonical_data_and_receipts.sql": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+    "integration-service/acceptance-tests/canonical-apply.test.ts": "dbdeccc4ff35cf9a1ec6a1de95b6eeeb7e02aa97926c7e2ac57907f06b998494"
+  },
+  "sourceBytesStableDuringGate": true
+}

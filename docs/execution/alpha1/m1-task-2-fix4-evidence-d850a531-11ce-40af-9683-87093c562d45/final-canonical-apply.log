@@ -1,0 +1,58 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:33092) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 1)
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ acceptance-tests/canonical-apply.test.ts (31 tests | 1 failed) 5689ms
+     × locks direct-helper owner eligibility before validating it under 'NULL-role withdrawal' 2062ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > locks direct-helper owner eligibility before validating it under 'NULL-role withdrawal'
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ acceptance-tests/canonical-apply.test.ts:717:32
+    715|         if(!lockWaitObserved) await new Promise(resolve=>setTimeout(re…
+    716|       }
+    717|       expect(lockWaitObserved).toBe(true);
+       |                                ^
+    718|       await disable.query('COMMIT');
+    719|       const authorityAfterWithdrawal=await database.query<{enabled:boo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+error: eligible owner not found
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 230, severity: 'ERROR', code: '42501', detail: undefined, hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: 'PL/pgSQL function record_canonical_customer_owner_change(text,text,text,uuid,uuid,bigint,text,bigint,uuid,uuid,bigint,jsonb) line 182 at RAISE', schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'pl_exec.c', routine: 'exec_stmt_raise' }
+This error originated in "acceptance-tests/canonical-apply.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "locks direct-helper owner eligibility before validating it under 'concurrent disable'". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 passed (31)
+     Errors  1 error
+   Start at  17:57:49
+   Duration  6.15s (transform 111ms, setup 0ms, import 268ms, tests 5.69s, environment 0ms)
+
