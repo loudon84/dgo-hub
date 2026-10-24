@@ -66,3 +66,5 @@ Site IdP, real upstream CRM/orders, SQL Server and remote Hermes remain unverifi
 ## M1-2 closed; M1-3 dispatch ready
 
 Independent [round 4 review](reviews/m1-task-2-rereview-4.md) passed Spec and Quality. All cumulative I1–I16 findings are closed. Approved source is e6cfa2f; migration 006 is now immutable. Latest canonical-apply evidence is 31/31 plus typecheck/build exit 0; no new whole-suite count is claimed. M1-3 builder details are finalized for strict REST batches and durable jobs; its exact base is frozen at dispatch. Worker/snapshot/SQL Server/UI work and all formal site acceptance remain pending.
+M1-3 implementation started under Luna at exact base ca32853e931ff8e0c2fdf147bd2e0c962ddf656c, after M1-2 review closure. API-015–018 and migration 007 are the active scope. No M1-3 completion/test result is claimed yet.
+
