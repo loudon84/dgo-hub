@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/snapshot-runs.test.ts -t rejects malformed route UUID, canonical date, cursor payload, and empty cursor safely
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 15 skipped (16)
+   Start at  23:58:11
+   Duration  3.28s (transform 205ms, setup 0ms, import 292ms, tests 2.81s, environment 0ms)
+

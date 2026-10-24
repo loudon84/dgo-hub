@@ -1,0 +1,21 @@
+{
+  "actualHead": "deb3ee873a2fdfae5a150b0bb8ef9056ecaa7ca3",
+  "base": "deb3ee873a2fdfae5a150b0bb8ef9056ecaa7ca3",
+  "capturedAt": "2026-10-24T15:57:55.3465065Z",
+  "files": [
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "bytes": 24051,
+      "rawSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "lfSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "cleanBlob": "b12544e335955494bfea994459a383dd0102d448"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 38085,
+      "rawSha256": "d7f9b1acdde5f85c54b22340c186d7a36c63c7b63fd6bad9159609ec83793468",
+      "lfSha256": "d7f9b1acdde5f85c54b22340c186d7a36c63c7b63fd6bad9159609ec83793468",
+      "cleanBlob": "b001ffe6860ac685655d6e1ca13a35b86f0bd2a8"
+    }
+  ]
+}

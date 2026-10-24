@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > rejects malformed route UUID, canonical date, cursor payload, and empty cursor safely
+AssertionError: expected 503 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 503
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:481:37
+    479|       expect(badId.statusCode).toBe(404);
+    480|       for (const response of [badDate,yearZeroFrom,yearZeroTo,badCurso…
+    481|         expect(response.statusCode).toBe(400);
+       |                                     ^
+    482|         expect(response.json().error.code).toBe('AUTH_INPUT_INVALID');
+    483|         expect(response.json().error.retryable).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

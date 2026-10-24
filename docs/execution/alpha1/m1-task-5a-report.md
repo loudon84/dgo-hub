@@ -99,3 +99,18 @@ The earlier migration run's 18/19 failure capture documents a fixture-isolation 
 ## Scope remaining
 
 M1-5A does not implement extraction, staging pages, business application, observations, checkpoint writes, deletes, APIs 022/024/060, cutover, SQL Server, UI/query-gate work, or network/deployment activity. Formal 48-gate evidence remains NOT_RUN pending the later M1-5 phases.
+
+## Fix round 2 — M1-5A-R5 year-zero date input
+
+This narrow follow-up addresses the remaining year-zero case identified in the scoped re-review. `parseCanonicalDate` now rejects year `0000` as `AUTH_INPUT_INVALID` before the date bound reaches PostgreSQL. The existing calendar, time, offset, UUID, and cursor checks remain in place.
+
+The existing malformed-route HTTP test now sends `GET /hub/v1/admin/etl-runs?created_from=0000-01-01T00%3A00%3A00Z` and the matching `created_to` case. Both assert HTTP 400, `AUTH_INPUT_INVALID`, and `retryable: false`. A valid year `0001` `created_from` control returns 200. The existing malformed date, UUID, cursor, and empty-cursor assertions remain in the same case.
+
+- RED at BASE `deb3ee873a2fdfae5a150b0bb8ef9056ecaa7ca3`: the focused HTTP case failed because the year-zero request returned 503 instead of 400.
+- GREEN: the same focused HTTP case passed (1 passed, 15 skipped), covering both year-zero bounds, the year-one control, and existing malformed-input cases.
+- `npm run typecheck`: exit 0. `npm run build`: exit 0. No migration suite or full snapshot suite was rerun for this one-line validator fix.
+- Product fix commit: `025bf0fd887d3510d2890be73fc8694d2a7124d0`, based on `deb3ee873a2fdfae5a150b0bb8ef9056ecaa7ca3`. The committed source manifest binds both changed files to their raw hashes and Git blobs. RED, GREEN, typecheck, and build each have actual-HEAD and before/after source snapshots; the GREEN/compiler/build post-snapshots match the committed source.
+- Evidence package: `docs/execution/alpha1/m1-task-5a-evidence/fix2-82e6cec7-4566-45c9-b9f6-1d77d0b0881a/`; an explicit SHA-256/byte-size manifest is included.
+- The RED and GREEN runs each used one pinned PostgreSQL fixture. Their retained lifecycle JSONL records show exact container IDs, ownership confirmation, removal, and absence after removal.
+
+M1-5 remains **IN_PROGRESS** and the formal 48-gate suite remains **NOT_RUN**. This follow-up changes no migration and does not alter the previously recorded G1 assurance limits. R1–R4 remain closed as recorded above; R5's remaining year-zero date defect is addressed by this fix.
