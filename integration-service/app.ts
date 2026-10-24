@@ -3,11 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IdentityRouteOptions } from './ingestion-api/identity-routes.js';
+import type { SourceRegistryRouteOptions } from './source-registry/routes.js';
 import { createHubLoggerOptions } from './ingestion-api/logging.js';
 import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from './contracts/runtime-config.js';
 
 export type BuildAppOptions = Readonly<{
   identity?: IdentityRouteOptions;
+  sourceRegistry?: SourceRegistryRouteOptions;
   logger?: FastifyServerOptions['logger'];
   runtime?: HubRuntimeConfiguration;
 }>;
@@ -17,7 +19,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const logger = options.logger ?? createHubLoggerOptions();
   const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false, genReqId: () => randomUUID() });
   const { registerRoutes } = await import('./ingestion-api/routes.js');
-  await registerRoutes(app, { identity: options.identity, runtime: options.runtime });
+  await registerRoutes(app, { identity: options.identity, sourceRegistry: options.sourceRegistry, runtime: options.runtime });
   return app;
 }
 
@@ -38,8 +40,14 @@ export async function startApp(environment: NodeJS.ProcessEnv = process.env): Pr
     import('./auth/service.js'),
   ]);
   const authService = createAuthService({ pool });
+  const [{ createSourceRegistryService, failClosedSecretResolver, failClosedEndpointAllowlist, failClosedCapabilityProbe }] = await Promise.all([
+    import('./source-registry/service.js'),
+  ]);
+  const sourceService = createSourceRegistryService({ pool, auth: authService, secretResolver: failClosedSecretResolver,
+    endpointAllowlist: failClosedEndpointAllowlist, capabilityProbe: failClosedCapabilityProbe });
   const identity = { authenticator: createOidcAuthenticator(controlledConfig, authService), authService };
-  const app = await buildApp({ identity, runtime });
+  const sourceRegistry = { ...identity, sourceService };
+  const app = await buildApp({ identity, sourceRegistry, runtime });
   await app.listen({ host: '0.0.0.0', port: Number(environment.PORT ?? 3000) });
 }
 

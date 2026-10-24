@@ -293,7 +293,10 @@ async function setTenantEnabled(pool: Pool, tenantId: string, enabled: boolean, 
   if (typeof enabled !== 'boolean') throw new AuthError('AUTH_INPUT_INVALID');
   await withAuthTransaction(pool, supplied, async client => {
     const changed = await client.query('UPDATE control.tenant SET enabled=$2 WHERE tenant_key=$1 AND enabled IS DISTINCT FROM $2', [tenantId, enabled]);
-    if (changed.rowCount) await client.query('UPDATE control.auth_subject SET auth_epoch=auth_epoch+1 WHERE tenant_key=$1', [tenantId]);
+    if (changed.rowCount) {
+      await client.query('UPDATE control.auth_subject SET auth_epoch=auth_epoch+1 WHERE tenant_key=$1', [tenantId]);
+      if (!enabled) await client.query('SELECT control.record_tenant_security_disable($1)', [tenantId]);
+    }
   });
 }
 
@@ -308,38 +311,55 @@ async function provisionSourceCredential(pool: Pool, input: SourceCredentialProv
   const digest = digestCredential(input.token);
   const enabled = input.enabled ?? true;
   await withAuthTransaction(pool, supplied, async client => {
-    const registered = await client.query(
-      `INSERT INTO control.credential_digest_registry(digest,kind) VALUES($1,'source') ON CONFLICT(digest) DO NOTHING`, [digest],
-    );
-    if (registered.rowCount !== 1) throw new AuthError('AUTH_INPUT_INVALID');
-    await client.query(
-      `INSERT INTO control.source_credential(source_id,tenant_key,digest,digest_kind,secret_ref,allowed_entities,enabled,revision)
-       VALUES($1,$2,$3,'source',$4,$5,$6,$7)
-       ON CONFLICT(tenant_key,source_id) DO UPDATE SET digest=EXCLUDED.digest,digest_kind='source',
-         secret_ref=EXCLUDED.secret_ref,allowed_entities=EXCLUDED.allowed_entities,enabled=EXCLUDED.enabled,revision=EXCLUDED.revision`,
-      [input.sourceId, input.tenantId, digest, input.secretRef, allowedEntities, enabled, revisionValue],
-    );
+    try {
+      await client.query('SELECT control.upsert_source_credential($1,$2,$3,$4,$5,$6,$7)',
+        [input.sourceId,input.tenantId,digest,input.secretRef,allowedEntities,enabled,revisionValue]);
+    } catch { throw new AuthError('AUTH_INPUT_INVALID'); }
   });
 }
 
 async function updateSourceCredential(
   pool: Pool, sourceId: string, tenantId: string, enabled: boolean, revisionText: string,
-  allowedEntitiesInput: readonly SourceEntity[], supplied?: PoolClient,
+  allowedEntitiesInput: readonly SourceEntity[], supplied?: PoolClient, secretRef?: string,
 ): Promise<void> {
   assertTenantKey(tenantId);
   if (typeof sourceId !== 'string' || sourceId.length < 1 || sourceId.length > 256 || typeof enabled !== 'boolean') throw new AuthError('AUTH_INPUT_INVALID');
   const revisionValue = revision(revisionText);
   const entities = sourceEntities(allowedEntitiesInput);
+  if (secretRef !== undefined && (typeof secretRef !== 'string' || secretRef.length < 1 || secretRef.length > 512 || /[\u0000-\u001f\u007f]/.test(secretRef))) throw new AuthError('AUTH_INPUT_INVALID');
   await withAuthTransaction(pool, supplied, async client => {
-    const result = await client.query(
-      `UPDATE control.source_credential SET enabled=$3,revision=$4,allowed_entities=$5
-        WHERE source_id=$1 AND tenant_key=$2 AND (enabled,revision,allowed_entities) IS DISTINCT FROM ($3,$4,$5)`,
-      [sourceId, tenantId, enabled, revisionValue, entities],
+    const result = await client.query<{ update_source_credential: number }>(
+      'SELECT control.update_source_credential($1,$2,$3,$4,$5,$6,$7)',
+      [sourceId,tenantId,enabled,revisionValue,entities,secretRef ?? null,secretRef !== undefined],
     );
-    if (!result.rowCount) {
+    if (Number(result.rows[0]?.update_source_credential ?? 0) === 0) {
       const exists = await client.query('SELECT 1 FROM control.source_credential WHERE source_id=$1 AND tenant_key=$2', [sourceId, tenantId]);
       if (!exists.rowCount) throw new AuthError('AUTH_INPUT_INVALID');
     }
+  });
+}
+
+async function advanceSourceEpoch(pool: Pool, sourceId: string, tenantId: string, supplied?: PoolClient): Promise<void> {
+  assertTenantKey(tenantId);
+  await withAuthTransaction(pool, supplied, async client => {
+    const updated = await client.query<{ bump_source_epoch: number }>('SELECT control.bump_source_epoch($1,$2)', [sourceId,tenantId]);
+    if (Number(updated.rows[0]?.bump_source_epoch ?? 0) === 0) throw new AuthError('AUTH_INPUT_INVALID');
+  });
+}
+
+async function recordSourceBarrier(
+  pool: Pool, sourceId: string, tenantId: string, barrierType: 'CREDENTIAL_COMPROMISE' | 'SOURCE_SCOPE_SECURITY_REMOVAL',
+  reasonCode: string, entity?: SourceEntity, supplied?: PoolClient,
+): Promise<void> {
+  assertTenantKey(tenantId);
+  if (typeof sourceId !== 'string' || sourceId.length < 1 || sourceId.length > 256 ||
+      typeof reasonCode !== 'string' || !/^[A-Z0-9_]{1,96}$/.test(reasonCode)) throw new AuthError('AUTH_INPUT_INVALID');
+  await withAuthTransaction(pool, supplied, async client => {
+    const result = await client.query<{ record_source_security_barrier: number }>(
+      'SELECT control.record_source_security_barrier($1,$2,$3,$4,$5)',
+      [sourceId,tenantId,barrierType,reasonCode,entity ?? null],
+    );
+    if (Number(result.rows[0]?.record_source_security_barrier ?? 0) === 0) throw new AuthError('AUTH_INPUT_INVALID');
   });
 }
 
@@ -355,8 +375,13 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
     setIdentityBinding: (issuer, subject, enabled, client) => setIdentityBinding(pool, issuer, subject, enabled, client),
     setTenantEnabled: (tenantId, enabled, client) => setTenantEnabled(pool, tenantId, enabled, client),
     provisionSourceCredential: (input, client) => provisionSourceCredential(pool, input, client),
-    updateSourceCredential: (sourceId, tenantId, enabled, revisionValue, entities, client) =>
-      updateSourceCredential(pool, sourceId, tenantId, enabled, revisionValue, entities, client),
+    updateSourceCredential: (sourceId, tenantId, enabled, revisionValue, entities, client, secretRef) =>
+      updateSourceCredential(pool, sourceId, tenantId, enabled, revisionValue, entities, client, secretRef),
+    advanceSourceEpoch: (sourceId, tenantId, client) => advanceSourceEpoch(pool, sourceId, tenantId, client),
+    revokeSourceCredential: (sourceId, tenantId, reasonCode, client) =>
+      recordSourceBarrier(pool, sourceId, tenantId, 'CREDENTIAL_COMPROMISE', reasonCode, undefined, client),
+    recordSourceScopeSecurityBarrier: (sourceId, tenantId, entity, reasonCode, client) =>
+      recordSourceBarrier(pool, sourceId, tenantId, 'SOURCE_SCOPE_SECURITY_REMOVAL', reasonCode, entity, client),
   });
 
   return Object.freeze({
@@ -509,20 +534,35 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
       assertEntity(entity);
       const digest = digestCredential(token);
       const result = await authQuery(() => pool.query<{
-        id: string; source_id: string; tenant_key: string; allowed_entities: SourceEntity[]; revision: string | number; enabled: boolean; tenant_enabled: boolean;
-      }>(
-        `SELECT c.id,c.source_id,c.tenant_key,c.allowed_entities,c.revision,c.enabled,t.enabled AS tenant_enabled
-           FROM control.source_credential c
-           JOIN control.credential_digest_registry d ON d.digest=c.digest AND d.kind='source' AND c.digest_kind=d.kind
-           JOIN control.tenant t ON t.tenant_key=c.tenant_key
-          WHERE c.digest=$1`, [digest],
-      ));
+        credential_id: string; source_id: string; tenant_key: string; allowed_entities: SourceEntity[]; credential_revision: string | number;
+        source_epoch: string | number; enabled: boolean; tenant_enabled: boolean;
+      }>('SELECT * FROM control.authenticate_source($1)',[digest]));
       const row = result.rows[0];
       if (!row) throw new AuthError('AUTH_INVALID');
       if (!row.enabled || !row.tenant_enabled) throw new AuthError('AUTH_REVOKED');
       const allowedEntities = sourceEntities(row.allowed_entities);
       if (!allowedEntities.includes(entity)) throw new AuthError('AUTH_FORBIDDEN');
-      return Object.freeze({ sourceId: row.source_id, tenantId: row.tenant_key, allowedEntities: Object.freeze(allowedEntities), credentialId: row.id, revision: decimalBigint(row.revision) });
+      return Object.freeze({ sourceId: row.source_id, tenantId: row.tenant_key, allowedEntities: Object.freeze(allowedEntities),
+        credentialId: row.credential_id, revision: decimalBigint(row.credential_revision), sourceEpoch: decimalBigint(row.source_epoch) });
+    },
+
+    async assertCurrentSource(snapshot, entity, client) {
+      assertEntity(entity);
+      if (!snapshot || !client || typeof snapshot.sourceId !== 'string' || typeof snapshot.tenantId !== 'string') {
+        throw new AuthError('AUTH_CONTEXT_CHANGED');
+      }
+      const result = await authQuery(() => client.query<{
+        credential_id: string; tenant_key: string; source_id: string; digest_kind: string; enabled: boolean;
+        allowed_entities: SourceEntity[]; credential_revision: string | number; source_epoch: string | number;
+        tenant_enabled: boolean; lifecycle: string; config_revision: string | number;
+      }>('SELECT * FROM control.lock_current_source($1,$2,$3,$4)',
+      [snapshot.credentialId, snapshot.tenantId, snapshot.sourceId, entity]));
+      const row = result.rows[0];
+      if (!row || row.credential_id !== snapshot.credentialId || row.tenant_key !== snapshot.tenantId || row.source_id !== snapshot.sourceId ||
+          row.digest_kind !== 'source' || !row.enabled || !row.tenant_enabled || row.lifecycle !== 'ACTIVE' ||
+          !sourceEntities(row.allowed_entities).includes(entity) || !snapshot.allowedEntities.includes(entity) ||
+          decimalBigint(row.credential_revision) !== snapshot.revision || decimalBigint(row.config_revision) !== snapshot.revision ||
+          decimalBigint(row.source_epoch) !== snapshot.sourceEpoch) throw new AuthError('AUTH_CONTEXT_CHANGED');
     },
 
     async assertCurrentAgent(snapshot) {

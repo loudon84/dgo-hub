@@ -6,12 +6,14 @@ import { validatePolicy, type PolicyInput } from '../permission-publish/policy.j
 import { toolDefinitions } from '../sales-mcp/tools.js';
 import { registerIdentityRoutes, type IdentityRouteOptions } from './identity-routes.js';
 import type { HubRuntimeConfiguration } from '../contracts/runtime-config.js';
+import { registerSourceRegistryRoutes, type SourceRegistryRouteOptions } from '../source-registry/routes.js';
 
 function key(request: { headers: Record<string, unknown> }, expected: string, header: string) {
   if (!expected || request.headers[header] !== expected) throw Object.assign(new Error('Unauthorized'), { statusCode: 401 });
 }
-export async function registerRoutes(app: FastifyInstance, options: { identity?: IdentityRouteOptions; runtime?: HubRuntimeConfiguration } = {}) {
+export async function registerRoutes(app: FastifyInstance, options: { identity?: IdentityRouteOptions; sourceRegistry?: SourceRegistryRouteOptions; runtime?: HubRuntimeConfiguration } = {}) {
   if (options.identity) await registerIdentityRoutes(app, options.identity);
+  if (options.sourceRegistry) await registerSourceRegistryRoutes(app, options.sourceRegistry);
   app.get('/health', async () => ({ ok: true }));
   if (options.runtime?.environmentKind !== 'local_lab' || options.runtime.legacyLabEnabled !== true) return;
   app.post<{ Params: { kind: 'customer' | 'order' }; Body: unknown }>('/v1/ingest/:kind', async (request, reply) => {

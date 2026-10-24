@@ -35,6 +35,7 @@ export type SourcePrincipal = Readonly<{
   allowedEntities: readonly SourceEntity[];
   credentialId: string;
   revision: string;
+  sourceEpoch: string;
 }>;
 
 export type CreateAgentCredentialInput = Readonly<{ purpose: string; ttl_seconds?: number }>;
@@ -82,6 +83,7 @@ export type AuthService = Readonly<{
   revokeAgentCredential(principal: UserPrincipal, credentialId: string): Promise<void>;
   authenticateAgent(token: string): Promise<AgentPrincipal>;
   authenticateSource(token: string, entity: SourceEntity): Promise<SourcePrincipal>;
+  assertCurrentSource(snapshot: SourcePrincipal, entity: SourceEntity, client: PoolClient): Promise<void>;
   assertCurrentAgent(snapshot: AgentPrincipal): Promise<void>;
   /** Controlled repository methods; a supplied PoolClient is reused without opening a nested transaction. */
   repository: Readonly<{
@@ -92,6 +94,9 @@ export type AuthService = Readonly<{
     setIdentityBinding(issuer: string, subject: string, enabled: boolean, client?: PoolClient): Promise<void>;
     setTenantEnabled(tenantId: string, enabled: boolean, client?: PoolClient): Promise<void>;
     provisionSourceCredential(input: SourceCredentialProvisionInput, client?: PoolClient): Promise<void>;
-    updateSourceCredential(sourceId: string, tenantId: string, enabled: boolean, revision: string, allowedEntities: readonly SourceEntity[], client?: PoolClient): Promise<void>;
+    updateSourceCredential(sourceId: string, tenantId: string, enabled: boolean, revision: string, allowedEntities: readonly SourceEntity[], client?: PoolClient, secretRef?: string): Promise<void>;
+    advanceSourceEpoch(sourceId: string, tenantId: string, client?: PoolClient): Promise<void>;
+    revokeSourceCredential(sourceId: string, tenantId: string, reasonCode: string, client?: PoolClient): Promise<void>;
+    recordSourceScopeSecurityBarrier(sourceId: string, tenantId: string, entity: SourceEntity, reasonCode: string, client?: PoolClient): Promise<void>;
   }>;
 }>;
