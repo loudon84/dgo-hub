@@ -59,6 +59,19 @@ async function appendEvidence(path: string, event: Record<string, string | numbe
   await appendFile(path, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`, 'utf8');
 }
 
+async function waitForHostPool(pool: pg.Pool, readyBy: number): Promise<void> {
+  while (Date.now() < readyBy) {
+    try {
+      await pool.query('SELECT 1');
+      return;
+    } catch {
+      const remaining = readyBy - Date.now();
+      if (remaining > 0) await new Promise(resolve => setTimeout(resolve, Math.min(300, remaining)));
+    }
+  }
+  throw new OwnedPostgresError('OWNED_POSTGRES_POOL_UNAVAILABLE', 'pool_check', 'pool_unavailable');
+}
+
 export async function startOwnedPostgres(options: { evidenceFile: string; taskLabel?: OwnedTaskLabel }, command: DockerCommand = docker): Promise<OwnedPostgres> {
   const runLabel = randomUUID();
   const taskLabel = options.taskLabel ?? 'task0';
@@ -116,11 +129,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
     if (!portMatch) throw new OwnedPostgresError('OWNED_POSTGRES_PORT_INVALID', 'port_discovery', 'startup_failed');
     const hostPort = Number(portMatch[1]);
     pool = new pg.Pool({ connectionString: `postgres://postgres@127.0.0.1:${hostPort}/postgres`, max: 8, connectionTimeoutMillis: 3_000 });
-    try {
-      await pool.query('SELECT 1');
-    } catch {
-      throw new OwnedPostgresError('OWNED_POSTGRES_POOL_UNAVAILABLE', 'pool_check', 'pool_unavailable');
-    }
+    await waitForHostPool(pool, readyBy);
 
     const ownedPool = pool;
     return {
