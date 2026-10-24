@@ -471,14 +471,19 @@ describe('durable snapshot run admission', () => {
       const headers={authorization:'Bearer owner-token'};
       const badId=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs/------------------------------------',headers});
       const badDate=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?created_from=2026-99-99T00%3A00%3A00Z',headers});
+      const yearZeroFrom=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?created_from=0000-01-01T00%3A00%3A00Z',headers});
+      const yearZeroTo=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?created_to=0000-01-01T00%3A00%3A00Z',headers});
+      const yearOneControl=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?created_from=0001-01-01T00%3A00%3A00Z',headers});
       const badCursor=await app.inject({method:'GET',url:`/hub/v1/admin/etl-runs?cursor=${malformedCursor}`,headers});
       const emptyCursor=await app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?cursor=',headers});
       expect(badId.statusCode).toBe(404);
-      for (const response of [badDate,badCursor,emptyCursor]) {
+      for (const response of [badDate,yearZeroFrom,yearZeroTo,badCursor,emptyCursor]) {
         expect(response.statusCode).toBe(400);
         expect(response.json().error.code).toBe('AUTH_INPUT_INVALID');
+        expect(response.json().error.retryable).toBe(false);
       }
-      expect([badId,badDate,badCursor,emptyCursor].map(response=>response.statusCode)).not.toContain(503);
+      expect(yearOneControl.statusCode).toBe(200);
+      expect([badId,badDate,yearZeroFrom,yearZeroTo,badCursor,emptyCursor].map(response=>response.statusCode)).not.toContain(503);
     } finally { await app.close(); }
   });
 });

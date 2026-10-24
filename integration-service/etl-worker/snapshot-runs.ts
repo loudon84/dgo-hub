@@ -39,6 +39,7 @@ function parseCanonicalDate(value: string): number {
   const [, yearText, monthText, dayText, hourText, minuteText, secondText, , zone] = match;
   const year = Number(yearText), month = Number(monthText), day = Number(dayText);
   const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+  if (year === 0) fail('AUTH_INPUT_INVALID');
   const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
   if (month < 1 || month > 12 || day < 1 || day > days || hour > 23 || minute > 59 || second > 59) fail('AUTH_INPUT_INVALID');
   if (zone !== 'Z') {
