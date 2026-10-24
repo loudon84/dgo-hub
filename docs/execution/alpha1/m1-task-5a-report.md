@@ -39,3 +39,8 @@ The final focused migration run initially exposed a test-fixture isolation failu
 ## Scope remaining
 
 M1-5A does not implement extraction, staging pages, business application, observations, checkpoint writes, deletes, APIs 022/024/060, cutover, SQL Server, UI/query-gate work, or network/deployment activity. Formal 48-gate evidence remains NOT_RUN pending the later M1-5 phases.
+
+## Controller evidence inventory clarification
+
+The retained sanitized docker-ownership-review.json contains all 58 recorded lifecycle events from this slice's 20 run labels: 19 created, 19 image-observed and 19 ownership-confirmed removed/absent containers, plus the one start_failure_unresolved event with no container ID. There is no created run lacking a confirmed removal/absence record. Only the two final-gate lifecycle JSONLs are copied verbatim; other raw lifecycle originals remain in the fresh external runtime. The no-ID startup is not counted as removed: its retained healthy-daemon exact task+run label query returned exit 0 with no matches. Controller independently checked all 49 artifact sizes/SHA-256 values and found zero mismatches. These retained records do not imply a new live resource check by the controller.
+
