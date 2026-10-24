@@ -107,7 +107,7 @@
 - [x] 合并各任务工程证据与准确commit/测试数量；复用 Task4 fixed run only after matching the six current `integration-service` runtime/test/migration entries against its manifest (zero mismatches); record honest site entry, lock and Gate BLOCKED results.
 - [x] API-001/046–048 and strict legacy-boundary local status updated with test/report evidence; site status remains NOT_RUN/BLOCKED. Hermes v0.22.1 is recorded as user-reported remote installation with handshake/Profile/tool registration unobserved.
 - [x] GPT-6.1 Sol whole-M0 stage review completed at `caf026a7`; local runtime/identity/isolation passed, Task5 Spec/Quality required the single bounded docs fix wave for M0-F-I1/I2/M1.
-- [ ] Scoped independent Sol re-review of the combined Task5 documentation fixes. M1 first brief is prepared; no M1 source code has started and no M1 dispatch occurs before this review closes.
+- [x] Scoped independent Sol re-review of the combined Task5 documentation fixes: all three findings ADDRESSED; Task5 Spec/Quality and M0 local engineering closure PASS. Local M1-1 may proceed after exact dispatch-base freeze; formal/site acceptance remains BLOCKED.
 
 ## 精确身份合同与裁定
 
