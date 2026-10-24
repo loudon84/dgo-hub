@@ -16,6 +16,7 @@ COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
 COPY deploy/alpha1/credential-revoke-sequence.mjs ./deploy/alpha1/credential-revoke-sequence.mjs
 COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
 COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+COPY deploy/alpha1/probe-transport.mjs ./deploy/alpha1/probe-transport.mjs
 COPY deploy/alpha1/sales-revoke-http-probe.mjs ./deploy/alpha1/sales-revoke-http-probe.mjs
 COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
 USER node

@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { request as plainRequest } from 'node:http';
 import { request } from 'node:https';
+import { certificateRejection, probeTcp } from './probe-transport.mjs';
 
 const endpoint = new URL(process.env.SALES_URL);
 const ca = await readFile(process.env.SALES_CA_FILE);
@@ -16,7 +17,7 @@ const send = (method, path, body, options = {}) => new Promise((resolve, reject)
   const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
   const host = options.host ?? endpoint.hostname;
   const req = request({
-    hostname: options.connectHost ?? host, port: Number(endpoint.port), servername: host,
+    hostname: options.connectHost ?? endpoint.hostname, port: Number(endpoint.port || 443), servername: host,
     path, method, ca: options.trusted === false ? undefined : ca,
     rejectUnauthorized: options.rejectUnauthorized !== false,
     headers: {
@@ -33,7 +34,7 @@ const send = (method, path, body, options = {}) => new Promise((resolve, reject)
     response.on('end', () => resolve({ status: response.statusCode ?? 0, headers: response.headers, body: Buffer.concat(chunks).toString('utf8') }));
   });
   req.on('error', reject);
-  req.setTimeout(6000, () => req.destroy(new Error('probe timeout')));
+  req.setTimeout(6000, () => req.destroy(Object.assign(new Error('probe timeout'), { code: 'TIMEOUT' })));
   if (payload) req.write(payload);
   req.end();
 });
@@ -46,8 +47,14 @@ const parseRpc = (body) => {
 
 try {
   stage = 'tls_negative_checks';
-  await send('GET', '/mcp/sales', undefined, { trusted: false }).then(() => record('untrusted_ca_rejected', false)).catch(() => record('untrusted_ca_rejected', true));
-  await send('GET', '/mcp/sales', undefined, { host: 'wrong.local' }).then(() => record('wrong_hostname_rejected', false)).catch(() => record('wrong_hostname_rejected', true));
+  // Both negatives connect to the same live endpoint; only trust/identity differs.
+  for (const [name, kind, options] of [
+    ['untrusted_ca_rejected', 'trust', { trusted: false }],
+    ['wrong_hostname_rejected', 'hostname', { host: 'wrong.local' }],
+  ]) {
+    const { pass, ...classification } = await certificateRejection(() => send('GET', '/mcp/sales', undefined, options), kind);
+    record(name, pass, classification);
+  }
   await new Promise(resolve => {
     const req = plainRequest({ hostname: 'sales.local', port: 80, method: 'GET', path: '/mcp/sales', timeout: 1500 }, response => {
       response.resume(); resolve(false);
@@ -96,17 +103,17 @@ try {
   }
 
   stage = 'sales_network_isolation';
-  for (const [host, port] of [['db', 5432], ['hasura', 8080], ['api', 3000], ['publisher', 3002], ['mcp', 3001]]) {
-    const connect = await new Promise(resolve => {
-      const socket = request({ hostname: host, port, method: 'GET', timeout: 1500 }, response => {
-        response.resume(); resolve({ reachable: true });
-      });
-      socket.on('error', error => resolve({ reachable: false, code: error.code ?? 'ERROR' }));
-      socket.on('timeout', () => { socket.destroy(); resolve({ reachable: false, code: 'TIMEOUT' }); });
-      socket.end();
-    });
-    record(`sales_network_${host}_not_reachable`, !connect.reachable, { reason: connect.code ?? 'reachable' });
+  const targets = process.env.SALES_NETWORK_TARGETS_FILE
+    ? JSON.parse(await readFile(process.env.SALES_NETWORK_TARGETS_FILE, 'utf8'))
+    : [['db', 5432], ['hasura', 8080], ['api', 3000], ['mcp', 3001]].map(([host, port]) => ({ name: host, host, port }));
+  if (!Array.isArray(targets) || targets.length === 0) throw Object.assign(new Error('targets required'), { code: 'PROBE_TARGETS_INVALID' });
+  for (const target of targets) {
+    if (!/^[a-z0-9_-]+$/i.test(target.name) || typeof target.host !== 'string' || !Number.isInteger(target.port) || target.port < 1 || target.port > 65535) throw Object.assign(new Error('invalid target'), { code: 'PROBE_TARGETS_INVALID' });
+    const result = await probeTcp(target.host, target.port);
+    const denial = ['tcp_refused', 'tcp_timeout', 'network_unreachable'].includes(result.layer);
+    record(`sales_network_${target.name}_not_reachable`, !result.reachable && denial, { ...result, host: target.host, port: target.port, ...(target.container_id ? { container_id: target.container_id } : {}) });
   }
+  checks.push({ name: 'publisher_no_m0_listener', status: 'INFO', reason: 'NO_M0_LISTENER', network_proof: false });
 } catch (error) {
   record('probe_completed', false, { code: 'SALES_NETWORK_PROBE_FAILED', stage, safe_failure_code: error?.code ?? 'unknown' });
 }

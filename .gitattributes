@@ -1,0 +1,2 @@
+# Retained raw command streams must match their recorded SHA-256 on every OS.
+docs/execution/alpha1/m0-task-4-evidence/**/*.log -text
