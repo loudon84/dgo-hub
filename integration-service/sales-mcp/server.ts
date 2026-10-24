@@ -53,7 +53,45 @@ function safeError(error: unknown, requestId: string): ToolError {
 function toolErrorResult(code: string, requestId: string): CallToolResult {
   return { isError: true, content: [{ type: 'text', text: JSON.stringify({ code, message: code, request_id: requestId }) }] };
 }
-function safeArgsDigest(value: unknown): Buffer { return createHash('sha256').update(JSON.stringify(value)).digest(); }
+function safeArgsDigest(value: unknown): Buffer {
+  type DigestWork = { kind: 'value'; value: unknown } | { kind: 'text'; text: string } | { kind: 'leave'; value: object };
+  const hash = createHash('sha256');
+  const active = new Set<object>();
+  const work: DigestWork[] = [{ kind: 'value', value }];
+  while (work.length) {
+    const item = work.pop()!;
+    if (item.kind === 'text') { hash.update(item.text); continue; }
+    if (item.kind === 'leave') { active.delete(item.value); continue; }
+    const current = item.value;
+    if (current === null) { hash.update('null'); continue; }
+    if (typeof current === 'string') { hash.update(JSON.stringify(current)); continue; }
+    if (typeof current === 'number' || typeof current === 'boolean') { hash.update(JSON.stringify(current)); continue; }
+    if (typeof current !== 'object') { hash.update(`unsupported:${typeof current}`); continue; }
+    if (active.has(current)) { hash.update('[circular]'); continue; }
+    active.add(current);
+    work.push({ kind: 'leave', value: current });
+    if (Array.isArray(current)) {
+      hash.update('[');
+      work.push({ kind: 'text', text: ']' });
+      for (let index = current.length - 1; index >= 0; index -= 1) {
+        work.push({ kind: 'value', value: current[index] });
+        if (index > 0) work.push({ kind: 'text', text: ',' });
+      }
+      continue;
+    }
+    const entries = Object.entries(current);
+    hash.update('{');
+    work.push({ kind: 'text', text: '}' });
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const [key, entryValue] = entries[index];
+      work.push({ kind: 'value', value: entryValue });
+      work.push({ kind: 'text', text: ':' });
+      work.push({ kind: 'text', text: JSON.stringify(key) });
+      if (index > 0) work.push({ kind: 'text', text: ',' });
+    }
+  }
+  return hash.digest();
+}
 function resultCount(value: unknown): number {
   if (Array.isArray(value)) return value.length;
   if (value && typeof value === 'object') {

@@ -506,6 +506,60 @@ describe('strict sales MCP authentication and audit boundary', () => {
     expect(queryCalls).toBe(before);
   });
 
+  it('safely audits deeply nested invalid arguments and correlates audit failures', async () => {
+    const nestedJson = '{"x":'.repeat(10_000) + '"review-value"' + '}'.repeat(10_000);
+    const requestBody = (id: number) => `{"jsonrpc":"2.0","id":${id},"method":"tools/call","params":{"name":"find_customers","arguments":{"term":${nestedJson}}}}`;
+    expect(Buffer.byteLength(requestBody(1))).toBe(60_117);
+    const before = queryCalls;
+
+    const response = await fetch(`${baseUrl}/mcp/sales`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      body: requestBody(1),
+    });
+    expect(response.status).toBe(200);
+    const result = await response.json() as { result?: { isError?: boolean; content?: { text?: string }[] }; error?: { code?: number; message?: string } };
+    expect({ isError: result.result?.isError, protocolError: result.error }).toEqual({ isError: true, protocolError: undefined });
+    const text = result.result?.content?.[0]?.text ?? '';
+    expect(text).not.toContain('review-value');
+    expect(text).not.toContain('Maximum call stack size exceeded');
+    const envelope = JSON.parse(text) as { code?: string; request_id?: string };
+    expect(envelope.code).toBe('TOOL_INPUT_INVALID');
+    expect(envelope.request_id).toBeTruthy();
+    const audit = await fixture.pool.query('SELECT outcome,error_code,request_id::text AS request_id,result_count FROM control.agent_audit WHERE request_id=$1', [envelope.request_id]);
+    expect(audit.rows).toEqual([{ outcome: 'error', error_code: 'TOOL_INPUT_INVALID', request_id: envelope.request_id, result_count: null }]);
+
+    const failedAuditPool = {
+      query: (...queryArgs: Parameters<typeof fixture.pool.query>) => {
+        if (String(queryArgs[0]).includes('INSERT INTO control.agent_audit')) { auditAttempted = true; throw new Error('private deep audit detail'); }
+        return fixture.pool.query(...queryArgs);
+      },
+    } as unknown as typeof fixture.pool;
+    let auditAttempted = false;
+    const failedAuditApp = createApp({ pool: failedAuditPool });
+    await failedAuditApp.listen({ host: '127.0.0.1', port: 0 });
+    const address = failedAuditApp.server.address();
+    if (!address || typeof address === 'string') throw new Error('deep validation audit failure server failed to bind');
+    try {
+      const failedResponse = await fetch(`http://127.0.0.1:${address.port}/mcp/sales`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${credential}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+        body: requestBody(13),
+      });
+      expect(failedResponse.status).toBe(200);
+      const failedResult = await failedResponse.json() as { result?: { isError?: boolean; content?: { text?: string }[] } };
+      expect(failedResult.result?.isError).toBe(true);
+      const failedText = failedResult.result?.content?.[0]?.text ?? '';
+      expect(failedText).not.toContain('private deep audit detail');
+      expect(failedText).not.toContain('Maximum call stack size exceeded');
+      const failedEnvelope = JSON.parse(failedText) as { code?: string; request_id?: string };
+      expect(failedEnvelope.code).toBe('AUDIT_UNAVAILABLE');
+      expect(failedEnvelope.request_id).toBeTruthy();
+      expect(auditAttempted).toBe(true);
+    } finally { await failedAuditApp.close(); }
+    expect(queryCalls).toBe(before);
+  });
+
   it('returns correlated AUDIT_UNAVAILABLE when an invalid-argument audit insert fails', async () => {
     const before = queryCalls;
     const failedAuditPool = {
