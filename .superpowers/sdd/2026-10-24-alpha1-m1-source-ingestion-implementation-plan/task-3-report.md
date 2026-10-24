@@ -8,7 +8,8 @@
 - Product source: `ebd41c78df45e7c9affc25a76aa7d2dd9187b5f8` (`Implement durable strict batch ingestion`).
 - Compatibility regression fix: `6a401bfd3c89dc37a1217e370ecbe423dbf3c26c` (`Keep strict reads compatible with existing handlers`).
 - Recovery coverage: `ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5` (`Exercise scoped barrier owner recovery flow`).
-- The last test/typecheck/build gates ran with the recovery test as an uncommitted source-tree change. After commit, `git hash-object integration-service/acceptance-tests/strict-ingestion.test.ts` and `git rev-parse HEAD:integration-service/acceptance-tests/strict-ingestion.test.ts` both returned `860c244f30e9b25dad7e9eaf20a34aaa1fc45873`, confirming gate bytes equal the committed blob. Gate HEAD at execution was `6a401bfd3c89dc37a1217e370ecbe423dbf3c26c`; recovery-test commit is the current HEAD.
+- Safe evidence archive: `76df2e85428778e2e765447ff230fda7b50a46de`, containing the 57 paths listed in the evidence whitelist plus the whitelist itself. Whitelist SHA-256 (the whitelist intentionally excludes its own hash): `1a83fd8718b0a517882a6ff934d79b46d6274d907490afcb314f51adf426c3fc`.
+- The last test/typecheck/build gates ran with the recovery test as an uncommitted source-tree change. After commit, `git hash-object integration-service/acceptance-tests/strict-ingestion.test.ts` and `git rev-parse HEAD:integration-service/acceptance-tests/strict-ingestion.test.ts` both returned `860c244f30e9b25dad7e9eaf20a34aaa1fc45873`, confirming gate bytes equal the committed blob. Gate HEAD at execution was `6a401bfd3c89dc37a1217e370ecbe423dbf3c26c`; `ab7cfe5` is the tested source commit, and later commits contain only the report and safe evidence archive.
 
 ## Scope delivered
 
