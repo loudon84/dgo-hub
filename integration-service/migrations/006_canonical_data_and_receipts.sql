@@ -172,11 +172,11 @@ CREATE SEQUENCE control.canonical_hub_revision_seq AS bigint;
 CREATE TABLE hub.canonical_customer (
   tenant_id text COLLATE "C" NOT NULL CHECK (length(tenant_id) BETWEEN 1 AND 128 AND tenant_id !~ '^[[:space:]]|[[:space:]]$'),
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  customer_name text NOT NULL,
+  customer_name text NOT NULL CHECK (char_length(customer_name) BETWEEN 1 AND 2048),
   owner_user_id text COLLATE "C" NOT NULL,
   dept_id text COLLATE "C" NOT NULL,
   status text NOT NULL CHECK (status IN ('ACTIVE','INACTIVE')),
-  phone text,
+  phone text CHECK (phone IS NULL OR char_length(phone) <= 2048),
   source_updated_at timestamptz NOT NULL,
   source_version numeric(20,0) NOT NULL CHECK (source_version >= 0),
   version_domain text NOT NULL CHECK (version_domain IN ('SOURCE_VERSION','SNAPSHOT_OBSERVATION')),
@@ -191,10 +191,10 @@ CREATE TABLE hub.canonical_order (
   tenant_id text COLLATE "C" NOT NULL CHECK (length(tenant_id) BETWEEN 1 AND 128 AND tenant_id !~ '^[[:space:]]|[[:space:]]$'),
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   customer_id uuid NOT NULL,
-  order_no text NOT NULL,
+  order_no text NOT NULL CHECK (length(order_no) BETWEEN 1 AND 128 AND order_no !~ '^[[:space:]]|[[:space:]]$'),
   status text NOT NULL CHECK (status IN ('DRAFT','CONFIRMED','COMPLETED','CANCELLED')),
   order_at timestamptz NOT NULL,
-  amount numeric(20,2) NOT NULL,
+  amount numeric(20,2) NOT NULL CHECK (amount >= 0),
   currency text NOT NULL CHECK (currency IN ('CNY','USD','EUR')),
   source_updated_at timestamptz NOT NULL,
   source_version numeric(20,0) NOT NULL CHECK (source_version >= 0),
@@ -212,10 +212,10 @@ CREATE TABLE hub.canonical_order_line (
   order_id uuid NOT NULL,
   source_line_id text COLLATE "C" NOT NULL CHECK (length(source_line_id) BETWEEN 1 AND 128 AND source_line_id !~ '^[[:space:]]|[[:space:]]$'),
   product_code text COLLATE "C" NOT NULL CHECK (length(product_code) BETWEEN 1 AND 128 AND product_code !~ '^[[:space:]]|[[:space:]]$'),
-  product_name text NOT NULL,
+  product_name text NOT NULL CHECK (char_length(product_name) BETWEEN 1 AND 2048),
   quantity numeric(20,6) NOT NULL CHECK (quantity > 0),
-  unit_price numeric(20,6) NOT NULL,
-  line_amount numeric(20,2) NOT NULL,
+  unit_price numeric(20,6) NOT NULL CHECK (unit_price >= 0),
+  line_amount numeric(20,2) NOT NULL CHECK (line_amount >= 0),
   source_updated_at timestamptz NOT NULL,
   source_version numeric(20,0) NOT NULL CHECK (source_version >= 0),
   version_domain text NOT NULL CHECK (version_domain IN ('SOURCE_VERSION','SNAPSHOT_OBSERVATION')),
@@ -336,6 +336,65 @@ CREATE TABLE control.canonical_apply_outbox (
     REFERENCES control.source_channel(id,tenant_key,source_id,entity,channel_epoch,version_domain) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 
+CREATE FUNCTION control.lock_canonical_owner(p_tenant text,p_user text)
+RETURNS TABLE(enabled boolean,business_role text,department_id text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
+AS $body$
+BEGIN
+  PERFORM control.acquire_security_barrier_guard_internal();
+  RETURN QUERY SELECT s.enabled,s.business_role,s.department_id FROM control.auth_subject s
+    WHERE s.tenant_key=p_tenant AND s.user_id=p_user FOR UPDATE;
+END;
+$body$;
+
+-- One deterministic projection envelope is shared by apply and API-014 remap.
+-- Source content carries the complete normalized business image; identity carries
+-- only resolved tenant-owned references.
+CREATE FUNCTION control.canonical_projection_digest(p_source_digest bytea,p_object_id uuid,p_identity jsonb) RETURNS bytea
+LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public
+AS $body$
+  SELECT public.digest(convert_to(jsonb_build_object('source_content_digest',encode(p_source_digest,'hex'),
+    'canonical_object_id',p_object_id::text,'identity',p_identity)::text,'UTF8'),'sha256')
+$body$;
+
+CREATE FUNCTION control.record_canonical_customer_owner_change(p_tenant text,p_source text,p_source_pk text,p_kind text,
+  p_external_id text,p_old_target text,p_new_target text,p_old_user text,p_new_user text,p_mapping_revision bigint,p_actor text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
+AS $body$
+DECLARE v_user text;
+BEGIN
+  PERFORM control.acquire_security_barrier_guard_internal();
+  IF p_kind NOT IN ('user','department') OR p_mapping_revision<=0 OR p_actor IS NULL OR p_actor=''
+     OR NOT EXISTS(SELECT 1 FROM control.source_registry r WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.data_owner_user_id=p_actor)
+     OR NOT EXISTS(SELECT 1 FROM control.source_identity_mapping_revision m WHERE m.tenant_key=p_tenant AND m.source_id=p_source
+       AND m.revision=p_mapping_revision AND m.mappings @> jsonb_build_array(jsonb_build_object('kind',p_kind,
+         'external_id',p_external_id,'target_id',p_new_target))) THEN
+    RAISE EXCEPTION 'approved source ownership mapping required' USING ERRCODE='42501';
+  END IF;
+  FOR v_user IN SELECT s.user_id FROM control.auth_subject s
+    WHERE s.tenant_key=p_tenant AND s.user_id IN (p_old_user,p_new_user) ORDER BY s.user_id FOR UPDATE
+  LOOP NULL; END LOOP;
+  IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=p_new_user
+      AND s.enabled AND s.business_role='sales'
+      AND ((p_kind='user' AND p_new_user=p_new_target) OR (p_kind='department' AND s.department_id=p_new_target))) THEN
+    RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='22023';
+  END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.canonical_source_identity i
+      JOIN control.canonical_identity_reference r USING(tenant_key,source_id,entity,source_pk)
+      JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
+      WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity='customer' AND i.source_pk=p_source_pk
+        AND r.kind=p_kind AND r.external_id=p_external_id AND r.target_id=p_old_target
+        AND ((p_kind='user' AND c.owner_user_id=p_old_target) OR (p_kind='department' AND c.dept_id=p_old_target))) THEN
+    RAISE EXCEPTION 'source ownership change does not match current projection' USING ERRCODE='42501';
+  END IF;
+  UPDATE control.auth_subject s SET auth_epoch=s.auth_epoch+1
+    WHERE s.tenant_key=p_tenant AND s.user_id IN (p_old_user,p_new_user);
+  INSERT INTO control.canonical_ownership_audit(tenant_key,source_id,entity,source_pk,kind,external_id,old_target_id,new_target_id,
+    identity_mapping_revision,actor_user_id,reason)
+    VALUES(p_tenant,p_source,'customer',p_source_pk,p_kind,p_external_id,p_old_target,p_new_target,p_mapping_revision,p_actor,'source projection changed ownership');
+END;
+$body$;
+
 CREATE FUNCTION control.reject_canonical_outbox_mutation() RETURNS trigger
 LANGUAGE plpgsql SET search_path = pg_catalog
 AS $body$
@@ -374,6 +433,8 @@ DECLARE
   v_object_id uuid;
   v_channel record;
   v_projection bytea;
+  v_current_owner text;
+  v_current_dept text;
 BEGIN
   IF p_kind NOT IN ('user','department','customer') OR p_revision <= 0 OR
      p_external_id IS NULL OR length(p_external_id) NOT BETWEEN 1 AND 128 OR
@@ -414,29 +475,44 @@ BEGIN
       SELECT i.customer_id INTO v_object_id FROM control.canonical_source_identity i
         WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity=v_row.entity AND i.source_pk=v_row.source_pk;
       IF v_object_id IS NOT NULL THEN
+        SELECT c.owner_user_id,c.dept_id INTO v_current_owner,v_current_dept FROM hub.canonical_customer c
+          WHERE c.tenant_id=p_tenant AND c.id=v_object_id AND c.deleted_at IS NULL;
+        IF FOUND THEN
+          PERFORM s.user_id FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id IN (v_current_owner,p_target_id)
+            ORDER BY s.user_id FOR UPDATE;
+          IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=p_target_id
+            AND s.enabled AND s.business_role='sales' AND s.department_id=v_current_dept) THEN
+            RAISE EXCEPTION 'eligible owner not found for canonical department' USING ERRCODE='22023';
+          END IF;
+        END IF;
         PERFORM 1 FROM hub.canonical_customer c WHERE c.tenant_id=p_tenant AND c.id=v_object_id AND c.deleted_at IS NULL FOR UPDATE;
       END IF;
       IF FOUND THEN
-        IF NOT EXISTS(SELECT 1 FROM control.auth_subject s JOIN hub.canonical_customer c
-          ON c.tenant_id=p_tenant AND c.id=v_object_id
-          WHERE s.tenant_key=p_tenant AND s.user_id=p_target_id AND s.enabled AND s.business_role='sales' AND s.department_id=c.dept_id) THEN
-          RAISE EXCEPTION 'eligible owner not found for canonical department' USING ERRCODE='22023';
-        END IF;
         UPDATE hub.canonical_customer c SET owner_user_id=p_target_id,hub_revision=nextval('control.canonical_hub_revision_seq')
           WHERE c.tenant_id=p_tenant AND c.id=v_object_id
-          RETURNING c.hub_revision,public.digest(convert_to(to_jsonb(c)::text,'UTF8'),'sha256') INTO v_new_revision,v_projection;
+          RETURNING c.hub_revision INTO v_new_revision;
         v_count:=v_count+1;
       END IF;
     ELSIF p_kind='department' AND v_row.entity='customer' THEN
       SELECT i.customer_id INTO v_object_id FROM control.canonical_source_identity i
         WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity=v_row.entity AND i.source_pk=v_row.source_pk;
       IF v_object_id IS NOT NULL THEN
+        SELECT c.owner_user_id INTO v_current_owner FROM hub.canonical_customer c
+          WHERE c.tenant_id=p_tenant AND c.id=v_object_id AND c.deleted_at IS NULL;
+        IF FOUND THEN
+          PERFORM s.user_id FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_current_owner
+            FOR UPDATE;
+          IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_current_owner
+            AND s.enabled AND s.business_role='sales' AND s.department_id=p_target_id) THEN
+            RAISE EXCEPTION 'confirmed department does not match current customer owner authority' USING ERRCODE='22023';
+          END IF;
+        END IF;
         PERFORM 1 FROM hub.canonical_customer c WHERE c.tenant_id=p_tenant AND c.id=v_object_id AND c.deleted_at IS NULL FOR UPDATE;
       END IF;
       IF FOUND THEN
         UPDATE hub.canonical_customer c SET dept_id=p_target_id,hub_revision=nextval('control.canonical_hub_revision_seq')
           WHERE c.tenant_id=p_tenant AND c.id=v_object_id
-          RETURNING c.hub_revision,public.digest(convert_to(to_jsonb(c)::text,'UTF8'),'sha256') INTO v_new_revision,v_projection;
+          RETURNING c.hub_revision INTO v_new_revision;
         v_count:=v_count+1;
       END IF;
     ELSIF p_kind='customer' AND v_row.entity='order' THEN
@@ -448,13 +524,22 @@ BEGIN
       IF FOUND THEN
         UPDATE hub.canonical_order o SET customer_id=p_target_id::uuid,hub_revision=nextval('control.canonical_hub_revision_seq')
           WHERE o.tenant_id=p_tenant AND o.id=v_object_id
-          RETURNING o.hub_revision,public.digest(convert_to(to_jsonb(o)::text,'UTF8'),'sha256') INTO v_new_revision,v_projection;
+          RETURNING o.hub_revision INTO v_new_revision;
         v_count:=v_count+1;
       END IF;
     END IF;
     UPDATE control.canonical_identity_reference SET target_id=p_target_id
       WHERE tenant_key=p_tenant AND source_id=p_source AND entity=v_row.entity AND source_pk=v_row.source_pk AND kind=p_kind;
     IF v_new_revision IS NOT NULL THEN
+      SELECT control.canonical_projection_digest(r.source_content_digest,v_object_id,
+        CASE WHEN v_row.entity='customer' THEN jsonb_build_object('owner_user_id',c.owner_user_id,'department_id',c.dept_id)
+             ELSE jsonb_build_object('customer_id',o.customer_id::text) END)
+        INTO v_projection
+        FROM control.source_version_receipt r
+        LEFT JOIN hub.canonical_customer c ON v_row.entity='customer' AND c.tenant_id=r.tenant_key AND c.id=v_object_id
+        LEFT JOIN hub.canonical_order o ON v_row.entity='order' AND o.tenant_id=r.tenant_key AND o.id=v_object_id
+        WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.entity=v_row.entity AND r.canonical_object_id=v_object_id
+        ORDER BY r.committed_at DESC LIMIT 1;
       SELECT r.channel_id,r.channel_epoch,r.version_domain INTO v_channel FROM control.source_version_receipt r
         WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.entity=v_row.entity AND r.canonical_object_id=v_object_id
         ORDER BY r.committed_at DESC LIMIT 1;
@@ -489,6 +574,10 @@ REVOKE ALL ON hub.canonical_customer,hub.canonical_order,hub.canonical_order_lin
   control.source_identity_remap_fence,control.canonical_ownership_audit,control.canonical_apply_outbox FROM PUBLIC;
 REVOKE ALL ON SEQUENCE control.canonical_hub_revision_seq,control.canonical_ownership_audit_id_seq,control.canonical_apply_outbox_id_seq FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.reject_canonical_outbox_mutation() FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.canonical_projection_digest(bytea,uuid,jsonb) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.lock_canonical_owner(text,text) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text)
+  FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.remap_canonical_identity(text,text,text,text,text,bigint,text,text) FROM PUBLIC,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.acquire_security_barrier_guard_internal(),control.allocate_security_barrier_fence(),
   control.guard_security_fact_write(),control.assign_source_barrier_fence() FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
@@ -514,8 +603,12 @@ GRANT SELECT,INSERT ON control.canonical_apply_outbox TO hub_worker;
 GRANT USAGE,SELECT ON SEQUENCE control.canonical_hub_revision_seq,control.canonical_apply_outbox_id_seq TO hub_worker;
 GRANT SELECT ON control.source_config_revision,control.source_mapping_revision,control.source_identity_mapping_revision,
   control.source_test_report,control.source_owner_approval,control.source_channel,control.source_security_barrier TO hub_worker;
+GRANT SELECT (tenant_key,source_id,kind,external_id,identity_mapping_revision) ON control.source_identity_remap_fence TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text) TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.lock_security_barrier_fence() TO hub_api,hub_worker;
+GRANT EXECUTE ON FUNCTION control.canonical_projection_digest(bytea,uuid,jsonb) TO hub_worker;
+GRANT EXECUTE ON FUNCTION control.lock_canonical_owner(text,text) TO hub_worker;
+GRANT EXECUTE ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text) TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.record_source_security_barrier(text,text,text,text,text) TO hub_api;
 GRANT EXECUTE ON FUNCTION control.record_tenant_security_disable(text) TO hub_api;
 GRANT EXECUTE ON FUNCTION control.upsert_source_credential(text,text,bytea,text,text[],boolean,bigint),

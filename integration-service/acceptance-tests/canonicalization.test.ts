@@ -18,6 +18,66 @@ describe('strict canonical normalization', () => {
     expect(canonicalDecimal('-0', 2)).toBe('0.00');
   });
 
+  it('rejects negative canonical money while allowing zero values', () => {
+    const order = {
+      source_pk: 'O-NEG', customer_external_id: 'CRM-1', order_no: 'O-NEG', status: 'DRAFT' as const,
+      order_at: '2026-01-01T00:00:00Z', amount: '0.00', currency: 'CNY' as const,
+      source_updated_at: '2026-01-01T00:00:00Z', source_version: '1', lines: [],
+    };
+    expect(canonicalOrderSchema.safeParse({ ...order, amount: '-0.01' }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, amount: '0.00', lines: [{
+      source_line_id: 'L1', product_code: 'SKU-1', product_name: 'One', quantity: '1.000000',
+      unit_price: '-0.000001', line_amount: '0.00',
+    }] }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, lines: [{
+      source_line_id: 'L1', product_code: 'SKU-1', product_name: 'One', quantity: '1.000000',
+      unit_price: '0.000000', line_amount: '-0.01',
+    }] }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, amount: '0.00', lines: [{
+      source_line_id: 'L1', product_code: 'SKU-1', product_name: 'One', quantity: '1.000000',
+      unit_price: '0.000000', line_amount: '0.00',
+    }] }).success).toBe(true);
+  });
+
+  it('enforces PRD text limits and the order number identifier contract', () => {
+    const customer = {
+      source_pk: 'C-LIMIT', customer_name: 'A', owner_external_id: 'owner', dept_external_id: 'dept',
+      status: 'ACTIVE' as const, source_updated_at: '2026-01-01T00:00:00Z', source_version: '1',
+    };
+    expect(canonicalCustomerSchema.safeParse({ ...customer, customer_name: 'x'.repeat(2048) }).success).toBe(true);
+    expect(canonicalCustomerSchema.safeParse({ ...customer, customer_name: 'x'.repeat(2049) }).success).toBe(false);
+    expect(canonicalCustomerSchema.safeParse({ ...customer, phone: 'x'.repeat(2048) }).success).toBe(true);
+    expect(canonicalCustomerSchema.safeParse({ ...customer, phone: 'x'.repeat(2049) }).success).toBe(false);
+
+    const order = {
+      source_pk: 'O-LIMIT', customer_external_id: 'C-LIMIT', order_no: 'O', status: 'DRAFT' as const,
+      order_at: '2026-01-01T00:00:00Z', amount: '0.00', currency: 'CNY' as const,
+      source_updated_at: '2026-01-01T00:00:00Z', source_version: '1', lines: [],
+    };
+    expect(canonicalOrderSchema.safeParse({ ...order, order_no: 'x'.repeat(128) }).success).toBe(true);
+    expect(canonicalOrderSchema.safeParse({ ...order, order_no: 'x'.repeat(129) }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, order_no: ' O' }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, order_no: 'O ' }).success).toBe(false);
+    expect(canonicalOrderSchema.safeParse({ ...order, lines: [{
+      source_line_id: 'L1', product_code: 'SKU-1', product_name: 'x'.repeat(2048), quantity: '1.000000',
+      unit_price: '0.000000', line_amount: '0.00',
+    }] }).success).toBe(true);
+    expect(canonicalOrderSchema.safeParse({ ...order, lines: [{
+      source_line_id: 'L1', product_code: 'SKU-1', product_name: 'x'.repeat(2049), quantity: '1.000000',
+      unit_price: '0.000000', line_amount: '0.00',
+    }] }).success).toBe(false);
+  });
+
+  it('accepts exactly 200 canonical order lines and rejects line 201', () => {
+    const lines=Array.from({length:201},(_,index)=>({source_line_id:`line-${String(index).padStart(3,'0')}`,
+      product_code:'SKU',product_name:'Item',quantity:'1.000000',unit_price:'0.000000',line_amount:'0.00'}));
+    const order={source_pk:'O-LINES',customer_external_id:'C-1',order_no:'O-LINES',status:'DRAFT' as const,
+      order_at:'2026-01-01T00:00:00Z',amount:'0.00',currency:'CNY' as const,source_updated_at:'2026-01-01T00:00:00Z',
+      source_version:'1'};
+    expect(canonicalOrderSchema.safeParse({...order,lines:lines.slice(0,200)}).success).toBe(true);
+    expect(canonicalOrderSchema.safeParse({...order,lines}).success).toBe(false);
+  });
+
   it('accepts decimal versions without converting them through Number', () => {
     expect(canonicalVersion('99999999999999999999')).toBe('99999999999999999999');
     expect(() => canonicalVersion('01')).toThrow('CANONICAL_VERSION_INVALID');

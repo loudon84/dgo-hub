@@ -18,11 +18,19 @@ export const orderSchema = z.object({
 export type Customer = z.infer<typeof customerSchema>;
 export type SalesOrder = z.infer<typeof orderSchema>;
 
-const canonicalId = z.string().transform(value => validateCanonicalIdentifier(value));
+const canonicalId = z.string().refine(value => {
+  try { validateCanonicalIdentifier(value); return true; }
+  catch { return false; }
+}, 'CANONICAL_IDENTIFIER_INVALID').transform(value => validateCanonicalIdentifier(value));
 const canonicalVersionSchema = z.string().transform(value => canonicalVersion(value));
 const sourceTimestamp = z.string().datetime({ offset: true });
-const canonicalText = z.string().min(1);
-const decimalAt = (scale: number, positive = false) => z.string().transform(value => canonicalDecimal(value, scale, { positive }));
+const canonicalText = z.string().min(1).max(2048);
+const decimalAt = (scale: number, positive = false) => z.string()
+  .refine(value => {
+    try { canonicalDecimal(value, scale, { positive, nonnegative: true }); return true; }
+    catch { return false; }
+  }, 'CANONICAL_DECIMAL_INVALID')
+  .transform(value => canonicalDecimal(value, scale, { positive, nonnegative: true }));
 
 export const canonicalCustomerSchema = z.object({
   source_pk: canonicalId,
@@ -30,7 +38,7 @@ export const canonicalCustomerSchema = z.object({
   owner_external_id: canonicalId,
   dept_external_id: canonicalId,
   status: z.enum(['ACTIVE', 'INACTIVE']),
-  phone: z.string().nullable().optional(),
+  phone: z.string().max(2048).nullable().optional(),
   source_updated_at: sourceTimestamp,
   source_version: canonicalVersionSchema,
   deleted_at: sourceTimestamp.nullable().optional(),
@@ -54,7 +62,7 @@ export const canonicalOrderLineSchema = z.object({
 export const canonicalOrderSchema = z.object({
   source_pk: canonicalId,
   customer_external_id: canonicalId,
-  order_no: canonicalText,
+  order_no: canonicalId,
   status: z.enum(['DRAFT', 'CONFIRMED', 'COMPLETED', 'CANCELLED']),
   order_at: sourceTimestamp,
   amount: decimalAt(2),

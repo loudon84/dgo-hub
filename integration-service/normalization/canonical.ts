@@ -18,7 +18,7 @@ function compareUtf8(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8'));
 }
 
-export type DecimalOptions = Readonly<{ positive?: boolean }>;
+export type DecimalOptions = Readonly<{ positive?: boolean; nonnegative?: boolean }>;
 
 export function canonicalDecimal(value: unknown, scale: number, options: DecimalOptions = {}): string {
   if (typeof value !== 'string' || !Number.isInteger(scale) || scale < 0 || scale > 18) {
@@ -29,7 +29,7 @@ export function canonicalDecimal(value: unknown, scale: number, options: Decimal
   const fraction = (match[3] ?? '').padEnd(scale, '0');
   const magnitude = BigInt(match[2]) * 10n ** BigInt(scale) + BigInt(fraction || '0');
   const signed = magnitude === 0n ? 0n : match[1] === '-' ? -magnitude : magnitude;
-  if (options.positive && signed <= 0n) throw new Error('CANONICAL_DECIMAL_INVALID');
+  if ((options.positive && signed <= 0n) || (options.nonnegative && signed < 0n)) throw new Error('CANONICAL_DECIMAL_INVALID');
   const digits = (signed < 0n ? -signed : signed).toString().padStart(scale + 1, '0');
   const normalized = scale === 0 ? digits : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
   return signed < 0n ? `-${normalized}` : normalized;

@@ -247,6 +247,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     const config = await configuredConfig(body.config);
     if (!await deps.secretResolver.isConfiguredReference(config.secret_ref)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
+      await client.query('SELECT control.lock_security_barrier_fence()');
       await currentOwner(client, principal.tenantId, body.data_owner_user_id as string);
       const credential = await client.query<{ revision: string | number; enabled: boolean }>(
         'SELECT revision,enabled FROM control.lock_source_credential($1,$2)', [principal.tenantId,body.source_id],

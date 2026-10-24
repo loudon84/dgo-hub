@@ -77,6 +77,36 @@ async function seedCustomerApplyProof(versionDomain: 'SOURCE_VERSION' | 'SNAPSHO
   };
 }
 
+async function approveOwnerMapping(context:ApplyContext,newOwnerId:string):Promise<ApplyContext> {
+  await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+    VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwnerId]);
+  const mappings=[
+    {kind:'user',external_id:'owner-ext',target_id:newOwnerId},
+    {kind:'department',external_id:'dept-ext',target_id:'sales-east'},
+    {kind:'customer',external_id:'customer-ext',target_id:(await database.query<{id:string}>(
+      `SELECT id::text AS id FROM hub.canonical_customer WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id},
+  ];
+  const identityDigest=Buffer.alloc(32,0x55);
+  await database.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+    VALUES($1,$2,2,$3,$4::jsonb,$5)`,[context.tenantId,context.sourceId,identityDigest,JSON.stringify(mappings),context.ownerUserId]);
+  const report=await database.query<{id:string}>(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,
+    identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
+    endpoint_profile_digest,data_contract_ref,report,status,created_by)
+    VALUES($1,$2,$3,$4,2,$5,$6,$7,$8,$9,$10,'fixture','{}'::jsonb,'PASS',$11) RETURNING id`,
+  [context.tenantId,context.sourceId,context.configRevision,context.mappingRevision,Buffer.from(context.configDigest,'hex'),
+    Buffer.from(context.mappingDigest,'hex'),identityDigest,context.credentialRevisionAtAdmission,context.credentialGenerationAtAdmission,
+    Buffer.from(context.endpointProfileDigest,'hex'),context.ownerUserId]);
+  const approval=await database.query<{id:string}>(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,
+    config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,
+    source_credential_revision,credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
+    VALUES($1,$2,$3,$4,$5,$6,2,$7,$8,$9,$10,$11,$12,'fixture',$13) RETURNING id`,
+  [context.tenantId,context.sourceId,context.ownerUserId,context.ownerRevision,context.configRevision,context.mappingRevision,
+    Buffer.from(context.configDigest,'hex'),Buffer.from(context.mappingDigest,'hex'),identityDigest,context.credentialRevisionAtAdmission,
+    context.credentialGenerationAtAdmission,Buffer.from(context.endpointProfileDigest,'hex'),report.rows[0].id]);
+  return {...context,identityMappingRevision:'2',identityMappingDigest:identityDigest.toString('hex'),
+    ownerApprovalId:approval.rows[0].id,testReportId:report.rows[0].id};
+}
+
 beforeAll(async () => {
   const root = fixtureEvidenceRootFromEnvironment();
   const evidenceFile = join(integrationServiceDirectory, 'acceptance-tests', 'evidence', 'm1-task-2', 'postgres-lifecycle.jsonl');
@@ -157,6 +187,76 @@ describe('canonical migration 006', () => {
     expect(privileges.rows[0]).toEqual({ api_insert: false, worker_insert: true, worker_delete_receipt: false, worker_read_barriers: true });
   });
 
+  it('runs complete customer and order applies under hub_worker with no unrelated auth writes', async () => {
+    const customerContext=await seedCustomerApplyProof();
+    const customer={source_pk:'worker-customer',customer_name:'Worker customer',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const customerClient=await database.connect();
+    try {
+      await customerClient.query('BEGIN');
+      await customerClient.query('SET LOCAL ROLE hub_worker');
+      const result=await applyCustomer(customerClient,customerContext,customer);
+      await customerClient.query('COMMIT');
+      expect(result.status).toBe('APPLIED');
+      await customerClient.query('BEGIN');
+      await customerClient.query('SET LOCAL ROLE hub_worker');
+      await expect(customerClient.query('UPDATE control.auth_subject SET auth_epoch=auth_epoch+1 WHERE tenant_key=$1 AND user_id=$2',
+        [customerContext.tenantId,customerContext.ownerUserId])).rejects.toMatchObject({code:'42501'});
+      await customerClient.query('ROLLBACK');
+    } finally { await customerClient.query('ROLLBACK').catch(()=>undefined); customerClient.release(); }
+
+    const orderContext=await seedCustomerApplyProof('SOURCE_VERSION','order');
+    const order={source_pk:'worker-order',customer_external_id:'customer-ext',order_no:'WORKER-1',status:'DRAFT' as const,
+      order_at:'2026-01-01T00:00:00Z',amount:'1.00',currency:'CNY' as const,source_updated_at:'2026-01-01T00:00:00Z',
+      source_version:'1',lines:[{source_line_id:'line-1',product_code:'sku-1',product_name:'Item',quantity:'1.000000',unit_price:'1.000000',line_amount:'1.00'}]};
+    const orderClient=await database.connect();
+    try {
+      await orderClient.query('BEGIN');
+      await orderClient.query('SET LOCAL ROLE hub_worker');
+      const result=await applyOrderAggregate(orderClient,orderContext,order);
+      await orderClient.query('COMMIT');
+      expect(result.status).toBe('APPLIED');
+    } finally { await orderClient.query('ROLLBACK').catch(()=>undefined); orderClient.release(); }
+  });
+
+  it('serializes owner eligibility with a concurrent M0 disable', async () => {
+    const context=await seedCustomerApplyProof();
+    const customer={source_pk:'owner-disable-race',customer_name:'Race customer',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const disable=await database.connect();
+    const apply=await database.connect();
+    let applyPromise:Promise<ApplyResult>|undefined;
+    try {
+      await disable.query('BEGIN');
+      await disable.query('UPDATE control.auth_subject SET enabled=false WHERE tenant_key=$1 AND user_id=$2',[context.tenantId,context.ownerUserId]);
+      await apply.query("SET application_name='m1_t2_owner_disable_apply'");
+      await apply.query('BEGIN');
+      applyPromise=applyCustomer(apply,context,customer);
+      const deadline=Date.now()+2000;
+      let lockWaitObserved=false;
+      while(Date.now()<deadline && !lockWaitObserved) {
+        const activity=await database.query<{wait_event_type:string|null}>(`SELECT wait_event_type FROM pg_stat_activity
+          WHERE application_name='m1_t2_owner_disable_apply'`);
+        lockWaitObserved=activity.rows[0]?.wait_event_type==='Lock';
+        if(!lockWaitObserved) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(lockWaitObserved).toBe(true);
+      await disable.query('COMMIT');
+      await expect(applyPromise).resolves.toMatchObject({status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID'});
+      await apply.query('ROLLBACK');
+      const state=await database.query<{receipts:string;identities:string}>(`SELECT
+        (SELECT count(*)::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_pk=$2) AS receipts,
+        (SELECT count(*)::text FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_pk=$2) AS identities`,
+      [context.tenantId,customer.source_pk]);
+      expect(state.rows[0]).toEqual({receipts:'0',identities:'0'});
+    } finally {
+      await disable.query('ROLLBACK').catch(()=>undefined);
+      if(applyPromise) await applyPromise.catch(()=>undefined);
+      await apply.query('ROLLBACK').catch(()=>undefined);
+      disable.release(); apply.release();
+    }
+  });
+
   it('applies an independently specified customer and handles version receipt outcomes atomically', async () => {
     const context = await seedCustomerApplyProof();
     const customer = {
@@ -168,7 +268,7 @@ describe('canonical migration 006', () => {
       await client.query('BEGIN');
       const first = await applyCustomer(client,context,customer);
       await client.query('COMMIT');
-      expect(first).toMatchObject({ status:'APPLIED', hubRevision:'1' });
+      expect(first.status).toBe('APPLIED');
       const stored = await database.query<{ customer_name:string; owner_user_id:string; source_version:string }>(
         'SELECT customer_name,owner_user_id,source_version::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2',
         [context.tenantId,requireApplied(first).objectId],
@@ -194,6 +294,39 @@ describe('canonical migration 006', () => {
     }
   });
 
+  it('fences old and new owner epochs with a source driven ownership change', async () => {
+    const context=await seedCustomerApplyProof();
+    const client=await database.connect();
+    const customer={source_pk:'source-owner-change',customer_name:'Owner change customer',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const newOwner=`owner-next-${randomBytes(3).toString('hex')}`;
+    try {
+      await client.query('BEGIN');
+      const first=await applyCustomer(client,context,customer);
+      await client.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      const before=await database.query<{user_id:string;auth_epoch:string}>(`SELECT user_id,auth_epoch::text FROM control.auth_subject
+        WHERE tenant_key=$1 AND user_id IN ($2,$3) ORDER BY user_id`,[context.tenantId,context.ownerUserId,newOwner]);
+      const revised=await approveOwnerMapping(context,newOwner);
+      await client.query('BEGIN');
+      const changed=await applyCustomer(client,revised,{...customer,source_version:'2'});
+      await client.query('COMMIT');
+      expect(changed).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
+      const after=await database.query<{user_id:string;auth_epoch:string;owner_user_id:string;audit_count:string}>(`SELECT s.user_id,s.auth_epoch::text,
+        (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$6) AS owner_user_id,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.source_pk=$3) AS audit_count
+        FROM control.auth_subject s WHERE s.tenant_key=$1 AND s.user_id IN ($4,$5) ORDER BY s.user_id`,
+      [context.tenantId,context.sourceId,customer.source_pk,context.ownerUserId,newOwner,requireApplied(first).objectId]);
+      expect(after.rows.map(row=>row.user_id)).toEqual([context.ownerUserId,newOwner].sort());
+      for(const row of after.rows) {
+        const oldEpoch=before.rows.find(old=>old.user_id===row.user_id)?.auth_epoch ?? '0';
+        expect(BigInt(row.auth_epoch)).toBe(BigInt(oldEpoch)+1n);
+        expect(row.owner_user_id).toBe(newOwner);
+        expect(row.audit_count).toBe('1');
+      }
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
   it('applies the first version zero and rejects a customer payload on an order channel', async () => {
     const context=await seedCustomerApplyProof();
     const customer={source_pk:'zero-version',customer_name:'Zero version customer',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
@@ -208,6 +341,50 @@ describe('canonical migration 006', () => {
       await client.query('BEGIN');
       await expect(applyCustomer(client,orderContext,customer)).rejects.toThrow('CANONICAL_APPLY_PROOF_INVALID');
       await client.query('ROLLBACK');
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('uses only the caller transaction and leaves the supplied PoolClient unreleased', async () => {
+    const context=await seedCustomerApplyProof();
+    const client=await database.connect();
+    const originalQuery=client.query.bind(client);
+    const statements:string[]=[];
+    let released=false;
+    const originalRelease=client.release.bind(client);
+    client.query=((query:unknown,...args:unknown[])=>{
+      if(typeof query==='string') statements.push(query.trim().split(/\s+/)[0].toUpperCase());
+      return (originalQuery as (...values:unknown[])=>unknown)(query,...args);
+    }) as typeof client.query;
+    client.release=((...args:Parameters<typeof client.release>)=>{released=true;return originalRelease(...args);}) as typeof client.release;
+    try {
+      await client.query('BEGIN');
+      const result=await applyCustomer(client,context,{source_pk:'caller-owned-client',customer_name:'Caller',owner_external_id:'owner-ext',
+        dept_external_id:'dept-ext',status:'ACTIVE',source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'});
+      expect(result.status).toBe('APPLIED');
+      expect(statements.filter(value=>['BEGIN','COMMIT','ROLLBACK'].includes(value))).toEqual(['BEGIN']);
+      expect(released).toBe(false);
+      await client.query('ROLLBACK');
+      expect(await database.query('SELECT 1 FROM control.source_version_receipt WHERE tenant_key=$1 AND source_pk=$2',
+        [context.tenantId,'caller-owned-client'])).toMatchObject({rowCount:0});
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); originalRelease(); }
+  });
+
+  it('rejects a frozen proof paired with a same-source channel from another connector tuple', async () => {
+    const context=await seedCustomerApplyProof();
+    await database.query(`UPDATE control.source_channel SET state='retired' WHERE id=$1`,[context.channelId]);
+    const channel=await database.query<{id:string}>(`INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,
+      version_domain,channel_epoch,state) VALUES($1,$2,'customer','postgresql','INCREMENTAL',$3,2,'active') RETURNING id`,
+    [context.tenantId,context.sourceId,context.versionDomain]);
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      await expect(applyCustomer(client,{...context,channelId:channel.rows[0].id,channelEpoch:'2'},
+        {source_pk:'mismatched-channel',customer_name:'Reject',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+          status:'ACTIVE',source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'})).rejects.toThrow('CANONICAL_APPLY_PROOF_INVALID');
+      await client.query('ROLLBACK');
+      const receipt=await database.query('SELECT 1 FROM control.source_version_receipt WHERE tenant_key=$1 AND source_pk=$2',
+        [context.tenantId,'mismatched-channel']);
+      expect(receipt.rowCount).toBe(0);
     } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
   });
 
@@ -281,6 +458,45 @@ describe('canonical migration 006', () => {
       const restored=await applyCustomer(client,context,{...customer,source_version:'3'});
       await client.query('COMMIT');
       expect(restored).toMatchObject({status:'APPLIED',objectId:deleted.status==='APPLIED'?requireApplied(deleted).objectId:''});
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('advances a repeated unknown-key snapshot tombstone without another revision or outbox row', async () => {
+    const context=await seedCustomerApplyProof('SNAPSHOT_OBSERVATION');
+    const client=await database.connect();
+    const tombstone={source_pk:'snapshot-unknown-delete',source_version:'1',deleted_at:'2026-02-01T00:00:00Z'};
+    try {
+      await client.query('BEGIN');
+      const first=await applyCustomer(client,context,tombstone as never);
+      await client.query('COMMIT');
+      const objectId=requireApplied(first).objectId;
+      await client.query('BEGIN');
+      const repeated=await applyCustomer(client,context,{...tombstone,source_version:'2'} as never);
+      await client.query('COMMIT');
+      expect(repeated).toMatchObject({status:'DUPLICATE',objectId});
+      const state=await database.query<{source_version:string;canonical_object_id:string;outbox_count:string;core_count:string}>(`SELECT r.source_version::text,
+        r.canonical_object_id::text,(SELECT count(*)::text FROM control.canonical_apply_outbox o
+          WHERE o.tenant_key=r.tenant_key AND o.source_id=r.source_id AND o.canonical_object_id=r.canonical_object_id) AS outbox_count,
+        (SELECT count(*)::text FROM hub.canonical_customer c WHERE c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id) AS core_count
+        FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,
+      [context.tenantId,context.sourceId,tombstone.source_pk]);
+      expect(state.rows[0]).toEqual({source_version:'2',canonical_object_id:objectId,outbox_count:'1',core_count:'0'});
+      const customer={source_pk:tombstone.source_pk,customer_name:'Restored snapshot customer',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+        status:'ACTIVE' as const,source_updated_at:'2026-02-02T00:00:00Z',source_version:'1'};
+      await client.query('BEGIN');
+      const stale=await applyCustomer(client,context,customer);
+      await client.query('COMMIT');
+      expect(stale).toMatchObject({status:'IGNORED_STALE',objectId});
+      await client.query('BEGIN');
+      const restored=await applyCustomer(client,context,{...customer,source_version:'3'});
+      await client.query('COMMIT');
+      expect(restored).toMatchObject({status:'APPLIED',objectId});
+      const restoredState=await database.query<{source_version:string;deleted:boolean;canonical_object_id:string;outbox_count:string}>(`SELECT r.source_version::text,
+        r.deleted,r.canonical_object_id::text,(SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key
+          AND o.source_id=r.source_id AND o.canonical_object_id=r.canonical_object_id) AS outbox_count
+        FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,
+      [context.tenantId,context.sourceId,tombstone.source_pk]);
+      expect(restoredState.rows[0]).toEqual({source_version:'3',deleted:false,canonical_object_id:objectId,outbox_count:'2'});
     } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
   });
 
@@ -371,6 +587,175 @@ describe('canonical migration 006', () => {
     } finally { client.release(); }
   });
 
+  it('uses one projection digest for remap and an unchanged post-remap snapshot observation', async () => {
+    const context=await seedCustomerApplyProof('SNAPSHOT_OBSERVATION');
+    const newOwner=`owner-remap-${randomBytes(3).toString('hex')}`;
+    const client=await database.connect();
+    const customer={source_pk:'snapshot-after-remap',customer_name:'Projection stable',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    try {
+      await database.query("UPDATE control.auth_subject SET management_scopes=ARRAY['source:approve']::text[] WHERE tenant_key=$1 AND user_id=$2",
+        [context.tenantId,context.ownerUserId]);
+      await client.query('BEGIN');
+      const first=await applyCustomer(client,context,customer);
+      await client.query('COMMIT');
+      const revised=await approveOwnerMapping(context,newOwner);
+      const initialEpochs=await database.query<{user_id:string;auth_epoch:string}>(`SELECT user_id,auth_epoch::text FROM control.auth_subject
+        WHERE tenant_key=$1 AND user_id IN ($2,$3) ORDER BY user_id`,[context.tenantId,context.ownerUserId,newOwner]);
+      await client.query('BEGIN');
+      await client.query('SELECT control.remap_canonical_identity($1,$2,\'user\',\'owner-ext\',$3,2,$4,\'rollback correction\')',
+        [context.tenantId,context.sourceId,newOwner,context.ownerUserId]);
+      await client.query('ROLLBACK');
+      const rolledBack=await database.query<{owner_user_id:string;source_version:string;outbox_count:string;audit_count:string;fence_count:string}>(`SELECT c.owner_user_id,
+        r.source_version::text,(SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key AND o.canonical_object_id=r.canonical_object_id) AS outbox_count,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=r.tenant_key AND a.source_pk=r.source_pk) AS audit_count,
+        (SELECT count(*)::text FROM control.source_identity_remap_fence f WHERE f.tenant_key=r.tenant_key AND f.source_id=r.source_id) AS fence_count
+        FROM control.source_version_receipt r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[context.tenantId,context.sourceId,customer.source_pk]);
+      expect(rolledBack.rows[0]).toEqual({owner_user_id:context.ownerUserId,source_version:'1',outbox_count:'1',audit_count:'0',fence_count:'0'});
+      expect((await database.query<{auth_epoch:string}>(`SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2`,
+        [context.tenantId,context.ownerUserId])).rows[0].auth_epoch).toBe(initialEpochs.rows.find(row=>row.user_id===context.ownerUserId)?.auth_epoch);
+      await client.query('BEGIN');
+      await client.query('SELECT control.remap_canonical_identity($1,$2,\'user\',\'owner-ext\',$3,2,$4,\'approved correction\')',
+        [context.tenantId,context.sourceId,newOwner,context.ownerUserId]);
+      await client.query('COMMIT');
+      const remapDigest=await database.query<{matches:boolean;outbox_count:string}>(`SELECT
+        o.projection_digest=control.canonical_projection_digest(r.source_content_digest,r.canonical_object_id,
+          jsonb_build_object('owner_user_id',c.owner_user_id,'department_id',c.dept_id)) AS matches,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox x WHERE x.tenant_key=o.tenant_key AND x.canonical_object_id=o.canonical_object_id) AS outbox_count
+        FROM control.canonical_apply_outbox o JOIN control.source_version_receipt r
+          ON (r.tenant_key,r.source_id,r.entity,r.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
+        JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE o.tenant_key=$1 AND o.source_id=$2 AND o.canonical_object_id=$3 AND o.operation='IDENTITY_REMAP'`,
+      [context.tenantId,context.sourceId,requireApplied(first).objectId]);
+      expect(remapDigest.rows[0]).toEqual({matches:true,outbox_count:'2'});
+      const remappedState=await database.query<{owner_user_id:string;dept_id:string;source_version:string;digest:string;user_ref:string;dept_ref:string;hub_revision:string}>(`SELECT
+        c.owner_user_id,c.dept_id,c.hub_revision::text,r.source_version::text,encode(r.source_content_digest,'hex') AS digest,
+        (SELECT target_id FROM control.canonical_identity_reference x WHERE x.tenant_key=r.tenant_key AND x.source_id=r.source_id
+          AND x.source_pk=r.source_pk AND x.kind='user') AS user_ref,
+        (SELECT target_id FROM control.canonical_identity_reference x WHERE x.tenant_key=r.tenant_key AND x.source_id=r.source_id
+          AND x.source_pk=r.source_pk AND x.kind='department') AS dept_ref
+        FROM control.source_version_receipt r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[context.tenantId,context.sourceId,customer.source_pk]);
+      expect(remappedState.rows[0]).toMatchObject({owner_user_id:newOwner,dept_id:'sales-east',source_version:'1',
+        digest:requireApplied(first).digest,user_ref:newOwner,dept_ref:'sales-east'});
+      await client.query('BEGIN');
+      const unchanged=await applyCustomer(client,revised,{...customer,source_version:'2'});
+      await client.query('COMMIT');
+      expect(unchanged).toMatchObject({status:'DUPLICATE',objectId:requireApplied(first).objectId});
+      const state=await database.query<{source_version:string;owner_user_id:string;hub_revision:string;outbox_count:string}>(`SELECT r.source_version::text,c.owner_user_id,
+        c.hub_revision::text,(SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key AND o.canonical_object_id=r.canonical_object_id) AS outbox_count
+        FROM control.source_version_receipt r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[context.tenantId,context.sourceId,customer.source_pk]);
+      expect(state.rows[0]).toEqual({source_version:'2',owner_user_id:newOwner,hub_revision:remappedState.rows[0].hub_revision,outbox_count:'2'});
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('serializes a source apply with an explicit owner remap and fences the older accepted mapping', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-race-${randomBytes(3).toString('hex')}`;
+    const customer={source_pk:'apply-remap-race',customer_name:'Race before remap',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    await database.query("UPDATE control.auth_subject SET management_scopes=ARRAY['source:approve']::text[] WHERE tenant_key=$1 AND user_id=$2",
+      [context.tenantId,context.ownerUserId]);
+    const revised=await approveOwnerMapping(context,newOwner);
+    const apply=await database.connect();
+    const remap=await database.connect();
+    let remapPromise:Promise<unknown>|undefined;
+    let applyPromise:Promise<ApplyResult>|undefined;
+    try {
+      await apply.query("SELECT set_config('application_name','m1_t2_apply_remap_hold',false)");
+      await apply.query('BEGIN');
+      applyPromise=applyCustomer(apply,context,customer);
+      await expect(applyPromise).resolves.toMatchObject({status:'APPLIED'});
+
+      await remap.query("SELECT set_config('application_name','m1_t2_apply_remap_wait',false)");
+      await remap.query('BEGIN');
+      await remap.query('SET LOCAL ROLE hub_api');
+      remapPromise=remap.query(`SELECT control.remap_canonical_identity($1,$2,'user','owner-ext',$3,2,$4,'concurrent approved correction')`,
+        [context.tenantId,context.sourceId,newOwner,context.ownerUserId]);
+      const deadline=Date.now()+2000;
+      let lockWaitObserved=false;
+      while(Date.now()<deadline && !lockWaitObserved) {
+        const activity=await database.query<{wait_event_type:string|null}>(`SELECT wait_event_type FROM pg_stat_activity
+          WHERE application_name='m1_t2_apply_remap_wait'`);
+        lockWaitObserved=activity.rows[0]?.wait_event_type==='Lock';
+        if(!lockWaitObserved) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(lockWaitObserved).toBe(true);
+      await apply.query('COMMIT');
+      await expect(remapPromise).resolves.toBeDefined();
+      await remap.query('COMMIT');
+
+      const stale=await database.connect();
+      try {
+        await stale.query('BEGIN');
+        await expect(applyCustomer(stale,context,{...customer,source_version:'2',customer_name:'Stale mapping update'}))
+          .resolves.toMatchObject({status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED'});
+        await stale.query('ROLLBACK');
+      } finally { await stale.query('ROLLBACK').catch(()=>undefined); stale.release(); }
+
+      const state=await database.query<{owner_user_id:string;receipt_version:string;outbox_count:string;audit_count:string}>(`SELECT c.owner_user_id,
+        r.source_version::text AS receipt_version,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=r.tenant_key AND o.canonical_object_id=r.canonical_object_id) AS outbox_count,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=r.tenant_key AND a.source_pk=r.source_pk) AS audit_count
+        FROM control.source_version_receipt r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=r.canonical_object_id
+        WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[context.tenantId,context.sourceId,customer.source_pk]);
+      expect(state.rows[0]).toEqual({owner_user_id:newOwner,receipt_version:'1',outbox_count:'2',audit_count:'1'});
+      expect(revised.identityMappingRevision).toBe('2');
+    } finally {
+      await apply.query('ROLLBACK').catch(()=>undefined);
+      await remapPromise?.catch(()=>undefined);
+      await remap.query('ROLLBACK').catch(()=>undefined);
+      apply.release(); remap.release();
+    }
+  });
+
+  it('rejects a department remap that contradicts the current M0 owner department', async () => {
+    const context=await seedCustomerApplyProof();
+    const customerId=(await database.query<{id:string}>(`SELECT id::text FROM hub.canonical_customer WHERE tenant_id=$1`,[context.tenantId])).rows[0].id;
+    await database.query(`UPDATE control.auth_subject SET management_scopes=ARRAY['source:approve']::text[] WHERE tenant_key=$1 AND user_id=$2`,
+      [context.tenantId,context.ownerUserId]);
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,'other-sales','dept-other','sales')`,[context.tenantId]);
+    await database.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+      VALUES($1,$2,2,$3,$4::jsonb,$5)`,[context.tenantId,context.sourceId,Buffer.alloc(32,0x66),JSON.stringify([
+        {kind:'user',external_id:'owner-ext',target_id:context.ownerUserId},
+        {kind:'department',external_id:'dept-ext',target_id:'dept-other'},
+      ]),context.ownerUserId]);
+    await database.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+      VALUES($1,$2,'customer','dept-remap-target',$3,$3)`,[context.tenantId,context.sourceId,customerId]);
+    await database.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
+      VALUES($1,$2,'customer','dept-remap-target','user','owner-ext',$3),($1,$2,'customer','dept-remap-target','department','dept-ext','sales-east')`,
+    [context.tenantId,context.sourceId,context.ownerUserId]);
+    await database.query(`INSERT INTO control.source_version_receipt(tenant_key,source_id,channel_id,channel_epoch,entity,source_pk,version_domain,
+      source_version,source_content_digest,projection_digest,canonical_object_id,deleted)
+      VALUES($1,$2,$3,1,'customer','dept-remap-target','SOURCE_VERSION',1,$4,$5,$6,false)`,
+    [context.tenantId,context.sourceId,context.channelId,Buffer.alloc(32,0x77),Buffer.alloc(32,0x88),customerId]);
+    const before=await database.query(`SELECT c.dept_id,r.target_id,
+      (SELECT auth_epoch FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS owner_epoch,
+      (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_pk='dept-remap-target') AS audits,
+      (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3) AS outbox,
+      (SELECT count(*)::text FROM control.source_identity_remap_fence WHERE tenant_key=$1 AND source_id=$3) AS fences
+      FROM hub.canonical_customer c JOIN control.canonical_identity_reference r ON r.tenant_key=c.tenant_id AND r.target_id=c.dept_id
+      WHERE c.tenant_id=$1 AND c.id=$4 AND r.kind='department'`,[context.tenantId,context.ownerUserId,context.sourceId,customerId]);
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      await expect(client.query(`SELECT control.remap_canonical_identity($1,$2,'department','dept-ext','dept-other',2,$3,'contradiction')`,
+        [context.tenantId,context.sourceId,context.ownerUserId])).rejects.toMatchObject({code:'22023'});
+      await client.query('ROLLBACK');
+      const after=await database.query(`SELECT c.dept_id,r.target_id,
+        (SELECT auth_epoch FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS owner_epoch,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_pk='dept-remap-target') AS audits,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3) AS outbox,
+        (SELECT count(*)::text FROM control.source_identity_remap_fence WHERE tenant_key=$1 AND source_id=$3) AS fences
+        FROM hub.canonical_customer c JOIN control.canonical_identity_reference r ON r.tenant_key=c.tenant_id AND r.target_id=c.dept_id
+        WHERE c.tenant_id=$1 AND c.id=$4 AND r.kind='department'`,[context.tenantId,context.ownerUserId,context.sourceId,customerId]);
+      expect(after.rows).toEqual(before.rows);
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
   it('replaces the complete order line image, retains tombstones, and restores only with a higher source version', async () => {
     const context=await seedCustomerApplyProof('SOURCE_VERSION','order');
     const base={source_pk:'order-100',customer_external_id:'customer-ext',order_no:'O-100',status:'CONFIRMED' as const,
@@ -383,17 +768,24 @@ describe('canonical migration 006', () => {
       const first=await applyOrderAggregate(client,context,{...base,source_version:'1'});
       await client.query('COMMIT');
       expect(first.status).toBe('APPLIED');
-      const initialLines=await database.query<{source_line_id:string;line_amount:string}>(
-        'SELECT source_line_id,line_amount::text FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2 ORDER BY source_line_id',
+      const initialLines=await database.query<{id:string;source_line_id:string;line_amount:string;deleted_at:Date|null}>(
+        'SELECT id::text,source_line_id,line_amount::text,deleted_at FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2 ORDER BY source_line_id',
         [context.tenantId,requireApplied(first).objectId]);
-      expect(initialLines.rows).toEqual([{source_line_id:'line-a',line_amount:'1800.00'},{source_line_id:'line-b',line_amount:'50.00'}]);
+      expect(initialLines.rows.map(({source_line_id,line_amount,deleted_at})=>({source_line_id,line_amount,deleted_at}))).toEqual([
+        {source_line_id:'line-a',line_amount:'1800.00',deleted_at:null},{source_line_id:'line-b',line_amount:'50.00',deleted_at:null},
+      ]);
 
       await client.query('BEGIN');
-      const replacement=await applyOrderAggregate(client,context,{...base,source_version:'2',lines:[base.lines[0]]});
+      const replacement=await applyOrderAggregate(client,context,{...base,source_version:'2',lines:[{...base.lines[0],product_name:'A revised',line_amount:'9.00'}]});
       await client.query('COMMIT');
       expect(replacement.status).toBe('APPLIED');
-      await expect(database.query('SELECT 1 FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2 AND source_line_id=$3',
-        [context.tenantId,requireApplied(first).objectId,'line-b'])).resolves.toMatchObject({rowCount:0});
+      const replacedLines=await database.query<{id:string;source_line_id:string;product_name:string;line_amount:string;deleted_at:Date|null}>(
+        'SELECT id::text,source_line_id,product_name,line_amount::text,deleted_at FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2 ORDER BY source_line_id',
+        [context.tenantId,requireApplied(first).objectId]);
+      expect(replacedLines.rows).toEqual([
+        {id:initialLines.rows[0].id,source_line_id:'line-a',product_name:'A revised',line_amount:'9.00',deleted_at:null},
+        {id:initialLines.rows[1].id,source_line_id:'line-b',product_name:'B',line_amount:'50.00',deleted_at:expect.any(Date)},
+      ]);
 
       await client.query('BEGIN');
       const deleted=await applyOrderAggregate(client,context,{...base,source_version:'3',deleted_at:'2026-02-04T00:00:00Z',lines:[]});
@@ -410,42 +802,108 @@ describe('canonical migration 006', () => {
       await client.query('COMMIT');
       expect(staleRestore.status).toBe('IGNORED_STALE');
       await client.query('BEGIN');
-      const restored=await applyOrderAggregate(client,context,{...base,source_version:'4',deleted_at:null,lines:[]});
+      const restored=await applyOrderAggregate(client,context,{...base,source_version:'4',deleted_at:null,lines:[base.lines[0]]});
       await client.query('COMMIT');
       expect(restored).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
-      const restoredRow=await database.query<{deleted_at:Date|null;line_count:string}>(`SELECT deleted_at,
-        (SELECT count(*)::text FROM hub.canonical_order_line l WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.deleted_at IS NULL) AS line_count
+      const restoredRow=await database.query<{deleted_at:Date|null;line_count:string;line_id:string;old_line_id:string}>(`SELECT deleted_at,
+        (SELECT count(*)::text FROM hub.canonical_order_line l WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.deleted_at IS NULL) AS line_count,
+        (SELECT id::text FROM hub.canonical_order_line l WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.source_line_id='line-a') AS line_id,
+        (SELECT id::text FROM hub.canonical_order_line l WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.source_line_id='line-b') AS old_line_id
         FROM hub.canonical_order o WHERE o.tenant_id=$1 AND o.id=$2`,[context.tenantId,requireApplied(first).objectId]);
-      expect(restoredRow.rows[0]).toEqual({deleted_at:null,line_count:'0'});
+      expect(restoredRow.rows[0]).toEqual({deleted_at:null,line_count:'1',line_id:initialLines.rows[0].id,old_line_id:initialLines.rows[1].id});
     } finally { client.release(); }
   });
 
-  it('rolls back the order header, first line, receipt, and outbox if a middle line write fails', async () => {
+  it('preserves the complete T0 order image when header, each representative line, receipt, or outbox fails', async () => {
     const context=await seedCustomerApplyProof('SOURCE_VERSION','order');
     const client=await database.connect();
+    const sourcePk='order-rollback-matrix';
+    let orderId='';
+    const base={source_pk:sourcePk,customer_external_id:'customer-ext',order_no:'O-RB',status:'DRAFT' as const,
+      order_at:'2026-02-03T00:00:00Z',amount:'3.00',currency:'CNY' as const,source_updated_at:'2026-02-03T00:00:00Z',deleted_at:null,
+      lines:['line-first','line-middle','line-last'].map((source_line_id,index)=>({source_line_id,product_code:`SKU-${index}`,
+        product_name:`Item ${index}`,quantity:'1.000000',unit_price:'1.000000',line_amount:'1.00'}))};
+    const state=async()=>{
+      const [header,lines,receipt,outbox]=await Promise.all([
+        database.query(`SELECT id::text,order_no,amount::text,source_version::text,hub_revision::text FROM hub.canonical_order WHERE tenant_id=$1 AND id=$2`,
+          [context.tenantId,orderId]),
+        database.query(`SELECT id::text,source_line_id,product_name,deleted_at,hub_revision::text FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2 ORDER BY source_line_id`,
+          [context.tenantId,orderId]),
+        database.query(`SELECT source_version::text,source_content_digest,projection_digest,canonical_object_id::text,deleted FROM control.source_version_receipt
+          WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3`,[context.tenantId,context.sourceId,sourcePk]),
+        database.query(`SELECT count(*)::text AS count FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2`,
+          [context.tenantId,context.sourceId]),
+      ]);
+      return {header:header.rows,lines:lines.rows,receipt:receipt.rows,outbox:outbox.rows[0].count};
+    };
     try {
-      await database.query(`CREATE FUNCTION control.fail_canonical_test_line() RETURNS trigger LANGUAGE plpgsql AS $$
-        BEGIN IF NEW.source_line_id='line-fail' THEN RAISE EXCEPTION 'fixture line failure'; END IF; RETURN NEW; END $$`);
-      await database.query(`CREATE TRIGGER fail_canonical_test_line BEFORE INSERT ON hub.canonical_order_line
-        FOR EACH ROW EXECUTE FUNCTION control.fail_canonical_test_line()`);
       await client.query('BEGIN');
-      await expect(applyOrderAggregate(client,context,{source_pk:'order-rollback',customer_external_id:'customer-ext',order_no:'O-RB',status:'DRAFT',
-        order_at:'2026-02-03T00:00:00Z',amount:'1.00',currency:'CNY',source_updated_at:'2026-02-03T00:00:00Z',source_version:'1',deleted_at:null,
-        lines:[{source_line_id:'line-first',product_code:'SKU-A',product_name:'A',quantity:'1.000000',unit_price:'1.000000',line_amount:'1.00'},
-          {source_line_id:'line-fail',product_code:'SKU-B',product_name:'B',quantity:'1.000000',unit_price:'1.000000',line_amount:'1.00'}]}))
-        .rejects.toThrow('fixture line failure');
-      await client.query('ROLLBACK');
-      const leftovers=await database.query<{orders:string;lines:string;receipts:string;outbox:string}>(`SELECT
-        (SELECT count(*)::text FROM hub.canonical_order WHERE tenant_id=$1 AND order_no='O-RB') AS orders,
-        (SELECT count(*)::text FROM hub.canonical_order_line WHERE tenant_id=$1 AND source_line_id IN ('line-first','line-fail')) AS lines,
-        (SELECT count(*)::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$2 AND source_pk='order-rollback') AS receipts,
-        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2 AND canonical_object_id IN
-          (SELECT id FROM hub.canonical_order WHERE tenant_id=$1 AND order_no='O-RB')) AS outbox`,[context.tenantId,context.sourceId]);
-      expect(leftovers.rows[0]).toEqual({orders:'0',lines:'0',receipts:'0',outbox:'0'});
+      const first=await applyOrderAggregate(client,context,{...base,source_version:'1'});
+      await client.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      orderId=requireApplied(first).objectId;
+      const t0=await state();
+      expect(t0.header[0]).toMatchObject({order_no:'O-RB',amount:'3.00',source_version:'1',hub_revision:requireApplied(first).hubRevision});
+      expect(t0.lines).toHaveLength(3);
+      expect(t0.receipt[0]).toMatchObject({source_version:'1',canonical_object_id:requireApplied(first).objectId,deleted:false});
+      expect(t0.outbox).toBe('1');
+
+      await database.query(`CREATE FUNCTION control.fail_canonical_test_checkpoint() RETURNS trigger LANGUAGE plpgsql AS $$
+        DECLARE point text := current_setting('m1_t2.failpoint',true); BEGIN
+          IF TG_TABLE_NAME='canonical_order' AND point='header' THEN
+            RAISE EXCEPTION 'fixture failure %',point;
+          ELSIF TG_TABLE_NAME='canonical_order_line' AND point IN ('first','middle','last') THEN
+            IF NEW.source_line_id='line-'||point THEN RAISE EXCEPTION 'fixture failure %',point; END IF;
+          ELSIF TG_TABLE_NAME='source_version_receipt' AND point='receipt' THEN
+            RAISE EXCEPTION 'fixture failure %',point;
+          ELSIF TG_TABLE_NAME='canonical_apply_outbox' AND point='outbox' THEN
+            RAISE EXCEPTION 'fixture failure %',point;
+          END IF;
+          RETURN NEW;
+        END $$`);
+      await database.query(`CREATE TRIGGER fail_canonical_header BEFORE INSERT ON hub.canonical_order
+        FOR EACH ROW EXECUTE FUNCTION control.fail_canonical_test_checkpoint()`);
+      await database.query(`CREATE TRIGGER fail_canonical_line BEFORE INSERT ON hub.canonical_order_line
+        FOR EACH ROW EXECUTE FUNCTION control.fail_canonical_test_checkpoint()`);
+      await database.query(`CREATE TRIGGER fail_canonical_receipt BEFORE INSERT ON control.source_version_receipt
+        FOR EACH ROW EXECUTE FUNCTION control.fail_canonical_test_checkpoint()`);
+      await database.query(`CREATE TRIGGER fail_canonical_outbox BEFORE INSERT ON control.canonical_apply_outbox
+        FOR EACH ROW EXECUTE FUNCTION control.fail_canonical_test_checkpoint()`);
+
+      for(const point of ['header','first','middle','last','receipt','outbox'] as const) {
+        await client.query('BEGIN');
+        await client.query("SELECT set_config('m1_t2.failpoint',$1,true)",[point]);
+        await expect(applyOrderAggregate(client,context,{...base,amount:'4.00',source_version:'2',
+          lines:base.lines.map(line=>({...line,product_name:`revised ${line.product_name}`}))})).rejects.toThrow(`fixture failure ${point}`);
+        await client.query('ROLLBACK');
+        expect(await state()).toEqual(t0);
+      }
     } finally {
-      await database.query('DROP TRIGGER IF EXISTS fail_canonical_test_line ON hub.canonical_order_line').catch(()=>undefined);
-      await database.query('DROP FUNCTION IF EXISTS control.fail_canonical_test_line()').catch(()=>undefined);
+      await database.query('DROP TRIGGER IF EXISTS fail_canonical_header ON hub.canonical_order').catch(()=>undefined);
+      await database.query('DROP TRIGGER IF EXISTS fail_canonical_line ON hub.canonical_order_line').catch(()=>undefined);
+      await database.query('DROP TRIGGER IF EXISTS fail_canonical_receipt ON control.source_version_receipt').catch(()=>undefined);
+      await database.query('DROP TRIGGER IF EXISTS fail_canonical_outbox ON control.canonical_apply_outbox').catch(()=>undefined);
+      await database.query('DROP FUNCTION IF EXISTS control.fail_canonical_test_checkpoint()').catch(()=>undefined);
+      await client.query('ROLLBACK').catch(()=>undefined);
       client.release();
     }
+  });
+
+  it('persists a complete 200-line order image', async () => {
+    const context=await seedCustomerApplyProof('SOURCE_VERSION','order');
+    const order={source_pk:'order-two-hundred',customer_external_id:'customer-ext',order_no:'O-200',status:'DRAFT' as const,
+      order_at:'2026-02-03T00:00:00Z',amount:'0.00',currency:'CNY' as const,source_updated_at:'2026-02-03T00:00:00Z',source_version:'1',
+      lines:Array.from({length:200},(_,index)=>({source_line_id:`line-${String(index).padStart(3,'0')}`,product_code:`SKU-${index}`,
+        product_name:`Product ${index}`,quantity:'1.000000',unit_price:'0.000000',line_amount:'0.00'}))};
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      const result=await applyOrderAggregate(client,context,order);
+      await client.query('COMMIT');
+      expect(result.status).toBe('APPLIED');
+      const count=await database.query<{count:string}>(`SELECT count(*)::text AS count FROM hub.canonical_order_line
+        WHERE tenant_id=$1 AND order_id=$2`,[context.tenantId,requireApplied(result).objectId]);
+      expect(count.rows[0].count).toBe('200');
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
   });
 });

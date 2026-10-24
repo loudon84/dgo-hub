@@ -47,7 +47,8 @@ export type ApplyResult =
 type IdentityMapping = Readonly<{ kind: 'user' | 'department' | 'customer'; external_id: string; target_id: string | null }>;
 type FrozenProof = {
   identity_mappings: IdentityMapping[];
-  config: { allowed_entities?: unknown };
+  config: { allowed_entities?: unknown; connector?: unknown; mode?: unknown; version_domain?: unknown };
+  data_contract_ref: string;
 };
 type Receipt = QueryResultRow & { source_version: string; source_content_digest: Buffer; canonical_object_id: string; deleted: boolean; projection_digest: Buffer };
 
@@ -81,8 +82,8 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
   );
   if (credentialResult.rows[0]?.id !== context.credentialId) throw new Error('CANONICAL_APPLY_PROOF_INVALID');
 
-  const channel = await client.query<{ state: string; version_domain: string; channel_epoch: string }>(`
-    SELECT state,version_domain,channel_epoch::text FROM control.source_channel
+  const channel = await client.query<{ state: string; connector: string; mode: string; version_domain: string; channel_epoch: string }>(`
+    SELECT state,connector,mode,version_domain,channel_epoch::text FROM control.source_channel
      WHERE id=$1 AND tenant_key=$2 AND source_id=$3 AND entity=$4`,
   [context.channelId,context.tenantId,context.sourceId,context.entity]);
   if (!channel.rowCount || channel.rows[0].version_domain !== context.versionDomain ||
@@ -93,7 +94,7 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
   if (channel.rows[0].state !== 'active') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
 
   const frozen = await client.query<FrozenProof>(`
-    SELECT i.mappings AS identity_mappings,c.config
+    SELECT i.mappings AS identity_mappings,c.config,a.data_contract_ref
       FROM control.source_owner_approval a
       JOIN control.source_test_report t ON t.id=a.test_report_id
       JOIN control.source_config_revision c
@@ -114,6 +115,7 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
        AND t.identity_mapping_digest=a.identity_mapping_digest
        AND t.source_credential_revision=a.source_credential_revision AND t.credential_generation=a.credential_generation
        AND t.endpoint_profile_digest=a.endpoint_profile_digest
+       AND t.data_contract_ref=a.data_contract_ref
        AND c.config_digest=$10 AND m.mapping_digest=$11 AND i.mapping_digest=$12
        AND c.config->'allowed_entities' ? $16`,
   [context.ownerApprovalId,context.testReportId,context.tenantId,context.sourceId,context.ownerUserId,
@@ -123,6 +125,11 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
     decimalProof(context.credentialRevisionAtAdmission,'CANONICAL_APPLY_PROOF_INVALID'),
     decimalProof(context.credentialGenerationAtAdmission,'CANONICAL_APPLY_PROOF_INVALID'),digestBytes(context.endpointProfileDigest),context.entity]);
   if (!frozen.rowCount || !Array.isArray(frozen.rows[0].identity_mappings)) throw new Error('CANONICAL_APPLY_PROOF_INVALID');
+  const config=frozen.rows[0].config;
+  if (channel.rows[0].connector!==config.connector || channel.rows[0].mode!==config.mode ||
+      channel.rows[0].version_domain!==config.version_domain || typeof frozen.rows[0].data_contract_ref!=='string') {
+    throw new Error('CANONICAL_APPLY_PROOF_INVALID');
+  }
 
   const barrier = await client.query<{ barrier_type: string }>(`
     SELECT barrier_type FROM control.source_security_barrier
@@ -160,18 +167,19 @@ async function resolveCustomerOwner(client: PoolClient, context: ApplyContext, m
   const owner = mappingFor(mappings,'user',input.owner_external_id);
   const dept = mappingFor(mappings,'department',input.dept_external_id);
   if (!owner || !dept || !owner.target_id || !dept.target_id) return { result:{ status:'QUARANTINED',code:'IDENTITY_MAPPING_REQUIRED' } as const };
-  const subject = await client.query<{ department_id:string|null; business_role:string|null }>(`
-    SELECT department_id,business_role FROM control.auth_subject
-     WHERE tenant_key=$1 AND user_id=$2 AND enabled`,[context.tenantId,owner.target_id]);
-  if (!subject.rowCount || subject.rows[0].business_role !== 'sales' || !subject.rows[0].department_id ||
+  const subject = await client.query<{ enabled:boolean;department_id:string|null; business_role:string|null }>(
+    'SELECT enabled,business_role,department_id FROM control.lock_canonical_owner($1,$2)',[context.tenantId,owner.target_id]);
+  if (!subject.rowCount || !subject.rows[0].enabled || subject.rows[0].business_role !== 'sales' || !subject.rows[0].department_id ||
       subject.rows[0].department_id !== dept.target_id) {
     return { result:{ status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' } as const };
   }
   return { ownerUserId:owner.target_id,departmentId:subject.rows[0].department_id };
 }
 
-function projectionDigest(value: unknown): Buffer {
-  return Buffer.from(sourceContentDigest(value),'hex');
+async function projectionDigest(client:PoolClient,sourceDigest:Buffer,objectId:string,identity:Record<string,string|boolean|null>):Promise<Buffer> {
+  const result=await client.query<{digest:Buffer}>(`SELECT control.canonical_projection_digest($1,$2::uuid,$3::jsonb) AS digest`,
+    [sourceDigest,objectId,JSON.stringify(identity)]);
+  return result.rows[0].digest;
 }
 
 async function allocateRevision(client: PoolClient): Promise<string> {
@@ -234,11 +242,16 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
       return { status:'QUARANTINED',code:'SOURCE_VERSION_CONFLICT' };
     }
   }
+  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior?.deleted && input.deleted_at!=null && prior.source_content_digest.equals(sourceDigest)) {
+    await writeReceipt(client,context,{sourcePk:input.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,
+      projection:prior.projection_digest,deleted:true});
+    return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+  }
   if (input.deleted_at != null) {
     const identity = await lockSourceIdentity(client,context,input.source_pk);
     const objectId = identity.rows[0]?.canonical_object_id ?? randomUUID();
     const revision = await allocateRevision(client);
-    const projection=projectionDigest({canonical_object_id:objectId,source_content_digest:sourceDigest.toString('hex'),deleted_at:input.deleted_at});
+    const projection=await projectionDigest(client,sourceDigest,objectId,{deleted:true,deleted_at:input.deleted_at});
     if (identity.rows[0]?.customer_id) {
       await client.query(`UPDATE hub.canonical_customer SET deleted_at=$3,source_version=$4,version_domain=$5,
         channel_epoch=$6,hub_revision=$7 WHERE tenant_id=$1 AND id=$2`,
@@ -262,15 +275,34 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
   }
   const resolved = await resolveCustomerOwner(client,context,proof.identity_mappings,customerInput);
   if ('result' in resolved && resolved.result) return resolved.result;
-  const projection = projectionDigest({ sourceDigest:sourceDigest.toString('hex'),ownerUserId:resolved.ownerUserId,departmentId:resolved.departmentId,customer:customerInput });
-  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) &&
-      prior.projection_digest.equals(projection) && prior.deleted===(customerInput.deleted_at != null)) {
-    await writeReceipt(client,context,{sourcePk:customerInput.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,
-      projection,deleted:customerInput.deleted_at != null});
-    return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) && !prior.deleted) {
+    const current=await client.query<{owner_user_id:string;dept_id:string;deleted_at:Date|null}>(`SELECT owner_user_id,dept_id,deleted_at
+      FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2`,[context.tenantId,prior.canonical_object_id]);
+    if(current.rowCount && current.rows[0].deleted_at===null && current.rows[0].owner_user_id===resolved.ownerUserId &&
+       current.rows[0].dept_id===resolved.departmentId) {
+      const projection=await projectionDigest(client,sourceDigest,prior.canonical_object_id,
+        {owner_user_id:resolved.ownerUserId,department_id:resolved.departmentId});
+      await writeReceipt(client,context,{sourcePk:customerInput.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,projection,deleted:false});
+      return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+    }
   }
   const identity = await lockSourceIdentity(client,context,input.source_pk);
   const objectId = identity.rows[0]?.canonical_object_id ?? randomUUID();
+  const existingAuthority=identity.rows[0]?.customer_id ? await client.query<{owner_user_id:string;dept_id:string}>(
+    'SELECT owner_user_id,dept_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2',
+    [context.tenantId,identity.rows[0].customer_id]) : undefined;
+  if(existingAuthority?.rowCount && (existingAuthority.rows[0].owner_user_id!==resolved.ownerUserId ||
+      existingAuthority.rows[0].dept_id!==resolved.departmentId)) {
+    const ownerChanged=existingAuthority.rows[0].owner_user_id!==resolved.ownerUserId;
+    await client.query('SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::bigint,$11)',[
+      context.tenantId,context.sourceId,customerInput.source_pk,ownerChanged?'user':'department',
+      ownerChanged?customerInput.owner_external_id:customerInput.dept_external_id,
+      ownerChanged?existingAuthority.rows[0].owner_user_id:existingAuthority.rows[0].dept_id,
+      ownerChanged?resolved.ownerUserId:resolved.departmentId,
+      existingAuthority.rows[0].owner_user_id,resolved.ownerUserId,context.identityMappingRevision,context.ownerUserId,
+    ]);
+  }
+  const projection=await projectionDigest(client,sourceDigest,objectId,{owner_user_id:resolved.ownerUserId,department_id:resolved.departmentId});
   const revision = await allocateRevision(client);
   await client.query(`INSERT INTO hub.canonical_customer
     (tenant_id,id,customer_name,owner_user_id,dept_id,status,phone,source_updated_at,source_version,version_domain,channel_epoch,deleted_at,hub_revision)
@@ -314,11 +346,16 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
       return { status:'QUARANTINED',code:'SOURCE_VERSION_CONFLICT' };
     }
   }
+  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior?.deleted && input.deleted_at!=null && prior.source_content_digest.equals(sourceDigest)) {
+    await writeReceipt(client,context,{sourcePk:input.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,
+      projection:prior.projection_digest,deleted:true});
+    return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+  }
   if (input.deleted_at != null) {
     const identity=await lockSourceIdentity(client,context,input.source_pk);
     const objectId=identity.rows[0]?.canonical_object_id ?? randomUUID();
     const revision=await allocateRevision(client);
-    const projection=projectionDigest({canonical_object_id:objectId,source_content_digest:sourceDigest.toString('hex'),deleted_at:input.deleted_at});
+    const projection=await projectionDigest(client,sourceDigest,objectId,{deleted:true,deleted_at:input.deleted_at});
     if (identity.rows[0]?.order_id) {
       await client.query(`UPDATE hub.canonical_order SET deleted_at=$3,source_version=$4,version_domain=$5,
         channel_epoch=$6,hub_revision=$7 WHERE tenant_id=$1 AND id=$2`,
@@ -345,15 +382,18 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
   const customer = await client.query<{ id:string }>(`SELECT id FROM hub.canonical_customer
     WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`,[context.tenantId,customerMapping.target_id]);
   if (!customer.rowCount) return { status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' };
-  const projection = projectionDigest({ sourceDigest:sourceDigest.toString('hex'),customerId:customer.rows[0].id,order:orderInput });
-  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) &&
-      prior.projection_digest.equals(projection) && prior.deleted===(orderInput.deleted_at != null)) {
-    await writeReceipt(client,context,{sourcePk:orderInput.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,
-      projection,deleted:orderInput.deleted_at != null});
-    return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+  if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) && !prior.deleted) {
+    const current=await client.query<{customer_id:string;deleted_at:Date|null}>(`SELECT customer_id,deleted_at
+      FROM hub.canonical_order WHERE tenant_id=$1 AND id=$2`,[context.tenantId,prior.canonical_object_id]);
+    if(current.rowCount && current.rows[0].deleted_at===null && current.rows[0].customer_id===customer.rows[0].id) {
+      const projection=await projectionDigest(client,sourceDigest,prior.canonical_object_id,{customer_id:customer.rows[0].id});
+      await writeReceipt(client,context,{sourcePk:orderInput.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,projection,deleted:false});
+      return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
+    }
   }
   const identity = await lockSourceIdentity(client,context,orderInput.source_pk);
   const objectId = identity.rows[0]?.canonical_object_id ?? randomUUID();
+  const projection=await projectionDigest(client,sourceDigest,objectId,{customer_id:customer.rows[0].id});
   const revision = await allocateRevision(client);
   await client.query(`INSERT INTO hub.canonical_order
     (tenant_id,id,customer_id,order_no,status,order_at,amount,currency,source_updated_at,source_version,version_domain,channel_epoch,deleted_at,hub_revision)
@@ -376,13 +416,21 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
     await client.query(`UPDATE hub.canonical_order_line SET deleted_at=$3,hub_revision=nextval('control.canonical_hub_revision_seq')
       WHERE tenant_id=$1 AND order_id=$2 AND deleted_at IS NULL`,[context.tenantId,objectId,orderInput.deleted_at]);
   } else {
-    await client.query('DELETE FROM hub.canonical_order_line WHERE tenant_id=$1 AND order_id=$2',[context.tenantId,objectId]);
+    const incomingLineIds=orderInput.lines.map(line=>line.source_line_id);
+    await client.query(`UPDATE hub.canonical_order_line SET deleted_at=$3,source_version=$4,version_domain=$5,channel_epoch=$6,
+      hub_revision=nextval('control.canonical_hub_revision_seq')
+      WHERE tenant_id=$1 AND order_id=$2 AND deleted_at IS NULL AND NOT(source_line_id=ANY($7::text[]))`,
+    [context.tenantId,objectId,orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,incomingLineIds]);
     for (const line of orderInput.lines) {
       const lineRevision = await allocateRevision(client);
       await client.query(`INSERT INTO hub.canonical_order_line
         (tenant_id,order_id,source_line_id,product_code,product_name,quantity,unit_price,line_amount,source_updated_at,
          source_version,version_domain,channel_epoch,deleted_at,hub_revision)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULL,$13)`,
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NULL,$13)
+        ON CONFLICT(tenant_id,order_id,source_line_id) DO UPDATE SET product_code=EXCLUDED.product_code,
+          product_name=EXCLUDED.product_name,quantity=EXCLUDED.quantity,unit_price=EXCLUDED.unit_price,
+          line_amount=EXCLUDED.line_amount,source_updated_at=EXCLUDED.source_updated_at,source_version=EXCLUDED.source_version,
+          version_domain=EXCLUDED.version_domain,channel_epoch=EXCLUDED.channel_epoch,deleted_at=NULL,hub_revision=EXCLUDED.hub_revision`,
       [context.tenantId,objectId,line.source_line_id,line.product_code,line.product_name,line.quantity,line.unit_price,
         line.line_amount,orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,lineRevision]);
     }

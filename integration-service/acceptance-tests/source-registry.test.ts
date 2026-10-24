@@ -126,6 +126,89 @@ describe('M1 source admission authorization', () => {
     await expect(service.pause(owner,'crm-new',created.revision,'role workflow')).resolves.toMatchObject({lifecycle:'PAUSED'});
   });
 
+  it('takes the common security guard before owner or source row locks during creation', async () => {
+    const owner=await prepareOwner();
+    const statements:string[]=[];
+    const observedPool={connect:async()=>{
+      const client=await fixture.pool.connect();
+      const original=client.query.bind(client);
+      client.query=((query:unknown,...args:unknown[])=>{
+        if(typeof query==='string') statements.push(query.trim().replace(/\s+/g,' '));
+        return (original as (...values:unknown[])=>unknown)(query,...args);
+      }) as typeof client.query;
+      return client;
+    }} as unknown as typeof fixture.pool;
+    const {service}=managerService(observedPool);
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{
+      name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',
+      secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone',
+    }});
+    const firstLock=statements.findIndex(sql=>sql.includes('FOR UPDATE')||sql.includes('lock_source_credential'));
+    const guard=statements.findIndex(sql=>sql.includes('lock_security_barrier_fence'));
+    expect(guard).toBeGreaterThanOrEqual(0);
+    expect(firstLock).toBeGreaterThan(guard);
+  });
+
+  it('serializes source creation and tenant disable without an inverse-lock deadlock', async () => {
+    const owner=await prepareOwner();
+    const sourceCredential=createCredential();
+    await auth.repository.provisionSourceCredential({sourceId:'crm-new',tenantId:owner.tenantId,token:sourceCredential.secret,
+      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'1'});
+    let ownerLockReached!:()=>void;
+    const reached=new Promise<void>(resolve=>{ownerLockReached=resolve;});
+    let resumeCreate!:()=>void;
+    const resume=new Promise<void>(resolve=>{resumeCreate=resolve;});
+    const createPool={connect:async()=>{
+      const client=await fixture.pool.connect();
+      const original=client.query.bind(client);
+      await original("SELECT set_config('application_name','m1_t2_source_create',false)");
+      const release=client.release.bind(client);
+      client.query=((query:unknown,...args:unknown[])=>{
+        const operation=(original as (...values:unknown[])=>Promise<unknown>)(query,...args);
+        return operation.then(async result=>{
+          if(typeof query==='string' && query.includes('FOR UPDATE OF t,s')) { ownerLockReached(); await resume; }
+          return result;
+        });
+      }) as typeof client.query;
+      client.release=((error?:Error|boolean)=>{ client.query=original as typeof client.query; release(error); }) as typeof client.release;
+      return client;
+    }} as unknown as typeof fixture.pool;
+    const disablePool={connect:async()=>{
+      const client=await fixture.pool.connect();
+      await client.query("SELECT set_config('application_name','m1_t2_tenant_disable',false)");
+      return client;
+    }} as unknown as typeof fixture.pool;
+    const {service}=managerService(createPool);
+    const disableAuth=createAuthService({pool:disablePool});
+    const config:SourceConfig={name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',
+      endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
+    let create:Promise<unknown>|undefined;
+    let disable:Promise<void>|undefined;
+    try {
+      create=service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
+      await reached;
+      disable=disableAuth.repository.setTenantEnabled(owner.tenantId,false);
+      const deadline=Date.now()+2000;
+      let blocked=false;
+      while(Date.now()<deadline && !blocked) {
+        const activity=await fixture.pool.query<{wait_event_type:string|null}>(`SELECT wait_event_type FROM pg_stat_activity
+          WHERE application_name='m1_t2_tenant_disable'`);
+        blocked=activity.rows[0]?.wait_event_type==='Lock';
+        if(!blocked) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(blocked).toBe(true);
+      resumeCreate();
+      await expect(create).resolves.toMatchObject({source_id:'crm-new'});
+      await expect(disable).resolves.toBeUndefined();
+      const tenant=await fixture.pool.query<{enabled:boolean}>('SELECT enabled FROM control.tenant WHERE tenant_key=$1',[owner.tenantId]);
+      expect(tenant.rows[0].enabled).toBe(false);
+    } finally {
+      resumeCreate();
+      await create?.catch(()=>undefined);
+      await disable?.catch(()=>undefined);
+    }
+  });
+
   it('locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction', async () => {
     const token = await activeSource();
     const client = await fixture.pool.connect();
@@ -861,12 +944,15 @@ function roleScopedPool() {
   return new Proxy(target,{get(targetObject,property){
     if(property==='connect') return async()=>{
     const client=await target.connect();
-    await client.query('SET ROLE hub_api');
-    const release=client.release.bind(client);
-    client.release=((error?: Error | boolean)=>{
-      void client.query('RESET ROLE').then(()=>release(error),()=>release(error));
-    }) as typeof client.release;
-    return client;
+      const originalQuery=client.query.bind(client);
+      const query=((query:unknown,...args:unknown[])=>{
+        if(typeof query==='string' && /^BEGIN(?:\s|$)/i.test(query.trim())) {
+          return (originalQuery as (...values:unknown[])=>Promise<unknown>)(query,...args)
+            .then(async result=>{ await originalQuery('SET LOCAL ROLE hub_api'); return result; });
+        }
+        return (originalQuery as (...values:unknown[])=>unknown)(query,...args);
+      }) as typeof client.query;
+      return {query,release:client.release.bind(client)};
     };
     const value=Reflect.get(targetObject,property,targetObject);
     return typeof value==='function'?value.bind(targetObject):value;
