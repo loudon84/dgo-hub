@@ -1,5 +1,6 @@
 {
   "evidence_root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-2-evidence-a34fb9ca-3a69-492a-8a14-ea52a5a154b1",
+  "self_hash_excluded": true,
   "entries": [
     {
       "path": "attempt-exit-manifest.json",
@@ -603,8 +604,8 @@
     },
     {
       "path": "owned-resource-inventory.json",
-      "bytes": 35770,
-      "sha256": "95f222982bd116f7be53357890df36639c4f46c40aca4a46656153cadeae13fb"
+      "bytes": 35798,
+      "sha256": "9667ffa464c660324a967efc9497312e57d18a710d99865bb515edf85e4223e2"
     },
     {
       "path": "snapshot-noop-red.exit",

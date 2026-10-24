@@ -1,7 +1,7 @@
 {
   "sourceCommit": "6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e",
   "postgresFixtureCount": 47,
-  "postgresUnconfirmedCleanupCount": 1,
+  "postgresUnconfirmedCleanupCount": 0,
   "httpFixtureCount": 15,
   "httpCleanupIncompleteCount": 0,
   "postgres": [
@@ -156,9 +156,9 @@
       "imageReference": "postgres:16.10-alpine",
       "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
       "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
-      "cleanupEvent": null,
-      "ownershipConfirmed": null,
-      "containerAbsentAfterRemoval": null,
+      "cleanupEvent": "removed_after_observer_deadlock",
+      "ownershipConfirmed": true,
+      "containerAbsentAfterRemoval": true,
       "lifecycleFile": "m1task1/ec3086b6-86e6-4d65-9dbb-c6809ce1dc9c/postgres-lifecycle.jsonl"
     },
     {
