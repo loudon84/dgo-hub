@@ -10,7 +10,7 @@ import { runMigrations } from '../migrations/runner.js';
 import { buildApp } from '../app.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 import { createLocalLabPostgresSourceConnectionFactory, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
-import { runSnapshotWorkerOnce } from '../etl-worker/snapshot-worker.js';
+import { runDurableWorkerLoop } from '../etl-worker/worker.js';
 import type { EndpointProfile } from '../source-registry/capability-probe.js';
 
 const evidenceRoot = fixtureEvidenceRootFromEnvironment();
@@ -232,15 +232,17 @@ describe('durable snapshot run admission', () => {
       }};
       const workerDependencies={secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-password'},
         egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
-      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBe(1);
+      const strictWorkerTick=(dependencies:typeof workerDependencies & {sourceConnectionFactory:PostgresSourceConnectionFactory}) =>
+        runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},dependencies);
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBeUndefined();
       const incomplete=await fixture.pool.query(`SELECT r.status,a.ordinal,a.status AS attempt_status,a.error_code,
         count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
         WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
       expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:1}]);
-      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBe(0);
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
-      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBe(1);
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
         array_agg(s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
         JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
