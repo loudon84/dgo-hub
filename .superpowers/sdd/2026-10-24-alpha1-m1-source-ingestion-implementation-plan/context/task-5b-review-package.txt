@@ -1,0 +1,2182 @@
+8d9f1dc M1-5B: retain extraction evidence and report
+7e2cc26 Exercise snapshots through strict worker loop
+0e7d4bf Implement PostgreSQL snapshot extraction and staging
+b67088b Record PostgreSQL extraction staging implementation dispatch
+ .../acceptance-tests/identity-store.test.ts        |   2 +-
+ .../postgres-snapshot-connector.test.ts            |  73 +++++
+ .../postgres-snapshot-contract.test.ts             |  63 ++++
+ .../postgres-snapshot-source.test.ts               | 124 ++++++++
+ .../acceptance-tests/snapshot-runs.test.ts         | 252 ++++++++++++++-
+ .../acceptance-tests/source-registry.test.ts       |  18 +-
+ .../etl-worker/postgres-snapshot-connector.ts      | 273 ++++++++++++++++
+ integration-service/etl-worker/snapshot-runs.ts    |  14 +-
+ .../etl-worker/snapshot-stage-store.ts             | 129 ++++++++
+ integration-service/etl-worker/snapshot-worker.ts  | 116 +++++++
+ integration-service/etl-worker/worker.ts           |  10 +-
+ .../migrations/009_snapshot_runs_and_recovery.sql  | 342 +++++++++++++++++++++
+ .../source-registry/capability-probe.ts            |  72 ++++-
+ integration-service/source-registry/service.ts     |  23 +-
+ 14 files changed, 1468 insertions(+), 43 deletions(-)
+diff --git a/integration-service/acceptance-tests/identity-store.test.ts b/integration-service/acceptance-tests/identity-store.test.ts
+index 83de1fd..1472bd3 100644
+--- a/integration-service/acceptance-tests/identity-store.test.ts
++++ b/integration-service/acceptance-tests/identity-store.test.ts
+@@ -66,21 +66,21 @@ afterAll(async () => {
+ });
+ 
+ beforeEach(async () => {
+   currentTime = new Date('2026-10-23T00:00:00.000Z');
+   await resetIdentityRows();
+ });
+ 
+ describe('Task1 identity and credential persistence', () => {
+   it('applies the current migrations and skips them on repeat while keeping migration 001 bytes intact', async () => {
+     await expect(runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' }))
+-      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries'] });
++      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries', '009_snapshot_runs_and_recovery'] });
+     const tables = await fixture.pool.query<{ name: string }>(
+       `SELECT table_name AS name FROM information_schema.tables
+         WHERE table_schema='control' AND table_name IN ('tenant','auth_subject','identity_binding','agent_credential','source_credential','credential_digest_registry','agent_credential_idempotency')`,
+     );
+     expect(tables.rowCount).toBe(7);
+   });
+ 
+   it('stores only SHA256 of decoded 32-byte credentials and applies server TTL boundaries', async () => {
+     const principal = await provisionUser();
+     const result = await auth.createAgentCredential(principal, { purpose: 'daily brief' }, 'default-ttl');
+diff --git a/integration-service/acceptance-tests/postgres-snapshot-connector.test.ts b/integration-service/acceptance-tests/postgres-snapshot-connector.test.ts
+new file mode 100644
+index 0000000..71990a1
+--- /dev/null
++++ b/integration-service/acceptance-tests/postgres-snapshot-connector.test.ts
+@@ -0,0 +1,73 @@
++import { describe, expect, it } from 'vitest';
++import type { EndpointProfile } from '../source-registry/capability-probe.js';
++import type { FieldMapping, SourceConfig } from '../source-registry/service.js';
++import { extractPostgresSnapshot, type SnapshotConnection, type SnapshotPage } from '../etl-worker/postgres-snapshot-connector.js';
++
++const config: SourceConfig = { name: 'fixture', connector: 'postgresql', mode: 'FULL_SNAPSHOT', version_domain: 'SNAPSHOT_OBSERVATION',
++  endpoint_allowlist_ref: 'fixture', secret_ref: 'vault:/fixture/source', allowed_entities: ['customer'], delete_contract: 'hard_delete' };
++const profile: EndpointProfile = { revision: 'p1', connector: 'postgresql', protocol: 'postgres:', host: '127.0.0.1', port: 5432,
++  allow_loopback_plaintext: true, database: 'source', user: 'reader', schema: 'crm', entities: {
++    customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at' },
++  } };
++const mappings: readonly FieldMapping[] = [{ entity: 'customer', source_field: 'name', target_field: 'customer_name', transform: 'trim' }];
++
++class ScriptedSource implements SnapshotConnection {
++  statements: string[] = [];
++  cursorRows = [
++    { c0: '900719925474099312345', c1: '  Customer  ', c2: '2026-10-25 09:10:11.123456+00' },
++    { c0: 'source-B', c1: 'Second', c2: '2026-10-25 09:10:12.000001+00' },
++  ];
++  async query(sql: string): Promise<{ rows: Record<string, unknown>[] }> {
++    this.statements.push(sql);
++    if (sql.includes('pg_current_snapshot')) return { rows: [{ snapshot_text: '00000003-00000001-1' }] };
++    if (sql.startsWith('FETCH')) return { rows: this.cursorRows.splice(0, Number(/^FETCH FORWARD (\d+)/.exec(sql)?.[1] ?? '0')) };
++    return { rows: [] };
++  }
++  async close(): Promise<void> { this.statements.push('CLOSE_CONNECTION'); }
++}
++
++describe('PostgreSQL repeatable-read snapshot connector', () => {
++  it('pages on one read-only snapshot and preserves source IDs and timestamp fractions as text', async () => {
++    const connection = new ScriptedSource();
++    const pages: SnapshotPage[] = [];
++    const scan = await extractPostgresSnapshot({ factory: { connect: async ({ profile: actual, password, policy }) => {
++      expect(actual).toBe(profile); expect(password).toBe('fixture-secret'); expect(policy).toEqual({ environmentKind: 'local_lab', policyId: 'test' });
++      return connection;
++    } }, policy: { environmentKind: 'local_lab', policyId: 'test' }, profile, config, password: 'fixture-secret', mappings,
++      pageSize: 1, onPage: async page => { pages.push(page); } });
++    expect(connection.statements.slice(0, 4)).toEqual([
++      'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY', "SET LOCAL TIME ZONE 'UTC'", "SET LOCAL DateStyle TO 'ISO, YMD'",
++      'SELECT pg_current_snapshot()::text AS snapshot_text',
++    ]);
++    expect(connection.statements.some(sql => sql.includes('"customer_id"::text AS "c0"'))).toBe(true);
++    expect(connection.statements.filter(sql => sql.startsWith('FETCH'))).toEqual(['FETCH FORWARD 1 FROM hub_snapshot_customer',
++      'FETCH FORWARD 1 FROM hub_snapshot_customer', 'FETCH FORWARD 1 FROM hub_snapshot_customer']);
++    expect(pages.map(page => page.rows[0])).toMatchObject([
++      { source_pk: '900719925474099312345', facts: { customer_name: 'Customer', source_updated_at: '2026-10-25 09:10:11.123456+00' } },
++      { source_pk: 'source-B', facts: { customer_name: 'Second', source_updated_at: '2026-10-25 09:10:12.000001+00' } },
++    ]);
++    expect(scan).toMatchObject({ row_count: 2, relation_counts: { customer: 2, order: 0, order_line: 0 } });
++    expect(connection.statements.at(-1)).toBe('CLOSE_CONNECTION');
++  });
++
++  it('rejects duplicate primary keys within one fetched page before publishing that page', async () => {
++    const connection = new ScriptedSource();
++    connection.cursorRows = [
++      { c0: 'duplicate', c1: 'A', c2: '2026-10-25 09:10:11.123456+00' },
++      { c0: 'duplicate', c1: 'B', c2: '2026-10-25 09:10:12.000001+00' },
++    ];
++    let published = false;
++    await expect(extractPostgresSnapshot({ factory: { connect: async () => connection }, policy: { environmentKind: 'local_lab', policyId: 'test' },
++      profile, config, password: 'fixture-secret', mappings, pageSize: 10, onPage: async () => { published = true; } }))
++      .rejects.toMatchObject({ code: 'SNAPSHOT_SOURCE_DUPLICATE_KEY' });
++    expect(published).toBe(false);
++  });
++
++  it('rejects an optional timestamp mapping that conflicts with the frozen profile coordinate', async () => {
++    const connection = new ScriptedSource();
++    await expect(extractPostgresSnapshot({ factory: { connect: async () => connection },
++      policy: { environmentKind:'local_lab',policyId:'test' },profile,config,password:'fixture-secret',
++      mappings:[...mappings,{entity:'customer',source_field:'other_timestamp',target_field:'source_updated_at',transform:'identity'}],
++      pageSize:10,onPage:async()=>undefined })).rejects.toMatchObject({code:'SNAPSHOT_PROFILE_INVALID'});
++  });
++});
+diff --git a/integration-service/acceptance-tests/postgres-snapshot-contract.test.ts b/integration-service/acceptance-tests/postgres-snapshot-contract.test.ts
+new file mode 100644
+index 0000000..b78ea95
+--- /dev/null
++++ b/integration-service/acceptance-tests/postgres-snapshot-contract.test.ts
+@@ -0,0 +1,63 @@
++import { describe, expect, it } from 'vitest';
++import { validateEndpointProfile, type EndpointProfile } from '../source-registry/capability-probe.js';
++import type { SourceConfig } from '../source-registry/service.js';
++
++const observationConfig: SourceConfig = {
++  name: 'fixture', connector: 'postgresql', mode: 'FULL_SNAPSHOT', version_domain: 'SNAPSHOT_OBSERVATION',
++  endpoint_allowlist_ref: 'fixture', secret_ref: 'vault:/fixture/source', allowed_entities: ['customer'], delete_contract: 'hard_delete',
++};
++
++function customerProfile(overrides: Record<string, unknown> = {}): EndpointProfile {
++  return ({
++    revision: 'fixture-v1', connector: 'postgresql', protocol: 'postgres:', host: '127.0.0.1', port: 5432,
++    allow_loopback_plaintext: true, database: 'source_db', user: 'source_reader', schema: 'public',
++    entities: { customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at', ...overrides } },
++  }) as unknown as EndpointProfile;
++}
++
++describe('approved PostgreSQL snapshot profile contract', () => {
++  it('requires an explicit source primary key for each enabled entity', () => {
++    expect(() => validateEndpointProfile(observationConfig, customerProfile({ source_pk: undefined }), { environmentKind: 'local_lab' }))
++      .toThrow('PROFILE_INVALID');
++  });
++
++  it('requires an approved order line table and header foreign key when orders are enabled', () => {
++    const config: SourceConfig = { ...observationConfig, allowed_entities: ['customer', 'order'] };
++    const profile = ({
++      ...customerProfile(),
++      entities: {
++        customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at' },
++        order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at' },
++      },
++    }) as unknown as EndpointProfile;
++    expect(() => validateEndpointProfile(config, profile, { environmentKind: 'local_lab' })).toThrow('PROFILE_INVALID');
++  });
++
++  it('requires an explicit owner assertion that SOURCE_VERSION covers order line changes', () => {
++    const config: SourceConfig = { ...observationConfig, version_domain: 'SOURCE_VERSION', allowed_entities: ['order'] };
++    const profile = ({
++      ...customerProfile(),
++      entities: { order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', version_field: 'version',
++        lines: { table: 'order_lines', order_fk: 'order_id' }, customer_source_id: 'crm-main' } },
++    }) as unknown as EndpointProfile;
++    expect(() => validateEndpointProfile(config, profile, { environmentKind: 'local_lab' })).toThrow('PROFILE_INVALID');
++  });
++
++  it('allows a missing source version field for SNAPSHOT_OBSERVATION only', () => {
++    expect(() => validateEndpointProfile(observationConfig, customerProfile(), { environmentKind: 'local_lab' })).not.toThrow();
++    const versionedConfig: SourceConfig = { ...observationConfig, version_domain: 'SOURCE_VERSION' };
++    expect(() => validateEndpointProfile(versionedConfig, customerProfile({ version_field: undefined }), { environmentKind: 'local_lab' }))
++      .toThrow('PROFILE_INVALID');
++  });
++
++  it('requires and validates the customer source ID for an order-only snapshot', () => {
++    const config: SourceConfig = { ...observationConfig, allowed_entities: ['order'] };
++    const order = { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', lines: { table: 'order_lines', order_fk: 'order_id' } };
++    expect(() => validateEndpointProfile(config, { ...customerProfile(), entities: { order } } as unknown as EndpointProfile,
++      { environmentKind: 'local_lab' })).toThrow('PROFILE_INVALID');
++    expect(() => validateEndpointProfile(config, { ...customerProfile(), entities: { order: { ...order, customer_source_id: 'bad/source' } } } as unknown as EndpointProfile,
++      { environmentKind: 'local_lab' })).toThrow('PROFILE_INVALID');
++    expect(() => validateEndpointProfile(config, { ...customerProfile(), entities: { order: { ...order, customer_source_id: 'crm-main' } } } as unknown as EndpointProfile,
++      { environmentKind: 'local_lab' })).not.toThrow();
++  });
++});
+diff --git a/integration-service/acceptance-tests/postgres-snapshot-source.test.ts b/integration-service/acceptance-tests/postgres-snapshot-source.test.ts
+new file mode 100644
+index 0000000..85ce5ca
+--- /dev/null
++++ b/integration-service/acceptance-tests/postgres-snapshot-source.test.ts
+@@ -0,0 +1,124 @@
++import { afterAll, beforeAll, describe, expect, it } from 'vitest';
++import { randomUUID } from 'node:crypto';
++import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
++import { createLocalLabPostgresSourceConnectionFactory, extractPostgresSnapshot } from '../etl-worker/postgres-snapshot-connector.js';
++import { createBoundedCapabilityProbe, type EndpointProfile } from '../source-registry/capability-probe.js';
++import type { FieldMapping, SourceConfig } from '../source-registry/service.js';
++
++const evidenceRoot = fixtureEvidenceRootFromEnvironment();
++const evidenceFile = 'E:/m1t5-runtime/m1-task-5b-source-lifecycle.jsonl';
++const image = 'postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297';
++let fixture: OwnedPostgres;
++let schema: string;
++let privateSchema: string;
++let reader: string;
++let owner: string;
++let ownerPool: import('pg').Pool;
++let profile: EndpointProfile;
++
++const config: SourceConfig = { name: 'owned fixture', connector: 'postgresql', mode: 'FULL_SNAPSHOT', version_domain: 'SNAPSHOT_OBSERVATION',
++  endpoint_allowlist_ref: 'owned-fixture', secret_ref: 'vault:/m1/task5/source', allowed_entities: ['customer', 'order'], delete_contract: 'hard_delete' };
++const mappings: readonly FieldMapping[] = [
++  { entity: 'customer', source_field: 'customer_name', target_field: 'customer_name', transform: 'trim' },
++  { entity: 'order', source_field: 'customer_id', target_field: 'customer_id', transform: 'source-id' },
++  { entity: 'order', source_field: 'order_no', target_field: 'order_no', transform: 'trim' },
++  { entity: 'order', source_field: 'status', target_field: 'status', transform: 'trim' },
++  { entity: 'order', source_field: 'order_at', target_field: 'order_at', transform: 'identity' },
++  { entity: 'order', source_field: 'amount', target_field: 'amount', transform: 'decimal-string' },
++  { entity: 'order', source_field: 'currency', target_field: 'currency', transform: 'trim' },
++  { entity: 'order', source_field: 'line_id', target_field: 'lines.source_line_id', transform: 'source-id' },
++  { entity: 'order', source_field: 'product_code', target_field: 'lines.product_code', transform: 'trim' },
++  { entity: 'order', source_field: 'product_name', target_field: 'lines.product_name', transform: 'trim' },
++  { entity: 'order', source_field: 'quantity', target_field: 'lines.quantity', transform: 'decimal-string' },
++  { entity: 'order', source_field: 'unit_price', target_field: 'lines.unit_price', transform: 'decimal-string' },
++  { entity: 'order', source_field: 'line_amount', target_field: 'lines.line_amount', transform: 'decimal-string' },
++];
++
++beforeAll(async () => {
++  fixture = await startOwnedPostgres({ evidenceFile, evidenceRoot, taskLabel: 'm1task5', imageReference: image });
++  const suffix = randomUUID().replaceAll('-', '').slice(0, 16);
++  schema = `m1_t5_${suffix}`;
++  privateSchema = `m1_private_${suffix}`;
++  reader = `m1_reader_${suffix}`;
++  owner = `m1_owner_${suffix}`;
++  await fixture.pool.query(`CREATE ROLE ${owner} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
++  await fixture.pool.query(`CREATE ROLE ${reader} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
++  await fixture.pool.query(`CREATE SCHEMA ${schema} AUTHORIZATION ${owner}`);
++  await fixture.pool.query(`CREATE SCHEMA ${privateSchema}`);
++  await fixture.pool.query(`CREATE TABLE ${privateSchema}.hidden_data(secret text)`);
++  const ownerClient = await fixture.pool.connect();
++  try {
++    await ownerClient.query(`SET ROLE ${owner}`);
++    await ownerClient.query(`CREATE TABLE ${schema}.customers(customer_id text PRIMARY KEY, customer_name text NOT NULL, updated_at timestamptz NOT NULL)`);
++    await ownerClient.query(`CREATE TABLE ${schema}.orders(order_id bigint PRIMARY KEY, customer_id text NOT NULL, order_no text NOT NULL, status text NOT NULL,
++      order_at timestamptz NOT NULL, amount numeric(30,12) NOT NULL, currency text NOT NULL, updated_at timestamptz NOT NULL)`);
++    await ownerClient.query(`CREATE TABLE ${schema}.order_lines(line_id text PRIMARY KEY, order_id bigint NOT NULL REFERENCES ${schema}.orders(order_id),
++      product_code text NOT NULL, product_name text NOT NULL, quantity numeric(30,12) NOT NULL, unit_price numeric(30,12) NOT NULL,
++      line_amount numeric(30,12) NOT NULL)`);
++    await ownerClient.query(`CREATE TABLE ${schema}.restricted_data(id integer, secret text)`);
++    await ownerClient.query(`INSERT INTO ${schema}.customers VALUES('C-1','Original','2026-10-25 10:00:00.123456+00')`);
++    await ownerClient.query(`INSERT INTO ${schema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
++      123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
++    await ownerClient.query(`INSERT INTO ${schema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Before',1.123456789012,
++      123456789012.123456789012,138636548569.222222221445)`);
++  } finally { await ownerClient.query('RESET ROLE').catch(() => undefined); ownerClient.release(); }
++  await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${reader}`);
++  await fixture.pool.query(`GRANT SELECT ON ${schema}.customers,${schema}.orders,${schema}.order_lines TO ${reader}`);
++  await fixture.pool.query(`GRANT SELECT(id) ON ${schema}.restricted_data TO ${reader}`);
++  const { default: pg } = await import('pg');
++  ownerPool = new pg.Pool({ host:'127.0.0.1',port:fixture.hostPort,database:'postgres',user:owner,max:1 });
++  await ownerPool.query('SELECT 1');
++  profile = { revision: 'owned-pg-v1', connector: 'postgresql', protocol: 'postgres:', host: '127.0.0.1', port: fixture.hostPort,
++    allow_loopback_plaintext: true, database: 'postgres', user: reader, schema, entities: {
++      customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at' },
++      order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', lines: { table: 'order_lines', order_fk: 'order_id' } },
++    } };
++}, 90_000);
++
++afterAll(async () => {
++  if (fixture) {
++    if (ownerPool) await ownerPool.end();
++    if (schema) await fixture.pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
++    if (privateSchema) await fixture.pool.query(`DROP SCHEMA IF EXISTS ${privateSchema} CASCADE`);
++    if (reader) await fixture.pool.query(`DROP ROLE IF EXISTS ${reader}`);
++    if (owner) await fixture.pool.query(`DROP ROLE IF EXISTS ${owner}`);
++    await fixture.close();
++  }
++});
++
++describe('owned PostgreSQL source fixture', () => {
++  it('reads all relations on one MVCC snapshot, retains exact values, and exposes a read-only role', async () => {
++    const rolePool = await import('pg').then(({ default: pg }) => new pg.Pool({ host: '127.0.0.1', port: fixture.hostPort,
++      database: 'postgres', user: reader, password: 'fixture', max: 1 }));
++    const probe = await createBoundedCapabilityProbe({ environmentKind: 'local_lab' }).run({ config, endpoint: profile, secret: 'fixture',
++      identityMappings: [], mappings });
++    expect(probe).toMatchObject({ passed: true, checks: expect.arrayContaining(['ENDPOINT_REACHABLE']) });
++    const emitted: Array<{ relation: string; pk: string; parent: string; facts: Record<string, string | null> }> = [];
++    const scan = await extractPostgresSnapshot({ factory: createLocalLabPostgresSourceConnectionFactory(),
++      policy: { environmentKind: 'local_lab', policyId: 'owned-loopback-fixture' }, profile, config, password: 'fixture', mappings,
++      pageSize: 1, onPage: async page => {
++        emitted.push(...page.rows.map(row => ({ relation: row.relation, pk: row.source_pk, parent: row.parent_source_pk, facts: row.facts })));
++        if (page.relation === 'customer') {
++          await ownerPool.query(`UPDATE ${schema}.customers SET customer_name='Changed',updated_at='2026-10-25 11:00:00.000001+00' WHERE customer_id='C-1'`);
++          await ownerPool.query(`UPDATE ${schema}.orders SET order_no='O-CHANGED' WHERE order_id=9007199254740993123`);
++          await ownerPool.query(`UPDATE ${schema}.order_lines SET product_name='After' WHERE line_id='L-1'`);
++        }
++      } });
++    expect(emitted).toMatchObject([
++      { relation: 'customer', pk: 'C-1', facts: { customer_name: 'Original', source_updated_at: '2026-10-25 10:00:00.123456+00' } },
++      { relation: 'order', pk: '9007199254740993123', facts: { order_no: 'O-1', amount: '123456789012345678.123456789012',
++        order_at: '2026-10-25 10:01:02.123456+00', source_updated_at: '2026-10-25 10:01:03.123456+00' } },
++      { relation: 'order_line', pk: 'L-1', parent: '9007199254740993123', facts: {
++        'lines.product_name': 'Before', 'lines.quantity': '1.123456789012', 'lines.unit_price': '123456789012.123456789012',
++        'lines.line_amount': '138636548569.222222221445', 'lines.source_line_id': 'L-1' } },
++    ]);
++    expect(scan.relation_counts).toEqual({ customer: 1, order: 1, order_line: 1 });
++    await expect(rolePool.query(`INSERT INTO ${schema}.customers VALUES('C-2','No','2026-10-25 10:00:00Z')`)).rejects.toMatchObject({ code: '42501' });
++    await expect(rolePool.query(`UPDATE ${schema}.customers SET customer_name='No' WHERE customer_id='C-1'`)).rejects.toMatchObject({ code: '42501' });
++    await expect(rolePool.query(`DELETE FROM ${schema}.customers WHERE customer_id='C-1'`)).rejects.toMatchObject({ code: '42501' });
++    await expect(rolePool.query(`TRUNCATE ${schema}.customers`)).rejects.toMatchObject({ code: '42501' });
++    await expect(rolePool.query(`SELECT secret FROM ${schema}.restricted_data`)).rejects.toMatchObject({ code: '42501' });
++    await expect(rolePool.query(`SELECT secret FROM ${privateSchema}.hidden_data`)).rejects.toMatchObject({ code: '42501' });
++    await rolePool.end();
++  });
++});
+diff --git a/integration-service/acceptance-tests/snapshot-runs.test.ts b/integration-service/acceptance-tests/snapshot-runs.test.ts
+index b001ffe..8ecdbd3 100644
+--- a/integration-service/acceptance-tests/snapshot-runs.test.ts
++++ b/integration-service/acceptance-tests/snapshot-runs.test.ts
+@@ -1,39 +1,45 @@
+ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
++import { createHash, randomUUID } from 'node:crypto';
+ import { mkdir } from 'node:fs/promises';
+ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { createAuthService } from '../auth/service.js';
+ import { createCredential } from '../auth/credentials.js';
+ import { createSourceRegistryService, type SourceRegistryService } from '../source-registry/service.js';
+ import { runMigrations } from '../migrations/runner.js';
+ import { buildApp } from '../app.js';
+ import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
++import { createLocalLabPostgresSourceConnectionFactory, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
++import { runDurableWorkerLoop } from '../etl-worker/worker.js';
++import type { EndpointProfile } from '../source-registry/capability-probe.js';
+ 
+ const evidenceRoot = fixtureEvidenceRootFromEnvironment();
+ const localEvidence = join(fileURLToPath(new URL('../../docs/execution/alpha1/m1-task-5a-evidence/', import.meta.url)), 'postgres-lifecycle.jsonl');
+ const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
+ const postgresImage = 'postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297';
+ let fixture: OwnedPostgres;
+ let auth: ReturnType<typeof createAuthService>;
+ let initialMigrations: { applied: string[]; skipped: string[] };
+ let service: SourceRegistryService;
+ let owner = { userId: 'snapshot_owner', tenantId: 'snapshot_tenant', departmentId: null, businessRole: null,
+   managementScopes: ['source:read','source:write','source:approve','mapping:write'] as const, authEpoch: '0',
+   businessTimezone: 'UTC', issuer: 'https://idp.example.test', subject: 'snapshot-owner' };
+ 
++let e2eEndpointProfile: EndpointProfile | undefined;
+ const endpointAllowlist = { resolve: async (reference: string) => {
+   if (reference !== 'pg-test') throw new Error('endpoint not approved');
+-  return { revision: 'pg-v1', connector: 'postgresql' as const, protocol: 'postgres:' as const, host: 'source.fixture.invalid',
++  return e2eEndpointProfile ?? { revision: 'pg-v1', connector: 'postgresql' as const, protocol: 'postgres:' as const, host: 'source.fixture.invalid',
+     port: 5432, database: 'source_db', user: 'source_reader', schema: 'public',
+-    entities: { customer: { table: 'customers', version_field: 'source_version' },
+-      order: { table: 'orders', version_field: 'source_version' } } };
++    entities: { customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at', version_field: 'source_version' },
++      order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', version_field: 'source_version', aggregate_version_covers_lines: true,
++        lines: { table: 'order_lines', order_fk: 'order_id' } } } };
+ } };
+ function makeService(pool: typeof fixture.pool): SourceRegistryService {
+   return createSourceRegistryService({ pool, auth, environmentKind: 'local_lab',
+     secretResolver: { isConfiguredReference: async value => value === 'vault:/snapshot/source', resolve: async () => 'fixture-secret' },
+     endpointAllowlist, capabilityProbe: { run: async () => ({ passed: true, checks: ['READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'] }) } });
+ }
+ 
+ beforeAll(async () => {
+   if (!evidenceRoot) await mkdir(dirname(localEvidence), { recursive: true });
+   fixture = await startOwnedPostgres({ evidenceFile: localEvidence, evidenceRoot, taskLabel: 'm1task5', imageReference: postgresImage });
+@@ -95,20 +101,249 @@ describe('durable snapshot run admission', () => {
+       await apiClient.query('SET ROLE hub_api');
+       await expect(apiClient.query('SELECT id FROM raw.ingestion_batch LIMIT 1')).rejects.toMatchObject({code:'42501'});
+       await apiClient.query('RESET ROLE');
+       await apiClient.query('SET ROLE hub_worker');
+       await expect(apiClient.query(`UPDATE control.etl_run SET request_digest=decode(repeat('00',32),'hex') WHERE false`))
+         .rejects.toMatchObject({code:'42501'});
+       await apiClient.query('RESET ROLE');
+     } finally { await apiClient.query('RESET ROLE').catch(()=>undefined); apiClient.release(); }
+   });
+ 
++  it('claims, starts, stages and publishes one immutable EXTRACTED manifest under the worker role', async () => {
++    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
++    const { createSnapshotStageStore, snapshotManifestDigest } = await import('../etl-worker/snapshot-stage-store.js');
++    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','stage-manifest');
++    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
++    const [claim, duplicateClaim] = await Promise.all([
++      store.claim(owner.tenantId,'pg-main',60),store.claim(owner.tenantId,'pg-main',60),
++    ]);
++    expect([claim,duplicateClaim].filter(Boolean)).toHaveLength(1);
++    const activeClaim = claim ?? duplicateClaim!;
++    const proof = await store.loadFrozenProof(owner.tenantId,'pg-main',run.run_id);
++    expect(proof).toMatchObject({ run_id:run.run_id,expected_entities:['customer'],endpoint_profile_digest:expect.any(String) });
++    const attempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,activeClaim.claim_token,60);
++    expect(attempt.ordinal).toBe(1);
++    const row = { entity:'customer' as const,relation:'customer' as const,source_pk:'C-1',parent_source_pk:'',source_version:null,
++      facts:{customer_name:'Acme',source_updated_at:'2026-10-25 10:00:00.123456+00'} };
++    const pageDigest = createHash('sha256').update(JSON.stringify(row)).digest('hex');
++    await store.writePage(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,activeClaim.claim_token,{ entity:'customer',relation:'customer',
++      page_no:1,rows:[row],first_key:'C-1',last_key:'C-1',page_digest:pageDigest });
++    const manifest = { state:'EXTRACTED',relations:['customer'],relation_counts:[{relation:'customer',row_count:1,page_count:1,page_digests:[pageDigest]}],
++      row_count:1,page_count:1,source_snapshot_identity:'a'.repeat(64),attempt_id:attempt.attempt_id,operation_id:attempt.operation_id,
++      profile_digest:proof.endpoint_profile_digest,mapping_digest:proof.mapping_digest,config_digest:proof.config_digest,
++      identity_mapping_digest:proof.identity_mapping_digest };
++    await expect(store.complete(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,activeClaim.claim_token,
++      manifest,snapshotManifestDigest(manifest))).resolves.toBe(1);
++    const state = await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest_digest,
++      (SELECT count(*)::int FROM control.etl_snapshot_stage_record s WHERE s.run_id=r.run_id) AS records
++      FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
++      WHERE r.run_id=$1`,[run.run_id]);
++    expect(state.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'1',state:'EXTRACTED',records:1});
++  });
++
++  it('restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan', async () => {
++    const sourceEvidence = join(fileURLToPath(new URL('../../docs/execution/alpha1/m1-task-5b-source-lifecycle.jsonl', import.meta.url)));
++    const sourceFixture = await startOwnedPostgres({ evidenceFile:sourceEvidence,evidenceRoot,taskLabel:'m1task5',imageReference:postgresImage });
++    const suffix = randomUUID().replaceAll('-','').slice(0,14);
++    const sourceSchema = `m1_e2e_${suffix}`;
++    const sourceOwner = `m1_e2eo_${suffix}`;
++    const sourceReader = `m1_e2er_${suffix}`;
++    const { default: pg } = await import('pg');
++    const ownerPool = new pg.Pool({host:'127.0.0.1',port:sourceFixture.hostPort,database:'postgres',user:sourceOwner,max:1});
++    try {
++      await sourceFixture.pool.query(`CREATE ROLE ${sourceOwner} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
++      await sourceFixture.pool.query(`CREATE ROLE ${sourceReader} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
++      await sourceFixture.pool.query(`CREATE SCHEMA ${sourceSchema} AUTHORIZATION ${sourceOwner}`);
++      const ownerClient=await sourceFixture.pool.connect();
++      try {
++        await ownerClient.query(`SET ROLE ${sourceOwner}`);
++        await ownerClient.query(`CREATE TABLE ${sourceSchema}.customers(customer_id text PRIMARY KEY,customer_name text NOT NULL,owner_id text NOT NULL,
++          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL)`);
++        await ownerClient.query(`CREATE TABLE ${sourceSchema}.orders(order_id bigint PRIMARY KEY,customer_id text NOT NULL,order_no text NOT NULL,
++          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(30,12) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
++        await ownerClient.query(`CREATE TABLE ${sourceSchema}.order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL REFERENCES ${sourceSchema}.orders(order_id),
++          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(30,12) NOT NULL,unit_price numeric(30,12) NOT NULL,line_amount numeric(30,12) NOT NULL)`);
++        await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-1','Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:00.123456+00')`);
++        await ownerClient.query(`INSERT INTO ${sourceSchema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
++          123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
++        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456789012,
++          123456789012.123456789012,138636548569.222222221445)`);
++      } finally { await ownerClient.query('RESET ROLE').catch(()=>undefined); ownerClient.release(); }
++      await sourceFixture.pool.query(`GRANT USAGE ON SCHEMA ${sourceSchema} TO ${sourceReader}`);
++      await sourceFixture.pool.query(`GRANT SELECT ON ${sourceSchema}.customers,${sourceSchema}.orders,${sourceSchema}.order_lines TO ${sourceReader}`);
++      await ownerPool.query('SELECT 1');
++      e2eEndpointProfile={revision:'owned-source-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:sourceFixture.hostPort,
++        allow_loopback_plaintext:true,database:'postgres',user:sourceReader,schema:sourceSchema,entities:{
++          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'},
++          order:{table:'orders',source_pk:'order_id',updated_at_field:'updated_at',lines:{table:'order_lines',order_fk:'order_id'}},
++        }};
++      await auth.repository.provisionSourceCredential({sourceId:'pg-e2e',tenantId:owner.tenantId,token:createCredential().secret,
++        secretRef:'vault:/snapshot/source',allowedEntities:['customer','order'],revision:'1'});
++      const allowedEntities=['customer','order'] as const;
++      await service.create(owner,{source_id:'pg-e2e',data_owner_user_id:owner.userId,config:{name:'Owned order snapshot',connector:'postgresql',
++        mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
++        allowed_entities:allowedEntities,delete_contract:'hard_delete'}});
++      await service.writeMappings(owner,'pg-e2e','1',[
++        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
++        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
++        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
++        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
++        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
++        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
++        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
++        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
++        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
++        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
++        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
++        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
++        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
++        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
++        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
++        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
++      ]);
++      const tested=await service.test(owner,'pg-e2e','1');
++      expect(tested.status).toBe('PASS');
++      const approved=await service.approve(owner,'pg-e2e','1',tested.test_report_id,tested.data_contract_ref);
++      await service.activate(owner,'pg-e2e','1',approved.approval_id);
++      const { createSnapshotRun }=await import('../etl-worker/snapshot-runs.js');
++      const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','owned-e2e-run');
++      const realFactory=createLocalLabPostgresSourceConnectionFactory();
++      let loseSourceOnce=true;
++      let ownedReaderPid:number|undefined;
++      const interruptedFactory: PostgresSourceConnectionFactory={connect:async input=>{
++        const connection=await realFactory.connect(input);
++        return {query:async(sql:string)=>{
++          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_order')) {
++            loseSourceOnce=false;
++            if (!ownedReaderPid) throw new Error('owned source reader PID was not captured');
++            const terminated=await sourceFixture.pool.query(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
++              WHERE pid=$1 AND usename=$2 AND datname='postgres' AND client_addr IS NOT NULL`,[ownedReaderPid,sourceReader]);
++            if (terminated.rows[0]?.terminated !== true) throw new Error('owned source reader backend identity changed before termination');
++          }
++          if (!ownedReaderPid) {
++            const identity=await connection.query('SELECT pg_backend_pid() AS pid');
++            ownedReaderPid=Number(identity.rows[0]?.pid);
++            if (!Number.isSafeInteger(ownedReaderPid) || ownedReaderPid < 1) throw new Error('invalid owned source reader PID');
++            const owned=await sourceFixture.pool.query(`SELECT 1 FROM pg_stat_activity
++              WHERE pid=$1 AND usename=$2 AND datname='postgres' AND client_addr IS NOT NULL`,[ownedReaderPid,sourceReader]);
++            if (owned.rowCount !== 1) throw new Error('source backend is not the owned read-only fixture reader');
++          }
++          return connection.query(sql);
++        },close:async()=>connection.close()};
++      }};
++      const workerDependencies={secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-password'},
++        egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
++      const strictWorkerTick=(dependencies:typeof workerDependencies & {sourceConnectionFactory:PostgresSourceConnectionFactory}) =>
++        runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},dependencies);
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBeUndefined();
++      const incomplete=await fixture.pool.query(`SELECT r.status,a.ordinal,a.status AS attempt_status,a.error_code,
++        count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
++        LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
++        WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
++      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:1}]);
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
++        array_agg(s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
++        JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
++        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,m.state,m.manifest`,[run.run_id]);
++      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'3',state:'EXTRACTED',relations:['customer','order','order_line']});
++      expect(staged.rows[0].counts).toMatchObject([{relation:'customer',row_count:1},{relation:'order',row_count:1},{relation:'order_line',row_count:1}]);
++      const attempts=await fixture.pool.query(`SELECT a.ordinal,a.status,count(s.source_pk)::int AS staged FROM control.etl_run_attempt a
++        LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id) WHERE a.run_id=$1
++        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[run.run_id]);
++      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:1},{ordinal:2,status:'COMPLETE',staged:3}]);
++    } finally {
++      await ownerPool.end();
++      await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
++      await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceReader}`);
++      await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceOwner}`);
++      await sourceFixture.close();
++      e2eEndpointProfile=undefined;
++    }
++  });
++
++  it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
++    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
++    const { createSnapshotStageStore } = await import('../etl-worker/snapshot-stage-store.js');
++    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','retry-fence');
++    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
++    const firstClaim = await store.claim(owner.tenantId,'pg-main',60);
++    expect(firstClaim).toBeTruthy();
++    const firstAttempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,firstClaim!.claim_token,60);
++    await expect(store.fail(owner.tenantId,'pg-main',run.run_id,firstAttempt.attempt_id,firstClaim!.claim_token,
++      'SNAPSHOT_SOURCE_UNAVAILABLE',true)).resolves.toBe('RETRY');
++    const retryState = await fixture.pool.query(`SELECT r.status,r.snapshot_available_at>clock_timestamp() AS delayed,a.status AS attempt_status,
++      a.available_at>clock_timestamp() AS attempt_delayed FROM control.etl_run r JOIN control.etl_run_attempt a USING(run_id)
++      WHERE r.run_id=$1`,[run.run_id]);
++    expect(retryState.rows[0]).toMatchObject({status:'SCANNING',delayed:true,attempt_status:'INCOMPLETE',attempt_delayed:true});
++    await expect(store.claim(owner.tenantId,'pg-main',60)).resolves.toBeUndefined();
++    await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
++    const secondClaim = await store.claim(owner.tenantId,'pg-main',60);
++    expect(secondClaim).toBeTruthy();
++    const secondAttempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,secondClaim!.claim_token,60);
++    expect(secondAttempt.ordinal).toBe(2);
++    const page = {entity:'customer' as const,relation:'customer' as const,page_no:1,first_key:'C-STALE',last_key:'C-STALE',
++      page_digest:'0'.repeat(64),rows:[{entity:'customer' as const,relation:'customer' as const,source_pk:'C-STALE',parent_source_pk:'',
++        source_version:null,facts:{customer_name:'stale'}}]};
++    await expect(store.writePage(owner.tenantId,'pg-main',run.run_id,firstAttempt.attempt_id,firstClaim!.claim_token,page))
++      .rejects.toMatchObject({code:'40001'});
++  });
++
++  it('counts crash-after-start recovery toward the four durable start limit', async () => {
++    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
++    const { createSnapshotStageStore } = await import('../etl-worker/snapshot-stage-store.js');
++    const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','crash-start-budget');
++    const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
++    const ordinals: number[] = [];
++    for (let expectedOrdinal=1; expectedOrdinal<=4; expectedOrdinal+=1) {
++      const claim = await store.claim(owner.tenantId,'pg-main',60);
++      expect(claim).toBeTruthy();
++      const attempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,claim!.claim_token,60);
++      ordinals.push(attempt.ordinal);
++      await fixture.pool.query(`UPDATE control.etl_run SET snapshot_lease_expires_at=clock_timestamp()-interval '1 second',
++        snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
++      await expect(store.claim(owner.tenantId,'pg-main',60)).resolves.toBeUndefined();
++      const recovered = await fixture.pool.query(`SELECT status,snapshot_available_at>clock_timestamp() AS delayed FROM control.etl_run WHERE run_id=$1`,[run.run_id]);
++      if (expectedOrdinal < 4) {
++        expect(recovered.rows[0]).toMatchObject({status:'SCANNING',delayed:true});
++        await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
++      } else expect(recovered.rows[0]).toMatchObject({status:'FAILED',delayed:false});
++    }
++    expect(ordinals).toEqual([1,2,3,4]);
++    const attempts = await fixture.pool.query(`SELECT ordinal,status,error_code FROM control.etl_run_attempt WHERE run_id=$1 ORDER BY ordinal`,[run.run_id]);
++    expect(attempts.rows).toEqual([1,2,3,4].map(ordinal=>({ordinal,status:'INCOMPLETE',error_code:'SNAPSHOT_LEASE_EXPIRED'})));
++  });
++
++  it('rejects page and manifest publication behind a newer typed tenant barrier', async () => {
++    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
++    const { createSnapshotStageStore, snapshotManifestDigest } = await import('../etl-worker/snapshot-stage-store.js');
++    const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','stage-barrier-fence');
++    const store=createSnapshotStageStore(roleScopedPool('hub_worker'));
++    const claim=await store.claim(owner.tenantId,'pg-main',60);
++    const attempt=await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,claim!.claim_token,60);
++    await auth.repository.setTenantEnabled(owner.tenantId,false);
++    await auth.repository.setTenantEnabled(owner.tenantId,true);
++    const row={entity:'customer' as const,relation:'customer' as const,source_pk:'C-BARRIER',parent_source_pk:'',source_version:null,facts:{}};
++    const page={entity:'customer' as const,relation:'customer' as const,page_no:1,rows:[row],first_key:'C-BARRIER',last_key:'C-BARRIER',page_digest:'1'.repeat(64)};
++    await expect(store.writePage(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,claim!.claim_token,page))
++      .rejects.toMatchObject({code:'42501'});
++    const manifest={state:'EXTRACTED',relations:['customer'],relation_counts:[{relation:'customer',row_count:0,page_count:0}],row_count:0,
++      page_count:0,source_snapshot_identity:'b'.repeat(64),profile_digest:'0'.repeat(64),mapping_digest:'0'.repeat(64)};
++    await expect(store.complete(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,claim!.claim_token,manifest,snapshotManifestDigest(manifest)))
++      .rejects.toMatchObject({code:'42501'});
++    const state=await fixture.pool.query(`SELECT r.status,(SELECT count(*)::int FROM control.etl_snapshot_stage_record s WHERE s.run_id=r.run_id) AS records,
++      (SELECT count(*)::int FROM control.etl_snapshot_manifest m WHERE m.run_id=r.run_id) AS manifests FROM control.etl_run r WHERE r.run_id=$1`,[run.run_id]);
++    expect(state.rows[0]).toEqual({status:'SCANNING',records:0,manifests:0});
++  });
++
+   it('activates, pauses, and resumes the PostgreSQL snapshot schedule as hub_api', async () => {
+     const apiService = makeService(roleScopedPool('hub_api'));
+     await apiService.pause(owner, 'pg-main', '1', 'exercise API role schedule rights');
+     await fixture.pool.query(`DELETE FROM control.etl_snapshot_schedule WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+     const activated = await apiService.activate(owner, 'pg-main', '1', (await fixture.pool.query<{ id: string }>(
+       `SELECT id FROM control.source_owner_approval WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId])).rows[0].id);
+     expect(activated.lifecycle).toBe('ACTIVE');
+     await apiService.pause(owner, 'pg-main', '1', 'exercise API role pause');
+     const paused = await fixture.pool.query(`SELECT enabled FROM control.etl_snapshot_schedule WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+     expect(paused.rows[0].enabled).toBe(false);
+@@ -220,44 +455,43 @@ describe('durable snapshot run admission', () => {
+       admitDueSnapshotRun(pool,'snapshot_tenant','pg-main'),
+       admitDueSnapshotRun(pool,'snapshot_tenant','pg-main'),
+     ]);
+     expect(results.filter(Boolean)).toHaveLength(1);
+     expect(results.filter(value => value === null)).toHaveLength(1);
+     expect(await admitDueSnapshotRun(pool,'snapshot_tenant','pg-main')).toBeNull();
+     const count = await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+     expect(count.rows[0].count).toBe(1);
+   });
+ 
+-  it('fails closed for order snapshots until the approved line relation contract exists', async () => {
++  it('fails closed when order line mappings are missing from the approved mapping revision', async () => {
+     const orderConfig = { name: 'Order snapshot', connector: 'postgresql', mode: 'FULL_SNAPSHOT', version_domain: 'SNAPSHOT_OBSERVATION',
+       endpoint_allowlist_ref: 'pg-test', secret_ref: 'vault:/snapshot/source', allowed_entities: ['customer','order'], delete_contract: 'hard_delete' };
+     await auth.repository.provisionSourceCredential({ sourceId: 'pg_order', tenantId: owner.tenantId, token: createCredential().secret,
+       secretRef: 'vault:/snapshot/source', allowedEntities: ['customer','order'], revision: '1' });
+     await service.create(owner,{source_id:'pg_order',data_owner_user_id:owner.userId,config:orderConfig});
+     await service.writeMappings(owner,'pg_order','1',[
+       { entity:'customer',source_field:'name',target_field:'customer_name',transform:'trim' },
+       { entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id' },
+       { entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id' },
+       { entity:'customer',source_field:'status',target_field:'status',transform:'identity' },
+       { entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id' },
+       { entity:'order',source_field:'order_no',target_field:'order_no',transform:'identity' },
+       { entity:'order',source_field:'status',target_field:'status',transform:'identity' },
+       { entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity' },
+       { entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string' },
+       { entity:'order',source_field:'currency',target_field:'currency',transform:'identity' },
+     ]);
+     const tested = await service.test(owner,'pg_order','1');
+-    const approval = await service.approve(owner,'pg_order','1',tested.test_report_id,tested.data_contract_ref);
+-    await service.activate(owner,'pg_order','1',approval.approval_id);
+-    const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+-    await expect(createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg_order','1','order-run'))
+-      .rejects.toMatchObject({ code:'SOURCE_CONTRACT_INVALID' });
++    expect(tested.status).toBe('FAIL');
++    expect(tested.report.checks).toContain('MAPPING_REQUIRED:order:lines.source_line_id');
++    await expect(service.approve(owner,'pg_order','1',tested.test_report_id,tested.data_contract_ref))
++      .rejects.toMatchObject({ code:'SOURCE_CONFLICT' });
+     const runs = await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg_order'`,[owner.tenantId]);
+     expect(runs.rows[0].count).toBe(0);
+   });
+ 
+   it('fails closed when hard-delete absence has no safe source-version delete contract', async () => {
+     await auth.repository.provisionSourceCredential({ sourceId: 'pg_unsafe', tenantId: owner.tenantId, token: createCredential().secret,
+       secretRef: 'vault:/snapshot/source', allowedEntities: ['customer'], revision: '1' });
+     await service.create(owner,{source_id:'pg_unsafe',data_owner_user_id:owner.userId,config:{name:'Unsafe delete',connector:'postgresql',
+       mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
+       allowed_entities:['customer'],delete_contract:'hard_delete'}});
+diff --git a/integration-service/acceptance-tests/source-registry.test.ts b/integration-service/acceptance-tests/source-registry.test.ts
+index 9a64d26..092e776 100644
+--- a/integration-service/acceptance-tests/source-registry.test.ts
++++ b/integration-service/acceptance-tests/source-registry.test.ts
+@@ -75,23 +75,23 @@ afterAll(async () => {
+   await fixture.close();
+   await writeFile(join(dirname(fixture.evidenceFile), 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`);
+ });
+ 
+ describe('M1 source admission authorization', () => {
+   it('exposes a transaction-scoped current-source assertion', () => {
+     expect((auth as unknown as { assertCurrentSource?: unknown }).assertCurrentSource).toBeTypeOf('function');
+   });
+ 
+   it('applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat', async () => {
+-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'],skipped:[]});
++    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'],skipped:[]});
+     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
+-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'] });
++    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'] });
+     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
+       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
+     );
+     expect(row.rows).toHaveLength(1);
+     expect(row.rows[0]).toMatchObject({ version: 5, name: 'source_registry' });
+     expect(row.rows[0].checksum).toMatch(/^[a-f0-9]{64}$/);
+   });
+ 
+   it('does not grant API access to source digest or secret reference and keeps the lock function private', async () => {
+     const grants = await fixture.pool.query<{ source_digest: boolean; source_secret: boolean; source_table: boolean;
+@@ -714,65 +714,65 @@ describe('M1 source admission authorization', () => {
+       expect(requestedUrl).toBe('https://crm.example.test/capability');
+     } finally { vi.unstubAllGlobals(); }
+   });
+ 
+   it('performs a read-only PostgreSQL source probe against an owned role and approved objects', async () => {
+     const suffix=randomUUID().replaceAll('-','').slice(0,20);
+     const schema=`m1_probe_${suffix}`;
+     const role=`m1_reader_${suffix}`;
+     await fixture.pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+     await fixture.pool.query(`CREATE SCHEMA ${schema}`);
+-    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,deleted_at timestamptz)`);
++    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,updated_at timestamptz,deleted_at timestamptz)`);
+     await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
+     await fixture.pool.query(`GRANT SELECT ON ${schema}.customer_data TO ${role}`);
+     try {
+       const result=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
+         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
+         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
++          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
+         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+       });
+       expect(result).toMatchObject({passed:true,checks:expect.arrayContaining(['ENDPOINT_REACHABLE','SOURCE_IDENTITY_VALID','READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'])});
+-      await fixture.pool.query(`CREATE TABLE ${schema}.bad_customer(customer_id text,source_version text,deleted_at text)`);
++      await fixture.pool.query(`CREATE TABLE ${schema}.bad_customer(customer_id text,source_version text,updated_at text,deleted_at text)`);
+       await fixture.pool.query(`GRANT SELECT ON ${schema}.bad_customer TO ${role}`);
+       const badType=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
+         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
+         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'bad_customer',version_field:'source_version',delete_field:'deleted_at'}}},
++          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'bad_customer',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
+         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+       });
+       expect(badType).toMatchObject({passed:false,checks:expect.arrayContaining(['VERSION_DELETE_CONTRACT_INVALID'])});
+     } finally {
+       await fixture.pool.query(`DROP SCHEMA ${schema} CASCADE`);
+       await fixture.pool.query(`DROP ROLE ${role}`);
+     }
+   });
+ 
+   it('rejects column-level UPDATE grants on a PostgreSQL source object', async () => {
+     const suffix=randomUUID().replaceAll('-','').slice(0,20);
+     const schema=`m1_probe_${suffix}`;
+     const role=`m1_reader_${suffix}`;
+     await fixture.pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+     await fixture.pool.query(`CREATE SCHEMA ${schema}`);
+-    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,deleted_at timestamptz)`);
++    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,updated_at timestamptz,deleted_at timestamptz)`);
+     await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
+     await fixture.pool.query(`GRANT SELECT ON ${schema}.customer_data TO ${role}`);
+     await fixture.pool.query(`GRANT INSERT(customer_id) ON ${schema}.customer_data TO ${role}`);
+     await fixture.pool.query(`GRANT UPDATE(source_version) ON ${schema}.customer_data TO ${role}`);
+     try {
+       const result=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
+         config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
+         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+-          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
++          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}},
+         secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+       });
+       expect(result).toMatchObject({passed:false,checks:expect.arrayContaining(['READ_ONLY_PERMISSION_INVALID'])});
+     } finally {
+       await fixture.pool.query(`DROP SCHEMA ${schema} CASCADE`);
+       await fixture.pool.query(`DROP ROLE ${role}`);
+     }
+   });
+ 
+   it('keeps SQL Server unavailable for TESTED even when a deployment profile exists', async () => {
+@@ -914,21 +914,21 @@ async function prepareOwner() {
+ function managerService(pool: typeof fixture.pool = fixture.pool) {
+   const seenSecrets:string[]=[];
+   const secretResolver:SecretResolver={isConfiguredReference:reference=>reference==='vault:/crm/credential-v1',resolve:async reference=>{
+     if(reference!=='vault:/crm/credential-v1') throw new Error('unconfigured');
+     seenSecrets.push('fixture-secret'); return 'fixture-secret';
+   }};
+   const endpointAllowlist:EndpointAllowlist={resolve:async reference=>{
+     if(reference==='crm-prod') return {revision:'fixture-v1',connector:'rest',host:'127.0.0.1',port:capabilityPort,protocol:'http:',allow_loopback_http:true,path:'/',
+       schema_version:'customer-v1',source_identity:'fixture-crm',entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}};
+     if(reference==='pg-prod') return {revision:'fixture-pg-v1',connector:'postgresql',host:'db.fixture.invalid',port:5432,protocol:'postgres:',
+-      database:'source',user:'source_reader',schema:'public',entities:{customer:{table:'customers',version_field:'source_version',delete_field:'deleted_at'}}};
++      database:'source',user:'source_reader',schema:'public',entities:{customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'}}};
+     if(reference==='sql-prod') return {revision:'fixture-sql-v1',connector:'sqlserver',host:'sql.fixture.invalid',port:1433,protocol:'mssql:',entities:{}};
+     throw new Error('unapproved');
+   }};
+   const capabilityProbe=createBoundedCapabilityProbe({environmentKind:'local_lab'});
+   return {service:createSourceRegistryService({pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'local_lab'}),seenSecrets,
+     secretResolver,endpointAllowlist,capabilityProbe};
+ }
+ 
+ function customerMappings(firstSourceField='customer_name') {
+   return [
+diff --git a/integration-service/etl-worker/postgres-snapshot-connector.ts b/integration-service/etl-worker/postgres-snapshot-connector.ts
+new file mode 100644
+index 0000000..554971b
+--- /dev/null
++++ b/integration-service/etl-worker/postgres-snapshot-connector.ts
+@@ -0,0 +1,273 @@
++import { createHash } from 'node:crypto';
++import { Client } from 'pg';
++import type { FieldMapping, SourceConfig } from '../source-registry/service.js';
++import type { EndpointProfile } from '../source-registry/capability-probe.js';
++
++const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
++const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
++const VERSION = /^(?:0|[1-9][0-9]*|[0-9a-fA-F-]{36}|[A-Za-z0-9._:-]{1,128})$/;
++export const MAX_SNAPSHOT_PAGE_SIZE = 1000;
++
++export type SnapshotRelation = 'customer' | 'order' | 'order_line';
++export type SnapshotStageRow = Readonly<{
++  entity: 'customer' | 'order';
++  relation: SnapshotRelation;
++  source_pk: string;
++  parent_source_pk: string;
++  source_version: string | null;
++  facts: Readonly<Record<string, string | null>>;
++}>;
++export type SnapshotPage = Readonly<{
++  entity: 'customer' | 'order';
++  relation: SnapshotRelation;
++  page_no: number;
++  rows: readonly SnapshotStageRow[];
++  first_key: string;
++  last_key: string;
++  page_digest: string;
++}>;
++export type SnapshotConnection = Readonly<{
++  query(sql: string): Promise<{ rows: Record<string, unknown>[] }>;
++  close(): Promise<void>;
++}>;
++export type SourceEgressPolicy = Readonly<{
++  environmentKind: 'site' | 'local_lab';
++  policyId: string;
++}>;
++export type PostgresSourceConnectionFactory = Readonly<{
++  connect(input: Readonly<{ profile: EndpointProfile; password: string; policy: SourceEgressPolicy }>): Promise<SnapshotConnection>;
++}>;
++export type SnapshotScanResult = Readonly<{
++  snapshot_identity: string;
++  page_count: number;
++  row_count: number;
++  relation_counts: Readonly<Record<SnapshotRelation, number>>;
++}>;
++export type SnapshotPageSink = (page: SnapshotPage) => Promise<void>;
++
++export class SnapshotSourceError extends Error {
++  constructor(readonly code: 'SNAPSHOT_PROFILE_INVALID' | 'SNAPSHOT_SOURCE_UNAVAILABLE' | 'SNAPSHOT_SOURCE_CONTRACT_INVALID' |
++    'SNAPSHOT_SOURCE_DUPLICATE_KEY' | 'SNAPSHOT_CANCELLED') { super(code); }
++}
++
++function quoteIdentifier(value: string): string {
++  if (!IDENTIFIER.test(value)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  return `"${value.replaceAll('"', '""')}"`;
++}
++function qualified(schema: string, table: string): string { return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`; }
++function sha256(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex'); }
++function canonical(value: unknown): string {
++  if (value === null || typeof value !== 'object') return JSON.stringify(value);
++  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
++  const record = value as Record<string, unknown>;
++  return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${canonical(record[key])}`).join(',')}}`;
++}
++function mappedValue(raw: unknown, mapping: FieldMapping): string | null {
++  if (raw === null || raw === undefined) return null;
++  const text = String(raw);
++  switch (mapping.transform) {
++    case 'trim': return text.trim();
++    case 'decimal-string': if (!DECIMAL.test(text)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID'); return text;
++    case 'source-id': if (!text || text.length > 256 || /[\u0000-\u001f\u007f]/.test(text)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID'); return text;
++    case 'identity': return text;
++  }
++}
++function requireText(value: unknown): string {
++  if (typeof value !== 'string' || value.length < 1 || /[\u0000-\u001f\u007f]/.test(value))
++    throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID');
++  return value;
++}
++function relationMappings(mappings: readonly FieldMapping[], entity: 'customer' | 'order', prefix?: 'lines.') {
++  return mappings.filter(mapping => mapping.entity === entity && (prefix ? mapping.target_field.startsWith(prefix) : !mapping.target_field.startsWith('lines.')));
++}
++function columns(profile: EndpointProfile, config: SourceConfig, entity: 'customer' | 'order', mappings: readonly FieldMapping[], line = false): string {
++  const item = profile.entities[entity];
++  if (!item?.table || !item.source_pk || !IDENTIFIER.test(item.source_pk) || !item.table || !IDENTIFIER.test(item.table) || !profile.schema)
++    throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  if (!item.updated_at_field || !IDENTIFIER.test(item.updated_at_field)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  const key = line ? relationMappings(mappings, 'order', 'lines.').find(mapping => mapping.target_field === 'lines.source_line_id')?.source_field : item.source_pk;
++  if (!key) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  const selected = new Set<string>([key]);
++  if (line) {
++    if (!item.lines || !IDENTIFIER.test(item.lines.table) || !IDENTIFIER.test(item.lines.order_fk)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++    selected.add(item.lines.order_fk);
++  }
++  for (const mapping of relationMappings(mappings, entity, line ? 'lines.' : undefined)) {
++    if (!IDENTIFIER.test(mapping.source_field)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++    selected.add(mapping.source_field);
++  }
++  if (!line) {
++    selected.add(item.updated_at_field);
++    if (item.version_field) selected.add(item.version_field);
++    if (config.delete_contract === 'tombstone') {
++      if (!item.delete_field || !IDENTIFIER.test(item.delete_field)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++      selected.add(item.delete_field);
++    }
++    for (const target of ['source_updated_at', 'deleted_at']) {
++      const mapping = relationMappings(mappings, entity).find(value => value.target_field === target);
++      const field = target === 'source_updated_at' ? item.updated_at_field : item.delete_field;
++      if (mapping && mapping.source_field !== field) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++    }
++  }
++  const projections = [...selected].map((column, index) => `${quoteIdentifier(column)}::text AS ${quoteIdentifier(`c${index}`)}`);
++  const ordinal = new Map([...selected].map((column, index) => [column, `c${index}`]));
++  const order = line ? [item.lines!.order_fk, key] : [key];
++  const from = qualified(profile.schema, line ? item.lines!.table : item.table);
++  const orderSql = order.map(column => quoteIdentifier(column)).join(',');
++  return `SELECT ${projections.join(',')} FROM ${from} ORDER BY ${orderSql}`;
++}
++
++function pageRows(rows: Record<string, unknown>[], profile: EndpointProfile, config: SourceConfig,
++  mappings: readonly FieldMapping[], relation: SnapshotRelation): SnapshotStageRow[] {
++  const line = relation === 'order_line';
++  const entity = relation === 'customer' ? 'customer' : 'order';
++  const item = profile.entities[entity]!;
++  const lineMaps = line ? relationMappings(mappings, 'order', 'lines.') : [];
++  const maps = line ? lineMaps : relationMappings(mappings, entity);
++  const allSelected = new Set<string>();
++  const keyColumn = line ? lineMaps.find(mapping => mapping.target_field === 'lines.source_line_id')!.source_field : item.source_pk!;
++  allSelected.add(keyColumn);
++  const parentColumn = line ? item.lines!.order_fk : undefined;
++  if (parentColumn) allSelected.add(parentColumn);
++  for (const mapping of maps) allSelected.add(mapping.source_field);
++  if (!line) {
++    allSelected.add(item.updated_at_field!);
++    if (item.version_field) allSelected.add(item.version_field);
++    if (config.delete_contract === 'tombstone' && item.delete_field) allSelected.add(item.delete_field);
++  }
++  const names = [...allSelected];
++  const alias = new Map(names.map((name, index) => [name, `c${index}`]));
++  const unique = new Set<string>();
++  return rows.map(raw => {
++    const key = requireText(raw[alias.get(keyColumn)!]);
++    const parent = parentColumn ? requireText(raw[alias.get(parentColumn)!]) : '';
++    const uniqueKey = `${parent.length}:${parent}${key.length}:${key}`;
++    if (unique.has(uniqueKey)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_DUPLICATE_KEY');
++    unique.add(uniqueKey);
++    const facts: Record<string, string | null> = {};
++    for (const mapping of maps) {
++      const value = mappedValue(raw[alias.get(mapping.source_field)!], mapping);
++      if (line && (value === null || value.length === 0)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID');
++      facts[mapping.target_field] = value;
++    }
++    if (!line) {
++      const updatedAt = requireText(raw[alias.get(item.updated_at_field!)!]);
++      facts.source_updated_at = updatedAt;
++      if (config.delete_contract === 'tombstone') {
++        const deleted = raw[alias.get(item.delete_field!)!];
++        facts.deleted_at = deleted === null || deleted === undefined ? null : requireText(deleted);
++      }
++    }
++    const version = item.version_field ? raw[alias.get(item.version_field)!] : null;
++    const sourceVersion = version === null || version === undefined ? null : requireText(version);
++    if (!line && config.version_domain === 'SOURCE_VERSION' && (!sourceVersion || !VERSION.test(sourceVersion)))
++      throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID');
++    return Object.freeze({ entity, relation, source_pk: key, parent_source_pk: parent, source_version: sourceVersion,
++      facts: Object.freeze(facts) });
++  });
++}
++
++async function declareCursor(connection: SnapshotConnection, cursor: string, select: string): Promise<void> {
++  if (!/^hub_snapshot_(?:customer|order|order_line)$/.test(cursor)) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  await connection.query(`DECLARE ${cursor} NO SCROLL CURSOR WITHOUT HOLD FOR ${select}`);
++}
++
++export async function extractPostgresSnapshot(input: Readonly<{
++  factory: PostgresSourceConnectionFactory;
++  policy: SourceEgressPolicy;
++  profile: EndpointProfile;
++  config: SourceConfig;
++  password: string;
++  mappings: readonly FieldMapping[];
++  pageSize: number;
++  signal?: AbortSignal;
++  onPage: SnapshotPageSink;
++}>): Promise<SnapshotScanResult> {
++  if (!Number.isInteger(input.pageSize) || input.pageSize < 1 || input.pageSize > MAX_SNAPSHOT_PAGE_SIZE ||
++      !input.password || !input.profile || input.profile.connector !== 'postgresql') throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  const relations: SnapshotRelation[] = [...input.config.allowed_entities].sort((left, right) => left.localeCompare(right)).flatMap(entity => entity === 'customer'
++    ? ['customer' as const] : ['order' as const, 'order_line' as const]);
++  if (new Set(input.config.allowed_entities).size !== input.config.allowed_entities.length ||
++      input.config.allowed_entities.some(entity => entity !== 'customer' && entity !== 'order')) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++  let connection: SnapshotConnection | undefined;
++  let inTransaction = false;
++  let sinkFailure = false;
++  try {
++    if (input.signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
++    connection = await input.factory.connect({ profile: input.profile, password: input.password, policy: input.policy });
++    await connection.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
++    inTransaction = true;
++    await connection.query("SET LOCAL TIME ZONE 'UTC'");
++    await connection.query("SET LOCAL DateStyle TO 'ISO, YMD'");
++    const snapshot = await connection.query("SELECT pg_current_snapshot()::text AS snapshot_text");
++    const snapshotText = requireText(snapshot.rows[0]?.snapshot_text);
++    const counts: Record<SnapshotRelation, number> = { customer: 0, order: 0, order_line: 0 };
++    let pageCount = 0;
++    for (const relation of relations) {
++      if (input.signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
++      const entity = relation === 'customer' ? 'customer' : 'order';
++      const cursor = `hub_snapshot_${relation}`;
++      const select = columns(input.profile, input.config, entity, input.mappings, relation === 'order_line');
++      await declareCursor(connection, cursor, select);
++      let pageNo = 0;
++      while (true) {
++        if (input.signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
++        // FETCH grammar accepts only a literal; pageSize is validated and capped above.
++        const result = await connection.query(`FETCH FORWARD ${input.pageSize} FROM ${cursor}`);
++        if (!result.rows.length) break;
++        pageNo += 1;
++        const records = pageRows(result.rows, input.profile, input.config, input.mappings, relation);
++        const key = (row: SnapshotStageRow) => relation === 'order_line'
++          ? `${row.parent_source_pk.length}:${row.parent_source_pk}${row.source_pk.length}:${row.source_pk}` : row.source_pk;
++        const page: SnapshotPage = Object.freeze({ entity, relation, page_no: pageNo, rows: Object.freeze(records),
++          first_key: key(records[0]), last_key: key(records.at(-1)!), page_digest: sha256(canonical(records)) });
++        try { await input.onPage(page); }
++        catch (error) { sinkFailure = true; throw error; }
++        counts[relation] += records.length;
++        pageCount += 1;
++      }
++      await connection.query(`CLOSE ${cursor}`);
++    }
++    await connection.query('COMMIT');
++    inTransaction = false;
++    return Object.freeze({ snapshot_identity: sha256(snapshotText), page_count: pageCount,
++      row_count: Object.values(counts).reduce((total, count) => total + count, 0), relation_counts: Object.freeze(counts) });
++  } catch (error) {
++    if (inTransaction && connection) await connection.query('ROLLBACK').catch(() => undefined);
++    if (sinkFailure || error instanceof SnapshotSourceError) throw error;
++    if (typeof error === 'object' && error !== null && 'code' in error) {
++      const code = String(error.code);
++      if (['42501','23505','42703','42P01','28P01','22003','22007'].includes(code))
++        throw new SnapshotSourceError(code === '23505' ? 'SNAPSHOT_SOURCE_DUPLICATE_KEY' : 'SNAPSHOT_SOURCE_CONTRACT_INVALID');
++    }
++    throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE');
++  } finally {
++    if (connection) await connection.close().catch(() => undefined);
++  }
++}
++
++export const failClosedPostgresSourceConnectionFactory: PostgresSourceConnectionFactory = Object.freeze({
++  async connect() { throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE'); },
++});
++
++export function createLocalLabPostgresSourceConnectionFactory(): PostgresSourceConnectionFactory {
++  return Object.freeze({
++    async connect({ profile, password, policy }) {
++      if (policy.environmentKind !== 'local_lab' || !['127.0.0.1', '::1'].includes(profile.host.toLowerCase().replace(/^\[|\]$/g,'')) ||
++          profile.allow_loopback_plaintext !== true || profile.connector !== 'postgresql' || !profile.database || !profile.user)
++        throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++      const client = new Client({ host: profile.host, port: profile.port, database: profile.database, user: profile.user,
++        password, ssl: false, connectionTimeoutMillis: 3_000, query_timeout: 10_000, statement_timeout: 10_000,
++        application_name: 'hub_snapshot_extractor' });
++      try { await client.connect(); }
++      catch { await client.end().catch(() => undefined); throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE'); }
++      // A backend can disappear while the sink is staging a page; pg emits that socket error
++      // independently of a pending query. Pending queries still reject and drive rollback.
++      client.on('error', () => undefined);
++      return Object.freeze({
++        query: async (sql: string) => client.query(sql),
++        close: async () => client.end(),
++      });
++    },
++  });
++}
+diff --git a/integration-service/etl-worker/snapshot-runs.ts b/integration-service/etl-worker/snapshot-runs.ts
+index 68eeea1..0dcb044 100644
+--- a/integration-service/etl-worker/snapshot-runs.ts
++++ b/integration-service/etl-worker/snapshot-runs.ts
+@@ -107,24 +107,32 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
+       WHERE r.tenant_key=$1 AND r.source_id=$2`, [tenantId,sourceId]);
+   const source = sourceResult.rows[0];
+   if (!source) fail('SOURCE_NOT_FOUND');
+   if (source.lifecycle !== 'ACTIVE' || !source.credential_enabled || !source.tenant_enabled ||
+       revision(source.current_config_revision) !== approvedRevision) fail('SOURCE_CONFLICT');
+   const config = source.config as Record<string, any>;
+   const entities = Array.isArray(config.allowed_entities) ? [...config.allowed_entities].sort() as SourceEntity[] : [];
+   const credentialEntities = Array.isArray(source.allowed_entities) ? [...source.allowed_entities].sort() as SourceEntity[] : [];
+   if (config.connector !== 'postgresql' || config.mode !== 'FULL_SNAPSHOT' || entities.length === 0 ||
+       stable(entities) !== stable(credentialEntities)) fail('SOURCE_CONTRACT_INVALID');
+-  // The current registry has no approved line relation/key/order-FK proof. A is customer-only.
+-  if (entities.includes('order')) fail('SOURCE_CONTRACT_INVALID');
+   const endpoint = config.endpoint_profile as Record<string, any> | undefined;
+   if (!endpoint || typeof endpoint !== 'object') fail('SOURCE_CONTRACT_INVALID');
++  for (const entity of entities) {
++    const profileEntity = endpoint.entities?.[entity];
++    if (!profileEntity || typeof profileEntity.source_pk !== 'string' ||
++        (config.version_domain === 'SOURCE_VERSION' && typeof profileEntity.version_field !== 'string')) fail('SOURCE_CONTRACT_INVALID');
++  }
++  if (entities.includes('order')) {
++    const order = endpoint.entities?.order;
++    if (!order.lines || typeof order.lines.table !== 'string' || typeof order.lines.order_fk !== 'string' ||
++        (config.version_domain === 'SOURCE_VERSION' && order.aggregate_version_covers_lines !== true)) fail('SOURCE_CONTRACT_INVALID');
++  }
+   if (config.delete_contract === 'tombstone' && entities.some(entity => typeof endpoint.entities?.[entity]?.delete_field !== 'string')) {
+     fail('SOURCE_CONTRACT_INVALID');
+   }
+   if (config.version_domain === 'SOURCE_VERSION') {
+     if (config.delete_contract === 'hard_delete' || entities.some(entity => typeof endpoint.entities?.[entity]?.version_field !== 'string')) {
+       fail('SOURCE_CONTRACT_INVALID');
+     }
+   } else if (config.version_domain !== 'SNAPSHOT_OBSERVATION') fail('SOURCE_CONTRACT_INVALID');
+   const channels: Record<string, unknown> = {};
+   for (const entity of entities.sort((a,b) => ENTITY_ORDER.indexOf(a)-ENTITY_ORDER.indexOf(b))) {
+@@ -248,21 +256,21 @@ export async function admitDueSnapshotRun(pool: Pool, tenantId: string, sourceId
+     if (!source.rows[0]?.locked) return null;
+     const currentSource = await client.query<RunRow>(`SELECT current_config_revision FROM control.source_registry
+       WHERE tenant_key=$1 AND source_id=$2`, [tenantId,sourceId]);
+     if (!currentSource.rowCount) return null;
+     const revisionValue = revision(currentSource.rows[0].current_config_revision);
+     const base = await client.query<RunRow>(`SELECT cr.config->'allowed_entities' AS entities FROM control.source_registry r
+       JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
+       WHERE r.tenant_key=$1 AND r.source_id=$2`, [tenantId,sourceId]);
+     const entities = (base.rows[0]?.entities ?? []).slice().sort((a: string,b: string) => ENTITY_ORDER.indexOf(a as SourceEntity)-ENTITY_ORDER.indexOf(b as SourceEntity));
+     for (const entity of entities) await client.query('SELECT * FROM control.lock_source_channel($1,$2,$3)', [tenantId,sourceId,entity]);
+-    const schedule = await client.query<RunRow>(`SELECT * FROM control.etl_snapshot_schedule
++    const schedule = await client.query<RunRow>(`SELECT schedule_revision,next_due_at FROM control.etl_snapshot_schedule
+       WHERE tenant_key=$1 AND source_id=$2 AND enabled AND next_due_at<=clock_timestamp() FOR UPDATE SKIP LOCKED`, [tenantId,sourceId]);
+     if (!schedule.rowCount) return null;
+     const active = await client.query<RunRow>(`SELECT status FROM control.etl_run WHERE tenant_key=$1 AND source_id=$2
+       AND status=ANY($3::text[]) LIMIT 1`, [tenantId,sourceId,[...ACTIVE]]);
+     if (active.rowCount) return null;
+     const proof = await lockedProof(client,tenantId,sourceId,revisionValue);
+     const scheduledKey = `due:${schedule.rows[0].schedule_revision}:${new Date(schedule.rows[0].next_due_at).toISOString()}`;
+     const run = await insertRun(client,proof,tenantId,sourceId,'SCHEDULED','DUE_GATE',scheduledKey,String(schedule.rows[0].schedule_revision));
+     await client.query(`UPDATE control.etl_snapshot_schedule SET active_run_id=$3,last_run_id=$3,updated_at=clock_timestamp()
+       WHERE tenant_key=$1 AND source_id=$2`, [tenantId,sourceId,run.run_id]);
+diff --git a/integration-service/etl-worker/snapshot-stage-store.ts b/integration-service/etl-worker/snapshot-stage-store.ts
+new file mode 100644
+index 0000000..a3a3c1e
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-stage-store.ts
+@@ -0,0 +1,129 @@
++import { createHash } from 'node:crypto';
++import type { Pool, PoolClient } from 'pg';
++import type { SourceConfig } from '../source-registry/service.js';
++import type { EndpointProfile } from '../source-registry/capability-probe.js';
++import type { SnapshotPage, SnapshotRelation } from './postgres-snapshot-connector.js';
++
++export type SnapshotClaim = Readonly<{ run_id: string; claim_token: string }>;
++export type SnapshotAttempt = Readonly<{ attempt_id: string; ordinal: number; operation_id: string }>;
++export type FrozenSnapshotProof = Readonly<{
++  tenant_key: string;
++  source_id: string;
++  run_id: string;
++  expected_entities: readonly ('customer' | 'order')[];
++  security_barrier_fence: string;
++  config: SourceConfig;
++  endpoint_profile: EndpointProfile;
++  mappings: readonly { entity: 'customer' | 'order'; source_field: string; target_field: string; transform: 'identity' | 'trim' | 'decimal-string' | 'source-id' }[];
++  config_digest: string;
++  mapping_digest: string;
++  identity_mapping_digest: string;
++  endpoint_profile_digest: string;
++}>;
++
++function stable(value: unknown): string {
++  if (value === null || typeof value !== 'object') return JSON.stringify(value);
++  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
++  const record=value as Record<string,unknown>;
++  return `{${Object.keys(record).sort().map(key=>`${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
++}
++function digest(value: unknown): string { return createHash('sha256').update(stable(value),'utf8').digest('hex'); }
++function digestHex(value: Buffer | string): string { return Buffer.isBuffer(value) ? value.toString('hex') : value; }
++
++async function transaction<T>(pool: Pool, action: (client: PoolClient) => Promise<T>): Promise<T> {
++  const client=await pool.connect();
++  try {
++    await client.query('BEGIN');
++    await client.query('SELECT control.lock_security_barrier_fence()');
++    const value=await action(client);
++    await client.query('COMMIT');
++    return value;
++  } catch (error) { await client.query('ROLLBACK').catch(()=>undefined); throw error; }
++  finally { client.release(); }
++}
++
++export function createSnapshotStageStore(pool: Pool) {
++  return Object.freeze({
++    claim(tenantId: string, sourceId: string, leaseSeconds: number): Promise<SnapshotClaim | undefined> {
++      return transaction(pool,async client=>{
++        const result=await client.query<SnapshotClaim>(`SELECT run_id,claim_token FROM control.claim_etl_snapshot_run($1,$2,$3)`,
++          [tenantId,sourceId,leaseSeconds]);
++        return result.rows[0];
++      });
++    },
++    async loadFrozenProof(tenantId: string, sourceId: string, runId: string): Promise<FrozenSnapshotProof> {
++      return transaction(pool,async client=>{
++        const run=await client.query<Record<string,any>>(`SELECT run_id,tenant_key,source_id,status,expected_entities,config_revision,config_digest,
++          mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,security_barrier_fence
++          FROM control.etl_run WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[tenantId,sourceId,runId]);
++        if(!run.rowCount || run.rows[0].status!=='SCANNING') throw new Error('SNAPSHOT_RUN_UNAVAILABLE');
++        const row=run.rows[0];
++        const configRow=await client.query<Record<string,any>>(`SELECT config,config_digest FROM control.source_config_revision
++          WHERE tenant_key=$1 AND source_id=$2 AND revision=$3`,[tenantId,sourceId,row.config_revision]);
++        const mappingRow=await client.query<Record<string,any>>(`SELECT mappings,mapping_digest FROM control.source_mapping_revision
++          WHERE tenant_key=$1 AND source_id=$2 AND revision=$3`,[tenantId,sourceId,row.mapping_revision]);
++        const identityRow=await client.query<{mapping_digest:Buffer}>(`SELECT mapping_digest FROM control.source_identity_mapping_revision
++          WHERE tenant_key=$1 AND source_id=$2 AND revision=$3`,[tenantId,sourceId,row.identity_mapping_revision]);
++        if(!configRow.rowCount || !mappingRow.rowCount || !identityRow.rowCount) throw new Error('SNAPSHOT_PROOF_INVALID');
++        const config=configRow.rows[0].config as SourceConfig;
++        const profile=config.endpoint_profile;
++        const mappings=mappingRow.rows[0].mappings as FrozenSnapshotProof['mappings'];
++        const configDigest=digestHex(configRow.rows[0].config_digest);
++        const mappingDigest=digestHex(mappingRow.rows[0].mapping_digest);
++        const identityDigest=digestHex(identityRow.rows[0].mapping_digest);
++        if(digest(config)!==configDigest || digest(mappings)!==mappingDigest || identityDigest!==digestHex(row.identity_mapping_digest) ||
++            !profile || digest(profile)!==digestHex(row.endpoint_profile_digest) ||
++            digest(config)!==digestHex(row.config_digest) || digest(mappings)!==digestHex(row.mapping_digest) ||
++            !Array.isArray(row.expected_entities) || stable([...row.expected_entities].sort())!==stable([...config.allowed_entities].sort()))
++          throw new Error('SNAPSHOT_PROOF_INVALID');
++        return Object.freeze({ tenant_key:tenantId,source_id:sourceId,run_id:runId,expected_entities:Object.freeze([...row.expected_entities]),
++          security_barrier_fence:String(row.security_barrier_fence),config,endpoint_profile:profile,mappings,
++          config_digest:configDigest,mapping_digest:mappingDigest,identity_mapping_digest:identityDigest,
++          endpoint_profile_digest:digestHex(row.endpoint_profile_digest) });
++      });
++    },
++    beginAttempt(tenantId: string, sourceId: string, runId: string, token: string, leaseSeconds: number): Promise<SnapshotAttempt> {
++      return transaction(pool,async client=>{
++        const result=await client.query<SnapshotAttempt>(`SELECT attempt_id,ordinal,operation_id FROM control.begin_etl_snapshot_attempt($1,$2,$3,$4,$5)`,
++          [tenantId,sourceId,runId,token,leaseSeconds]);
++        if(!result.rowCount) throw new Error('SNAPSHOT_ATTEMPT_UNAVAILABLE');
++        return result.rows[0];
++      });
++    },
++    heartbeat(tenantId: string, sourceId: string, runId: string, attemptId: string, token: string, leaseSeconds: number): Promise<boolean> {
++      return transaction(pool,async client=>{
++        const result=await client.query<{heartbeat_etl_snapshot_run:boolean}>(`SELECT control.heartbeat_etl_snapshot_run($1,$2,$3,$4,$5,$6)`,
++          [tenantId,sourceId,runId,attemptId,token,leaseSeconds]);
++        return result.rows[0]?.heartbeat_etl_snapshot_run===true;
++      });
++    },
++    writePage(tenantId: string, sourceId: string, runId: string, attemptId: string, token: string, page: SnapshotPage): Promise<number> {
++      return transaction(pool,async client=>{
++        const result=await client.query<{write_etl_snapshot_page:number}>(`SELECT control.write_etl_snapshot_page($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::bytea,$12::jsonb)`,
++          [tenantId,sourceId,runId,attemptId,token,page.entity,page.relation,page.page_no,page.first_key,page.last_key,
++            Buffer.from(page.page_digest,'hex'),JSON.stringify(page.rows)]);
++        return Number(result.rows[0]?.write_etl_snapshot_page ?? 0);
++      });
++    },
++    complete(tenantId: string, sourceId: string, runId: string, attemptId: string, token: string, manifest: Record<string,unknown>, manifestDigest: string): Promise<number> {
++      return transaction(pool,async client=>{
++        const result=await client.query<{complete_etl_snapshot_manifest:string}>(`SELECT control.complete_etl_snapshot_manifest($1,$2,$3,$4,$5,$6::jsonb,$7::bytea)`,
++          [tenantId,sourceId,runId,attemptId,token,JSON.stringify(manifest),Buffer.from(manifestDigest,'hex')]);
++        return Number(result.rows[0]?.complete_etl_snapshot_manifest ?? 0);
++      });
++    },
++    fail(tenantId: string, sourceId: string, runId: string, attemptId: string, token: string, errorCode: string, retryable: boolean): Promise<string> {
++      return transaction(pool,async client=>{
++        const result=await client.query<{fail_etl_snapshot_attempt:string}>(`SELECT control.fail_etl_snapshot_attempt($1,$2,$3,$4,$5,$6,$7)`,
++          [tenantId,sourceId,runId,attemptId,token,errorCode,retryable]);
++        return result.rows[0]?.fail_etl_snapshot_attempt ?? 'STALE';
++      });
++    },
++  });
++}
++
++export function expectedSnapshotRelations(entities: readonly ('customer'|'order')[]): readonly SnapshotRelation[] {
++  return Object.freeze([...entities].sort().flatMap(entity=>entity==='customer'?['customer' as const]:['order' as const,'order_line' as const]));
++}
++
++export function snapshotManifestDigest(manifest: Record<string,unknown>): string { return digest(manifest); }
+diff --git a/integration-service/etl-worker/snapshot-worker.ts b/integration-service/etl-worker/snapshot-worker.ts
+new file mode 100644
+index 0000000..1942399
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-worker.ts
+@@ -0,0 +1,116 @@
++import type { Pool, PoolClient } from 'pg';
++import { validateEndpointProfile } from '../source-registry/capability-probe.js';
++import type { SecretResolver } from '../source-registry/service.js';
++import {
++  extractPostgresSnapshot, failClosedPostgresSourceConnectionFactory, type PostgresSourceConnectionFactory,
++  type SnapshotPage, type SourceEgressPolicy, SnapshotSourceError,
++} from './postgres-snapshot-connector.js';
++import { createSnapshotStageStore, expectedSnapshotRelations, snapshotManifestDigest } from './snapshot-stage-store.js';
++
++export type SnapshotWorkerDependencies = Readonly<{
++  secretResolver: SecretResolver;
++  sourceConnectionFactory?: PostgresSourceConnectionFactory;
++  egressPolicy: SourceEgressPolicy;
++  pageSize?: number;
++  leaseSeconds?: number;
++}>;
++
++async function transaction<T>(pool: Pool, action: (client: PoolClient) => Promise<T>): Promise<T> {
++  const client = await pool.connect();
++  try {
++    await client.query('BEGIN');
++    await client.query('SELECT control.lock_security_barrier_fence()');
++    const result = await action(client);
++    await client.query('COMMIT');
++    return result;
++  } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; }
++  finally { client.release(); }
++}
++
++async function availableSources(pool: Pool, limit: number): Promise<Array<{ tenant_key: string; source_id: string }>> {
++  return transaction(pool, async client => {
++    const result = await client.query<{ tenant_key: string; source_id: string }>(`SELECT tenant_key,source_id FROM control.etl_run
++      WHERE status IN ('QUEUED','SCANNING') AND snapshot_available_at<=clock_timestamp()
++        AND (snapshot_claim_token IS NULL OR snapshot_lease_expires_at<=clock_timestamp())
++      ORDER BY created_at,run_id LIMIT $1`, [limit]);
++    return result.rows;
++  });
++}
++
++function errorCode(error: unknown): string {
++  if (error instanceof SnapshotSourceError) return error.code;
++  if (error instanceof Error && /^SNAPSHOT_[A-Z0-9_:-]{1,90}$/.test(error.message)) return error.message;
++  if (typeof error === 'object' && error !== null && 'code' in error && String(error.code) === '23505') return 'SNAPSHOT_DUPLICATE_KEY';
++  return 'SNAPSHOT_INTERNAL_FAILURE';
++}
++function retryable(error: unknown): boolean {
++  return error instanceof SnapshotSourceError && error.code === 'SNAPSHOT_SOURCE_UNAVAILABLE';
++}
++
++export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWorkerDependencies, options: { limit?: number } = {}): Promise<number> {
++  const limit = options.limit ?? 10;
++  const leaseSeconds = dependencies.leaseSeconds ?? 60;
++  const pageSize = dependencies.pageSize ?? 500;
++  if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(leaseSeconds) || leaseSeconds < 10 || leaseSeconds > 900)
++    throw new Error('SNAPSHOT_WORKER_OPTIONS_INVALID');
++  const store = createSnapshotStageStore(pool);
++  const candidates = await availableSources(pool, limit);
++  let claimed = 0;
++  for (const source of candidates) {
++    const claim = await store.claim(source.tenant_key, source.source_id, leaseSeconds);
++    if (!claim) continue;
++    claimed += 1;
++    let attemptId: string | undefined;
++    let stopped = false;
++    let leaseLost = false;
++    const abort = new AbortController();
++    let heartbeat: NodeJS.Timeout | undefined;
++    try {
++      const attempt = await store.beginAttempt(source.tenant_key, source.source_id, claim.run_id, claim.claim_token, leaseSeconds);
++      attemptId = attempt.attempt_id;
++      const proof = await store.loadFrozenProof(source.tenant_key, source.source_id, claim.run_id);
++      const profile = proof.endpoint_profile;
++      validateEndpointProfile(proof.config, profile, { environmentKind: dependencies.egressPolicy.environmentKind });
++      const password = await dependencies.secretResolver.resolve(proof.config.secret_ref);
++      if (typeof password !== 'string' || password.length < 1) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
++      const pages: Array<Pick<SnapshotPage, 'entity' | 'relation' | 'page_no' | 'first_key' | 'last_key' | 'page_digest' | 'rows'>> = [];
++      const stopHeartbeat = () => { stopped = true; if (heartbeat) clearInterval(heartbeat); };
++      heartbeat = setInterval(() => {
++        if (stopped) return;
++        void store.heartbeat(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token, leaseSeconds)
++          .then(ok => { if (!ok) { leaseLost = true; abort.abort(); } })
++          .catch(() => { leaseLost = true; abort.abort(); });
++      }, Math.max(2_000, Math.floor(leaseSeconds * 1000 / 3)));
++      const scan = await extractPostgresSnapshot({ factory: dependencies.sourceConnectionFactory ?? failClosedPostgresSourceConnectionFactory,
++        policy: dependencies.egressPolicy, profile, config: proof.config, password, mappings: proof.mappings, pageSize,
++        signal: abort.signal,
++        onPage: async page => {
++          if (leaseLost) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
++          await store.writePage(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token, page);
++          pages.push(page);
++        } });
++      stopHeartbeat();
++      if (leaseLost) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
++      const relations = expectedSnapshotRelations(proof.expected_entities);
++      const relationCounts = relations.map(relation => ({ relation, row_count: scan.relation_counts[relation],
++        page_count: pages.filter(page => page.relation === relation).length,
++        page_digests: pages.filter(page => page.relation === relation).map(page => page.page_digest) }));
++      const manifest: Record<string, unknown> = { state: 'EXTRACTED', relations, relation_counts: relationCounts,
++        row_count: scan.row_count, page_count: scan.page_count, source_snapshot_identity: scan.snapshot_identity,
++        attempt_id: attempt.attempt_id, operation_id: attempt.operation_id, profile_digest: proof.endpoint_profile_digest,
++        mapping_digest: proof.mapping_digest, config_digest: proof.config_digest,
++        identity_mapping_digest: proof.identity_mapping_digest };
++      await store.complete(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token,
++        manifest, snapshotManifestDigest(manifest));
++    } catch (error) {
++      stopped = true;
++      if (heartbeat) clearInterval(heartbeat);
++      if (attemptId) await store.fail(source.tenant_key, source.source_id, claim.run_id, attemptId, claim.claim_token,
++        errorCode(error), retryable(error)).catch(() => 'STALE');
++    } finally {
++      stopped = true;
++      if (heartbeat) clearInterval(heartbeat);
++    }
++  }
++  return claimed;
++}
+diff --git a/integration-service/etl-worker/worker.ts b/integration-service/etl-worker/worker.ts
+index e58d398..7f85e67 100644
+--- a/integration-service/etl-worker/worker.ts
++++ b/integration-service/etl-worker/worker.ts
+@@ -1,18 +1,19 @@
+ import { pathToFileURL } from 'node:url';
+ import { resolve } from 'node:path';
+ import { randomUUID } from 'node:crypto';
+ import type { Pool, PoolClient } from 'pg';
+ import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from '../contracts/runtime-config.js';
+ import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-contract.js';
+ import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
+ import { durableRetryDelayMs } from './retry.js';
++import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
+ 
+ type Source = { name: string; url: string; table: string; kind: 'customer' | 'order' };
+ type LegacyDependencies = {
+   pool: import('pg').Pool;
+   ingest: typeof import('../normalization/store.js').ingest;
+   fetchOpenMetadataTable: typeof import('../ontology-binding/binding.js').fetchOpenMetadataTable;
+   nextRetryDelay: typeof import('./retry.js').nextRetryDelay;
+ };
+ 
+ type DurableJob = {
+@@ -366,26 +367,28 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
+       let record: PublicRecord;
+       try { record=adaptRecord(job,item); }
+       catch { await setInvalidFacts(pool,claim,job,item,'DURABLE_FACTS_INVALID'); continue; }
+       await applyItem(pool,claim,job,item,record,leaseMs,options.hooks ?? {});
+     }
+     await finishClaim(pool,claim,job);
+   }
+   return claims.length;
+ }
+ 
+-export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.ProcessEnv = process.env): Promise<void> {
++export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.ProcessEnv = process.env,
++  snapshotDependencies?: SnapshotWorkerDependencies): Promise<void> {
+   const once=environment.HUB_STRICT_INGESTION_WORKER_ONCE==='true';
+   const interval=Number(environment.HUB_STRICT_INGESTION_WORKER_INTERVAL_MS ?? 1000);
+   if (!Number.isInteger(interval) || interval<100 || interval>60_000) throw new Error('WORKER_OPTIONS_INVALID');
+   do {
+     await runDurableWorkerOnce(pool);
++    if (snapshotDependencies) await runSnapshotWorkerOnce(pool, snapshotDependencies);
+     if (once) return;
+     await new Promise(resolve => setTimeout(resolve,interval));
+   } while (true);
+ }
+ 
+ export function resolveWorkerSources(environment: NodeJS.ProcessEnv, runtime: HubRuntimeConfiguration): readonly Source[] {
+   if (runtime.environmentKind !== 'local_lab' || !runtime.legacyLabEnabled) return [];
+   return ([
+     { name: 'crm', url: environment.CRM_DB_URL ?? '', table: 'crm_customers', kind: 'customer' },
+     { name: 'orders', url: environment.ORDER_DB_URL ?? '', table: 'erp_orders', kind: 'order' },
+@@ -428,28 +431,29 @@ async function runLegacyWorker(environment: NodeJS.ProcessEnv, sources: readonly
+         await pool.query("UPDATE control.hook_outbox SET attempts=attempts+1,last_error=$2,next_attempt_at=now()+($3::integer * interval '1 millisecond') WHERE id=$1", [row.id,String(error),nextRetryDelay(row.attempts)]);
+       }
+     }
+   }
+   const tick = async () => { for (const source of sources) await pull(source); await processHooks(); };
+   await tick();
+   if (environment.WORKER_ONCE === '1') { await pool.end(); return; }
+   setInterval(() => { void tick(); }, Number(environment.WORKER_INTERVAL_MS ?? 15000));
+ }
+ 
+-export async function startWorker(environment: NodeJS.ProcessEnv = process.env): Promise<'not_ready' | 'local_lab' | 'strict'> {
++export async function startWorker(environment: NodeJS.ProcessEnv = process.env,
++  snapshotDependencies?: SnapshotWorkerDependencies): Promise<'not_ready' | 'local_lab' | 'strict'> {
+   const runtime = readHubRuntimeConfiguration(environment);
+   if (environment.HUB_ENABLE_STRICT_INGESTION_WORKER === 'true') {
+     if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
+     const { pool } = await import('../db.js');
+     const role = await pool.query<{ current_user: string }>('SELECT current_user');
+     if (role.rows[0]?.current_user !== 'hub_worker') throw new Error('WORKER_DATABASE_ROLE_INVALID');
+-    await runDurableWorkerLoop(pool, environment);
++    await runDurableWorkerLoop(pool, environment, snapshotDependencies);
+     return 'strict';
+   }
+   const sources = resolveWorkerSources(environment, runtime);
+   if (!runtime.legacyLabEnabled) return 'not_ready';
+   if (!environment.DATABASE_URL) throw new Error('RUNTIME_CONFIG_INVALID');
+   const [{ pool }, { ingest }, { fetchOpenMetadataTable }, { nextRetryDelay }] = await Promise.all([
+     import('../db.js'), import('../normalization/store.js'), import('../ontology-binding/binding.js'), import('./retry.js'),
+   ]);
+   await runLegacyWorker(environment, sources, { pool, ingest, fetchOpenMetadataTable, nextRetryDelay });
+   return 'local_lab';
+diff --git a/integration-service/migrations/009_snapshot_runs_and_recovery.sql b/integration-service/migrations/009_snapshot_runs_and_recovery.sql
+index 814f872..f266f8f 100644
+--- a/integration-service/migrations/009_snapshot_runs_and_recovery.sql
++++ b/integration-service/migrations/009_snapshot_runs_and_recovery.sql
+@@ -168,10 +168,352 @@ GRANT SELECT (id,tenant_key,source_id,enabled,allowed_entities,revision,source_e
+ GRANT SELECT (tenant_key,enabled) ON control.tenant TO hub_worker;
+ GRANT SELECT (tenant_key,user_id,enabled) ON control.auth_subject TO hub_worker;
+ GRANT EXECUTE ON FUNCTION control.lock_etl_snapshot_source(text,text) TO hub_api,hub_worker;
+ GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text),control.lock_source_channel(text,text,text) TO hub_worker;
+ GRANT INSERT (tenant_key,source_id,run_id,ordinal,operation_id,status) ON control.etl_run_attempt TO hub_api,hub_worker;
+ GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at,enabled,schedule_revision,interval_seconds) ON control.etl_snapshot_schedule TO hub_api;
+ GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at) ON control.etl_snapshot_schedule TO hub_worker;
+ GRANT UPDATE (status,started_at,completed_at,extracted_count,applied_count,quarantined_count,error_code,completeness_summary,checkpoint_summary)
+   ON control.etl_run TO hub_worker;
+ GRANT UPDATE (status,started_at,ended_at,error_code,source_snapshot_identity) ON control.etl_run_attempt TO hub_worker;
++
++-- M1-5B snapshot extraction is a separate lease and attempt domain from the
++-- 008 ingestion-item lease. Claiming a run does not create an attempt.
++ALTER TABLE control.etl_run_attempt DROP CONSTRAINT etl_run_attempt_ordinal_check;
++ALTER TABLE control.etl_run_attempt ADD CONSTRAINT etl_run_attempt_ordinal_check CHECK (ordinal BETWEEN 1 AND 4);
++ALTER TABLE control.etl_run_attempt ADD COLUMN claim_token uuid;
++ALTER TABLE control.etl_run_attempt ADD COLUMN lease_expires_at timestamptz;
++ALTER TABLE control.etl_run_attempt ADD COLUMN available_at timestamptz NOT NULL DEFAULT clock_timestamp();
++ALTER TABLE control.etl_run ADD COLUMN snapshot_claim_token uuid;
++ALTER TABLE control.etl_run ADD COLUMN snapshot_lease_expires_at timestamptz;
++ALTER TABLE control.etl_run ADD COLUMN snapshot_available_at timestamptz NOT NULL DEFAULT clock_timestamp();
++
++CREATE TABLE control.etl_snapshot_stage_page (
++  tenant_key text NOT NULL,
++  source_id text NOT NULL,
++  run_id uuid NOT NULL,
++  attempt_id uuid NOT NULL,
++  entity text NOT NULL CHECK (entity IN ('customer','order')),
++  relation text NOT NULL CHECK (relation IN ('customer','order','order_line')),
++  page_no integer NOT NULL CHECK (page_no > 0),
++  row_count integer NOT NULL CHECK (row_count > 0),
++  first_key text NOT NULL,
++  last_key text NOT NULL,
++  page_digest bytea NOT NULL CHECK (octet_length(page_digest)=32),
++  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,page_no),
++  FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  CHECK ((relation='customer' AND entity='customer') OR (relation IN ('order','order_line') AND entity='order'))
++);
++CREATE TABLE control.etl_snapshot_stage_record (
++  tenant_key text NOT NULL,
++  source_id text NOT NULL,
++  run_id uuid NOT NULL,
++  attempt_id uuid NOT NULL,
++  entity text NOT NULL CHECK (entity IN ('customer','order')),
++  relation text NOT NULL CHECK (relation IN ('customer','order','order_line')),
++  parent_source_pk text NOT NULL DEFAULT '',
++  source_pk text NOT NULL CHECK (length(source_pk)>0),
++  source_version text,
++  facts jsonb NOT NULL CHECK (jsonb_typeof(facts)='object'),
++  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
++  FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  CHECK ((relation='customer' AND entity='customer' AND parent_source_pk='') OR
++    (relation='order' AND entity='order' AND parent_source_pk='') OR
++    (relation='order_line' AND entity='order' AND parent_source_pk<>''))
++);
++CREATE INDEX etl_snapshot_stage_record_lookup_idx ON control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation);
++CREATE TABLE control.etl_snapshot_manifest (
++  tenant_key text NOT NULL,
++  source_id text NOT NULL,
++  run_id uuid NOT NULL,
++  attempt_id uuid NOT NULL,
++  state text NOT NULL CHECK (state='EXTRACTED'),
++  manifest jsonb NOT NULL CHECK (jsonb_typeof(manifest)='object'),
++  manifest_digest bytea NOT NULL CHECK (octet_length(manifest_digest)=32),
++  source_snapshot_identity text NOT NULL CHECK (manifest->>'source_snapshot_identity'=source_snapshot_identity),
++  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY (tenant_key,source_id,run_id,attempt_id),
++  UNIQUE (attempt_id),
++  FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++
++CREATE FUNCTION control.reject_snapshot_stage_mutation() RETURNS trigger
++LANGUAGE plpgsql SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  RAISE EXCEPTION 'snapshot stage is immutable' USING ERRCODE='55000';
++END;
++$body$;
++CREATE TRIGGER etl_snapshot_page_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_stage_page
++FOR EACH ROW EXECUTE FUNCTION control.reject_snapshot_stage_mutation();
++CREATE TRIGGER etl_snapshot_record_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_stage_record
++FOR EACH ROW EXECUTE FUNCTION control.reject_snapshot_stage_mutation();
++CREATE TRIGGER etl_snapshot_manifest_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_manifest
++FOR EACH ROW EXECUTE FUNCTION control.reject_snapshot_stage_mutation();
++
++REVOKE ALL ON control.etl_snapshot_stage_page,control.etl_snapshot_stage_record,control.etl_snapshot_manifest FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
++REVOKE ALL ON FUNCTION control.reject_snapshot_stage_mutation() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
++
++-- Freeze the unredacted source profile and mappings only for the dedicated worker.
++GRANT SELECT (tenant_key,source_id,revision,config_digest,config) ON control.source_config_revision TO hub_worker;
++GRANT SELECT (tenant_key,source_id,revision,mapping_digest,mappings) ON control.source_mapping_revision TO hub_worker;
++GRANT SELECT (tenant_key,source_id,revision,mapping_digest) ON control.source_identity_mapping_revision TO hub_worker;
++REVOKE ALL ON control.etl_run,control.etl_run_attempt,control.etl_snapshot_schedule FROM hub_worker;
++REVOKE INSERT ON control.etl_run FROM hub_worker;
++GRANT SELECT (run_id,tenant_key,source_id,status,expected_entities,credential_id,config_revision,config_digest,mapping_revision,
++  mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,entity_channel_proof,
++  delete_contract,security_barrier_fence,run_mode,request_kind,request_route,idempotency_key,request_digest,
++  owner_user_id,owner_revision,schedule_revision,created_at,started_at,completed_at,extracted_count,applied_count,
++  quarantined_count,completeness_summary,checkpoint_summary,snapshot_claim_token,snapshot_lease_expires_at,snapshot_available_at)
++  ON control.etl_run TO hub_worker;
++GRANT SELECT (attempt_id,tenant_key,source_id,run_id,ordinal,operation_id,status,source_snapshot_identity,started_at,ended_at,
++  error_code,claim_token,lease_expires_at,available_at) ON control.etl_run_attempt TO hub_worker;
++GRANT SELECT (tenant_key,source_id,enabled,interval_seconds,next_due_at,active_run_id,last_run_id,schedule_revision)
++  ON control.etl_snapshot_schedule TO hub_worker;
++-- Preserve A's existing due-admission gate, which creates API-019-equivalent
++-- runs and marks the schedule's active run under the same Hub transaction.
++GRANT INSERT (tenant_key,source_id,run_mode,request_kind,request_route,idempotency_key,request_digest,credential_id,
++  credential_revision,credential_generation,source_epoch,admission_source_epoch,expected_entities,entity_channel_proof,
++  config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,
++  endpoint_profile_digest,test_report_id,approval_id,data_contract_ref,delete_contract,security_barrier_fence,owner_user_id,
++  owner_revision,schedule_revision) ON control.etl_run TO hub_worker;
++GRANT INSERT (tenant_key,source_id,run_id,ordinal,operation_id,status) ON control.etl_run_attempt TO hub_worker;
++GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at) ON control.etl_snapshot_schedule TO hub_worker;
++
++CREATE FUNCTION control.assert_etl_snapshot_claim(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid)
++RETURNS control.etl_run LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE;
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  SELECT * INTO run_row FROM control.etl_run r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id FOR UPDATE;
++  IF NOT FOUND OR run_row.snapshot_claim_token IS DISTINCT FROM p_claim_token OR
++     run_row.snapshot_lease_expires_at IS NULL OR run_row.snapshot_lease_expires_at<=clock_timestamp() OR
++     run_row.status<>'SCANNING' THEN RAISE EXCEPTION 'snapshot claim lost' USING ERRCODE='40001'; END IF;
++  IF EXISTS (SELECT 1 FROM control.source_security_barrier b
++      WHERE b.tenant_key=run_row.tenant_key AND b.effective_fence>run_row.security_barrier_fence
++        AND (b.source_id IS NULL OR b.source_id=run_row.source_id)
++        AND (b.credential_id IS NULL OR b.credential_id=run_row.credential_id)
++        AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')
++        AND ((b.entity IS NULL AND b.channel_id IS NULL) OR EXISTS (SELECT 1 FROM jsonb_each(run_row.entity_channel_proof) proof
++          WHERE (b.entity IS NULL OR proof.key=b.entity) AND (b.channel_id IS NULL OR proof.value->>'channel_id'=b.channel_id::text)))) THEN
++    RAISE EXCEPTION 'snapshot security barrier' USING ERRCODE='42501';
++  END IF;
++  RETURN run_row;
++END;
++$body$;
++
++CREATE FUNCTION control.claim_etl_snapshot_run(p_tenant_key text,p_source_id text,p_lease_seconds integer)
++RETURNS TABLE(run_id uuid,claim_token uuid) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE; current_attempt control.etl_run_attempt%ROWTYPE; token uuid;
++  retry_seconds integer[] := ARRAY[5,30,120];
++BEGIN
++  IF p_lease_seconds<10 OR p_lease_seconds>900 THEN RAISE EXCEPTION 'snapshot lease invalid' USING ERRCODE='22023'; END IF;
++  PERFORM control.lock_security_barrier_fence();
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  SELECT * INTO run_row FROM control.etl_run r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
++    AND r.status IN ('QUEUED','SCANNING') AND r.snapshot_available_at<=clock_timestamp()
++    AND (r.snapshot_claim_token IS NULL OR r.snapshot_lease_expires_at<=clock_timestamp())
++    ORDER BY r.created_at,r.run_id LIMIT 1 FOR UPDATE SKIP LOCKED;
++  IF NOT FOUND THEN RETURN; END IF;
++  IF EXISTS (SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=run_row.tenant_key
++      AND b.effective_fence>run_row.security_barrier_fence AND (b.source_id IS NULL OR b.source_id=run_row.source_id)
++      AND (b.credential_id IS NULL OR b.credential_id=run_row.credential_id)
++      AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')
++      AND ((b.entity IS NULL AND b.channel_id IS NULL) OR EXISTS (SELECT 1 FROM jsonb_each(run_row.entity_channel_proof) proof
++        WHERE (b.entity IS NULL OR proof.key=b.entity) AND (b.channel_id IS NULL OR proof.value->>'channel_id'=b.channel_id::text)))) THEN
++    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),error_code='SNAPSHOT_SECURITY_BARRIER',
++      snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL WHERE etl_run.run_id=run_row.run_id;
++    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,next_due_at=GREATEST(next_due_at,run_row.created_at+interval '300 seconds'),
++      updated_at=clock_timestamp() WHERE tenant_key=run_row.tenant_key AND source_id=run_row.source_id AND active_run_id=run_row.run_id;
++    RETURN;
++  END IF;
++  IF run_row.snapshot_claim_token IS NOT NULL AND run_row.snapshot_lease_expires_at<=clock_timestamp() THEN
++    SELECT * INTO current_attempt FROM control.etl_run_attempt a WHERE a.run_id=run_row.run_id AND a.status='RUNNING' ORDER BY a.ordinal DESC LIMIT 1 FOR UPDATE;
++    IF FOUND THEN
++      UPDATE control.etl_run_attempt SET status='INCOMPLETE',ended_at=clock_timestamp(),error_code='SNAPSHOT_LEASE_EXPIRED',
++        claim_token=NULL,lease_expires_at=NULL,available_at=clock_timestamp()+make_interval(secs=>retry_seconds[LEAST(current_attempt.ordinal,3)])
++        WHERE attempt_id=current_attempt.attempt_id;
++      IF current_attempt.ordinal>=4 THEN
++        UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),error_code='SNAPSHOT_ATTEMPTS_EXHAUSTED',
++          snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL WHERE etl_run.run_id=run_row.run_id;
++        UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,next_due_at=GREATEST(next_due_at,run_row.created_at+interval '300 seconds'),
++          updated_at=clock_timestamp() WHERE tenant_key=run_row.tenant_key AND source_id=run_row.source_id AND active_run_id=run_row.run_id;
++      ELSE
++        UPDATE control.etl_run SET snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL,
++          snapshot_available_at=clock_timestamp()+make_interval(secs=>retry_seconds[LEAST(current_attempt.ordinal,3)])
++          WHERE etl_run.run_id=run_row.run_id;
++      END IF;
++      RETURN;
++    END IF;
++  END IF;
++  token:=gen_random_uuid();
++  UPDATE control.etl_run SET status='SCANNING',snapshot_claim_token=token,
++    snapshot_lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds),
++    started_at=COALESCE(started_at,clock_timestamp()) WHERE etl_run.run_id=run_row.run_id;
++  run_id:=run_row.run_id; claim_token:=token; RETURN NEXT;
++END;
++$body$;
++
++CREATE FUNCTION control.begin_etl_snapshot_attempt(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid,p_lease_seconds integer)
++RETURNS TABLE(attempt_id uuid,ordinal smallint,operation_id uuid) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE; next_ordinal integer; new_attempt control.etl_run_attempt%ROWTYPE;
++BEGIN
++  run_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_run_id,p_claim_token);
++  SELECT * INTO new_attempt FROM control.etl_run_attempt a WHERE a.run_id=p_run_id AND a.status='QUEUED' ORDER BY a.ordinal LIMIT 1 FOR UPDATE;
++  IF FOUND THEN
++    UPDATE control.etl_run_attempt AS a SET status='RUNNING',started_at=clock_timestamp(),claim_token=p_claim_token,
++      lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds) WHERE a.attempt_id=new_attempt.attempt_id RETURNING a.* INTO new_attempt;
++    attempt_id:=new_attempt.attempt_id; ordinal:=new_attempt.ordinal; operation_id:=new_attempt.operation_id; RETURN NEXT; RETURN;
++  END IF;
++  SELECT COALESCE(MAX(a.ordinal),0)+1 INTO next_ordinal FROM control.etl_run_attempt a WHERE a.run_id=p_run_id;
++  IF next_ordinal>4 THEN RAISE EXCEPTION 'snapshot attempts exhausted' USING ERRCODE='54000'; END IF;
++  INSERT INTO control.etl_run_attempt(tenant_key,source_id,run_id,ordinal,operation_id,status,started_at,claim_token,lease_expires_at)
++    VALUES(p_tenant_key,p_source_id,p_run_id,next_ordinal,gen_random_uuid(),'RUNNING',clock_timestamp(),p_claim_token,
++      clock_timestamp()+make_interval(secs=>p_lease_seconds)) RETURNING * INTO new_attempt;
++  attempt_id:=new_attempt.attempt_id; ordinal:=new_attempt.ordinal; operation_id:=new_attempt.operation_id; RETURN NEXT;
++END;
++$body$;
++
++CREATE FUNCTION control.heartbeat_etl_snapshot_run(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
++  p_claim_token uuid,p_lease_seconds integer) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  PERFORM control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_run_id,p_claim_token);
++  UPDATE control.etl_run SET snapshot_lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds)
++    WHERE run_id=p_run_id AND snapshot_claim_token=p_claim_token;
++  UPDATE control.etl_run_attempt SET lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds)
++    WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND claim_token=p_claim_token AND status='RUNNING';
++  RETURN FOUND;
++END;
++$body$;
++
++CREATE FUNCTION control.write_etl_snapshot_page(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_entity text,p_relation text,p_page_no integer,p_first_key text,p_last_key text,p_digest bytea,p_rows jsonb) RETURNS integer
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE; n integer; last_page integer;
++BEGIN
++  run_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_run_id,p_claim_token);
++  IF p_attempt_id IS NULL OR p_page_no<1 OR octet_length(p_digest)<>32 OR jsonb_typeof(p_rows)<>'array' OR
++     (p_relation='customer' AND p_entity<>'customer') OR (p_relation IN ('order','order_line') AND p_entity<>'order') OR
++     p_relation NOT IN ('customer','order','order_line') THEN RAISE EXCEPTION 'snapshot page invalid' USING ERRCODE='22023'; END IF;
++  IF NOT EXISTS (SELECT 1 FROM control.etl_run_attempt WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND status='RUNNING'
++      AND claim_token=p_claim_token AND lease_expires_at>clock_timestamp()) THEN RAISE EXCEPTION 'snapshot attempt lost' USING ERRCODE='40001'; END IF;
++  SELECT COALESCE(MAX(page_no),0) INTO last_page FROM control.etl_snapshot_stage_page
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND entity=p_entity AND relation=p_relation;
++  IF p_page_no<>last_page+1 THEN RAISE EXCEPTION 'snapshot page sequence invalid' USING ERRCODE='22023'; END IF;
++  n:=jsonb_array_length(p_rows);
++  IF n<1 THEN RAISE EXCEPTION 'snapshot page empty' USING ERRCODE='22023'; END IF;
++  INSERT INTO control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,source_version,facts)
++  SELECT p_tenant_key,p_source_id,p_run_id,p_attempt_id,x.entity,x.relation,COALESCE(x.parent_source_pk,''),x.source_pk,x.source_version,x.facts
++    FROM jsonb_to_recordset(p_rows) AS x(entity text,relation text,parent_source_pk text,source_pk text,source_version text,facts jsonb);
++  INSERT INTO control.etl_snapshot_stage_page(tenant_key,source_id,run_id,attempt_id,entity,relation,page_no,row_count,first_key,last_key,page_digest)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_page_no,n,p_first_key,p_last_key,p_digest);
++  RETURN n;
++END;
++$body$;
++
++CREATE FUNCTION control.fail_etl_snapshot_attempt(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_error_code text,p_retryable boolean) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE; attempt_row control.etl_run_attempt%ROWTYPE; retry_seconds integer[]:=ARRAY[5,30,120]; retry boolean;
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  SELECT * INTO run_row FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
++  IF NOT FOUND OR run_row.snapshot_claim_token IS DISTINCT FROM p_claim_token OR run_row.snapshot_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
++  SELECT * INTO attempt_row FROM control.etl_run_attempt WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND status='RUNNING'
++    AND claim_token=p_claim_token FOR UPDATE;
++  IF NOT FOUND THEN RETURN 'STALE'; END IF;
++  retry:=p_retryable AND attempt_row.ordinal<4;
++  UPDATE control.etl_run_attempt SET status=CASE WHEN retry THEN 'INCOMPLETE' ELSE 'FAILED' END,ended_at=clock_timestamp(),
++    error_code=p_error_code,claim_token=NULL,lease_expires_at=NULL,
++    available_at=CASE WHEN retry THEN clock_timestamp()+make_interval(secs=>retry_seconds[attempt_row.ordinal]) ELSE available_at END
++    WHERE attempt_id=p_attempt_id;
++  IF retry THEN
++    UPDATE control.etl_run SET snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL,
++      snapshot_available_at=clock_timestamp()+make_interval(secs=>retry_seconds[attempt_row.ordinal]) WHERE run_id=p_run_id;
++    RETURN 'RETRY';
++  END IF;
++  UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),error_code=p_error_code,
++    snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL WHERE run_id=p_run_id;
++  UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,next_due_at=GREATEST(next_due_at,run_row.created_at+interval '300 seconds'),
++    updated_at=clock_timestamp() WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
++  RETURN 'FAILED';
++END;
++$body$;
++
++CREATE FUNCTION control.complete_etl_snapshot_manifest(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_manifest jsonb,p_digest bytea) RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE run_row control.etl_run%ROWTYPE; relation_row record; expected_relations text[]; total_rows bigint; manifest_rows bigint;
++BEGIN
++  run_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_run_id,p_claim_token);
++  IF octet_length(p_digest)<>32 OR jsonb_typeof(p_manifest)<>'object' OR
++     p_manifest->>'profile_digest'<>encode(run_row.endpoint_profile_digest,'hex') OR
++     p_manifest->>'mapping_digest'<>encode(run_row.mapping_digest,'hex') OR
++     NOT EXISTS (SELECT 1 FROM control.etl_run_attempt WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND status='RUNNING'
++       AND claim_token=p_claim_token AND lease_expires_at>clock_timestamp()) THEN RAISE EXCEPTION 'snapshot manifest proof invalid' USING ERRCODE='22023'; END IF;
++  expected_relations:=ARRAY[]::text[];
++  IF 'customer'=ANY(run_row.expected_entities) THEN expected_relations:=array_append(expected_relations,'customer'); END IF;
++  IF 'order'=ANY(run_row.expected_entities) THEN expected_relations:=array_append(expected_relations,'order'); expected_relations:=array_append(expected_relations,'order_line'); END IF;
++  IF (SELECT array_agg(value ORDER BY value) FROM jsonb_array_elements_text(p_manifest->'relations') AS rel(value)) IS DISTINCT FROM
++     (SELECT array_agg(value ORDER BY value) FROM unnest(expected_relations) AS rel(value)) THEN RAISE EXCEPTION 'snapshot relation coverage invalid' USING ERRCODE='22023'; END IF;
++  FOR relation_row IN SELECT * FROM jsonb_to_recordset(p_manifest->'relation_counts') AS r(relation text,row_count bigint,page_count integer) LOOP
++    IF relation_row.relation <> ALL(expected_relations) OR relation_row.row_count<0 OR relation_row.page_count<0 THEN
++      RAISE EXCEPTION 'snapshot relation count invalid' USING ERRCODE='22023';
++    END IF;
++    IF (SELECT COALESCE(sum(row_count),0) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id
++        AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation=relation_row.relation)<>relation_row.row_count OR
++       (SELECT count(*) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
++        AND attempt_id=p_attempt_id AND relation=relation_row.relation)<>relation_row.page_count OR
++       (relation_row.page_count>0 AND (SELECT (min(page_no),max(page_no)) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key
++        AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation=relation_row.relation)
++        IS DISTINCT FROM (1,relation_row.page_count)) THEN RAISE EXCEPTION 'snapshot page receipt mismatch' USING ERRCODE='22023'; END IF;
++  END LOOP;
++  IF jsonb_array_length(p_manifest->'relation_counts')<>cardinality(expected_relations) THEN RAISE EXCEPTION 'snapshot relation count set invalid' USING ERRCODE='22023'; END IF;
++  IF EXISTS (SELECT 1 FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
++      AND attempt_id=p_attempt_id AND relation<>ALL(expected_relations)) THEN RAISE EXCEPTION 'snapshot unexpected relation' USING ERRCODE='22023'; END IF;
++  IF 'order'=ANY(run_row.expected_entities) AND EXISTS (SELECT 1 FROM control.etl_snapshot_stage_record line
++      LEFT JOIN control.etl_snapshot_stage_record header ON header.tenant_key=line.tenant_key AND header.source_id=line.source_id
++        AND header.run_id=line.run_id AND header.attempt_id=line.attempt_id AND header.entity='order' AND header.relation='order'
++        AND header.parent_source_pk='' AND header.source_pk=line.parent_source_pk
++      WHERE line.tenant_key=p_tenant_key AND line.source_id=p_source_id AND line.run_id=p_run_id AND line.attempt_id=p_attempt_id
++        AND line.relation='order_line' AND header.source_pk IS NULL) THEN RAISE EXCEPTION 'snapshot orphan line' USING ERRCODE='23503'; END IF;
++  IF EXISTS (SELECT 1 FROM control.etl_snapshot_stage_record line WHERE line.tenant_key=p_tenant_key AND line.source_id=p_source_id
++       AND line.run_id=p_run_id AND line.attempt_id=p_attempt_id AND line.relation='order_line'
++       AND NOT (line.facts ?& ARRAY['lines.source_line_id','lines.product_code','lines.product_name','lines.quantity','lines.unit_price','lines.line_amount']))
++    THEN RAISE EXCEPTION 'snapshot incomplete line facts' USING ERRCODE='23514'; END IF;
++  SELECT count(*) INTO total_rows FROM control.etl_snapshot_stage_record WHERE tenant_key=p_tenant_key AND source_id=p_source_id
++    AND run_id=p_run_id AND attempt_id=p_attempt_id;
++  manifest_rows:=NULLIF(p_manifest->>'row_count','')::bigint;
++  IF manifest_rows IS DISTINCT FROM total_rows THEN RAISE EXCEPTION 'snapshot manifest row count mismatch' USING ERRCODE='22023'; END IF;
++  INSERT INTO control.etl_snapshot_manifest(tenant_key,source_id,run_id,attempt_id,state,manifest,manifest_digest,source_snapshot_identity)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,'EXTRACTED',p_manifest,p_digest,p_manifest->>'source_snapshot_identity');
++  UPDATE control.etl_run_attempt SET status='COMPLETE',ended_at=clock_timestamp(),claim_token=NULL,lease_expires_at=NULL,
++    source_snapshot_identity=p_manifest->>'source_snapshot_identity' WHERE attempt_id=p_attempt_id;
++  UPDATE control.etl_run SET status='VALIDATING',extracted_count=total_rows,snapshot_claim_token=NULL,snapshot_lease_expires_at=NULL,
++    completeness_summary=jsonb_build_object('status','EXTRACTED','manifest_digest',encode(p_digest,'hex'),'attempt_id',p_attempt_id)
++    WHERE run_id=p_run_id;
++  RETURN total_rows;
++END;
++$body$;
++
++REVOKE ALL ON FUNCTION control.assert_etl_snapshot_claim(text,text,uuid,uuid),
++  control.claim_etl_snapshot_run(text,text,integer),control.begin_etl_snapshot_attempt(text,text,uuid,uuid,integer),
++  control.heartbeat_etl_snapshot_run(text,text,uuid,uuid,uuid,integer),
++  control.write_etl_snapshot_page(text,text,uuid,uuid,uuid,text,text,integer,text,text,bytea,jsonb),
++  control.fail_etl_snapshot_attempt(text,text,uuid,uuid,uuid,text,boolean),
++  control.complete_etl_snapshot_manifest(text,text,uuid,uuid,uuid,jsonb,bytea) FROM PUBLIC;
++GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_run(text,text,integer),
++  control.begin_etl_snapshot_attempt(text,text,uuid,uuid,integer),
++  control.heartbeat_etl_snapshot_run(text,text,uuid,uuid,uuid,integer),
++  control.write_etl_snapshot_page(text,text,uuid,uuid,uuid,text,text,integer,text,text,bytea,jsonb),
++  control.fail_etl_snapshot_attempt(text,text,uuid,uuid,uuid,text,boolean),
++  control.complete_etl_snapshot_manifest(text,text,uuid,uuid,uuid,jsonb,bytea) TO hub_worker;
+diff --git a/integration-service/source-registry/capability-probe.ts b/integration-service/source-registry/capability-probe.ts
+index 792187e..0996ccc 100644
+--- a/integration-service/source-registry/capability-probe.ts
++++ b/integration-service/source-registry/capability-probe.ts
+@@ -1,17 +1,24 @@
+ import { Client } from 'pg';
+ import type { SourceEntity } from '../auth/types.js';
+ import type { SourceConfig, CapabilityProbe } from './service.js';
+ 
+ type EntityProfile = Readonly<{
+   table?: string;
+-  version_field: string;
++  source_pk?: string;
++  updated_at_field?: string;
++  version_field?: string;
++  aggregate_version_covers_lines?: boolean;
++  // External identity of the customer source when orders are extracted alone.
++  // This is a source ID value, never a SQL identifier.
++  customer_source_id?: string;
++  lines?: Readonly<{ table: string; order_fk: string }>;
+   delete_field?: string;
+   version_type?: 'integer' | 'number' | 'text';
+   delete_type?: 'boolean' | 'timestamp';
+ }>;
+ 
+ export type EndpointProfile = Readonly<{
+   revision: string;
+   connector: 'rest' | 'postgresql' | 'sqlserver';
+   protocol: 'https:' | 'http:' | 'postgres:' | 'mssql:';
+   host: string;
+@@ -24,20 +31,21 @@ export type EndpointProfile = Readonly<{
+   database?: string;
+   user?: string;
+   schema?: string;
+   entities: Readonly<Partial<Record<SourceEntity, EntityProfile>>>;
+ }>;
+ 
+ export type ProbeEnvironment = Readonly<{ environmentKind: 'site' | 'local_lab' }>;
+ 
+ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
+ const SCHEMA_VERSION = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
++const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+ const LOOPBACK = new Set(['127.0.0.1','::1','localhost']);
+ const MAX_REST_BODY_BYTES = 32 * 1024;
+ const PROBE_TIMEOUT_MS = 3_000;
+ 
+ function loopback(host: string): boolean { return LOOPBACK.has(host.toLowerCase().replace(/^\[|\]$/g,'')); }
+ function checkProfile(config: SourceConfig, profile: EndpointProfile, environment: ProbeEnvironment): void {
+   if (!profile || profile.connector !== config.connector || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(profile.revision) ||
+       typeof profile.host !== 'string' || profile.host.length > 253 || /[\s/@?#]/.test(profile.host) ||
+       !Number.isInteger(profile.port) || profile.port < 1 || profile.port > 65535) throw new Error('PROFILE_INVALID');
+   const local = environment.environmentKind === 'local_lab' && loopback(profile.host);
+@@ -53,22 +61,33 @@ function checkProfile(config: SourceConfig, profile: EndpointProfile, environmen
+         typeof profile.source_identity !== 'string' || !SCHEMA_VERSION.test(profile.source_identity)) throw new Error('PROFILE_INVALID');
+   } else {
+     if (profile.protocol !== 'postgres:' || typeof profile.database !== 'string' || !IDENTIFIER.test(profile.database) ||
+         typeof profile.schema !== 'string' || !IDENTIFIER.test(profile.schema) || typeof profile.user !== 'string' || !IDENTIFIER.test(profile.user) ||
+         (profile.allow_loopback_plaintext === true && !local) || (profile.allow_loopback_plaintext !== true && local && environment.environmentKind === 'local_lab')) {
+       throw new Error('PROFILE_INVALID');
+     }
+   }
+   for (const entity of config.allowed_entities) {
+     const item = profile.entities[entity];
+-    if (!item || !IDENTIFIER.test(item.version_field) || (item.delete_field !== undefined && !IDENTIFIER.test(item.delete_field)) ||
+-        (profile.connector === 'postgresql' && (typeof item.table !== 'string' || !IDENTIFIER.test(item.table)))) throw new Error('PROFILE_INVALID');
++    if (!item || (item.version_field !== undefined && !IDENTIFIER.test(item.version_field)) ||
++        (config.version_domain === 'SOURCE_VERSION' && typeof item.version_field !== 'string') ||
++        (item.delete_field !== undefined && !IDENTIFIER.test(item.delete_field)) ||
++        (profile.connector === 'postgresql' && (typeof item.table !== 'string' || !IDENTIFIER.test(item.table) ||
++          typeof item.source_pk !== 'string' || !IDENTIFIER.test(item.source_pk) ||
++          typeof item.updated_at_field !== 'string' || !IDENTIFIER.test(item.updated_at_field)))) throw new Error('PROFILE_INVALID');
++    if (profile.connector === 'postgresql' && entity === 'order') {
++      if (!item.lines || !IDENTIFIER.test(item.lines.table) || !IDENTIFIER.test(item.lines.order_fk)) throw new Error('PROFILE_INVALID');
++      if (config.version_domain === 'SOURCE_VERSION' && item.aggregate_version_covers_lines !== true) throw new Error('PROFILE_INVALID');
++      if (config.allowed_entities.includes('customer')) {
++        if (item.customer_source_id !== undefined && (typeof item.customer_source_id !== 'string' || !SOURCE_ID.test(item.customer_source_id))) throw new Error('PROFILE_INVALID');
++      } else if (typeof item.customer_source_id !== 'string' || !SOURCE_ID.test(item.customer_source_id)) throw new Error('PROFILE_INVALID');
++    } else if (item.lines !== undefined || item.aggregate_version_covers_lines !== undefined || item.customer_source_id !== undefined) throw new Error('PROFILE_INVALID');
+   }
+ }
+ 
+ function quoteIdentifier(value: string): string {
+   if (!IDENTIFIER.test(value)) throw new Error('PROFILE_INVALID');
+   return `"${value.replaceAll('"','""')}"`;
+ }
+ 
+ async function readBoundedJson(response: Response): Promise<unknown> {
+   const length = Number(response.headers.get('content-length') ?? 0);
+@@ -102,22 +121,22 @@ function assertRestContract(config: SourceConfig, profile: EndpointProfile, resp
+   const entities = root.entities as Record<string, unknown>;
+   for (const entity of config.allowed_entities) {
+     const declared = entities[entity];
+     const expected = profile.entities[entity]!;
+     if (!declared || typeof declared !== 'object' || Array.isArray(declared)) throw new Error('CONTRACT_INVALID');
+     const value = declared as Record<string, unknown>;
+     const fields = value.fields;
+     const fieldTypes=value.field_types;
+     if (!Array.isArray(fields) || fields.some(field => typeof field !== 'string') ||
+         !fieldTypes || typeof fieldTypes!=='object' || Array.isArray(fieldTypes) ||
+-        value.version_field !== expected.version_field || value.delete_contract !== config.delete_contract ||
+-        !fields.includes(expected.version_field) ||
++      value.version_field !== expected.version_field || value.delete_contract !== config.delete_contract ||
++      !expected.version_field || !fields.includes(expected.version_field) ||
+         !['integer','number','text'].includes(String((fieldTypes as Record<string,unknown>)[expected.version_field])) ||
+         (config.delete_contract === 'tombstone' && (typeof expected.delete_field !== 'string' || value.delete_field !== expected.delete_field || !fields.includes(expected.delete_field)))) {
+       throw new Error('CONTRACT_INVALID');
+     }
+     if(config.delete_contract==='tombstone' && !['boolean','timestamp'].includes(String((fieldTypes as Record<string,unknown>)[expected.delete_field!])))
+       throw new Error('CONTRACT_INVALID');
+     if (mappings.some(mapping => mapping.entity === entity && !fields.includes(mapping.source_field))) throw new Error('MAPPING_INVALID');
+   }
+ }
+ 
+@@ -132,21 +151,21 @@ async function probeRest(config: SourceConfig, profile: EndpointProfile, secret:
+     const response = await fetch(url, { method: 'GET', headers: { authorization: `Bearer ${secret}`, accept: 'application/json' },
+       redirect: 'manual', signal: controller.signal });
+     if (response.status !== 200 || response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
+       throw new Error('ENDPOINT_REJECTED');
+     }
+     assertRestContract(config, profile, await readBoundedJson(response), mappings);
+   } finally { clearTimeout(timeout); }
+ }
+ 
+ async function probePostgres(config: SourceConfig, profile: EndpointProfile, secret: string,
+-  mappings: readonly { entity: SourceEntity; source_field: string }[]): Promise<void> {
++  mappings: readonly { entity: SourceEntity; source_field: string; target_field: string }[]): Promise<void> {
+   const client = new Client({ host: profile.host, port: profile.port, database: profile.database, user: profile.user,
+     password: secret, ssl: profile.allow_loopback_plaintext ? false : { rejectUnauthorized: true },
+     connectionTimeoutMillis: PROBE_TIMEOUT_MS, query_timeout: PROBE_TIMEOUT_MS, statement_timeout: PROBE_TIMEOUT_MS,
+   });
+   let inTransaction = false;
+   try {
+     await client.connect();
+     await client.query('BEGIN READ ONLY');
+     inTransaction = true;
+     await client.query("SET LOCAL statement_timeout = '3000ms'");
+@@ -155,45 +174,76 @@ async function probePostgres(config: SourceConfig, profile: EndpointProfile, sec
+         has_schema_privilege(current_user,$1,'CREATE') AS schema_create,
+         has_database_privilege(current_user,current_database(),'CREATE') AS database_create
+        FROM pg_roles r WHERE r.rolname=current_user`, [profile.schema],
+     );
+     if (identity.rows[0]?.database !== profile.database || !identity.rowCount || identity.rows[0].superuser ||
+         identity.rows[0].createdb || identity.rows[0].createrole || identity.rows[0].schema_create || identity.rows[0].database_create) {
+       throw new Error('SOURCE_IDENTITY_INVALID');
+     }
+     for (const entity of config.allowed_entities) {
+       const item = profile.entities[entity]!;
++      const explicitTimeMappings=mappings.filter(mapping=>mapping.entity===entity &&
++        ['source_updated_at','deleted_at'].includes(mapping.target_field));
++      if(explicitTimeMappings.some(mapping=>mapping.source_field!==
++        (mapping.target_field==='source_updated_at'?item.updated_at_field:item.delete_field))) throw new Error('MAPPING_INVALID');
+       const columns = await client.query<{ column_name: string;data_type:string;udt_name:string }>(
+         `SELECT column_name,data_type,udt_name FROM information_schema.columns WHERE table_catalog=$1 AND table_schema=$2 AND table_name=$3`,
+         [profile.database,profile.schema,item.table],
+       );
+       const names = new Set(columns.rows.map(row => row.column_name));
+       const byName=new Map(columns.rows.map(row=>[row.column_name,row]));
+-      const required = [item.version_field,...(config.delete_contract === 'tombstone' ? [item.delete_field!] : []),
+-        ...mappings.filter(mapping => mapping.entity === entity).map(mapping => mapping.source_field)];
++      const required = [item.source_pk!,item.updated_at_field!,...(item.version_field ? [item.version_field] : []),...(config.delete_contract === 'tombstone' ? [item.delete_field!] : []),
++        ...mappings.filter(mapping => mapping.entity === entity && !mapping.target_field.startsWith('lines.')).map(mapping => mapping.source_field)];
+       if (!columns.rowCount || required.some(name => !names.has(name))) throw new Error('MAPPING_INVALID');
+-      const versionType=byName.get(item.version_field)?.data_type;
++      const versionType=item.version_field ? byName.get(item.version_field)?.data_type : undefined;
++      const updatedAtType=byName.get(item.updated_at_field!)?.data_type;
++      const updatedAtTypes=new Set(['timestamp with time zone']);
+       const versionTypes=new Set(['smallint','integer','bigint','numeric','character varying','text']);
+       const deleteType=item.delete_field?byName.get(item.delete_field)?.data_type:undefined;
+-      const deleteTypes=new Set(['boolean','timestamp without time zone','timestamp with time zone']);
+-      if(!versionType || !versionTypes.has(versionType) || (config.delete_contract==='tombstone' && (!deleteType || !deleteTypes.has(deleteType))))
++      const deleteTypes=new Set(['boolean','timestamp with time zone']);
++      const mappedTimes=mappings.filter(mapping=>mapping.entity===entity && ['order_at','source_updated_at'].includes(mapping.target_field));
++      if(!updatedAtType || !updatedAtTypes.has(updatedAtType) || (item.version_field && (!versionType || !versionTypes.has(versionType))) ||
++          mappedTimes.some(mapping=>byName.get(mapping.source_field)?.data_type!=='timestamp with time zone') ||
++          (config.version_domain === 'SOURCE_VERSION' && !item.version_field) ||
++          (config.delete_contract==='tombstone' && (!deleteType || !deleteTypes.has(deleteType))))
+         throw new Error('VERSION_DELETE_CONTRACT_INVALID');
+       const qualified = `${quoteIdentifier(profile.schema!)}.${quoteIdentifier(item.table!)}`;
+       const permission = await client.query<{ can_read: boolean; can_write: boolean; column_write: boolean }>(
+         `SELECT has_table_privilege(current_user,$1::regclass,'SELECT') AS can_read,
+           has_table_privilege(current_user,$1::regclass,'INSERT,UPDATE,DELETE,TRUNCATE') AS can_write,
+           has_any_column_privilege(current_user,$1::regclass,'INSERT') OR
+           has_any_column_privilege(current_user,$1::regclass,'UPDATE') AS column_write`, [`${profile.schema}.${item.table}`],
+       );
+       if (!permission.rows[0]?.can_read || permission.rows[0].can_write || permission.rows[0].column_write) throw new Error('READ_ONLY_PERMISSION_INVALID');
+       const selected = required.map(quoteIdentifier).join(',');
+       await client.query(`SELECT ${selected} FROM ${qualified} LIMIT 0`);
++      if (entity === 'order') {
++        const lines = item.lines!;
++        const lineColumns = await client.query<{ column_name: string }>(
++          `SELECT column_name FROM information_schema.columns WHERE table_catalog=$1 AND table_schema=$2 AND table_name=$3`,
++          [profile.database,profile.schema,lines.table],
++        );
++        const lineNames = new Set(lineColumns.rows.map(row => row.column_name));
++        const lineSources = mappings.filter(mapping => mapping.entity === 'order' && mapping.target_field.startsWith('lines.')).map(mapping => mapping.source_field);
++        const lineRequired = [lines.order_fk, ...lineSources];
++        if (!lineColumns.rowCount || lineRequired.some(name => !IDENTIFIER.test(name) || !lineNames.has(name))) throw new Error('MAPPING_INVALID');
++        const lineQualified = `${quoteIdentifier(profile.schema!)}.${quoteIdentifier(lines.table)}`;
++        const linePermission = await client.query<{ can_read: boolean; can_write: boolean; column_write: boolean }>(
++          `SELECT has_table_privilege(current_user,$1::regclass,'SELECT') AS can_read,
++            has_table_privilege(current_user,$1::regclass,'INSERT,UPDATE,DELETE,TRUNCATE') AS can_write,
++            has_any_column_privilege(current_user,$1::regclass,'INSERT') OR has_any_column_privilege(current_user,$1::regclass,'UPDATE') AS column_write`,
++          [`${profile.schema}.${lines.table}`],
++        );
++        if (!linePermission.rows[0]?.can_read || linePermission.rows[0].can_write || linePermission.rows[0].column_write)
++          throw new Error('READ_ONLY_PERMISSION_INVALID');
++        await client.query(`SELECT ${[...new Set(lineRequired)].map(quoteIdentifier).join(',')} FROM ${lineQualified} LIMIT 0`);
++      }
+     }
+   } finally {
+     if (inTransaction) await client.query('ROLLBACK').catch(() => undefined);
+     await client.end().catch(() => undefined);
+   }
+ }
+ 
+ export function createBoundedCapabilityProbe(environment: ProbeEnvironment): CapabilityProbe {
+   return Object.freeze({
+     async run({ config, endpoint, secret, mappings }) {
+diff --git a/integration-service/source-registry/service.ts b/integration-service/source-registry/service.ts
+index f123ab0..8ef56f2 100644
+--- a/integration-service/source-registry/service.ts
++++ b/integration-service/source-registry/service.ts
+@@ -50,20 +50,21 @@ export type SourceRegistryDependencies = Readonly<{
+   environmentKind?: ProbeEnvironment['environmentKind'];
+ }>;
+ 
+ type RevisionRow = { revision: string | number; config_digest: Buffer; config: SourceConfig };
+ const ENTITY = new Set<SourceEntity>(['customer','order']);
+ const TRANSFORM = new Set<FieldMapping['transform']>(['identity','trim','decimal-string','source-id']);
+ const TARGET_FIELDS: Readonly<Record<SourceEntity, ReadonlySet<string>>> = {
+   customer:new Set(['customer_name','owner_user_id','dept_id','status','phone','source_updated_at','source_version','deleted_at']),
+   order:new Set(['customer_id','order_no','status','order_at','amount','currency','source_updated_at','source_version','deleted_at']),
+ };
++const POSTGRES_ORDER_LINE_TARGETS = ['lines.source_line_id','lines.product_code','lines.product_name','lines.quantity','lines.unit_price','lines.line_amount'] as const;
+ const REQUIRED_TARGET_FIELDS: Readonly<Record<SourceEntity, readonly string[]>> = {
+   customer:['customer_name','owner_user_id','dept_id','status'],
+   order:['customer_id','order_no','status','order_at','amount','currency'],
+ };
+ const SECRET_REF = /^(?:vault|secret|env):\/[A-Za-z0-9._/-]{1,240}$/;
+ const REF = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+ const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+ 
+ function fail(code: ConstructorParameters<typeof AuthError>[0]): never { throw new AuthError(code); }
+ function requireScope(principal: UserPrincipal, scope: UserPrincipal['managementScopes'][number]): void {
+@@ -114,35 +115,43 @@ function parseMappings(input: unknown): readonly FieldMapping[] {
+     const value = item as Record<string, unknown>;
+     if (Object.keys(value).some(key => !['entity','source_field','target_field','transform'].includes(key)) ||
+         !ENTITY.has(value.entity as SourceEntity) || typeof value.source_field !== 'string' || !/^[A-Za-z_][A-Za-z0-9_.]{0,127}$/.test(value.source_field) ||
+         typeof value.target_field !== 'string' || !/^[A-Za-z_][A-Za-z0-9_.]{0,127}$/.test(value.target_field) || !TRANSFORM.has(value.transform as FieldMapping['transform'])) fail('AUTH_INPUT_INVALID');
+     return Object.freeze(value as unknown as FieldMapping);
+   });
+   const keys = result.map(value => `${value.entity}\0${value.target_field}`);
+   if (new Set(keys).size !== keys.length) fail('AUTH_INPUT_INVALID');
+   return Object.freeze(result);
+ }
+-function mappingContractErrors(entities: readonly SourceEntity[], mappings: readonly FieldMapping[]): string[] {
++function mappingContractErrors(entities: readonly SourceEntity[], mappings: readonly FieldMapping[], postgresSnapshot = false): string[] {
+   const errors:string[]=[];
+   for(const entity of entities) {
+     const entityMappings=mappings.filter(mapping=>mapping.entity===entity);
+     for(const mapping of entityMappings) {
+-      if(!TARGET_FIELDS[entity].has(mapping.target_field)) errors.push(`MAPPING_TARGET_UNSUPPORTED:${entity}:${mapping.target_field}`);
+-      else if(mapping.target_field==='amount' && mapping.transform!=='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+-      else if(mapping.target_field!=='amount' && mapping.transform==='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
++      if(!TARGET_FIELDS[entity].has(mapping.target_field) && !(postgresSnapshot && entity==='order' && POSTGRES_ORDER_LINE_TARGETS.includes(mapping.target_field as typeof POSTGRES_ORDER_LINE_TARGETS[number])))
++        errors.push(`MAPPING_TARGET_UNSUPPORTED:${entity}:${mapping.target_field}`);
++      else if((mapping.target_field==='amount' || mapping.target_field.startsWith('lines.') &&
++          ['lines.quantity','lines.unit_price','lines.line_amount'].includes(mapping.target_field)) && mapping.transform!=='decimal-string')
++        errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
++      else if(mapping.target_field!=='amount' && !['lines.quantity','lines.unit_price','lines.line_amount'].includes(mapping.target_field) &&
++          mapping.transform==='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+       else if(['customer_name','phone','order_no','status','currency'].includes(mapping.target_field) &&
+         !['identity','trim'].includes(mapping.transform)) errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+-      else if(['owner_user_id','dept_id','customer_id'].includes(mapping.target_field) && mapping.transform!=='source-id' && mapping.transform!=='identity')
++      else if(['owner_user_id','dept_id','customer_id','lines.source_line_id'].includes(mapping.target_field) && mapping.transform!=='source-id' && mapping.transform!=='identity')
++        errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
++      else if(['lines.product_code','lines.product_name'].includes(mapping.target_field) && !['identity','trim'].includes(mapping.transform))
+         errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+     }
+     const targets=new Set(entityMappings.map(mapping=>mapping.target_field));
+     for(const required of REQUIRED_TARGET_FIELDS[entity]) if(!targets.has(required)) errors.push(`MAPPING_REQUIRED:${entity}:${required}`);
++    if(postgresSnapshot && entity==='order') for(const required of POSTGRES_ORDER_LINE_TARGETS)
++      if(!targets.has(required)) errors.push(`MAPPING_REQUIRED:${entity}:${required}`);
+   }
+   return errors;
+ }
+ function parseIdentityMappings(input: unknown): readonly IdentityMapping[] {
+   if (!Array.isArray(input) || input.length > 10000) fail('AUTH_INPUT_INVALID');
+   const result = input.map(item => {
+     if (!item || typeof item !== 'object' || Array.isArray(item)) fail('AUTH_INPUT_INVALID');
+     const value = item as Record<string, unknown>;
+     if (Object.keys(value).some(key => !['kind','external_id','target_id'].includes(key)) || !['user','department','customer'].includes(String(value.kind)) ||
+         typeof value.external_id !== 'string' || value.external_id.length < 1 || value.external_id.length > 256 || /[\u0000-\u001f\u007f]/.test(value.external_id) ||
+@@ -362,21 +371,21 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
+   }
+ 
+   async function validateMappings(principal: UserPrincipal, sourceId: string, revisionInput: unknown) {
+     requireScope(principal,'source:write');
+     if (typeof revisionInput !== 'string' || !/^[1-9][0-9]*$/.test(revisionInput)) fail('AUTH_INPUT_INVALID');
+     return transaction(pool, async client => {
+       const row = await sourceRow(client,principal.tenantId,sourceId);
+       if (decimal(row.mapping_revision) !== revisionInput) fail('SOURCE_CONFLICT');
+       const maps = await loadMappings(client,principal.tenantId,sourceId,revisionInput,decimal(row.identity_mapping_revision));
+       const configuredEntities = row.allowed_entities as SourceEntity[];
+-      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings);
++      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings,row.connector==='postgresql');
+       return { revision: revisionInput, valid: errors.length === 0, errors };
+     });
+   }
+ 
+   async function writeIdentityMappings(principal: UserPrincipal, sourceId: string, input: unknown) {
+     requireScope(principal,'source:approve');
+     const values = parseIdentityMappings(input);
+     return transaction(pool, async client => {
+       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
+@@ -416,21 +425,21 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
+       const credentialReport = await client.query<{ id: string; revision: string | number; enabled: boolean; credential_generation:string|number }>(
+         'SELECT id,revision,enabled,credential_generation FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2',
+         [principal.tenantId,sourceId],
+       );
+       return { row, config, maps, configRow: configReport.rows[0], mappingDigest: mappingReport.rows[0]?.mapping_digest,
+         identityDigest: identityReport.rows[0]?.mapping_digest, credential: credentialReport.rows[0],
+         endpointDigest:digest(config.endpoint_profile) };
+     });
+     const safeChecks: string[] = [];
+     let passed = false;
+-    const mappingErrors=mappingContractErrors(snapshot.config.allowed_entities,snapshot.maps.fieldMappings);
++    const mappingErrors=mappingContractErrors(snapshot.config.allowed_entities,snapshot.maps.fieldMappings,snapshot.config.connector==='postgresql');
+     let reportCode = mappingErrors.length ? 'MAPPING_CONTRACT_INVALID' : 'SOURCE_PROBE_UNAVAILABLE';
+     if (mappingErrors.length) {
+       safeChecks.push(...mappingErrors);
+     } else {
+       try {
+         if (snapshot.config.connector === 'sqlserver') fail('SOURCE_PROBE_UNAVAILABLE');
+         if (!snapshot.credential.enabled || decimal(snapshot.credential.revision) !== expected ||
+             !await deps.secretResolver.isConfiguredReference(snapshot.config.secret_ref) ||
+             !snapshot.config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
+         const endpoint = await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref);
