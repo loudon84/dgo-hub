@@ -1,0 +1,18 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > applies and repeats migration 009, with API and worker limited to their exact run rights
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > persists activation schedule and returns the same run for a same-key replay
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > does not admit an overlapping manual request and exposes a durable callable due gate
+error: relation "control.etl_run_attempt" does not exist
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/snapshot-runs.test.ts:39:3
+     37|
+     38| beforeEach(async () => {
+     39|   await fixture.pool.query(`TRUNCATE control.etl_run_attempt,control.e…
+       |   ^
+     40|     control.source_security_barrier,control.source_lifecycle_event,con…
+     41|     control.source_channel,control.source_identity_mapping_revision,co…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+

@@ -1,0 +1,13 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/snapshot-runs.test.ts (3 tests | 3 failed) 2762ms
+     × applies and repeats migration 009, with API and worker limited to their exact run rights 5ms
+     × persists activation schedule and returns the same run for a same-key replay 4ms
+     × does not admit an overlapping manual request and exposes a durable callable due gate 4ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  22:57:53
+   Duration  3.24s (transform 113ms, setup 0ms, import 284ms, tests 2.76s, environment 0ms)
+

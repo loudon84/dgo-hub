@@ -1,0 +1,22 @@
+{
+  "taskLabel": "m1task5",
+  "runLabel": "88ad9762-f861-4961-90d4-de8e83ad33a0",
+  "startEvent": {
+    "at": "2026-10-24T14:57:44.400Z",
+    "event": "start_failure_unresolved",
+    "containerIdRecorded": false
+  },
+  "dockerServerVersion": "29.8.1",
+  "dockerServerVersionExit": 0,
+  "identityFilters": [
+    "label=codex.m0.task=m1task5",
+    "label=codex.m0.run=88ad9762-f861-4961-90d4-de8e83ad33a0"
+  ],
+  "listExit": 0,
+  "matchingContainerCount": 0,
+  "matchingContainers": [],
+  "knownContainerNameProvided": false,
+  "currentMatchingContainerFound": false,
+  "cleanupAttempted": false,
+  "conclusion": "No current container matches both exact labels while the Docker daemon is healthy. No container ID or name was recorded for the start attempt, so removal is not asserted."
+}

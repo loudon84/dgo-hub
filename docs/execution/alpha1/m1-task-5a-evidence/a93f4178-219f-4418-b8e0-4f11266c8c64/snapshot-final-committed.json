@@ -1,0 +1,84 @@
+{
+  "label": "after-product-commit",
+  "head": "4166e6d47d01ee8daad3c3f81b64055f73f37d8e",
+  "branch": "feat/alpha1-implementation",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/helpers/postgres.ts",
+      "raw_sha256": "d70b3620b8a9feb50b9a02691e6bd58bc07a36ce760ddea1e83fcdd2551cedbf",
+      "lf_sha256": "3929d604e9f81beaba399ddbf416a2bb385a7c43c2d32a714a85ce377345726d",
+      "bytes": 11797,
+      "clean_blob": "c56ee77950b33f44f534505b4da438e4cf06d41e"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "raw_sha256": "1b2ced8b45a500b7f0af7f4e872838eadec5b28eb06212b74baf7b9c839f8f3a",
+      "lf_sha256": "e8ba53398e2e4dff0b11d7b27995b9b1b005fea710f0fb1c58563fa3faa4488a",
+      "bytes": 26478,
+      "clean_blob": "729d2827e1ab995c4b402037d59a546ecb9950ab"
+    },
+    {
+      "path": "integration-service/app.ts",
+      "raw_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "lf_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "bytes": 3945,
+      "clean_blob": "7748a5c150f53914d77d3026dc5a329f28e602a5"
+    },
+    {
+      "path": "integration-service/auth/errors.ts",
+      "raw_sha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "lf_sha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "bytes": 801,
+      "clean_blob": "78da83b76777163fa076d2e70f9ec738e86b436b"
+    },
+    {
+      "path": "integration-service/ingestion-api/routes.ts",
+      "raw_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "lf_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "bytes": 8392,
+      "clean_blob": "b7fbaf57dd7413579d2d87598785122f11224763"
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "raw_sha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "lf_sha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "bytes": 52014,
+      "clean_blob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "raw_sha256": "854e6f09cd1f4f674fbf20b5faedb7054ab11aa49c7780764540322470db1534",
+      "lf_sha256": "854e6f09cd1f4f674fbf20b5faedb7054ab11aa49c7780764540322470db1534",
+      "bytes": 17595,
+      "clean_blob": "ebbf76a808c445d08576a685c263998c50c2dff1"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-contract.ts",
+      "raw_sha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "lf_sha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "bytes": 2031,
+      "clean_blob": "fd9223e7aade2f42c2f3ccbbb9fbaf7b682d6178"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "raw_sha256": "a7cf6377b5e5112cdd935cbc4f4d9ce9c718a9580117f7435b6f41c381d8079f",
+      "lf_sha256": "a7cf6377b5e5112cdd935cbc4f4d9ce9c718a9580117f7435b6f41c381d8079f",
+      "bytes": 22414,
+      "clean_blob": "f2b288a0dcc33ecc329a7ba0bad139f071a67fde"
+    },
+    {
+      "path": "integration-service/ingestion-api/snapshot-routes.ts",
+      "raw_sha256": "5e394780b3ccf0fa4f69f2b09636880653778dcfef74f06ccd85fca0fd94018e",
+      "lf_sha256": "5e394780b3ccf0fa4f69f2b09636880653778dcfef74f06ccd85fca0fd94018e",
+      "bytes": 5236,
+      "clean_blob": "c2978a3b5064c94250aa67946dc0191272477e35"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "raw_sha256": "06ac73d2fcd1aa2329ac4c745aeac3e6a3a62286209239d2421a958864cb87d4",
+      "lf_sha256": "06ac73d2fcd1aa2329ac4c745aeac3e6a3a62286209239d2421a958864cb87d4",
+      "bytes": 13038,
+      "clean_blob": "499dffbde260fa299bbb849d9b368652a60e3116"
+    }
+  ]
+}

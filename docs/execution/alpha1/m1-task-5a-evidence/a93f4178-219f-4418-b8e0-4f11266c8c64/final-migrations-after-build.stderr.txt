@@ -1,0 +1,18 @@
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+Error: Command failed: C:\nvm4w\nodejs\node.exe dist/migrate.js --environment-kind local_lab
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}
+
+ ❯ acceptance-tests/migrations.test.ts:184:20
+    182|   it('runs the compiled CLI with an explicit environment and closes it…
+    183|     const connectionString = `postgres://postgres@127.0.0.1:${postgres…
+    184|     const output = execFileSync(process.execPath, ['dist/migrate.js', …
+       |                    ^
+    185|       cwd: process.cwd(),
+    186|       env: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

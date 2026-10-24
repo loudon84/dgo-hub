@@ -1,0 +1,11 @@
+ M integration-service/acceptance-tests/helpers/postgres.ts
+ M integration-service/acceptance-tests/migrations.test.ts
+ M integration-service/app.ts
+ M integration-service/auth/errors.ts
+ M integration-service/ingestion-api/routes.ts
+ M integration-service/source-registry/service.ts
+?? integration-service/acceptance-tests/snapshot-runs.test.ts
+?? integration-service/etl-worker/snapshot-contract.ts
+?? integration-service/etl-worker/snapshot-runs.ts
+?? integration-service/ingestion-api/snapshot-routes.ts
+?? integration-service/migrations/009_snapshot_runs_and_recovery.sql

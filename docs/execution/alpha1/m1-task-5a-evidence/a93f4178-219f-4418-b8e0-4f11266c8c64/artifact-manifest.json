@@ -1,0 +1,247 @@
+[
+  {
+    "path": "docker-ownership-review.json",
+    "bytes": 29174,
+    "sha256": "0d7db369f5e7316a2a644510a07d56d5f595378f2e07f9454cd03cc5c0946092"
+  },
+  {
+    "path": "final-build.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-build.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-build.stdout.txt",
+    "bytes": 79,
+    "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+  },
+  {
+    "path": "final-focused-postfix.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-focused-postfix.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-focused-postfix.stdout.txt",
+    "bytes": 335,
+    "sha256": "9e988f10b6ade34e269330e9f4b229817dd6c3c54ebbd903d8e04c2eb203f627"
+  },
+  {
+    "path": "final-head-after.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-head-after.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-head-after.stdout.txt",
+    "bytes": 41,
+    "sha256": "bdbdbbe23fd9f3e31440b6b9f82fc29139422acd66159a2346ae5e9c9882484f"
+  },
+  {
+    "path": "final-head-before.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-head-before.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-head-before.stdout.txt",
+    "bytes": 41,
+    "sha256": "bdbdbbe23fd9f3e31440b6b9f82fc29139422acd66159a2346ae5e9c9882484f"
+  },
+  {
+    "path": "final-head-committed.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-head-committed.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-head-committed.stdout.txt",
+    "bytes": 41,
+    "sha256": "d376dbda71ec0154fe83a8b583a97aaab2b3608481683e01db1dcf783d8cb9d5"
+  },
+  {
+    "path": "final-log.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-log.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-log.stdout.txt",
+    "bytes": 251,
+    "sha256": "9d63b7adda17050ea716da690366fb5e54261e6e8756ab7abee9bdad841fe9f7"
+  },
+  {
+    "path": "final-migrations-after-build.exit.txt",
+    "bytes": 3,
+    "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+  },
+  {
+    "path": "final-migrations-after-build.stderr.txt",
+    "bytes": 1003,
+    "sha256": "ea1cf476016c0325341fe92da4432a20df7d2ff5d58206c37467109936348018"
+  },
+  {
+    "path": "final-migrations-after-build.stdout.txt",
+    "bytes": 505,
+    "sha256": "9fdf4e22cc032473177c2e0184e110fbeec2a0de2e079e4eebc597d732016a67"
+  },
+  {
+    "path": "final-migrations-fixed.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-migrations-fixed.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-migrations-fixed.stdout.txt",
+    "bytes": 332,
+    "sha256": "6709ccd58d10a6478dfcbe72d5cb60feb593673bd524f8600a5e726dceaa80a6"
+  },
+  {
+    "path": "final-product-status.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-product-status.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-product-status.stdout.txt",
+    "bytes": 577,
+    "sha256": "decdf31e35726e980a829edb325a22bc8afccbe478236db02969aebb07ff491e"
+  },
+  {
+    "path": "final-typecheck.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "final-typecheck.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "final-typecheck.stdout.txt",
+    "bytes": 92,
+    "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+  },
+  {
+    "path": "postgres-lifecycle-migrations.jsonl",
+    "bytes": 930,
+    "sha256": "5a1868cd28de043c1131d7dd8842276df78a2fab577d6eca98d7ffd0b1c78d46"
+  },
+  {
+    "path": "postgres-lifecycle-snapshot-tests.jsonl",
+    "bytes": 1048,
+    "sha256": "44463268875064365382176f2b9623163418e6faf7893fdbc07126488b277640"
+  },
+  {
+    "path": "red-focused.exit.txt",
+    "bytes": 3,
+    "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+  },
+  {
+    "path": "red-focused.stderr.txt",
+    "bytes": 1107,
+    "sha256": "909c81b749641cfadecc94c669ea9bdff752b4d7913257601f0016a34b0fed7f"
+  },
+  {
+    "path": "red-focused.stdout.txt",
+    "bytes": 577,
+    "sha256": "c65582eb4b3e54bff922c283d92b42736ecabd8f8882d54b344d12b132b15f79"
+  },
+  {
+    "path": "snapshot-final-after.json",
+    "bytes": 3959,
+    "sha256": "bbafe7cb852db9e0748a26ce33c51edce748b8707a783bc7783a0f6bee472bfa"
+  },
+  {
+    "path": "snapshot-final-before.json",
+    "bytes": 3960,
+    "sha256": "bdf364db6b5148af2ebf20c46b06041371dbe45045754c536ba1ad4d6cc28199"
+  },
+  {
+    "path": "snapshot-final-committed.json",
+    "bytes": 3963,
+    "sha256": "e14e9c68c501442be62a633f7f939f8352e895c4eb5929471b28bb3a73b1656b"
+  },
+  {
+    "path": "source-diff.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "source-diff.patch",
+    "bytes": 78401,
+    "sha256": "ed6f11fcfc23595352611f52358820cef395015edfe12266621e71bceed99887"
+  },
+  {
+    "path": "source-diff.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "unresolved-start-resolution.json",
+    "bytes": 808,
+    "sha256": "0a6fdefe45a2cdb4464b4a00a74daf19fe7c18cc2e7497005715326c33488361"
+  },
+  {
+    "path": "unresolved-run-docker-list.stdout.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "unresolved-run-docker-list.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "unresolved-run-docker-list.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  },
+  {
+    "path": "unresolved-run-docker-health.stdout.txt",
+    "bytes": 7,
+    "sha256": "f24501f198ca7655d88a7f4323c6a7f4eb2d9a9c5e84f8bcd816d8050422538e"
+  },
+  {
+    "path": "unresolved-run-docker-health.stderr.txt",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "unresolved-run-docker-health.exit.txt",
+    "bytes": 3,
+    "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+  }
+]
