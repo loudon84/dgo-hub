@@ -80,12 +80,15 @@ async function seedCustomerApplyProof(versionDomain: 'SOURCE_VERSION' | 'SNAPSHO
 async function approveOwnerMapping(context:ApplyContext,newOwnerId:string):Promise<ApplyContext> {
   await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
     VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwnerId]);
-  const mappings=[
+  return approveIdentityMapping(context,[
     {kind:'user',external_id:'owner-ext',target_id:newOwnerId},
     {kind:'department',external_id:'dept-ext',target_id:'sales-east'},
     {kind:'customer',external_id:'customer-ext',target_id:(await database.query<{id:string}>(
       `SELECT id::text AS id FROM hub.canonical_customer WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id},
-  ];
+  ]);
+}
+
+async function approveIdentityMapping(context:ApplyContext,mappings:readonly {kind:string;external_id:string;target_id:string|null}[]):Promise<ApplyContext> {
   const identityDigest=Buffer.alloc(32,0x55);
   await database.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
     VALUES($1,$2,2,$3,$4::jsonb,$5)`,[context.tenantId,context.sourceId,identityDigest,JSON.stringify(mappings),context.ownerUserId]);
@@ -313,7 +316,7 @@ describe('canonical migration 006', () => {
       await client.query('COMMIT');
       expect(changed).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
       const after=await database.query<{user_id:string;auth_epoch:string;owner_user_id:string;audit_count:string}>(`SELECT s.user_id,s.auth_epoch::text,
-        (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$6) AS owner_user_id,
+        (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$6::uuid) AS owner_user_id,
         (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.source_pk=$3) AS audit_count
         FROM control.auth_subject s WHERE s.tenant_key=$1 AND s.user_id IN ($4,$5) ORDER BY s.user_id`,
       [context.tenantId,context.sourceId,customer.source_pk,context.ownerUserId,newOwner,requireApplied(first).objectId]);
@@ -325,6 +328,291 @@ describe('canonical migration 006', () => {
         expect(row.audit_count).toBe('1');
       }
     } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('applies an owner change between two external keys in one frozen identity mapping', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-key-b-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const client=await database.connect();
+    const firstPayload={source_pk:'two-owner-keys',customer_name:'Two key customer',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      const first=await applyCustomer(client,frozen,firstPayload);
+      await client.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      const before=await database.query<{user_id:string;auth_epoch:string}>(`SELECT user_id,auth_epoch::text FROM control.auth_subject
+        WHERE tenant_key=$1 AND user_id IN ($2,$3) ORDER BY user_id`,[context.tenantId,context.ownerUserId,newOwner]);
+
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      const rolledBack=await applyCustomer(client,frozen,{...firstPayload,owner_external_id:'ext-B',source_version:'2'});
+      expect(rolledBack.status).toBe('APPLIED');
+      await expect(client.query('SELECT 1/0')).rejects.toMatchObject({code:'22012'});
+      await client.query('ROLLBACK');
+      const afterRollback=await database.query<{owner_user_id:string;source_version:string;reference_key:string;reference_target:string;
+        audit_count:string;outbox_count:string}>(`SELECT
+        (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$4::uuid) AS owner_user_id,
+        (SELECT r.source_version::text FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id=$2
+          AND r.entity='customer' AND r.source_pk=$3) AS source_version,
+        (SELECT i.external_id FROM control.canonical_identity_reference i WHERE i.tenant_key=$1 AND i.source_id=$2
+          AND i.entity='customer' AND i.source_pk=$3 AND i.kind='user') AS reference_key,
+        (SELECT i.target_id FROM control.canonical_identity_reference i WHERE i.tenant_key=$1 AND i.source_id=$2
+          AND i.entity='customer' AND i.source_pk=$3 AND i.kind='user') AS reference_target,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.source_pk=$3) AS audit_count,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=$1 AND o.source_id=$2 AND o.entity='customer'
+          AND o.canonical_object_id=$4::uuid) AS outbox_count`,
+      [context.tenantId,context.sourceId,firstPayload.source_pk,requireApplied(first).objectId]);
+      expect(afterRollback.rows[0]).toEqual({owner_user_id:context.ownerUserId,source_version:'1',reference_key:'ext-A',
+        reference_target:context.ownerUserId,audit_count:'0',outbox_count:'1'});
+      const epochsAfterRollback=await database.query<{user_id:string;auth_epoch:string}>(`SELECT user_id,auth_epoch::text FROM control.auth_subject
+        WHERE tenant_key=$1 AND user_id IN ($2,$3) ORDER BY user_id`,[context.tenantId,context.ownerUserId,newOwner]);
+      expect(epochsAfterRollback.rows).toEqual(before.rows);
+
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      const second=await applyCustomer(client,frozen,{...firstPayload,owner_external_id:'ext-B',source_version:'2'});
+      await client.query('COMMIT');
+      expect(second).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
+      const after=await database.query<{user_id:string;auth_epoch:string;owner_user_id:string;source_version:string;reference_key:string;
+        reference_target:string;audit_count:string;outbox_count:string}>(`SELECT s.user_id,s.auth_epoch::text,
+          (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.tenant_id=$1 AND c.id=$6) AS owner_user_id,
+          (SELECT r.source_version::text FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id=$2
+            AND r.entity='customer' AND r.source_pk=$3) AS source_version,
+          (SELECT i.external_id FROM control.canonical_identity_reference i WHERE i.tenant_key=$1 AND i.source_id=$2
+            AND i.entity='customer' AND i.source_pk=$3 AND i.kind='user') AS reference_key,
+          (SELECT i.target_id FROM control.canonical_identity_reference i WHERE i.tenant_key=$1 AND i.source_id=$2
+            AND i.entity='customer' AND i.source_pk=$3 AND i.kind='user') AS reference_target,
+          (SELECT count(*)::text FROM control.canonical_ownership_audit a WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.source_pk=$3) AS audit_count,
+          (SELECT count(*)::text FROM control.canonical_apply_outbox o WHERE o.tenant_key=$1 AND o.source_id=$2 AND o.entity='customer'
+            AND o.canonical_object_id=$6) AS outbox_count
+        FROM control.auth_subject s WHERE s.tenant_key=$1 AND s.user_id IN ($4,$5) ORDER BY s.user_id`,
+      [context.tenantId,context.sourceId,firstPayload.source_pk,context.ownerUserId,newOwner,requireApplied(first).objectId]);
+      expect(after.rows.map(row=>row.user_id)).toEqual([context.ownerUserId,newOwner].sort());
+      for(const row of after.rows) {
+        const oldEpoch=before.rows.find(old=>old.user_id===row.user_id)?.auth_epoch ?? '0';
+        expect(BigInt(row.auth_epoch)).toBe(BigInt(oldEpoch)+1n);
+        expect(row.owner_user_id).toBe(newOwner);
+        expect(row.source_version).toBe('2');
+        expect(row.reference_key).toBe('ext-B');
+        expect(row.reference_target).toBe(newOwner);
+        expect(row.audit_count).toBe('1');
+        expect(row.outbox_count).toBe('2');
+      }
+
+      const beforeReplay=await database.query<{old_epoch:string;new_epoch:string;audits:string;outbox:string}>(`SELECT
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$3) AS new_epoch,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_pk=$4) AS audits,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$5 AND entity='customer' AND canonical_object_id=$6) AS outbox`,
+      [context.tenantId,context.ownerUserId,newOwner,firstPayload.source_pk,context.sourceId,requireApplied(first).objectId]);
+      await client.query('BEGIN');
+      await client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,firstPayload.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,
+        frozen.versionDomain,frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,
+        frozen.identityMappingRevision,JSON.stringify([{kind:'user',external_id:'ext-B'}]),
+      ]);
+      await client.query('COMMIT');
+      const afterReplay=await database.query<{old_epoch:string;new_epoch:string;audits:string;outbox:string}>(`SELECT
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$3) AS new_epoch,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_pk=$4) AS audits,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$5 AND entity='customer' AND canonical_object_id=$6) AS outbox`,
+      [context.tenantId,context.ownerUserId,newOwner,firstPayload.source_pk,context.sourceId,requireApplied(first).objectId]);
+      expect(afterReplay.rows).toEqual(beforeReplay.rows);
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('finishes frozen owner work after an ordinary Data Owner binding change', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-after-data-owner-change-${randomBytes(3).toString('hex')}`;
+    const replacementDataOwner=`data-owner-current-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales'),($1,$3,NULL,NULL)`,[context.tenantId,newOwner,replacementDataOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    await database.query(`UPDATE control.source_registry SET data_owner_user_id=$3 WHERE tenant_key=$1 AND source_id=$2`,
+      [context.tenantId,context.sourceId,replacementDataOwner]);
+    await database.query(`UPDATE control.source_registry SET owner_revision=owner_revision+1,lifecycle='PAUSED'
+      WHERE tenant_key=$1 AND source_id=$2`,[context.tenantId,context.sourceId]);
+    const client=await database.connect();
+    const customer={source_pk:'frozen-owner-binding-change',customer_name:'Frozen O1 proof',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    try {
+      await client.query('BEGIN');
+      const first=await applyCustomer(client,frozen,customer);
+      await client.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      await client.query('BEGIN');
+      const changed=await applyCustomer(client,frozen,{...customer,owner_external_id:'ext-B',source_version:'2'});
+      await client.query('COMMIT');
+      expect(changed).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
+      const state=await database.query<{current_data_owner:string;owner_user_id:string;actor_user_id:string;old_epoch:string;new_epoch:string}>(`SELECT
+        r.data_owner_user_id AS current_data_owner,
+        c.owner_user_id,
+        (SELECT a.actor_user_id FROM control.canonical_ownership_audit a WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.source_pk=$3) AS actor_user_id,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$4) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$5) AS new_epoch
+        FROM control.source_registry r JOIN hub.canonical_customer c ON c.tenant_id=r.tenant_key AND c.id=$6
+        WHERE r.tenant_key=$1 AND r.source_id=$2`,
+      [context.tenantId,context.sourceId,customer.source_pk,context.ownerUserId,newOwner,requireApplied(first).objectId]);
+      expect(state.rows[0]).toEqual({current_data_owner:replacementDataOwner,owner_user_id:newOwner,actor_user_id:context.ownerUserId,
+        old_epoch:'1',new_epoch:'1'});
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('rejects a direct worker owner-change effect without a matching canonical change', async () => {
+    const context=await seedCustomerApplyProof();
+    const unrelated=`unrelated-subject-${randomBytes(3).toString('hex')}`;
+    const newOwner=`owner-direct-helper-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,NULL,NULL),($1,$3,'sales-east','sales')`,[context.tenantId,unrelated,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'owner-ext',target_id:newOwner},
+      {kind:'department',external_id:'dept-ext',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const before=await database.query<{unrelated_epoch:string;owner_epoch:string;audits:string;receipts:string;outbox:string;source_identities:string;
+      core_state:string[];old_signature_absent:boolean}>(`SELECT
+      (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS unrelated_epoch,
+      (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$3) AS owner_epoch,
+      (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$4) AS audits,
+      (SELECT count(*)::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$4) AS receipts,
+      (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$4) AS outbox,
+      (SELECT count(*)::text FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id=$4) AS source_identities,
+      (SELECT array_agg(id::text||':'||owner_user_id||':'||dept_id ORDER BY id) FROM hub.canonical_customer WHERE tenant_id=$1) AS core_state,
+      to_regprocedure('control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text)') IS NULL AS old_signature_absent`,
+    [context.tenantId,unrelated,context.ownerUserId,context.sourceId]);
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      await expect(client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,'no-canonical-change',$3,$4,$5::bigint,$6,$7::bigint,$8,$9,2,$10::jsonb)`,[
+        context.tenantId,context.sourceId,context.credentialId,frozen.channelId,frozen.channelEpoch,frozen.versionDomain,
+        frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,
+        JSON.stringify([{kind:'user',external_id:'owner-ext'}]),
+      ])).rejects.toMatchObject({code:'42501'});
+      expect(before.rows[0].old_signature_absent).toBe(true);
+      await client.query('ROLLBACK');
+      const after=await database.query<{unrelated_epoch:string;owner_epoch:string;audits:string;receipts:string;outbox:string;source_identities:string;
+        core_state:string[];old_signature_absent:boolean}>(`SELECT
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS unrelated_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$3) AS owner_epoch,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$4) AS audits,
+        (SELECT count(*)::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$4) AS receipts,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$4) AS outbox,
+        (SELECT count(*)::text FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id=$4) AS source_identities,
+        (SELECT array_agg(id::text||':'||owner_user_id||':'||dept_id ORDER BY id) FROM hub.canonical_customer WHERE tenant_id=$1) AS core_state,
+        to_regprocedure('control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text)') IS NULL AS old_signature_absent`,
+      [context.tenantId,unrelated,context.ownerUserId,context.sourceId]);
+      expect(after.rows).toEqual(before.rows);
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('enforces typed barriers and newer remap fences through direct worker helper calls', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-helper-fences-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const payload={source_pk:'direct-helper-fences',customer_name:'Helper fence customer',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const apply=await database.connect();
+    let objectId:string;
+    try {
+      await apply.query('BEGIN');
+      const first=await applyCustomer(apply,frozen,payload);
+      await apply.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      await apply.query('BEGIN');
+      const changed=await applyCustomer(apply,frozen,{...payload,owner_external_id:'ext-B',source_version:'2'});
+      await apply.query('COMMIT');
+      expect(changed).toMatchObject({status:'APPLIED'});
+      objectId=requireApplied(first).objectId;
+    } finally { await apply.query('ROLLBACK').catch(()=>undefined); apply.release(); }
+
+    const state=async()=>database.query<{owner_epoch:string;new_epoch:string;owner_user_id:string;owner_key:string;owner_target:string;
+      audit_count:string;receipt_version:string;outbox_count:string;hub_revision:string}>(`SELECT
+      (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2) AS owner_epoch,
+      (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$3) AS new_epoch,
+      (SELECT owner_user_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$6) AS owner_user_id,
+      (SELECT external_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$4 AND source_pk=$5 AND kind='user') AS owner_key,
+      (SELECT target_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$4 AND source_pk=$5 AND kind='user') AS owner_target,
+      (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$4 AND source_pk=$5) AS audit_count,
+      (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$4 AND entity='customer' AND source_pk=$5) AS receipt_version,
+      (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$4 AND entity='customer' AND canonical_object_id=$6) AS outbox_count,
+      (SELECT hub_revision::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$6) AS hub_revision`,
+    [context.tenantId,context.ownerUserId,newOwner,context.sourceId,payload.source_pk,objectId]);
+
+    const beforeFence=await state();
+    const mappingDigest=Buffer.alloc(32,0x66);
+    const revisionThree=[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ];
+    await database.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+      VALUES($1,$2,3,$3,$4::jsonb,$5)`,[context.tenantId,context.sourceId,mappingDigest,JSON.stringify(revisionThree),context.ownerUserId]);
+    await database.query(`INSERT INTO control.source_identity_remap_fence(tenant_key,source_id,kind,external_id,identity_mapping_revision)
+      VALUES($1,$2,'user','ext-B',3)`,[context.tenantId,context.sourceId]);
+    const remapClient=await database.connect();
+    try {
+      await remapClient.query('BEGIN');
+      await remapClient.query('SET LOCAL ROLE hub_worker');
+      await expect(remapClient.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,payload.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,frozen.versionDomain,
+        frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,frozen.identityMappingRevision,
+        JSON.stringify([{kind:'user',external_id:'ext-B'}]),
+      ])).rejects.toMatchObject({code:'42501',message:'identity mapping was superseded'});
+      await remapClient.query('ROLLBACK');
+    } finally { await remapClient.query('ROLLBACK').catch(()=>undefined); remapClient.release(); }
+    expect((await state()).rows).toEqual(beforeFence.rows);
+
+    const barrier=await database.query<{effective_fence:string}>(`INSERT INTO control.source_security_barrier
+      (tenant_key,source_id,credential_id,entity,channel_id,barrier_type,reason_code,created_by)
+      VALUES($1,$2,$3,'customer',$4,'SOURCE_SCOPE_SECURITY_REMOVAL','fix2 fixture','fixture')
+      RETURNING effective_fence::text`,[context.tenantId,context.sourceId,context.credentialId,frozen.channelId]);
+    expect(BigInt(barrier.rows[0].effective_fence)).toBeGreaterThan(BigInt(frozen.securityBarrierFenceAtAdmission));
+    const beforeBarrier=await state();
+    const barrierClient=await database.connect();
+    try {
+      await barrierClient.query('BEGIN');
+      await barrierClient.query('SET LOCAL ROLE hub_worker');
+      await expect(barrierClient.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,payload.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,frozen.versionDomain,
+        frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,frozen.identityMappingRevision,
+        JSON.stringify([{kind:'department',external_id:'dept-D'}]),
+      ])).rejects.toMatchObject({code:'42501',message:'security barrier blocks source ownership change'});
+      await barrierClient.query('ROLLBACK');
+    } finally { await barrierClient.query('ROLLBACK').catch(()=>undefined); barrierClient.release(); }
+    expect((await state()).rows).toEqual(beforeBarrier.rows);
   });
 
   it('applies the first version zero and rejects a customer payload on an order channel', async () => {

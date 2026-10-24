@@ -291,16 +291,14 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
   const existingAuthority=identity.rows[0]?.customer_id ? await client.query<{owner_user_id:string;dept_id:string}>(
     'SELECT owner_user_id,dept_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2',
     [context.tenantId,identity.rows[0].customer_id]) : undefined;
-  if(existingAuthority?.rowCount && (existingAuthority.rows[0].owner_user_id!==resolved.ownerUserId ||
-      existingAuthority.rows[0].dept_id!==resolved.departmentId)) {
-    const ownerChanged=existingAuthority.rows[0].owner_user_id!==resolved.ownerUserId;
-    await client.query('SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::bigint,$11)',[
-      context.tenantId,context.sourceId,customerInput.source_pk,ownerChanged?'user':'department',
-      ownerChanged?customerInput.owner_external_id:customerInput.dept_external_id,
-      ownerChanged?existingAuthority.rows[0].owner_user_id:existingAuthority.rows[0].dept_id,
-      ownerChanged?resolved.ownerUserId:resolved.departmentId,
-      existingAuthority.rows[0].owner_user_id,resolved.ownerUserId,context.identityMappingRevision,context.ownerUserId,
-    ]);
+  const ownershipChanges: {kind:'user'|'department';external_id:string}[]=[];
+  if(existingAuthority?.rowCount) {
+    if(existingAuthority.rows[0].owner_user_id!==resolved.ownerUserId) {
+      ownershipChanges.push({kind:'user',external_id:customerInput.owner_external_id});
+    }
+    if(existingAuthority.rows[0].dept_id!==resolved.departmentId) {
+      ownershipChanges.push({kind:'department',external_id:customerInput.dept_external_id});
+    }
   }
   const projection=await projectionDigest(client,sourceDigest,objectId,{owner_user_id:resolved.ownerUserId,department_id:resolved.departmentId});
   const revision = await allocateRevision(client);
@@ -317,12 +315,19 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
     (tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id) VALUES($1,$2,'customer',$3,$4,$4)
     ON CONFLICT(tenant_key,source_id,entity,source_pk) DO UPDATE SET canonical_object_id=EXCLUDED.canonical_object_id,customer_id=EXCLUDED.customer_id`,
   [context.tenantId,context.sourceId,customerInput.source_pk,objectId]);
+  await writeReceipt(client,context,{sourcePk:customerInput.source_pk,objectId,version,digest:sourceDigest,projection,deleted:customerInput.deleted_at != null});
+  await writeOutbox(client,context,{objectId,revision,operation:customerInput.deleted_at?'DELETE':'UPSERT',projection,digest:sourceDigest});
+  if(ownershipChanges.length) {
+    await client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+      context.tenantId,context.sourceId,customerInput.source_pk,context.credentialId,context.channelId,context.channelEpoch,
+      context.versionDomain,context.securityBarrierFenceAtAdmission,context.ownerApprovalId,context.testReportId,
+      context.identityMappingRevision,JSON.stringify(ownershipChanges),
+    ]);
+  }
   await client.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
     VALUES($1,$2,'customer',$3,'user',$4,$5),($1,$2,'customer',$3,'department',$6,$7)
     ON CONFLICT(tenant_key,source_id,entity,source_pk,kind) DO UPDATE SET external_id=EXCLUDED.external_id,target_id=EXCLUDED.target_id`,
   [context.tenantId,context.sourceId,customerInput.source_pk,customerInput.owner_external_id,resolved.ownerUserId,customerInput.dept_external_id,resolved.departmentId]);
-  await writeReceipt(client,context,{sourcePk:customerInput.source_pk,objectId,version,digest:sourceDigest,projection,deleted:customerInput.deleted_at != null});
-  await writeOutbox(client,context,{objectId,revision,operation:customerInput.deleted_at?'DELETE':'UPSERT',projection,digest:sourceDigest});
   return { status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex') };
 }
 

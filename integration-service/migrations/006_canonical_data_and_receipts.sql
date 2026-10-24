@@ -357,41 +357,177 @@ AS $body$
     'canonical_object_id',p_object_id::text,'identity',p_identity)::text,'UTF8'),'sha256')
 $body$;
 
-CREATE FUNCTION control.record_canonical_customer_owner_change(p_tenant text,p_source text,p_source_pk text,p_kind text,
-  p_external_id text,p_old_target text,p_new_target text,p_old_user text,p_new_user text,p_mapping_revision bigint,p_actor text)
+DROP FUNCTION IF EXISTS control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text);
+CREATE FUNCTION control.record_canonical_customer_owner_change(p_tenant text,p_source text,p_source_pk text,p_credential_id uuid,
+  p_channel_id uuid,p_channel_epoch bigint,p_version_domain text,p_admitted_fence bigint,p_owner_approval_id uuid,
+  p_test_report_id uuid,p_mapping_revision bigint,p_changes jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
 AS $body$
-DECLARE v_user text;
+DECLARE
+  v_actor text;
+  v_mappings jsonb;
+  v_config jsonb;
+  v_fence bigint;
+  v_credential_id uuid;
+  v_channel_state text;
+  v_channel_connector text;
+  v_channel_mode text;
+  v_channel_domain text;
+  v_channel_epoch bigint;
+  v_customer_id uuid;
+  v_owner text;
+  v_department text;
+  v_hub_revision bigint;
+  v_source_version numeric;
+  v_change record;
+  v_new_target text;
+  v_old_target text;
+  v_old_external text;
+  v_affected_users text[] := ARRAY[]::text[];
+  v_user text;
+  v_count integer;
 BEGIN
-  PERFORM control.acquire_security_barrier_guard_internal();
-  IF p_kind NOT IN ('user','department') OR p_mapping_revision<=0 OR p_actor IS NULL OR p_actor=''
-     OR NOT EXISTS(SELECT 1 FROM control.source_registry r WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.data_owner_user_id=p_actor)
-     OR NOT EXISTS(SELECT 1 FROM control.source_identity_mapping_revision m WHERE m.tenant_key=p_tenant AND m.source_id=p_source
-       AND m.revision=p_mapping_revision AND m.mappings @> jsonb_build_array(jsonb_build_object('kind',p_kind,
-         'external_id',p_external_id,'target_id',p_new_target))) THEN
+  v_fence:=control.acquire_security_barrier_guard_internal();
+  IF p_credential_id IS NULL OR p_channel_id IS NULL OR p_channel_epoch IS NULL OR p_admitted_fence IS NULL
+     OR p_owner_approval_id IS NULL OR p_test_report_id IS NULL OR p_admitted_fence<0 OR p_admitted_fence>v_fence OR p_mapping_revision<=0
+     OR p_version_domain NOT IN ('SOURCE_VERSION','SNAPSHOT_OBSERVATION')
+     OR coalesce(jsonb_typeof(p_changes)<>'array',true) OR jsonb_array_length(p_changes)=0
+     OR jsonb_array_length(p_changes)>2
+     OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_changes) e
+       WHERE jsonb_typeof(e)<>'object' OR NOT (e ? 'kind') OR NOT (e ? 'external_id')
+         OR (e - 'kind' - 'external_id')<>'{}'::jsonb
+         OR e->>'kind' NOT IN ('user','department') OR coalesce(e->>'external_id','')='')
+     OR (SELECT count(DISTINCT e->>'kind') FROM jsonb_array_elements(p_changes) e)<>
+        (SELECT count(*) FROM jsonb_array_elements(p_changes)) THEN
+    RAISE EXCEPTION 'invalid source ownership change proof' USING ERRCODE='42501';
+  END IF;
+
+  -- The caller's ordinary source job remains authorized by its immutable
+  -- approval/report/mapping tuple. Current Data Owner changes are admission
+  -- changes and do not cancel this already accepted proof.
+  SELECT a.owner_user_id,m.mappings,c.config INTO v_actor,v_mappings,v_config
+    FROM control.source_owner_approval a
+    JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id)=(a.test_report_id,a.tenant_key,a.source_id)
+    JOIN control.source_identity_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=
+      (a.tenant_key,a.source_id,a.identity_mapping_revision)
+    JOIN control.source_config_revision c ON (c.tenant_key,c.source_id,c.revision)=(a.tenant_key,a.source_id,a.config_revision)
+   WHERE a.id=p_owner_approval_id AND a.test_report_id=p_test_report_id
+     AND a.tenant_key=p_tenant AND a.source_id=p_source AND a.identity_mapping_revision=p_mapping_revision
+     AND t.status='PASS' AND t.config_revision=a.config_revision AND t.mapping_revision=a.mapping_revision
+     AND t.identity_mapping_revision=a.identity_mapping_revision
+     AND t.config_digest=a.config_digest AND t.mapping_digest=a.mapping_digest
+     AND t.identity_mapping_digest=a.identity_mapping_digest
+     AND t.source_credential_revision=a.source_credential_revision
+     AND t.credential_generation=a.credential_generation
+     AND t.endpoint_profile_digest=a.endpoint_profile_digest AND t.data_contract_ref=a.data_contract_ref
+     AND m.mapping_digest=a.identity_mapping_digest AND c.config_digest=a.config_digest;
+  IF NOT FOUND OR v_actor IS NULL OR jsonb_typeof(v_mappings)<>'array' OR jsonb_typeof(v_config)<>'object' THEN
     RAISE EXCEPTION 'approved source ownership mapping required' USING ERRCODE='42501';
   END IF;
-  FOR v_user IN SELECT s.user_id FROM control.auth_subject s
-    WHERE s.tenant_key=p_tenant AND s.user_id IN (p_old_user,p_new_user) ORDER BY s.user_id FOR UPDATE
-  LOOP NULL; END LOOP;
-  IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=p_new_user
-      AND s.enabled AND s.business_role='sales'
-      AND ((p_kind='user' AND p_new_user=p_new_target) OR (p_kind='department' AND s.department_id=p_new_target))) THEN
-    RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='22023';
+
+  SELECT id INTO v_credential_id FROM control.lock_source_credential(p_tenant,p_source);
+  IF v_credential_id IS DISTINCT FROM p_credential_id THEN
+    RAISE EXCEPTION 'source credential proof does not match' USING ERRCODE='42501';
   END IF;
-  IF NOT EXISTS(SELECT 1 FROM control.canonical_source_identity i
-      JOIN control.canonical_identity_reference r USING(tenant_key,source_id,entity,source_pk)
-      JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
-      WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity='customer' AND i.source_pk=p_source_pk
-        AND r.kind=p_kind AND r.external_id=p_external_id AND r.target_id=p_old_target
-        AND ((p_kind='user' AND c.owner_user_id=p_old_target) OR (p_kind='department' AND c.dept_id=p_old_target))) THEN
-    RAISE EXCEPTION 'source ownership change does not match current projection' USING ERRCODE='42501';
+  SELECT state,connector,mode,version_domain,channel_epoch INTO
+    v_channel_state,v_channel_connector,v_channel_mode,v_channel_domain,v_channel_epoch
+    FROM control.source_channel WHERE id=p_channel_id AND tenant_key=p_tenant AND source_id=p_source AND entity='customer';
+  IF NOT FOUND OR v_channel_state<>'active' OR v_channel_epoch<>p_channel_epoch OR v_channel_domain<>p_version_domain
+     OR v_channel_connector IS DISTINCT FROM v_config->>'connector' OR v_channel_mode IS DISTINCT FROM v_config->>'mode'
+     OR v_channel_domain IS DISTINCT FROM v_config->>'version_domain' THEN
+    RAISE EXCEPTION 'source channel proof does not match' USING ERRCODE='42501';
   END IF;
-  UPDATE control.auth_subject s SET auth_epoch=s.auth_epoch+1
-    WHERE s.tenant_key=p_tenant AND s.user_id IN (p_old_user,p_new_user);
-  INSERT INTO control.canonical_ownership_audit(tenant_key,source_id,entity,source_pk,kind,external_id,old_target_id,new_target_id,
-    identity_mapping_revision,actor_user_id,reason)
-    VALUES(p_tenant,p_source,'customer',p_source_pk,p_kind,p_external_id,p_old_target,p_new_target,p_mapping_revision,p_actor,'source projection changed ownership');
+  IF EXISTS(SELECT 1 FROM control.source_security_barrier b
+     WHERE b.tenant_key=p_tenant AND b.effective_fence>p_admitted_fence
+       AND (b.source_id IS NULL OR b.source_id=p_source)
+       AND (b.credential_id IS NULL OR b.credential_id=p_credential_id)
+       AND (b.entity IS NULL OR b.entity='customer')
+       AND (b.channel_id IS NULL OR b.channel_id=p_channel_id)
+       AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN
+    RAISE EXCEPTION 'security barrier blocks source ownership change' USING ERRCODE='42501';
+  END IF;
+
+  SELECT i.customer_id,c.owner_user_id,c.dept_id,c.hub_revision,c.source_version
+    INTO v_customer_id,v_owner,v_department,v_hub_revision,v_source_version
+    FROM control.canonical_source_identity i
+    JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
+   WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity='customer' AND i.source_pk=p_source_pk
+   FOR UPDATE OF i,c;
+  IF NOT FOUND OR v_customer_id IS NULL OR NOT EXISTS(
+    SELECT 1 FROM control.source_version_receipt r
+    JOIN control.canonical_apply_outbox o ON (o.tenant_key,o.source_id,o.channel_id,o.entity,o.canonical_object_id,
+      o.hub_revision,o.projection_digest)=(r.tenant_key,r.source_id,r.channel_id,r.entity,r.canonical_object_id,
+      v_hub_revision,r.projection_digest)
+    WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.channel_id=p_channel_id AND r.entity='customer'
+      AND r.source_pk=p_source_pk AND r.canonical_object_id=v_customer_id AND r.source_version=v_source_version
+      AND o.operation='UPSERT'
+  ) THEN
+    RAISE EXCEPTION 'source ownership change has no matching canonical apply' USING ERRCODE='42501';
+  END IF;
+
+  FOR v_change IN SELECT e->>'kind' AS kind,e->>'external_id' AS external_id FROM jsonb_array_elements(p_changes) e
+  LOOP
+    IF EXISTS(SELECT 1 FROM control.source_identity_remap_fence f
+        WHERE f.tenant_key=p_tenant AND f.source_id=p_source AND f.kind=v_change.kind AND f.external_id=v_change.external_id
+          AND f.identity_mapping_revision>p_mapping_revision) THEN
+      RAISE EXCEPTION 'identity mapping was superseded' USING ERRCODE='42501';
+    END IF;
+    SELECT count(*),min(e->>'target_id') INTO v_count,v_new_target
+      FROM jsonb_array_elements(v_mappings) e
+     WHERE e->>'kind'=v_change.kind AND e->>'external_id'=v_change.external_id;
+    IF v_count<>1 OR v_new_target IS NULL THEN
+      RAISE EXCEPTION 'approved source ownership mapping required' USING ERRCODE='42501';
+    END IF;
+    SELECT r.external_id,r.target_id INTO v_old_external,v_old_target
+      FROM control.canonical_identity_reference r
+     WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.entity='customer' AND r.source_pk=p_source_pk
+       AND r.kind=v_change.kind
+     FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'source ownership reference missing' USING ERRCODE='42501'; END IF;
+
+    IF (v_change.kind='user' AND v_owner<>v_new_target) OR
+       (v_change.kind='department' AND v_department<>v_new_target) THEN
+      RAISE EXCEPTION 'source ownership change does not match current projection' USING ERRCODE='42501';
+    END IF;
+
+    IF v_change.kind='user' THEN
+      IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_new_target
+          AND s.enabled AND s.business_role='sales' AND s.department_id=v_department) THEN
+        RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
+      END IF;
+    ELSE
+      IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_owner
+          AND s.enabled AND s.business_role='sales' AND s.department_id=v_new_target) THEN
+        RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
+      END IF;
+    END IF;
+
+    IF v_old_target<>v_new_target THEN
+      IF v_change.kind='user' THEN
+        v_affected_users:=array_append(v_affected_users,v_old_target);
+        v_affected_users:=array_append(v_affected_users,v_new_target);
+      ELSE
+        v_affected_users:=array_append(v_affected_users,v_owner);
+      END IF;
+      INSERT INTO control.canonical_ownership_audit(tenant_key,source_id,entity,source_pk,kind,external_id,old_target_id,new_target_id,
+        identity_mapping_revision,actor_user_id,reason)
+        VALUES(p_tenant,p_source,'customer',p_source_pk,v_change.kind,v_change.external_id,v_old_target,v_new_target,
+          p_mapping_revision,v_actor,'source projection changed ownership');
+    END IF;
+    UPDATE control.canonical_identity_reference SET external_id=v_change.external_id,target_id=v_new_target
+     WHERE tenant_key=p_tenant AND source_id=p_source AND entity='customer' AND source_pk=p_source_pk AND kind=v_change.kind;
+  END LOOP;
+
+  FOR v_user IN SELECT DISTINCT u FROM unnest(v_affected_users) AS affected(u) ORDER BY u
+  LOOP
+    PERFORM 1 FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_user FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'affected owner subject missing' USING ERRCODE='42501'; END IF;
+  END LOOP;
+  FOR v_user IN SELECT DISTINCT u FROM unnest(v_affected_users) AS affected(u) ORDER BY u
+  LOOP
+    UPDATE control.auth_subject SET auth_epoch=auth_epoch+1 WHERE tenant_key=p_tenant AND user_id=v_user;
+    IF NOT FOUND THEN RAISE EXCEPTION 'affected owner subject missing' USING ERRCODE='42501'; END IF;
+  END LOOP;
 END;
 $body$;
 
@@ -576,7 +712,7 @@ REVOKE ALL ON SEQUENCE control.canonical_hub_revision_seq,control.canonical_owne
 REVOKE ALL ON FUNCTION control.reject_canonical_outbox_mutation() FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.canonical_projection_digest(bytea,uuid,jsonb) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.lock_canonical_owner(text,text) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
-REVOKE ALL ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text)
+REVOKE ALL ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,uuid,uuid,bigint,text,bigint,uuid,uuid,bigint,jsonb)
   FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.remap_canonical_identity(text,text,text,text,text,bigint,text,text) FROM PUBLIC,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.acquire_security_barrier_guard_internal(),control.allocate_security_barrier_fence(),
@@ -608,7 +744,7 @@ GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text) TO hub_worke
 GRANT EXECUTE ON FUNCTION control.lock_security_barrier_fence() TO hub_api,hub_worker;
 GRANT EXECUTE ON FUNCTION control.canonical_projection_digest(bytea,uuid,jsonb) TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.lock_canonical_owner(text,text) TO hub_worker;
-GRANT EXECUTE ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,text,text,text,text,text,text,bigint,text) TO hub_worker;
+GRANT EXECUTE ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,uuid,uuid,bigint,text,bigint,uuid,uuid,bigint,jsonb) TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.record_source_security_barrier(text,text,text,text,text) TO hub_api;
 GRANT EXECUTE ON FUNCTION control.record_tenant_security_disable(text) TO hub_api;
 GRANT EXECUTE ON FUNCTION control.upsert_source_credential(text,text,bytea,text,text[],boolean,bigint),
