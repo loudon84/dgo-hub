@@ -1,8 +1,8 @@
 # M1-3 Task Brief — Strict REST Batch Intake and Durable Job Receipts
 
-**Planning status:** preflight only. M1-3 must not start until root closes the independent M1-2 Sol review and freezes the post-planning implementation base. The M1-2 report records source commit `6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e`; that source pin is research provenance, not an authorized implementation base. Do not infer a replacement base.
+**Planning status:** ready for M1-3 dispatch. M1-2 independent review is closed: Spec PASS / Quality Approved, all I1–I16 addressed in task-2-rereview-4.md. Approved source is `e6cfa2f5c1b777a18e65cacbb9b02702b7f727c0`; root freezes the exact post-planning Git base at dispatch. Earlier 6bec/f7be pins remain research provenance. Do not infer a different implementation base.
 
-**Authority:** public M1 plan, PRD §§8.6, 9.1–9.3, Appendix A.1–A.2 and C.1–C.2, reviewed M1-2 brief/report, and the pin-based interface findings in [context/m1-task3-interface-preflight.md](context/m1-task3-interface-preflight.md). PRD approval state remains REVIEW. Root must settle the listed contract ambiguities before a builder freezes public behavior.
+**Authority:** public M1 plan, PRD §§8.6, 9.1–9.3, Appendix A.1–A.2 and C.1–C.2, reviewed M1-2 brief/report, and the pin-based interface findings in [context/m1-task3-interface-preflight.md](context/m1-task3-interface-preflight.md). PRD approval state remains REVIEW. The root rulings recorded below settle the public-contract ambiguities; preserve PRD §13.3 verbatim for the request digest.
 
 ## Scope and boundaries
 
@@ -86,3 +86,11 @@ No M1-3 code work is authorized until the independent M1-2 Sol review closes and
 ## Out of scope
 
 No M1-4 worker/retry/apply claims, M1-5 snapshot/checkpoint/reconciliation, SQL Server, UI, source endpoint network tests, remote service calls, production data, changes to historical migrations 001–006, or changes to formal acceptance status. No API-060, hard-delete approval, source deletion, new auth scope, source token table, or generalized ingestion framework.
+
+## Dispatch authorization after M1-2 closure
+
+The controller authorizes M1-3 implementation after committing this final brief and reading the exact BASE from Git. The dispatch supplies BASE. Use approved M1-2 source e6cfa2f and unchanged migrations 001–006. Migration 006 SHA-256 is `fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065`; its DB-owned apply_xid receipt/outbox facts and locking permission-effect helper remain intact. M1-3 creates its separate intake processing outbox; it does not invoke canonical apply or alter that helper.
+
+Perform a bounded initial interface check against BASE before implementation; earlier pin notes do not override current approved exports. No product writer runs in parallel. Only the seven original product modules plus existing supporting modules are retained; add files under the existing seams rather than a new platform. The builder may commit explicit reviewed source/test/config/doc paths for M1-3, then a separate safe evidence/report whitelist. Never stage an entire evidence or scratch tree. Write the complete report to both `task-3-report.md` in this workspace and `docs/execution/alpha1/m1-task-3-report.md`; preserve failing outputs and exact actual gate HEAD/dirty source bytes/committed blob relationships. Do not edit progress.md, push, merge, deploy, or begin M1-4.
+
+The M1 and older M0 context/policy-blocked-host-artifacts.md guards remain binding. Leave existing untracked run roots, duplicate scratch evidence, integration-service/0/1/2 and the wrong-relative pointer untouched. Do not retry deletion or moving a rejected target by changing tools, paths or mechanisms. Site acceptance remains NOT_RUN/BLOCKED; no external source, IdP or remote Hermes is available.

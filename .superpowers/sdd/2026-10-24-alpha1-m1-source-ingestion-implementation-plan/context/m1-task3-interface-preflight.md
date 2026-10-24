@@ -108,3 +108,8 @@ Minimal local gates after M1-3 implementation: focused HTTP + owned-PostgreSQL a
 - `docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md` — §§8.6, 9.1–9.3, API-015–018, A.1, C.1–C.2.
 - `docs/OpenMetadata_UI扩展规格说明_v1.0.md` — relevant P04/legacy ingestion context; it describes earlier `/admin/ingestion/*` helper routes, not the new API-017/018 contract.
 - Pinned source files read through `git show 6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e:<path>`: `integration-service/app.ts`, `ingestion-api/routes.ts`, `ingestion-api/identity-routes.ts`, `ingestion-api/logging.ts`, `auth/types.ts`, `auth/service.ts`, `auth/repository.ts`, `auth/errors.ts`, `migrations/005_source_registry.sql`, `migrations/006_canonical_data_and_receipts.sql`, `normalization/models.ts`, `normalization/apply.ts`, `package.json`.
+
+## Post-review approval metadata
+
+M1-2 closed at e6cfa2f source / 773e048 review HEAD: Sol task-2-rereview-4.md Spec PASS / Quality Approved, all I1–I16 closed. Later changes from the f7be research pin concern the controlled ownership helper, DB-stamped apply_xid and null-safe eligibility; the builder performs a bounded interface check at the exact root dispatch BASE. Migration006 approved SHA-256 fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065 is immutable. This paragraph records review metadata, not a new source inspection by root. Root final brief authorizes M1-3 after its post-planning BASE is frozen.
+
