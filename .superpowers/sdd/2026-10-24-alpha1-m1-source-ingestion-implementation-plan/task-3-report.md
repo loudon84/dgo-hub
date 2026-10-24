@@ -16,6 +16,8 @@ Implemented only API-015/016 strict REST intake, API-017/018 safe job reads, and
 
 Migration 007 adds durable raw bytes, jobs/items/idempotency/outbox and the approval security fence. Hub API can insert but cannot read raw payload bytes or write canonical data; worker raw read is granted for later processing. Migrations 001–006 remain unchanged. SHA-256 for 006: `fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065`; SHA-256 for 007: `4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159`.
 
+The raw/LF/Git blob manifest is `docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/source-file-manifest.json`. It covers the 15 product source/test paths in the three implementation commits, with raw SHA-256, normalized-LF SHA-256, and Git blob IDs. All 15 working clean-filter blob IDs match HEAD. Three test files contain one CRLF among otherwise LF endings, with no bare CR; the manifest records both raw and normalized hashes. A dispatch-base diff confirms migrations 001–006 are unchanged.
+
 Source files and tests are in the three source commits listed above. Added `.env.example` documentation for the deployment-controlled raw-storage policy; absent policy fails closed. Acceptance tests explicitly use `local_lab_fixture`. This fixture does not demonstrate at-rest disk encryption.
 
 ## Test evidence
