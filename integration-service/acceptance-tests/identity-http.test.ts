@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
 import type { FastifyInstance } from 'fastify';
@@ -14,10 +14,11 @@ import type { AuthService, UserPrincipal } from '../auth/types.js';
 import { createOidcAuthenticator, readOidcConfiguration, type OidcConfiguration } from '../auth/oidc.js';
 import { createHubLoggerOptions } from '../ingestion-api/logging.js';
 import { runMigrations } from '../migrations/runner.js';
-import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
 const evidenceDirectory = join(fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-2-evidence/review-round1/', import.meta.url)), randomUUID());
 const evidenceFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
+const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
 const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 const audience = 'hub-api';
 const NOW = Math.floor(Date.now() / 1000);
@@ -134,9 +135,11 @@ function unsignedToken(alg: string): string {
 }
 
 beforeAll(async () => {
-  await mkdir(evidenceDirectory, { recursive: true });
-  await writeFile(evidenceFile, '', 'utf8');
-  fixture = await startOwnedPostgres({ evidenceFile, taskLabel: 'task2' });
+  if (!controlledEvidenceRoot) {
+    await mkdir(evidenceDirectory, { recursive: true });
+    await writeFile(evidenceFile, '', 'utf8');
+  }
+  fixture = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'task2' });
   await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
   authService = createAuthService({ pool: fixture.pool });
   rsa = await createSigningKey('RS256', 'rsa-primary');
@@ -172,7 +175,7 @@ afterAll(async () => {
     hostPort: fixture.hostPort,
   };
   await fixture.close();
-  await writeFile(join(evidenceDirectory, 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`, 'utf8');
+  await writeFile(join(dirname(fixture.evidenceFile), 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`, 'utf8');
 });
 
 beforeEach(async () => {

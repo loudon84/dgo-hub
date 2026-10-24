@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { runMigrations } from '../migrations/runner.js';
-import { OwnedPostgresError, startOwnedPostgres } from './helpers/postgres.js';
+import { fixtureEvidenceRootFromEnvironment, OwnedPostgresError, startOwnedPostgres } from './helpers/postgres.js';
 
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
 const roots: string[] = [];
@@ -102,23 +102,42 @@ describe('owned PostgreSQL startup cleanup failure paths', () => {
     await writeFile(evidenceFile, '');
     let id = 'a'.repeat(64);
     let label = '';
+    let taskLabel = 'task0';
     let cidFile = '';
     const calls: string[][] = [];
     const command = vi.fn(async (args: string[], stage: string) => {
       calls.push(args);
       if (stage === 'container_start') {
         label = args.find(value => value.startsWith('codex.m0.run='))!.slice('codex.m0.run='.length);
+        taskLabel = args.find(value => value.startsWith('codex.m0.task='))!.slice('codex.m0.task='.length);
         cidFile = args[args.indexOf('--cidfile') + 1];
         await writeFile(cidFile, `${id}\n`);
         throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stage, 'startup_failed');
       }
-      if (stage === 'ownership_check') return `${id}|task0|${label}`;
+      if (stage === 'ownership_check') return `${id}|${taskLabel}|${label}`;
       if (stage === 'failed_start_cleanup') return '';
       if (stage === 'cleanup_verification') return '';
       throw new Error(`unexpected stage: ${stage}`);
     });
-    return { root, evidenceFile, get cidFile() { return cidFile; }, calls, command, setId(value: string) { id = value; } };
+    return { root, evidenceFile, get cidFile() { return cidFile; }, get runLabel() { return label; }, calls, command, setId(value: string) { id = value; } };
   }
+
+  it('routes every owned fixture lifecycle event under the explicit run evidence root', async () => {
+    const f = await fixture();
+    const runEvidenceRoot = join(f.root, 'task4-run');
+    await expect(startOwnedPostgres({
+      evidenceFile: f.evidenceFile,
+      evidenceRoot: fixtureEvidenceRootFromEnvironment({ M0_RUN_EVIDENCE_ROOT: runEvidenceRoot }),
+      taskLabel: 'task2',
+    }, f.command)).rejects.toMatchObject({ code: 'OWNED_POSTGRES_COMMAND_FAILED' });
+
+    const routedFile = join(runEvidenceRoot, 'task2', f.runLabel, 'postgres-lifecycle.jsonl');
+    const events = (await readFile(routedFile, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
+    expect(events.map(event => event.event)).toEqual(['created', 'removed_after_start_failure']);
+    expect(events[0]).toMatchObject({ taskLabel: 'task2', runLabel: f.runLabel, containerId: 'a'.repeat(64) });
+    expect(events[1]).toMatchObject({ ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+    await expect(readFile(f.evidenceFile, 'utf8')).resolves.toBe('');
+  });
 
   it('recovers the created ID after docker run writes its cidfile then fails', async () => {
     const f = await fixture();

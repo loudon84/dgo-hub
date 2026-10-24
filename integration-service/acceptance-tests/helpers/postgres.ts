@@ -1,8 +1,8 @@
-import { appendFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
 
@@ -10,7 +10,7 @@ const execFile = promisify(execFileCallback);
 const IMAGE_REFERENCE = 'postgres:16.10-alpine';
 const START_TIMEOUT_MS = 75_000;
 type DockerCommand = (args: string[], stage: string, timeout?: number) => Promise<string>;
-export type OwnedTaskLabel = 'task0' | 'task1' | 'task2' | 'task3';
+export type OwnedTaskLabel = 'task0' | 'task1' | 'task2' | 'task3' | 'task4';
 
 type SafeFailure = 'docker_unavailable' | 'image_unavailable' | 'startup_failed' | 'readiness_timeout' | 'pool_unavailable';
 
@@ -30,6 +30,7 @@ export type OwnedPostgres = {
   repoDigest: string;
   runtimeImageId: string;
   hostPort: number;
+  evidenceFile: string;
   close(): Promise<void>;
 };
 
@@ -72,9 +73,21 @@ async function waitForHostPool(pool: pg.Pool, readyBy: number): Promise<void> {
   throw new OwnedPostgresError('OWNED_POSTGRES_POOL_UNAVAILABLE', 'pool_check', 'pool_unavailable');
 }
 
-export async function startOwnedPostgres(options: { evidenceFile: string; taskLabel?: OwnedTaskLabel }, command: DockerCommand = docker): Promise<OwnedPostgres> {
+export function fixtureEvidenceRootFromEnvironment(environment: NodeJS.ProcessEnv = process.env): string | undefined {
+  const root = environment.M0_RUN_EVIDENCE_ROOT;
+  if (root === undefined) return undefined;
+  if (!isAbsolute(root)) throw new Error('M0_RUN_EVIDENCE_ROOT_INVALID');
+  return resolve(root);
+}
+
+export async function startOwnedPostgres(options: { evidenceFile: string; evidenceRoot?: string; taskLabel?: OwnedTaskLabel }, command: DockerCommand = docker): Promise<OwnedPostgres> {
   const runLabel = randomUUID();
   const taskLabel = options.taskLabel ?? 'task0';
+  if (options.evidenceRoot !== undefined && !isAbsolute(options.evidenceRoot)) throw new Error('OWNED_POSTGRES_EVIDENCE_ROOT_INVALID');
+  const evidenceFile = options.evidenceRoot === undefined
+    ? options.evidenceFile
+    : join(resolve(options.evidenceRoot), taskLabel, runLabel, 'postgres-lifecycle.jsonl');
+  await mkdir(dirname(evidenceFile), { recursive: true });
   const tempDirectory = await mkdtemp(join(tmpdir(), 'dgo-m0-pg-'));
   const cidFile = join(tempDirectory, 'container.cid');
   let containerId: string | undefined;
@@ -93,7 +106,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
 
     containerId = (await readFile(cidFile, 'utf8')).trim();
     if (!/^[a-f0-9]{64}$/i.test(containerId)) throw new OwnedPostgresError('OWNED_POSTGRES_ID_INVALID', 'record_created_resource', 'startup_failed');
-    await appendEvidence(options.evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE });
+    await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE });
 
     const inspectRaw = await command(['inspect', '--format', '{{.Config.Image}}|{{.Image}}|{{json .Mounts}}', containerId], 'container_metadata');
     const [imageReference, runtimeImageId, mountJson] = inspectRaw.split('|');
@@ -111,7 +124,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
     if (!repoDigest || !/^postgres@sha256:[a-f0-9]{64}$/i.test(repoDigest)) {
       throw new OwnedPostgresError('OWNED_POSTGRES_REPO_DIGEST_MISSING', 'image_metadata', 'image_unavailable');
     }
-    await appendEvidence(options.evidenceFile, { event: 'image_observed', runLabel, containerId, imageReference, repoDigest, runtimeImageId });
+    await appendEvidence(evidenceFile, { event: 'image_observed', runLabel, containerId, imageReference, repoDigest, runtimeImageId });
 
     const readyBy = Date.now() + START_TIMEOUT_MS;
     while (Date.now() < readyBy) {
@@ -141,6 +154,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
       repoDigest,
       runtimeImageId,
       hostPort,
+      evidenceFile,
       async close() {
         await ownedPool.end();
         let ownershipConfirmed = false;
@@ -151,10 +165,10 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
           await command(['rm', '--force', containerId!], 'owned_container_removal');
           containerAbsentAfterRemoval = await containerIsAbsent(command, containerId!);
           if (!containerAbsentAfterRemoval) throw new OwnedPostgresError('OWNED_POSTGRES_CLEANUP_INCOMPLETE', 'cleanup_verification', 'startup_failed');
-          await appendEvidence(options.evidenceFile, { event: 'removed', taskLabel, runLabel, containerId: containerId!, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+          await appendEvidence(evidenceFile, { event: 'removed', taskLabel, runLabel, containerId: containerId!, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
           await rm(tempDirectory, { recursive: true, force: true });
         } catch (error) {
-          await appendEvidence(options.evidenceFile, {
+          await appendEvidence(evidenceFile, {
             event: 'cleanup_unconfirmed', taskLabel, runLabel, containerId: containerId!, cidFile,
             ownershipConfirmed, containerAbsentAfterRemoval,
           }).catch(() => undefined);
@@ -169,7 +183,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
         const candidate = (await readFile(cidFile, 'utf8')).trim();
         if (/^[a-f0-9]{64}$/.test(candidate)) {
           containerId = candidate;
-          await appendEvidence(options.evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE, recoveredFromCidFile: true });
+          await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE, recoveredFromCidFile: true });
         }
       } catch { /* Keep the cidfile directory if resource identity cannot be recovered. */ }
     }
@@ -185,17 +199,17 @@ export async function startOwnedPostgres(options: { evidenceFile: string; taskLa
       }
       if (cleanupConfirmed) {
         try {
-          await appendEvidence(options.evidenceFile, { event: 'removed_after_start_failure', taskLabel, runLabel, containerId, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
+          await appendEvidence(evidenceFile, { event: 'removed_after_start_failure', taskLabel, runLabel, containerId, ownershipConfirmed: true, containerAbsentAfterRemoval: true });
           await rm(tempDirectory, { recursive: true, force: true });
         } catch { /* Retain the cidfile directory when lifecycle evidence cannot be completed. */ }
       } else {
-        await appendEvidence(options.evidenceFile, {
+        await appendEvidence(evidenceFile, {
           event: 'cleanup_unconfirmed', taskLabel, runLabel, containerId, cidFile, ownershipConfirmed,
           containerAbsentAfterRemoval: false,
         }).catch(() => undefined);
       }
     } else {
-      await appendEvidence(options.evidenceFile, { event: 'start_failure_unresolved', taskLabel, runLabel, cidFile }).catch(() => undefined);
+      await appendEvidence(evidenceFile, { event: 'start_failure_unresolved', taskLabel, runLabel, cidFile }).catch(() => undefined);
     }
     throw error;
   }

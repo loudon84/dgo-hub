@@ -7,7 +7,7 @@ import { jwtVerify, generateKeyPair, SignJWT } from 'jose';
 import { createAuthService } from '../auth/service.js';
 import type { AgentPrincipal, AuthService, UserPrincipal } from '../auth/types.js';
 import { runMigrations } from '../migrations/runner.js';
-import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 import { createMcpApp, type AlphaReadinessResolver, type McpServerOptions, type SalesQueryExecutor } from '../sales-mcp/server.js';
 import { createHasuraQueryExecutor } from '../sales-mcp/queries.js';
 import { buildApp } from '../app.js';
@@ -19,6 +19,7 @@ import { resolveWorkerSources } from '../etl-worker/worker.js';
 
 const evidenceDirectory = join(fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-3-evidence/', import.meta.url)), randomUUID());
 const lifecycleFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
+const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
 const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 const signingSecret = Buffer.alloc(32, 17).toString('base64url');
 const ready: AlphaReadinessResolver = async () => ({ ready: true, reason: 'READY', bindingVersion: 'binding-test-v1', policyVersion: 'policy-test-v1' });
@@ -81,8 +82,8 @@ function createApp(options: Partial<McpServerOptions> = {}) {
 
 describe('strict sales MCP authentication and audit boundary', () => {
   beforeAll(async () => {
-    await mkdir(evidenceDirectory, { recursive: true });
-    fixture = await startOwnedPostgres({ evidenceFile: lifecycleFile, taskLabel: 'task3' });
+    if (!controlledEvidenceRoot) await mkdir(evidenceDirectory, { recursive: true });
+    fixture = await startOwnedPostgres({ evidenceFile: lifecycleFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'task3' });
     await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
     authService = createAuthService({ pool: fixture.pool });
     user = await createUser();

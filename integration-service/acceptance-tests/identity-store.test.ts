@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { createAuthService } from '../auth/service.js';
@@ -9,10 +9,11 @@ import { createCredential } from '../auth/credentials.js';
 import { AuthError } from '../auth/errors.js';
 import type { AuthScope } from '../auth/types.js';
 import { runMigrations } from '../migrations/runner.js';
-import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
 const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/round1/', import.meta.url));
 const evidenceFile = join(evidenceDirectory, 'postgres-lifecycle.jsonl');
+const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
 const migrationsDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
 let fixture: OwnedPostgres;
 let auth: ReturnType<typeof createAuthService>;
@@ -40,9 +41,11 @@ async function provisionUser(input: { tenantId?: string; userId?: string; sub?: 
 }
 
 beforeAll(async () => {
-  await mkdir(evidenceDirectory, { recursive: true });
-  await writeFile(evidenceFile, '', 'utf8');
-  fixture = await startOwnedPostgres({ evidenceFile, taskLabel: 'task1' });
+  if (!controlledEvidenceRoot) {
+    await mkdir(evidenceDirectory, { recursive: true });
+    await writeFile(evidenceFile, '', 'utf8');
+  }
+  fixture = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'task1' });
   await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
   auth = createAuthService({ pool: fixture.pool, clock });
 }, 90_000);
@@ -59,7 +62,7 @@ afterAll(async () => {
     hostPort: fixture.hostPort,
   };
   await fixture.close();
-  await writeFile(join(evidenceDirectory, 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`, 'utf8');
+  await writeFile(join(dirname(fixture.evidenceFile), 'postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`, 'utf8');
 });
 
 beforeEach(async () => {

@@ -3,13 +3,14 @@ import { copyFile, mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
 const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/round1/', import.meta.url));
 const evidenceFile = join(evidenceDirectory, 'foundation-postgres-lifecycle.jsonl');
+const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
 const source002 = fileURLToPath(new URL('../migrations/002_identity_auth.sql', import.meta.url));
 let postgres: OwnedPostgres;
@@ -39,8 +40,8 @@ async function migrationRunner() {
 }
 
 beforeAll(async () => {
-  await mkdir(evidenceDirectory, { recursive: true });
-  postgres = await startOwnedPostgres({ evidenceFile });
+  if (!controlledEvidenceRoot) await mkdir(evidenceDirectory, { recursive: true });
+  postgres = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'task0' });
 }, 90_000);
 
 afterAll(async () => {
@@ -54,7 +55,7 @@ afterAll(async () => {
       hostPort: postgres.hostPort,
     };
     await postgres.close();
-    await writeFile(join(evidenceDirectory, 'foundation-postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`);
+    await writeFile(join(dirname(postgres.evidenceFile), 'foundation-postgres-resource-summary.json'), `${JSON.stringify({ ...resource, cleanup: 'confirmed removed by exact owned container ID' }, null, 2)}\n`);
   }
 });
 
