@@ -1,0 +1,174 @@
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-verify-audit Building 
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal Building 
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-probe Building 
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.91kB 0.0s done
+#1 DONE 0.0s
+
+#2 [grant-probe internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [verify-audit internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [sales-probe internal] load .dockerignore
+#4 transferring context: 74B done
+#4 DONE 0.0s
+
+#5 [seed-principal internal] load .dockerignore
+#5 transferring context: 248B done
+#5 DONE 0.1s
+
+#4 [grant-probe internal] load .dockerignore
+#4 DONE 0.0s
+
+#6 [seed-principal build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#6 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#6 DONE 0.0s
+
+#7 [sales-probe internal] load build context
+#7 transferring context: 2B 0.0s done
+#7 DONE 0.0s
+
+#8 [grant-probe build 3/6] COPY integration-service/package*.json ./
+#8 CACHED
+
+#9 [grant-probe stage-1  2/11] WORKDIR /app
+#9 CACHED
+
+#10 [grant-probe build 6/6] RUN npm run build
+#10 CACHED
+
+#11 [grant-probe build 2/6] WORKDIR /build/integration-service
+#11 CACHED
+
+#12 [grant-probe stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#12 CACHED
+
+#13 [grant-probe stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#13 CACHED
+
+#14 [grant-probe build 4/6] RUN npm ci --no-audit --no-fund
+#14 CACHED
+
+#15 [grant-probe stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#15 CACHED
+
+#16 [grant-probe stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#16 CACHED
+
+#17 [grant-probe stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#17 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/verify-audit.mjs": not found
+
+#18 [grant-probe stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#18 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/seed-principal.mjs": not found
+
+#19 [verify-audit stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#19 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/grant-probe.mjs": not found
+
+#20 [verify-audit stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#20 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/sales-probe.mjs": not found
+
+#21 [verify-audit stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#21 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/entrypoint.mjs": not found
+
+#22 [verify-audit build 5/6] COPY integration-service/ ./
+#22 ERROR: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/integration-service": not found
+
+#23 [seed-principal internal] load build context
+#23 transferring context: 6.12kB 0.1s done
+#23 DONE 0.1s
+
+#24 [seed-principal stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#24 CACHED
+
+#25 [seed-principal stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#25 CACHED
+
+#26 [seed-principal stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#26 CACHED
+
+#27 [seed-principal stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#27 CACHED
+
+#28 [seed-principal stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#28 CACHED
+
+#9 [seed-principal stage-1  2/11] WORKDIR /app
+#9 CACHED
+
+#29 [seed-principal stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#29 CACHED
+
+#30 [seed-principal stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#30 CACHED
+
+#31 [seed-principal build 4/6] RUN npm ci --no-audit --no-fund
+#31 CACHED
+
+#32 [seed-principal build 3/6] COPY integration-service/package*.json ./
+#32 CACHED
+
+#33 [seed-principal stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#33 CACHED
+
+#11 [seed-principal build 2/6] WORKDIR /build/integration-service
+#11 CACHED
+
+#34 [seed-principal build 6/6] RUN npm run build
+#34 CACHED
+
+#35 [seed-principal build 5/6] COPY integration-service/ ./
+#35 CACHED
+
+#36 [seed-principal stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#36 CACHED
+
+#37 [seed-principal] exporting to image
+#37 exporting layers done
+#37 exporting manifest sha256:bf167afa6051129ac0f4061002e5e65d093a58df6a70fdd30e8f9c2ea75d3caa
+#37 exporting manifest sha256:bf167afa6051129ac0f4061002e5e65d093a58df6a70fdd30e8f9c2ea75d3caa 0.0s done
+#37 exporting config sha256:2993698471d1600ccfdbe00f4da1a53a35446a3abbe6f946a0d87486c62cef0a 0.0s done
+#37 CANCELED
+------
+ > [verify-audit build 5/6] COPY integration-service/ ./:
+------
+------
+ > [verify-audit stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs:
+------
+------
+ > [verify-audit stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs:
+------
+------
+ > [grant-probe stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs:
+------
+------
+ > [verify-audit stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs:
+------
+------
+ > [grant-probe stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs:
+------
+Dockerfile:18
+
+--------------------
+
+  16 |     COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+
+  17 |     COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+
+  18 | >>> COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+
+  19 |     USER node
+
+  20 |     ENTRYPOINT ["node", "deploy/alpha1/entrypoint.mjs"]
+
+--------------------
+
+target sales-probe: failed to solve: failed to compute cache key: failed to calculate checksum of ref koirzi43f8927jw56v9ygrier::0u5m4gug16uijoyuhftkbbylq: "/deploy/alpha1/verify-audit.mjs": not found
+
+
+
+View build details: docker-desktop://dashboard/build/default/default/ln6asnwnx6x5a31gwuqbzka2z
+

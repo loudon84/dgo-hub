@@ -1,0 +1,55 @@
+{
+  "view": "Git index blobs, independent of ignored worktree files",
+  "historical_logs_verified": 114,
+  "fixed_stdout_stderr_verified": 6,
+  "checks": [
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/typecheck.stdout.log",
+      "sha256": "sha256:187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "expected_sha256": "sha256:187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "bytes": 88,
+      "match": true,
+      "git_blob": "81f8154d25b57d12df51fba89caf09f48135f983"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/typecheck.stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "match": true,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/test.stdout.log",
+      "sha256": "sha256:8b6146ce59cb3320c76cedf59dba5ef32b5ac08667652e740e725fb4c92b002e",
+      "expected_sha256": "sha256:8b6146ce59cb3320c76cedf59dba5ef32b5ac08667652e740e725fb4c92b002e",
+      "bytes": 290,
+      "match": true,
+      "git_blob": "c50db5322eaab9d7ff4873c39baa518b08422b0c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/test.stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "match": true,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/build.stdout.log",
+      "sha256": "sha256:463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "expected_sha256": "sha256:463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "bytes": 75,
+      "match": true,
+      "git_blob": "6154486650af6a859572e6e0487f656e7e06c06e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/local-checks/build.stderr.log",
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "match": true,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    }
+  ]
+}

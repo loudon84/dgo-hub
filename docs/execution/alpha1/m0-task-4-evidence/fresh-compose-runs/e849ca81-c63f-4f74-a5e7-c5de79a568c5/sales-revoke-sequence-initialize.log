@@ -1,0 +1,5 @@
+time="2026-10-24T09:59:56+08:00" level=warning msg="Found orphan containers (alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-grant-probe-run-d6cda50089e1, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-grant-probe-run-cfcf5b980d4e, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-verify-audit-run-cd7c9ce4977f, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe-run-2adad6279c94, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-worker-run-2aa7cfeddf44, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher-run-43b4b5475747, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-grant-probe-run-2ffd6e4886d9, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal-run-12181b96bac1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe-run-be34b2d91091 Creating 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe-run-be34b2d91091 Created 
+{"status":"FAIL","checks":[{"name":"token_a_initializes_before_token_b_revoke","status":"FAIL"}]}
+

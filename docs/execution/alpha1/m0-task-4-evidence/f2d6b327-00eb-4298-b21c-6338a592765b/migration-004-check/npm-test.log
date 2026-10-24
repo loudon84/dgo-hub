@@ -1,0 +1,52 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/migrations.test.ts acceptance-tests/identity-store.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"004","migrationName":"alpha1_runtime_security"}
+ ❯ acceptance-tests/identity-store.test.ts (13 tests | 13 skipped) 2667ms
+ ❯ acceptance-tests/migrations.test.ts (18 tests | 1 failed) 3821ms
+     × runs the compiled CLI with an explicit environment and closes its own pool 220ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/identity-store.test.ts [ acceptance-tests/identity-store.test.ts ]
+MigrationRunnerError: MIGRATION_APPLY_FAILED 004 alpha1_runtime_security
+ ❯ invalid migrations/runner.ts:198:10
+    196|
+    197| function invalid(code: string, migration?: Migration): MigrationRunner…
+    198|   return new MigrationRunnerError(code, migration?.versionText, migrat…
+       |          ^
+    199| }
+    200|
+ ❯ applyMigration migrations/runner.ts:325:11
+ ❯ runMigrations migrations/runner.ts:400:7
+ ❯ acceptance-tests/identity-store.test.ts:49:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+Error: Command failed: C:\nvm4w\nodejs\node.exe dist/migrate.js --environment-kind local_lab
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"004","migrationName":"alpha1_runtime_security"}
+
+ ❯ acceptance-tests/migrations.test.ts:93:20
+     91|   it('runs the compiled CLI with an explicit environment and closes it…
+     92|     const connectionString = `postgres://postgres@127.0.0.1:${postgres…
+     93|     const output = execFileSync(process.execPath, ['dist/migrate.js', …
+       |                    ^
+     94|       cwd: process.cwd(),
+     95|       env: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  1 failed | 17 passed | 13 skipped (31)
+   Start at  09:27:36
+   Duration  4.11s (transform 119ms, setup 0ms, import 238ms, tests 6.49s, environment 0ms)
+

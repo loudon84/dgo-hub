@@ -1,0 +1,170 @@
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp Building 
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.66kB 0.0s done
+#1 DONE 0.0s
+
+#2 [mcp internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [mcp internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [api internal] load .dockerignore
+#4 transferring context: 248B done
+#4 DONE 0.0s
+
+#5 [mcp build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 DONE 0.0s
+
+#6 [api internal] load build context
+#6 transferring context: 6.12kB 0.1s done
+#6 DONE 0.1s
+
+#7 [api build 3/6] COPY integration-service/package*.json ./
+#7 CACHED
+
+#8 [api build 2/6] WORKDIR /build/integration-service
+#8 CACHED
+
+#9 [api stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#9 CACHED
+
+#10 [api stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#10 CACHED
+
+#11 [api stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#11 CACHED
+
+#12 [api stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#12 CACHED
+
+#13 [api build 6/6] RUN npm run build
+#13 CACHED
+
+#14 [api stage-1  2/11] WORKDIR /app
+#14 CACHED
+
+#15 [api stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#15 CACHED
+
+#16 [api stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#16 CACHED
+
+#17 [api stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#17 CACHED
+
+#18 [api stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#18 CACHED
+
+#19 [api build 5/6] COPY integration-service/ ./
+#19 CACHED
+
+#20 [api build 4/6] RUN npm ci --no-audit --no-fund
+#20 CACHED
+
+#21 [api stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 CACHED
+
+#22 [api] exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:69cfbae57fa77f7e3d596d57acf6bd32c90406493e4d3d66dcdf7d31ed7378fa 0.0s done
+#22 exporting config sha256:f61333d1dbf69f9794748d97bb4ab865043e6f2ee297b0e6e924e489a86053f7 0.0s done
+#22 exporting attestation manifest sha256:fb9916a0fcd0ecea664620295784cfafaac4c7e46cb16ec1f0c7b3050510f43c 0.1s done
+#22 exporting manifest list sha256:af4d177c1003c5a5362e627e466fcafaeb8f82d334aeb559b05dd031c921a5da
+#22 exporting manifest list sha256:af4d177c1003c5a5362e627e466fcafaeb8f82d334aeb559b05dd031c921a5da 0.0s done
+#22 naming to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-api:latest done
+#22 unpacking to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-api:latest 0.0s done
+#22 DONE 0.3s
+
+#23 [mcp] exporting to image
+#23 exporting layers done
+#23 exporting manifest sha256:05495c852687cf916751abce32c7fd404e7b3fd803bf5737502b288ae4df5f20 0.0s done
+#23 exporting config sha256:6484a05027afeb3b3ffeba9111bcbe835077942cf8092125c4cccc0cdd815f29 0.0s done
+#23 exporting attestation manifest sha256:5668efa8fc51e2f28d997cc4b288db54e1521e250ee295878b9b87d30f31f03c 0.1s done
+#23 exporting manifest list sha256:0029a2d9b88e4b7fd30a4a8d592350ba21500f8bc358ff0777258042e2c0103c 0.0s done
+#23 naming to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp:latest done
+#23 unpacking to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp:latest 0.0s done
+#23 DONE 0.3s
+
+#24 [api] resolving provenance for metadata file
+#24 DONE 0.0s
+
+#25 [mcp] resolving provenance for metadata file
+#25 DONE 0.0s
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp Built 
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-api Built 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_control_data Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_back Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_business Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_data Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_data Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_back Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_front Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_back Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_front Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_back Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_control_data Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_business Creating 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_alpha1-pgdata Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_front Creating 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_alpha1-pgdata Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_front Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_admin_publish Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_admin_publish Creating 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_alpha1-pgdata Created 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_alpha1-pgdata Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_data Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_data Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_back Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_back Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_admin_publish Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_admin_publish Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_front Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_management_front Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_control_data Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_control_data Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Creating 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_back Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_back Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_business Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_hasura_business Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_front Created 
+ Network alpha1-m0-a91d65b2151644d9a46392d1da80985e_sales_front Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-api-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-hasura-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-hasura-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-proxy-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-proxy-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-api-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-management-proxy-1 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-management-proxy-1 Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Waiting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-db-1 Healthy 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Waiting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Waiting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Exited 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-api-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Exited 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-hasura-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-api-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-management-proxy-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-hasura-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Waiting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-management-proxy-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator-1 Exited 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-mcp-1 Started 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-proxy-1 Starting 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-proxy-1 Started 

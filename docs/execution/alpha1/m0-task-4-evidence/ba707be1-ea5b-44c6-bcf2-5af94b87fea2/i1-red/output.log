@@ -1,0 +1,44 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts -t safely audits deeply
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/mcp-auth.test.ts (21 tests | 1 failed | 20 skipped) 2298ms
+     × safely audits deeply nested invalid arguments and correlates audit failures 51ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > safely audits deeply nested invalid arguments and correlates audit failures
+AssertionError: expected { isError: undefined, …(1) } to deeply equal { isError: true, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "isError": true,
+-   "protocolError": undefined,
++   "isError": undefined,
++   "protocolError": {
++     "code": -32603,
++     "message": "Maximum call stack size exceeded",
++   },
+  }
+
+ ❯ acceptance-tests/mcp-auth.test.ts:521:78
+    519|     expect(response.status).toBe(200);
+    520|     const result = await response.json() as { result?: { isError?: boo…
+    521|     expect({ isError: result.result?.isError, protocolError: result.er…
+       |                                                                              ^
+    522|     const text = result.result?.content?.[0]?.text ?? '';
+    523|     expect(text).not.toContain('review-value');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 20 skipped (21)
+   Start at  09:18:09
+   Duration  3.15s (transform 143ms, setup 0ms, import 646ms, tests 2.30s, environment 0ms)
+

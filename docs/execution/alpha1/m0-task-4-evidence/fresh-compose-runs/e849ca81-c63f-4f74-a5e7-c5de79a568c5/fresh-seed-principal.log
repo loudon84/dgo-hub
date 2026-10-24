@@ -1,0 +1,85 @@
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 655B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 315B done
+#4 DONE 0.0s
+
+#5 [build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 6.12kB 0.1s done
+#6 DONE 0.1s
+
+#7 [stage-1  2/11] WORKDIR /app
+#7 CACHED
+
+#8 [stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#8 CACHED
+
+#9 [build 5/6] COPY integration-service/ ./
+#9 CACHED
+
+#10 [stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#10 CACHED
+
+#11 [stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#11 CACHED
+
+#12 [stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#12 CACHED
+
+#13 [build 3/6] COPY integration-service/package*.json ./
+#13 CACHED
+
+#14 [stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#14 CACHED
+
+#15 [build 2/6] WORKDIR /build/integration-service
+#15 CACHED
+
+#16 [stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#16 CACHED
+
+#17 [stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#17 CACHED
+
+#18 [build 6/6] RUN npm run build
+#18 CACHED
+
+#19 [stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#19 CACHED
+
+#20 [build 4/6] RUN npm ci --no-audit --no-fund
+#20 CACHED
+
+#21 [stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 CACHED
+
+#22 exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:2b15068e30597d4ae8dace2ce8e0ef1b7a45f84a6b5661caa123ba58452b521e 0.0s done
+#22 exporting config sha256:7337fe46af9c38b9f4cce82de5397a81151d46ee7d414f7f38d8bf9dd45066a5 0.0s done
+#22 exporting attestation manifest sha256:8c2b25ab929d0ab0ac7edb5b4baefb356998cf9f037c1ce0a7b5379312a8eb40 0.0s done
+#22 exporting manifest list sha256:cbb7c9d0995f3e7c261eac165a6751fc3f16124530651c26ea65ee7ea024bc8d 0.0s done
+#22 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal:latest done
+#22 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal:latest 0.0s done
+#22 DONE 0.2s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal Built 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal-run-12181b96bac1 Creating 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal-run-12181b96bac1 Created 
+{"status":"PASS","principal":"synthetic-local-sales","provisionedBy":"one-shot-migrator"}

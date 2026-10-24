@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/migrations.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+   Start at  09:53:55
+   Duration  3.57s (transform 53ms, setup 0ms, import 94ms, tests 3.29s, environment 0ms)
+

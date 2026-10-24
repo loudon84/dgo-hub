@@ -1,0 +1,32 @@
+{"child_exit":1,"checks":[{"name":"untrusted_ca_rejected","status":"PASS"},{"name":"wrong_hostname_rejected","status":"PASS"},{"name":"plain_http_denied","status":"PASS"},{"name":"tls_entry_without_credential_401","status":"FAIL"},{"name":"trusted_tls_mcp_initialize","status":"FAIL"},{"name":"mcp_initialized_notification","status":"PASS"},{"name":"exact_five_mcp_tools","status":"FAIL"},{"name":"context_not_ready_with_server_request_id","status":"FAIL","http_status":200,"tool_error_code":"missing","correlated_request_id":false},{"name":"admin_route_absent","status":"PASS"},{"name":"management_route_absent","status":"PASS"},{"name":"ingest_route_absent","status":"PASS"},{"name":"hasura_route_absent","status":"PASS"},{"name":"sales_network_db_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_hasura_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_api_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_publisher_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_mcp_not_reachable","status":"PASS","reason":"TIMEOUT"}],"plaintext_connections_accepted":0}
+✖ live TLS negatives classify certificates and reachable plaintext fails isolation (16770.4943ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 16858.7295
+
+✖ failing tests:
+
+test at deploy\alpha1\sales-probe.test.mjs:12:1
+✖ live TLS negatives classify certificates and reachable plaintext fails isolation (16770.4943ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'ERR_TLS_CERT_ALTNAME_INVALID'
+  
+      at TestContext.<anonymous> (file:///E:/git/dgo-hub/deploy/alpha1/sales-probe.test.mjs:49:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'ERR_TLS_CERT_ALTNAME_INVALID',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

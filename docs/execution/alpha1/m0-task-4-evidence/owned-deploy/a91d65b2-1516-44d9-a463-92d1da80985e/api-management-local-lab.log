@@ -1,0 +1,33 @@
+api-1               | {"level":30,"time":1792806279726,"pid":1,"hostname":"a7e6420c78ad","msg":"Server listening at http://127.0.0.1:3000"}
+api-1               | {"level":30,"time":1792806279727,"pid":1,"hostname":"a7e6420c78ad","msg":"Server listening at http://172.28.0.4:3000"}
+management-proxy-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+api-1               | {"level":30,"time":1792806279727,"pid":1,"hostname":"a7e6420c78ad","msg":"Server listening at http://172.25.0.2:3000"}
+management-proxy-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+management-proxy-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+management-proxy-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+management-proxy-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+management-proxy-1  | 2026/10/24 01:41:33 [emerg] 1#1: host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10
+management-proxy-1  | nginx: [emerg] host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10
+management-proxy-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+management-proxy-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+management-proxy-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+management-proxy-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+management-proxy-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+management-proxy-1  | 2026/10/24 01:42:39 [emerg] 1#1: host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10
+management-proxy-1  | nginx: [emerg] host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10
+management-proxy-1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+management-proxy-1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+management-proxy-1  | 10-listen-on-ipv6-by-default.sh: info: can not modify /etc/nginx/conf.d/default.conf (read-only file system?)
+management-proxy-1  | /docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+management-proxy-1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+management-proxy-1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+management-proxy-1  | 2026/10/24 01:43:44 [emerg] 1#1: host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10
+management-proxy-1  | nginx: [emerg] host not found in upstream "api" in /etc/nginx/conf.d/default.conf:10

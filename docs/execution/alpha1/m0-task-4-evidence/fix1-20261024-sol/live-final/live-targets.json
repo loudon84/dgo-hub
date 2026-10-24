@@ -1,0 +1,72 @@
+[
+  {
+    "container_id": "ec3c6522aa96360f47148cfd0d733e433ddfb5b49b8d3a5ed844c92c0d81fb3f",
+    "name": "db-ip0",
+    "host": "172.27.0.2",
+    "network_id": "ea782d6ea60ff3127cafa07ff4a81085f4c97457849d429ed08062f34b07424f",
+    "port": 5432
+  },
+  {
+    "container_id": "ec3c6522aa96360f47148cfd0d733e433ddfb5b49b8d3a5ed844c92c0d81fb3f",
+    "name": "db-ip1",
+    "host": "172.29.0.2",
+    "network_id": "12cc8ecd739fa6e22bf948becf061e23363a649427f7d96c1806df25f28aad2d",
+    "port": 5432
+  },
+  {
+    "container_id": "581abd525771226faa9ca2e945290171abdcbffd4cf4f89373d88f1f0193ab8b",
+    "name": "api-ip0",
+    "host": "172.27.0.3",
+    "network_id": "ea782d6ea60ff3127cafa07ff4a81085f4c97457849d429ed08062f34b07424f",
+    "port": 3000
+  },
+  {
+    "container_id": "581abd525771226faa9ca2e945290171abdcbffd4cf4f89373d88f1f0193ab8b",
+    "name": "api-ip1",
+    "host": "172.26.0.2",
+    "network_id": "89e69846b256979eab937f9a820c53fcb5fe51a423891f1712b8c936bc2a3705",
+    "port": 3000
+  },
+  {
+    "container_id": "47010bb02e6eefc544ff36e3ea6fb03ca9fac7fab30a0b4bbb52306e51d905eb",
+    "name": "mcp-ip0",
+    "host": "172.27.0.4",
+    "network_id": "ea782d6ea60ff3127cafa07ff4a81085f4c97457849d429ed08062f34b07424f",
+    "port": 3001
+  },
+  {
+    "container_id": "47010bb02e6eefc544ff36e3ea6fb03ca9fac7fab30a0b4bbb52306e51d905eb",
+    "name": "mcp-ip1",
+    "host": "172.28.0.3",
+    "network_id": "aede8c9fb925fc79d338dc1ada4feff25b232301e5739500c075f8addc27c700",
+    "port": 3001
+  },
+  {
+    "container_id": "47010bb02e6eefc544ff36e3ea6fb03ca9fac7fab30a0b4bbb52306e51d905eb",
+    "name": "mcp-ip2",
+    "host": "172.25.0.2",
+    "network_id": "7a71985fd135458c79e183bcf20156377585ca66d4cf30039fe3459b24d7d647",
+    "port": 3001
+  },
+  {
+    "container_id": "8a52ca27706e44f6fdea4a155c41cf82ab197e04ea6dc24b4f878eefdd216a1c",
+    "name": "hasura-ip0",
+    "host": "172.30.0.2",
+    "network_id": "c87da6f145ec558ff0b0bb71f45b608f1029cc77ff68466621ae151293b99c85",
+    "port": 8080
+  },
+  {
+    "container_id": "8a52ca27706e44f6fdea4a155c41cf82ab197e04ea6dc24b4f878eefdd216a1c",
+    "name": "hasura-ip1",
+    "host": "172.28.0.2",
+    "network_id": "aede8c9fb925fc79d338dc1ada4feff25b232301e5739500c075f8addc27c700",
+    "port": 8080
+  },
+  {
+    "container_id": "8a52ca27706e44f6fdea4a155c41cf82ab197e04ea6dc24b4f878eefdd216a1c",
+    "name": "hasura-ip2",
+    "host": "172.29.0.3",
+    "network_id": "12cc8ecd739fa6e22bf948becf061e23363a649427f7d96c1806df25f28aad2d",
+    "port": 8080
+  }
+]

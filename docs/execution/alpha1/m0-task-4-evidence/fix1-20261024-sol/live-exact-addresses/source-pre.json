@@ -1,0 +1,30 @@
+[
+  {
+    "path": "deploy/alpha1/sales-probe.mjs",
+    "sha256": "e541f04c1fd618b191efdedcaa98279b9ccd9436d08698a658c41326e7cf976e"
+  },
+  {
+    "path": "deploy/alpha1/probe-transport.mjs",
+    "sha256": "ae7a0115bc35725c05bb9c728e9616f73fdc0a69e991c078ceb4c804d8025803"
+  },
+  {
+    "path": "deploy/alpha1/probe-sales-network.ps1",
+    "sha256": "e6ebc68442fa6ea2e8de8dd0b1d2b976f68c4864e42e7c8322b109ef0a61b1c1"
+  },
+  {
+    "path": "deploy/alpha1/sales-probe.test.mjs",
+    "sha256": "0cd77e9ad4a64723116e0cc1690ba50d6ef6b40a10d035ce6fd73017d50b3dea"
+  },
+  {
+    "path": "deploy/alpha1/probe-focused-live.mjs",
+    "sha256": "9f36726b157fb8fb892bf48f62ee7d8edb66f38a849d82273972b41dac4c717d"
+  },
+  {
+    "path": "deploy/alpha1/verify-probe-fix1.ps1",
+    "sha256": "99012fedc862f33a796a407832ed3f29a86da16ca1b8a9b2b4a0d533df542454"
+  },
+  {
+    "path": "deploy/alpha1/Dockerfile",
+    "sha256": "457048b59a8cabf27d1b1a36ba28c0716cf1fdc5e56a997088177824fdaeee3e"
+  }
+]

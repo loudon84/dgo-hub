@@ -1,0 +1,89 @@
+time="2026-10-24T09:55:53+08:00" level=warning msg="Found orphan containers (alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-grant-probe-run-2ffd6e4886d9, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal-run-12181b96bac1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 635B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 315B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 ...
+
+#6 [build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#6 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#6 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 6.12kB 0.1s done
+#5 DONE 0.1s
+
+#7 [stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#7 CACHED
+
+#8 [build 2/6] WORKDIR /build/integration-service
+#8 CACHED
+
+#9 [stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#9 CACHED
+
+#10 [stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#10 CACHED
+
+#11 [build 4/6] RUN npm ci --no-audit --no-fund
+#11 CACHED
+
+#12 [stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#12 CACHED
+
+#13 [stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#13 CACHED
+
+#14 [stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#14 CACHED
+
+#15 [stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#15 CACHED
+
+#16 [stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#16 CACHED
+
+#17 [stage-1  2/11] WORKDIR /app
+#17 CACHED
+
+#18 [build 3/6] COPY integration-service/package*.json ./
+#18 CACHED
+
+#19 [build 5/6] COPY integration-service/ ./
+#19 CACHED
+
+#20 [build 6/6] RUN npm run build
+#20 CACHED
+
+#21 [stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 CACHED
+
+#22 exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:b8221a9d1a5148c8c0670e9cc8379a9f5c7ae30c5c82f76646894fde4d5dec52 0.0s done
+#22 exporting config sha256:489e4e0f97e7fa14b5ea38ff9ce089ee62646e589250fd994ca73bd6fd9258e7 0.0s done
+#22 exporting attestation manifest sha256:4673af72223c73036aaa3b00bb7db044d8b53c583dc2ba6e33d5b6827cde63c0 0.0s done
+#22 exporting manifest list sha256:f1826575921e67641994c107fa6f2d511ef406afa011520ecb6519805275275b 0.0s done
+#22 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher:latest done
+#22 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher:latest 0.0s done
+#22 DONE 0.2s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher Built 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher-run-43b4b5475747 Creating 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher-run-43b4b5475747 Created 
+{"status":"BLOCKED","component":"publisher","code":"M0_PUBLISHER_NOT_READY","gate":"closed"}

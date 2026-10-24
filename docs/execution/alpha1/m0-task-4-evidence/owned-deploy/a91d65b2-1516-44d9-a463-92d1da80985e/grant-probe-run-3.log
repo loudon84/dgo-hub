@@ -1,0 +1,5 @@
+time="2026-10-24T09:41:47+08:00" level=warning msg="Found orphan containers (alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-fb53a4443471, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-3377fa13976a, alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal-run-45db9ac156fd) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-5a3f17bd85bd Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-5a3f17bd85bd Created 
+{"status":"FAIL","checks":[],"error_code":"GRANT_PROBE_FAILED","stage":"api_create_credential","safe_failure_code":"AUTH_UNAVAILABLE"}
+

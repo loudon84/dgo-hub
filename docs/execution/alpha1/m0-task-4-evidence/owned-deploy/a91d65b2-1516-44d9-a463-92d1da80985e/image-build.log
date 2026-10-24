@@ -1,0 +1,97 @@
+--progress is a global compose flag, better use `docker compose --progress xx build ...
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 631B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.4s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 248B done
+#4 DONE 0.1s
+
+#5 [build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 CACHED
+
+#6 [build 2/6] WORKDIR /build/integration-service
+#6 DONE 0.1s
+
+#7 [internal] load build context
+#7 transferring context: 645.25kB 0.1s done
+#7 DONE 0.2s
+
+#8 [build 3/6] COPY integration-service/package*.json ./
+#8 DONE 0.1s
+
+#9 [build 4/6] RUN npm ci --no-audit --no-fund
+#9 4.939 
+#9 4.939 added 199 packages in 5s
+#9 4.941 npm notice
+#9 4.941 npm notice New minor version of npm available! 11.11.0 -> 11.21.1
+#9 4.941 npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.1
+#9 4.941 npm notice To update run: npm install -g npm@11.21.1
+#9 4.941 npm notice
+#9 DONE 6.1s
+
+#10 [build 5/6] COPY integration-service/ ./
+#10 DONE 0.2s
+
+#11 [build 6/6] RUN npm run build
+#11 0.314 
+#11 0.314 > data-governance-integration-service@1.0.0 build
+#11 0.314 > tsc -p tsconfig.json
+#11 0.314 
+#11 DONE 4.1s
+
+#12 [stage-1  2/11] WORKDIR /app
+#12 CACHED
+
+#13 [stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#13 DONE 0.1s
+
+#14 [stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#14 DONE 1.3s
+
+#15 [stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#15 DONE 0.2s
+
+#16 [stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#16 DONE 0.1s
+
+#17 [stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#17 DONE 0.1s
+
+#18 [stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#18 DONE 0.1s
+
+#19 [stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#19 DONE 0.1s
+
+#20 [stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#20 DONE 0.1s
+
+#21 [stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 DONE 0.1s
+
+#22 exporting to image
+#22 exporting layers
+#22 exporting layers 3.3s done
+#22 exporting manifest sha256:25e0e50bec07d742ef3b6bd50e4ec5f4a97fe1323aca1dc8793f37af34e7a7d7 0.0s done
+#22 exporting config sha256:5838634a981e427b3f84d107b26302455317329d4d3825481f735df3ef307fd7 0.0s done
+#22 exporting attestation manifest sha256:126be56c98b5b58c7968741684a5e2f6742f5327ca95e77b60796efb88c7378c 0.0s done
+#22 exporting manifest list sha256:5d126e54d1cff12055ea57266bcb5838d32e24488edb26f2209fda9d5149c55c
+#22 exporting manifest list sha256:5d126e54d1cff12055ea57266bcb5838d32e24488edb26f2209fda9d5149c55c 0.0s done
+#22 naming to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator:latest done
+#22 unpacking to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator:latest
+#22 unpacking to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator:latest 1.4s done
+#22 DONE 4.9s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-migrator Built 

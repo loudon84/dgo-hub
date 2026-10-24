@@ -1,0 +1,19 @@
+time="2026-10-24T09:48:20+08:00" level=warning msg="Found orphan containers (alpha1-m0-a91d65b2151644d9a46392d1da80985e-sales-probe-run-9ede7b5c13ca, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-8d0f340a7274, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-8962ef66cb52, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-b5b12b5d0eb9, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-bd805ac2d962, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-5a3f17bd85bd, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-fb53a4443471, alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-3377fa13976a, alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal-run-45db9ac156fd) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-verify-audit-run-72f786f2ae48 Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-verify-audit-run-72f786f2ae48 Created 
+node:internal/fs/promises:640
+  return new FileHandle(await PromisePrototypeThen(
+                        ^
+
+Error: ENOENT: no such file or directory, open '/run/probe/mcp-request-id'
+    at async open (node:internal/fs/promises:640:25)
+    at async readFile (node:internal/fs/promises:1283:14)
+    at async file:///app/deploy/alpha1/verify-audit.mjs:4:20 {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/run/probe/mcp-request-id'
+}
+
+Node.js v24.14.1
+

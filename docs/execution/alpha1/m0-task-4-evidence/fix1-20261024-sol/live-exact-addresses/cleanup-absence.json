@@ -1,0 +1,100 @@
+[
+  {
+    "id": "fdef0fd1e7b45adac075d329052aae7a52c0851ebff2eb35ce45094fe9db700d",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network fdef0fd1e7b45adac075d329052aae7a52c0851ebff2eb35ce45094fe9db700d not found"
+  },
+  {
+    "id": "2cb9a1f493d02f3df2f51aa6612d13387f8e0ed3f1f2157095be2dd88c7f93b7",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network 2cb9a1f493d02f3df2f51aa6612d13387f8e0ed3f1f2157095be2dd88c7f93b7 not found"
+  },
+  {
+    "id": "e04f82e37ab42c81a67cd3abebeb1438e253fbc08772f46b8141923307e71c98",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network e04f82e37ab42c81a67cd3abebeb1438e253fbc08772f46b8141923307e71c98 not found"
+  },
+  {
+    "id": "0df9104a42d3fe371ed218a2fcbd7493622265eae2d8b4faca7b93207a1dc8b0",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network 0df9104a42d3fe371ed218a2fcbd7493622265eae2d8b4faca7b93207a1dc8b0 not found"
+  },
+  {
+    "id": "a48bd4017eb6a212a2be0b344610ddf64ae63782d1cfea1b6525d2c23705ee97",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network a48bd4017eb6a212a2be0b344610ddf64ae63782d1cfea1b6525d2c23705ee97 not found"
+  },
+  {
+    "id": "4bc6c3d6de794b8872da5a1bdddbb441ef6703ba874b22028d7009c5fd659fbe",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network 4bc6c3d6de794b8872da5a1bdddbb441ef6703ba874b22028d7009c5fd659fbe not found"
+  },
+  {
+    "id": "1f1ebe41bbacbe8063d7a55a5440df1ad67ba1cf456432113f3a39122a7ba7ad",
+    "exit_code": 1,
+    "type": "network",
+    "absent": true,
+    "output": "[]\nError response from daemon: network 1f1ebe41bbacbe8063d7a55a5440df1ad67ba1cf456432113f3a39122a7ba7ad not found"
+  },
+  {
+    "id": "d38e7ef2439555906973f2306748861c265f5c484ff801398e5f2eda398a2cb2",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: d38e7ef2439555906973f2306748861c265f5c484ff801398e5f2eda398a2cb2"
+  },
+  {
+    "id": "32ec201d9d817764c56a06c074be57a5a90dea5a90967b3227d3a65b8cbc7a7a",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: 32ec201d9d817764c56a06c074be57a5a90dea5a90967b3227d3a65b8cbc7a7a"
+  },
+  {
+    "id": "19d6801ebf4caf5b1bd72f033ef3ca20d8f518cae90d6f5122cfbdbd2ad0966d",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: 19d6801ebf4caf5b1bd72f033ef3ca20d8f518cae90d6f5122cfbdbd2ad0966d"
+  },
+  {
+    "id": "52c87d74e571562f5d8f4bc6f26dce88dfc9c0a349547ad4471d38ee7625642c",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: 52c87d74e571562f5d8f4bc6f26dce88dfc9c0a349547ad4471d38ee7625642c"
+  },
+  {
+    "id": "1aa1ededd67b3835c655648fb62a032b98a234e5f5de57e584c458c58f7accbd",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: 1aa1ededd67b3835c655648fb62a032b98a234e5f5de57e584c458c58f7accbd"
+  },
+  {
+    "id": "b10c3402d5f16e6bbfa5c06fcc7bc8c7f11d802a943ff8d8a6358c4c00843183",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: b10c3402d5f16e6bbfa5c06fcc7bc8c7f11d802a943ff8d8a6358c4c00843183"
+  },
+  {
+    "id": "c3da190b7598f09facf721f38abe0e97d8e65d5b1288918c4ee9fc9b12183cbd",
+    "exit_code": 1,
+    "type": "container",
+    "absent": true,
+    "output": "[]\nerror: no such object: c3da190b7598f09facf721f38abe0e97d8e65d5b1288918c4ee9fc9b12183cbd"
+  }
+]

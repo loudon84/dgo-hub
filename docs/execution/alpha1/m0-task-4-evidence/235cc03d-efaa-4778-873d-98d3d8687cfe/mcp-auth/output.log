@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  09:19:00
+   Duration  3.83s (transform 160ms, setup 0ms, import 621ms, tests 3.01s, environment 0ms)
+

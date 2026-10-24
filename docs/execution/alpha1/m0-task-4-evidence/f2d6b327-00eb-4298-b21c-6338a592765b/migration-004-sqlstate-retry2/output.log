@@ -1,0 +1,17 @@
+node:internal/fs/promises:640
+  return new FileHandle(await PromisePrototypeThen(
+                        ^
+
+Error: ENOENT: no such file or directory, open 'E:\git\dgo-hub\docs\execution\alpha1\m0-task-4-evidence\f2d6b327-00eb-4298-b21c-6338a592765b\migration-004-sqlstate-retry2\task4\fallback\postgres-lifecycle.jsonl'
+    at async open (node:internal/fs/promises:640:25)
+    at async writeFile (node:internal/fs/promises:1253:14)
+    at async appendEvidence (file:///E:/git/dgo-hub/integration-service/dist/acceptance-tests/helpers/postgres.js:46:5)
+    at async startOwnedPostgres (file:///E:/git/dgo-hub/integration-service/dist/acceptance-tests/helpers/postgres.js:85:9)
+    at async file:///E:/git/dgo-hub/docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry2/probe.mjs:3:56 {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\f2d6b327-00eb-4298-b21c-6338a592765b\\migration-004-sqlstate-retry2\\task4\\fallback\\postgres-lifecycle.jsonl'
+}
+
+Node.js v24.14.1

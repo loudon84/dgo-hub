@@ -1,0 +1,134 @@
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api Building 
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp Building 
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.68kB 0.0s done
+#1 DONE 0.0s
+
+#2 [migrator internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [api internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [api internal] load .dockerignore
+#4 transferring context: 315B done
+#4 DONE 0.0s
+
+#5 [mcp build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 DONE 0.0s
+
+#6 [mcp internal] load build context
+#6 transferring context: 6.12kB 0.1s done
+#6 DONE 0.1s
+
+#7 [api build 3/6] COPY integration-service/package*.json ./
+#7 CACHED
+
+#8 [api stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#8 CACHED
+
+#9 [api build 5/6] COPY integration-service/ ./
+#9 CACHED
+
+#10 [api stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#10 CACHED
+
+#11 [api stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#11 CACHED
+
+#12 [api stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#12 CACHED
+
+#13 [api build 4/6] RUN npm ci --no-audit --no-fund
+#13 CACHED
+
+#14 [api build 6/6] RUN npm run build
+#14 CACHED
+
+#15 [api stage-1  2/11] WORKDIR /app
+#15 CACHED
+
+#16 [api build 2/6] WORKDIR /build/integration-service
+#16 CACHED
+
+#17 [api stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#17 CACHED
+
+#18 [api stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#18 CACHED
+
+#19 [api stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#19 CACHED
+
+#20 [api stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#20 CACHED
+
+#21 [api stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 CACHED
+
+#22 [mcp] exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:dcff96f9484a8b179fae1a15550556367e03eb823590f9be1c447138af652a74 done
+#22 exporting config sha256:9521ac4cb55116dd0c96a69888cb3bf384d78caf523a71b15087463cae5de8e3 done
+#22 exporting attestation manifest sha256:bac143d113adc0feaf8cb895b384349b1a457bf0b5cedd6d6781845e306fbf14
+#22 exporting attestation manifest sha256:bac143d113adc0feaf8cb895b384349b1a457bf0b5cedd6d6781845e306fbf14 0.1s done
+#22 exporting manifest list sha256:e54d5f4084e976f985a52969da8e32d9f1340258061e4fdf7416860b1a9736aa
+#22 exporting manifest list sha256:e54d5f4084e976f985a52969da8e32d9f1340258061e4fdf7416860b1a9736aa 0.1s done
+#22 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp:latest 0.0s done
+#22 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp:latest 0.0s done
+#22 DONE 0.3s
+
+#23 [api] exporting to image
+#23 exporting layers done
+#23 exporting manifest sha256:ecaebbca85d5a061e81d2daf74c5b6423ef75d077a36da1f4eed4ed85ec27d7f done
+#23 exporting config sha256:61d08c7c8c7f2a045825a5542597e9715afd80122fcf84b1a1a863172dc16d24 0.0s done
+#23 exporting attestation manifest sha256:981cf0b9775457584b67a5cc9bfda0107b38ba1fcdb7f8b9e1399a2927f87262 0.1s done
+#23 exporting manifest list sha256:275d7668bceff49e37c2d443e4c4ec73d3acbdaec50a50bb7480fedd28f02c1d 0.1s done
+#23 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api:latest 0.0s done
+#23 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api:latest 0.0s done
+#23 DONE 0.4s
+
+#24 [migrator] exporting to image
+#24 exporting layers done
+#24 exporting manifest sha256:b5b82b051d7e4c74093e79b80f4ececa37bde149e5230a33d111dcc8babdf379 0.0s done
+#24 exporting config sha256:a776122f80c786bbb8e8d466312888b87b5c1aa39856bf5ec25e35e4a5cfcd83 0.0s done
+#24 exporting attestation manifest sha256:5ee58a38c9a2082f6f6c3605fe839a8c8dbaf4bd64c71ce01d01d86221b2e31a 0.1s done
+#24 exporting manifest list sha256:10822bec2a7f2f2b417edef16d287c7b6c84d8a041146aae21d762c71e013d80 0.1s done
+#24 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator:latest 0.0s done
+#24 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator:latest 0.0s done
+#24 DONE 0.4s
+
+#25 [mcp] resolving provenance for metadata file
+#25 DONE 0.1s
+
+#26 [api] resolving provenance for metadata file
+#26 DONE 0.1s
+
+#27 [migrator] resolving provenance for metadata file
+#27 DONE 0.0s
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator Built 
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp Built 
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api Built 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp-1 Running 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-hasura-1 Running 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1 Running 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-proxy-1 Running 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1 Recreate 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1 Recreated 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1 Waiting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1 Healthy 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Starting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Started 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Waiting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Waiting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Exited 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Exited 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1 Starting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Waiting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1 Started 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1 Starting 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1 Started 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1 Exited 

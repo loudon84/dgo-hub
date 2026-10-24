@@ -1,0 +1,1092 @@
+{
+  "source_commit": "f9ede840b11e65d57287495d69c81348101f509a",
+  "sensitive_scan_flags": 0,
+  "files": [
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/addresses-api.log",
+      "bytes": 1074,
+      "sha256": "59e26bcdfd825e1ba588e7471fb76f92afbfdce4c0dcc5958bdfe46eba73f8cc",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/addresses-db.log",
+      "bytes": 1064,
+      "sha256": "0883324e1c514c7a4169a253514b37a61f05f8b82da32a2df1959655cf201958",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/addresses-hasura.log",
+      "bytes": 1633,
+      "sha256": "cfc906c1c8730e1d1b8d754343ae7ce3c95c142194cd2fb221c40d574f736101",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/addresses-mcp.log",
+      "bytes": 1604,
+      "sha256": "f17c592fdf7c9a22690840ef3190a531f8202eec8145ec21d00b5f9b86aadea8",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/allowed-after.log",
+      "bytes": 3277,
+      "sha256": "173ab76e7b11a4de37f34d209f1206b2303e2900e8c0b7af931eef5a5140acee",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/allowed-before.log",
+      "bytes": 3277,
+      "sha256": "173ab76e7b11a4de37f34d209f1206b2303e2900e8c0b7af931eef5a5140acee",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/certificate-issuance.txt",
+      "bytes": 133,
+      "sha256": "602d550a67e5af7866b533e5c8a18bd394e039b1b2705da9703e8cb510f83131",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/cleanup-absence.json",
+      "bytes": 3623,
+      "sha256": "ce8f30cac686515ef29a2197a5b9b29a0e2843d5fa531ab946a604c65e3adec2",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-api.log",
+      "bytes": 66,
+      "sha256": "837e83804e7a633538a2b80d9c20d88ad75250b4d953329d9ba1b346dd705c61",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-db.log",
+      "bytes": 66,
+      "sha256": "31a6dec40e615a71018b10f643ec803c26dfd08829be2e6f5e949476b49a7a35",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-hasura.log",
+      "bytes": 66,
+      "sha256": "42ea9362e3c4a68586a870eee79a4f8c1adf1fd3ce29284ce4844b787968eb01",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-mcp.log",
+      "bytes": 66,
+      "sha256": "f5f1832981e2813a04e8bd6f13e27d9dbca3207fe5e7d0a6b700155a05a22961",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "bfb91557725675bf43cee70baea340a886290899668dc089cd18d68d278777bd",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-control_data.log",
+      "bytes": 66,
+      "sha256": "d874541727b5270286dba0370c44b3bf42f31052d733cd5ca00dd4b6d591bc34",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "caf72a11fee42a46b83a02933f937ff305b077d1f84d9506776bf5c2a72d9568",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "f6f5669867dbeecfaab3a1e6eb961071a22ac29e42ae90114200665deef4aa9d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-management_back.log",
+      "bytes": 66,
+      "sha256": "bbc60cbd7c772bece6504aedcc4aca2046a18861a60cef7f76214d5145a5b280",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "2e87571278f7d30428e1a14ee23a0a6cf9cc990f816147c0a4786d16831fc57c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "cca42aa56e8a57bf6bf3ba00f65f11df078e1cb2b8b389f639c0f86ed3364aa5",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-sales-probe.log",
+      "bytes": 66,
+      "sha256": "7c49eff991a4aaa646cd22394f9dbf72a64d061a6f928002e6e7d780e04430d7",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/create-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "73377a37232ac24c22b9ac6b5c39f80a6e968f43eda274a1c7d46720d5936c0b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/db-ready-0.log",
+      "bytes": 40,
+      "sha256": "90a02a3b42c01acc649ae1a998ceb935258d18d7e8e77d4b368b4bd1452befcf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/db-ready-1.log",
+      "bytes": 40,
+      "sha256": "90a02a3b42c01acc649ae1a998ceb935258d18d7e8e77d4b368b4bd1452befcf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/db-ready-2.log",
+      "bytes": 50,
+      "sha256": "febe982ad7accae664f6fae4ccaa3331e50ce64457a90e8e69d4c5ea6466314c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/existing-log-review.json",
+      "bytes": 33096,
+      "sha256": "e9f52d2034fed1e8d1da0e5e3d33657a587d758a24c906d44b7c5c4f998ec535",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-exit.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-final-exit.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-final.log",
+      "bytes": 1629,
+      "sha256": "426bd59ba0e220a73f4b4d8bc4af9e1e0bf57fd2afad2978fca394fc202965ab",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-final2-exit.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-final2.log",
+      "bytes": 1630,
+      "sha256": "c04385ff9791a0fcdb9b3553d395603d5aa166d51179815ec376a11016612af6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-frozen-exit.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green-frozen.log",
+      "bytes": 1630,
+      "sha256": "0f48160ee081a1d1b7ce185128dacd22b61ce3add68c5d662a657642d0402421",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/green.log",
+      "bytes": 1498,
+      "sha256": "ababf957b25b731a4746523a88893142ebbae86987676e6318a9651747ec6c3c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-api.log",
+      "bytes": 1748,
+      "sha256": "f0c62466ec207d597a0f81bc9c149335fb54a4a6cfb56265167e750fe5b79852",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-db.log",
+      "bytes": 1583,
+      "sha256": "5a019f25e0c09b22a599f70481a87532716ce777cc9ac10ad2819468a3baab75",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-hasura.log",
+      "bytes": 2393,
+      "sha256": "d64b58f347a52221d10d0e35dcd58f57427360f6890478d52b965acfa9a29b6b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-mcp.log",
+      "bytes": 2468,
+      "sha256": "9d7fd8f1cecad435065f5a0b73f925a3c125725b33a4bde482a6f07798249fe7",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-admin_publish.log",
+      "bytes": 490,
+      "sha256": "d0298fefa2311075b228bed4b12021565ed2e1aedd7a264bc9df79002b8e66d4",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-control_data.log",
+      "bytes": 1056,
+      "sha256": "b9be4231b1abbc0283ee9b3fb7c1f24bf52aabdd1f84fcb15e2e1508fa41ed45",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-hasura_business.log",
+      "bytes": 775,
+      "sha256": "34c87bdb9202a2a46b7e0003e0ba67ed2b561018fe3a92f486b8e337ca539614",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-hasura_data.log",
+      "bytes": 774,
+      "sha256": "5dc811f6dee9c3b1a5dbda8c4b9cc2ee0ac9a7495297b2a77870f52332fa7ea1",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-management_back.log",
+      "bytes": 487,
+      "sha256": "f48672a02d791b19d3673237e490dae3f9a225235a496707e9c5b712ddb66e6a",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-sales_back.log",
+      "bytes": 780,
+      "sha256": "24bb213be59d0344be21c08274f14126106576a9584f941a842ad6dbe0235bfb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-network-sales_ingress.log",
+      "bytes": 788,
+      "sha256": "454cbc0409b05d9f7e90b50d5ad0275e3d5c3a2f7d39beeb5cebd8806207f9a3",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-sales-probe.log",
+      "bytes": 1419,
+      "sha256": "bb7e986ebf18bc1c51e5392af83d661344ec1cbcffb8c34fe2c99090f9444882",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/identity-sales-proxy.log",
+      "bytes": 1852,
+      "sha256": "eb6197f62053e9c90bb9a9c5325ff0981d925001aaac327224a5fd1b556b6158",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/addresses-api.log",
+      "bytes": 1074,
+      "sha256": "c63359dff3df3a0c1491b9b2c92c0dbd548f3c23ca61faf94508eee1596fbbcb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/addresses-db.log",
+      "bytes": 1064,
+      "sha256": "056947fc6a588e592dfdedaae9b0284d95cc3cde7ea3dd03efa18f528285fa68",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/addresses-hasura.log",
+      "bytes": 1633,
+      "sha256": "e498b179b05b44c7f552e5d33e0accb691d0eb10613b8be2d6ee7f25220bfaa6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/addresses-mcp.log",
+      "bytes": 1604,
+      "sha256": "9cd0cde60a70769be9565e16aee6c1d256226e420ef146c9dd2c12545737ce9b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/allowed-after.log",
+      "bytes": 3140,
+      "sha256": "79050e49f9c06d65a5dd997cf0627115a2825f5f2645b560826cf4b80f6a0485",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/allowed-before.log",
+      "bytes": 3140,
+      "sha256": "79050e49f9c06d65a5dd997cf0627115a2825f5f2645b560826cf4b80f6a0485",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/certificate-issuance.txt",
+      "bytes": 133,
+      "sha256": "602d550a67e5af7866b533e5c8a18bd394e039b1b2705da9703e8cb510f83131",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/cleanup-absence.json",
+      "bytes": 3890,
+      "sha256": "349f53e473a17a9552dec21e6b0183581405d493c898b2acf571fa40c284c5bf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-allowed-probe.log",
+      "bytes": 66,
+      "sha256": "37314481b7c56825b66fb9b83c2ca86b4e067f346f97a61d90a0da9166dcea54",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-api.log",
+      "bytes": 66,
+      "sha256": "1b07383f54c3fd88e767247b213eae498297975a3071c5632bc8eddecf2a9000",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-db.log",
+      "bytes": 66,
+      "sha256": "cc64d082ab8e8956f6439d0dd59bf86f2b78d961a2d0664b298e5417e46e28f1",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-hasura.log",
+      "bytes": 66,
+      "sha256": "988e78bbadc439a8ff1f4389c2ab5e8c4c933cf1cbee917613d4f8aab6487392",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-mcp.log",
+      "bytes": 66,
+      "sha256": "2ceb783e36cc933992aa5359b7c7257198852c46c2eac2b2f5518ee828d4c237",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "299cd5a6f1a027c162cb1096673d9236fc00568b0804cb13ce71c270c2b962eb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-control_data.log",
+      "bytes": 66,
+      "sha256": "db80a50acb9a21e992f62b560d688a17bf19fde58638eaa1c1e4f479b25b04dd",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "b7409ea2deb5f86daf2364019577254c7144b9eb914129c3d0ddade986dc232c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "32d7cc8960ba24bcef3b6b2f4fa8703ee1e851b426855f468ee60811339d7433",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-management_back.log",
+      "bytes": 66,
+      "sha256": "245a840de690115b5559fce0cfc817f2434e513941dc22582d15eca1ce7db704",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "fd46bd9d55f70957d8dbc095ba636e10b68257036584f40919bf3338f5ad1260",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "d8280615a54b2617684f6ecdb9449d8b1fe2e8233991f0fd661e3791c45d502a",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-sales-probe.log",
+      "bytes": 66,
+      "sha256": "f1d16b75a6a7f364244849bc482e2dcfad99b17bde6c68ba063111e7bef3dbb4",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/create-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "2c457b2c323d27be801cefd4010b792766000b5e04018296a3024726d51f4ca6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/db-ready-0.log",
+      "bytes": 40,
+      "sha256": "90a02a3b42c01acc649ae1a998ceb935258d18d7e8e77d4b368b4bd1452befcf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/db-ready-1.log",
+      "bytes": 50,
+      "sha256": "febe982ad7accae664f6fae4ccaa3331e50ce64457a90e8e69d4c5ea6466314c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-allowed-probe.log",
+      "bytes": 4062,
+      "sha256": "2157676fc530b6072b2e0aa747fa7ec51b03db5e6f06e238b9f4f63257086f0a",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-api.log",
+      "bytes": 1769,
+      "sha256": "ebcc2984cd95c39b859a69dc623f6d7d6a65d2e1975a5229a7e5aee99d361ff6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-db.log",
+      "bytes": 1604,
+      "sha256": "9c1b46fa5bc56541acd9411adeb5434b596da1e8ba0bf6b40cae025aa6fccd32",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-hasura.log",
+      "bytes": 2435,
+      "sha256": "5cfcf4886efc17a9e07c80b99664c4c46715878ff1c1477f013157f22e59e6c2",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-mcp.log",
+      "bytes": 2510,
+      "sha256": "01ed6cb839ce904513226d1dd45d877b957ac9dec0fdac150f2c44a32be378ad",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-admin_publish.log",
+      "bytes": 785,
+      "sha256": "28e4d1a4a8df4c273245583e941358ec2f060eab06ee66af438c94b57d83ed8f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-control_data.log",
+      "bytes": 1351,
+      "sha256": "3b74e0374ee1ef1d9bf1ae03e5a5ba9c14a66313a54738516a0da057a42ca9f4",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-hasura_business.log",
+      "bytes": 1070,
+      "sha256": "3ae21db092d22ae68f35c001566666063eed6778b1ac7d58013f3c6053eabdff",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-hasura_data.log",
+      "bytes": 1069,
+      "sha256": "32a747df87baf119a15a7d6f9ae71829abfdb3bddc33b81cc06d60da8c3371ca",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-management_back.log",
+      "bytes": 782,
+      "sha256": "291c34c0c628e29495065edb9cd2e3965a0b7d3f9fe79ffe3dacd8f0493f3225",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-sales_back.log",
+      "bytes": 1075,
+      "sha256": "864409b7ee5dd3fe92b3e12700ef60d4a0572267086974de2a248e49a5158c97",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-network-sales_ingress.log",
+      "bytes": 788,
+      "sha256": "4d348745e2e2a686d7c137e94377dbb1b81f35af00f096e263f60821132073cb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-sales-probe.log",
+      "bytes": 1461,
+      "sha256": "a42857d081e92b60d0c1c39c16707f1cb6313c17014d19324753afc5899ada23",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/identity-sales-proxy.log",
+      "bytes": 1873,
+      "sha256": "a9016134cbae7c1432f90077c81af5681888c0b49747d01c47890572f124dbdd",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/live-run.json",
+      "bytes": 34298,
+      "sha256": "eaf590c76187dac68e096ccdb81b24bffbe52af88e59d7c1050e0153d86a14a1",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/live-targets.json",
+      "bytes": 2572,
+      "sha256": "441f0c7ca81655936e9e47f6a8bb4a55aaba9f84c9d79327b9ca2ec304a3c19d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-allowed-probe.log",
+      "bytes": 66,
+      "sha256": "37314481b7c56825b66fb9b83c2ca86b4e067f346f97a61d90a0da9166dcea54",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-api.log",
+      "bytes": 66,
+      "sha256": "1b07383f54c3fd88e767247b213eae498297975a3071c5632bc8eddecf2a9000",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-db.log",
+      "bytes": 66,
+      "sha256": "cc64d082ab8e8956f6439d0dd59bf86f2b78d961a2d0664b298e5417e46e28f1",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-hasura.log",
+      "bytes": 66,
+      "sha256": "988e78bbadc439a8ff1f4389c2ab5e8c4c933cf1cbee917613d4f8aab6487392",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-mcp.log",
+      "bytes": 66,
+      "sha256": "2ceb783e36cc933992aa5359b7c7257198852c46c2eac2b2f5518ee828d4c237",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "299cd5a6f1a027c162cb1096673d9236fc00568b0804cb13ce71c270c2b962eb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-control_data.log",
+      "bytes": 66,
+      "sha256": "db80a50acb9a21e992f62b560d688a17bf19fde58638eaa1c1e4f479b25b04dd",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "b7409ea2deb5f86daf2364019577254c7144b9eb914129c3d0ddade986dc232c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "32d7cc8960ba24bcef3b6b2f4fa8703ee1e851b426855f468ee60811339d7433",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-management_back.log",
+      "bytes": 66,
+      "sha256": "245a840de690115b5559fce0cfc817f2434e513941dc22582d15eca1ce7db704",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "fd46bd9d55f70957d8dbc095ba636e10b68257036584f40919bf3338f5ad1260",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "d8280615a54b2617684f6ecdb9449d8b1fe2e8233991f0fd661e3791c45d502a",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-sales-probe.log",
+      "bytes": 66,
+      "sha256": "f1d16b75a6a7f364244849bc482e2dcfad99b17bde6c68ba063111e7bef3dbb4",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/remove-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "2c457b2c323d27be801cefd4010b792766000b5e04018296a3024726d51f4ca6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/sales-only.log",
+      "bytes": 4276,
+      "sha256": "196879afb9e7de3f551ef0b2ac6749b01df9858937534f3439a658390f3cc959",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/source-post.json",
+      "bytes": 1003,
+      "sha256": "14c1f620343fa34fc74c175b629859da164b89081b4b8eca09b22ab93ccd1f0d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/source-pre.json",
+      "bytes": 1003,
+      "sha256": "14c1f620343fa34fc74c175b629859da164b89081b4b8eca09b22ab93ccd1f0d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-wrapper-exit.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-wrapper.log",
+      "bytes": 62,
+      "sha256": "b25b5580b1835ee383c949d7ce51ee490c3e42ab60ce9762a797cd5d21c6e6e6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final-wrapper-exit.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final-wrapper.log",
+      "bytes": 62,
+      "sha256": "843bae0b6448908cf584666692ce9afa35dfbeeb31d9a610c68bbf5b2a00787f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/addresses-api.log",
+      "bytes": 1074,
+      "sha256": "6148118e7bb8baba37f06323143ac9e9c4724a5cbb822180dc101fb792f2b44f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/addresses-db.log",
+      "bytes": 1064,
+      "sha256": "f81a505fff54f81fae6cbe1948019a74d4eda0b5d148020282d7fbb9586378e3",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/addresses-hasura.log",
+      "bytes": 1633,
+      "sha256": "5d0988796c67fa2ec268c75bf68c79f87b8cfa8af1327bc159f4ce6e3434bca5",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/addresses-mcp.log",
+      "bytes": 1604,
+      "sha256": "747ca98eba4f8b3a44e364d34cb65823442febb254b1559e33676ca8a9d57c8b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/allowed-after.log",
+      "bytes": 3357,
+      "sha256": "5c811c4bdfa9db70696677943047ce6c304d868f8f9f0986e6d989b5ccabd3e8",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/allowed-before.log",
+      "bytes": 3357,
+      "sha256": "5c811c4bdfa9db70696677943047ce6c304d868f8f9f0986e6d989b5ccabd3e8",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/certificate-issuance.txt",
+      "bytes": 133,
+      "sha256": "602d550a67e5af7866b533e5c8a18bd394e039b1b2705da9703e8cb510f83131",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/cleanup-absence.json",
+      "bytes": 3623,
+      "sha256": "5819ed78190c1c9911aa8fbc04a3bd6e8561f6ae7ac8817688a037f9eb2449ba",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-api.log",
+      "bytes": 66,
+      "sha256": "fdfcb750600fe68114fbd03578523ebdadebe56fe95253c8018089eb0a3d06e3",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-db.log",
+      "bytes": 66,
+      "sha256": "81c8ed821d66abc662a313d568f6de7567027a13194e1f911fb9374059af3b04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-hasura.log",
+      "bytes": 66,
+      "sha256": "a14141dcdbfd6b2bb90a1964d9adcf315d5b0a28acd1780babb6d49155bccafb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-mcp.log",
+      "bytes": 66,
+      "sha256": "83a59d87f27d5d702e704e277b93601e0fd66725db00918a6e8849935328fd8d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "15ba71f8fbae5c1dcd968455056634c7222a8cacf72f01d5ed8adeb1fe68ab3c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-control_data.log",
+      "bytes": 66,
+      "sha256": "4b78c48952371c918856d193316eab326a2129e474a3abc25579c784f405090b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "6490caab2a979ffdb7d88c3b914ea3282492cb24ce0c9ab856bb180a73625f48",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "bd76cef7cc91810594a10c3a5246599eef9081df815d6c0ccd4f84dffd763c5d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-management_back.log",
+      "bytes": 66,
+      "sha256": "bcc27c19e409060962095b95d6049c479b2735687cec6c244a477b738e3fbdf9",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "5a19b77ae83acd6420c9521c0ba11e9fb242f08851162c3aefb34e1b8500d3d7",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "0608e5fe26904e77d637e61286b1f7d5decd3d2990ef4b2aa8a4bf31097cf396",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-sales-probe.log",
+      "bytes": 66,
+      "sha256": "84031d7599419959a1ce7a28a25520c5bb21aa2908783f838945f8b268ddb323",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/create-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "8c7016c543e02b1ff5420c241166092f352561796428d6e0cc97c0d33c4541ff",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/db-ready-0.log",
+      "bytes": 40,
+      "sha256": "90a02a3b42c01acc649ae1a998ceb935258d18d7e8e77d4b368b4bd1452befcf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/db-ready-1.log",
+      "bytes": 40,
+      "sha256": "90a02a3b42c01acc649ae1a998ceb935258d18d7e8e77d4b368b4bd1452befcf",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/db-ready-2.log",
+      "bytes": 50,
+      "sha256": "febe982ad7accae664f6fae4ccaa3331e50ce64457a90e8e69d4c5ea6466314c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-api.log",
+      "bytes": 1759,
+      "sha256": "1bb386786e19e3184b6d3157377089b851cb06e823a9a647a42a4c4d709da9e3",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-db.log",
+      "bytes": 1594,
+      "sha256": "43606e106ab8f16507ebf8ed837da5fa0d58c2759f8ab1314b3723afc42b2b96",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-hasura.log",
+      "bytes": 2415,
+      "sha256": "d18dee7bffc5c68df785c42859b94385b5ea8681566cfe1c4cf8b3154a5ace29",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-mcp.log",
+      "bytes": 2490,
+      "sha256": "12ca7f963ac562f0f677abf3da2d8de4647447ebd3bb279f619411f359c4405c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-admin_publish.log",
+      "bytes": 490,
+      "sha256": "57609d33c886153b870d035270bfe5b372129afd81adb2d84b15a5b92acef75a",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-control_data.log",
+      "bytes": 1056,
+      "sha256": "d794d7811c3cea321e2ee67767ca43e7a3b85c4a7f029aac06431d8a511e8e8f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-hasura_business.log",
+      "bytes": 775,
+      "sha256": "548a9993c50bb0ba4f9400de87b1f9e6282b527b8a470721115db5c56b8e3acb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-hasura_data.log",
+      "bytes": 774,
+      "sha256": "b351a4dcf40f8ac782880222d45781174e8ddc9eb1e127e537c81f43dcd2845f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-management_back.log",
+      "bytes": 487,
+      "sha256": "0edf1c33fba36c1c0f1d04b3acba5d68991aae36a3af7b9b05d0e2a0e20c1cf6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-sales_back.log",
+      "bytes": 780,
+      "sha256": "d3a44995a321d41d46fad6f4756ff2a3b4d47209cd61b5eca6f1b6cfc8f73538",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-network-sales_ingress.log",
+      "bytes": 788,
+      "sha256": "c1ee4c92230ea3f0407cdb52d6cea7689e59a2293e8baa6546ddb6ef3883948f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-sales-probe.log",
+      "bytes": 1441,
+      "sha256": "dff911ddd03413539b820c675015702e59faa4671de88d9630213c2b03720b1f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/identity-sales-proxy.log",
+      "bytes": 1863,
+      "sha256": "ff9e979af58c9e4f128541c34c3cc76117e1b9cee5a6a20256353c08e1dd8cd6",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/live-run.json",
+      "bytes": 30687,
+      "sha256": "5ddf1811ae4fd9940a865c9e3e3cd18d00a368a02605e1392c7f892013f38d21",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/live-targets.json",
+      "bytes": 2572,
+      "sha256": "186c54e3b6b1f8a79e20b3b63659de548c0a435fdd13c74295e60fb8ee39be43",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-api.log",
+      "bytes": 66,
+      "sha256": "fdfcb750600fe68114fbd03578523ebdadebe56fe95253c8018089eb0a3d06e3",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-db.log",
+      "bytes": 66,
+      "sha256": "81c8ed821d66abc662a313d568f6de7567027a13194e1f911fb9374059af3b04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-hasura.log",
+      "bytes": 66,
+      "sha256": "a14141dcdbfd6b2bb90a1964d9adcf315d5b0a28acd1780babb6d49155bccafb",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-mcp.log",
+      "bytes": 66,
+      "sha256": "83a59d87f27d5d702e704e277b93601e0fd66725db00918a6e8849935328fd8d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "15ba71f8fbae5c1dcd968455056634c7222a8cacf72f01d5ed8adeb1fe68ab3c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-control_data.log",
+      "bytes": 66,
+      "sha256": "4b78c48952371c918856d193316eab326a2129e474a3abc25579c784f405090b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "6490caab2a979ffdb7d88c3b914ea3282492cb24ce0c9ab856bb180a73625f48",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "bd76cef7cc91810594a10c3a5246599eef9081df815d6c0ccd4f84dffd763c5d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-management_back.log",
+      "bytes": 66,
+      "sha256": "bcc27c19e409060962095b95d6049c479b2735687cec6c244a477b738e3fbdf9",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "5a19b77ae83acd6420c9521c0ba11e9fb242f08851162c3aefb34e1b8500d3d7",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "0608e5fe26904e77d637e61286b1f7d5decd3d2990ef4b2aa8a4bf31097cf396",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-sales-probe.log",
+      "bytes": 66,
+      "sha256": "84031d7599419959a1ce7a28a25520c5bb21aa2908783f838945f8b268ddb323",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/remove-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "8c7016c543e02b1ff5420c241166092f352561796428d6e0cc97c0d33c4541ff",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/sales-only.log",
+      "bytes": 4276,
+      "sha256": "1f834adb3f02a1aa7911a2c44ae6439b69b25d57c634092b94f0c708d7657307",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-run.json",
+      "bytes": 30576,
+      "sha256": "18750d40a166cc0e8a90dceb22066384f48c32108611bd7696e90678b6b078c0",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-targets.json",
+      "bytes": 2572,
+      "sha256": "4fd15643cf46334123e3a22c88bb9834fe45185f36444ba492469493def975c0",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-wrapper-exit.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-wrapper.log",
+      "bytes": 62,
+      "sha256": "656d1cfa372b683961a28f990da932980dafc06c38884b6d64488bc28c407106",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/red-exit.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/red.log",
+      "bytes": 2234,
+      "sha256": "30176558efb456a908767a37495c162002fb8ebafb460132d2a696e39449426f",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-api.log",
+      "bytes": 66,
+      "sha256": "837e83804e7a633538a2b80d9c20d88ad75250b4d953329d9ba1b346dd705c61",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-db.log",
+      "bytes": 66,
+      "sha256": "31a6dec40e615a71018b10f643ec803c26dfd08829be2e6f5e949476b49a7a35",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-hasura.log",
+      "bytes": 66,
+      "sha256": "42ea9362e3c4a68586a870eee79a4f8c1adf1fd3ce29284ce4844b787968eb01",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-mcp.log",
+      "bytes": 66,
+      "sha256": "f5f1832981e2813a04e8bd6f13e27d9dbca3207fe5e7d0a6b700155a05a22961",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-admin_publish.log",
+      "bytes": 66,
+      "sha256": "bfb91557725675bf43cee70baea340a886290899668dc089cd18d68d278777bd",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-control_data.log",
+      "bytes": 66,
+      "sha256": "d874541727b5270286dba0370c44b3bf42f31052d733cd5ca00dd4b6d591bc34",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-hasura_business.log",
+      "bytes": 66,
+      "sha256": "caf72a11fee42a46b83a02933f937ff305b077d1f84d9506776bf5c2a72d9568",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-hasura_data.log",
+      "bytes": 66,
+      "sha256": "f6f5669867dbeecfaab3a1e6eb961071a22ac29e42ae90114200665deef4aa9d",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-management_back.log",
+      "bytes": 66,
+      "sha256": "bbc60cbd7c772bece6504aedcc4aca2046a18861a60cef7f76214d5145a5b280",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-sales_back.log",
+      "bytes": 66,
+      "sha256": "2e87571278f7d30428e1a14ee23a0a6cf9cc990f816147c0a4786d16831fc57c",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-network-sales_ingress.log",
+      "bytes": 66,
+      "sha256": "cca42aa56e8a57bf6bf3ba00f65f11df078e1cb2b8b389f639c0f86ed3364aa5",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-sales-probe.log",
+      "bytes": 66,
+      "sha256": "7c49eff991a4aaa646cd22394f9dbf72a64d061a6f928002e6e7d780e04430d7",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/remove-sales-proxy.log",
+      "bytes": 66,
+      "sha256": "73377a37232ac24c22b9ac6b5c39f80a6e968f43eda274a1c7d46720d5936c0b",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/sales-only.log",
+      "bytes": 4166,
+      "sha256": "60407b45e25b6b3205d452adeb1935079658dd84bfb423961cbf242acad18c78",
+      "flags": []
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/syntax-checks.json",
+      "bytes": 913,
+      "sha256": "239049b1ef58b8f508384f8ad37dcc8340061174b899f730f5eed279b163927b",
+      "flags": []
+    }
+  ]
+}

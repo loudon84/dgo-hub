@@ -1,0 +1,87 @@
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.17kB 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 248B done
+#4 DONE 0.0s
+
+#5 [build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 14.92kB 0.1s done
+#6 DONE 0.1s
+
+#7 [build 2/6] WORKDIR /build/integration-service
+#7 CACHED
+
+#8 [build 4/6] RUN npm ci --no-audit --no-fund
+#8 CACHED
+
+#9 [build 6/6] RUN npm run build
+#9 CACHED
+
+#10 [stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#10 CACHED
+
+#11 [stage-1  2/11] WORKDIR /app
+#11 CACHED
+
+#12 [build 5/6] COPY integration-service/ ./
+#12 CACHED
+
+#13 [build 3/6] COPY integration-service/package*.json ./
+#13 CACHED
+
+#14 [stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#14 CACHED
+
+#15 [stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#15 CACHED
+
+#16 [stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#16 CACHED
+
+#17 [stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#17 CACHED
+
+#18 [stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#18 DONE 0.1s
+
+#19 [stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#19 DONE 0.1s
+
+#20 [stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#20 DONE 0.1s
+
+#21 [stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 DONE 0.1s
+
+#22 exporting to image
+#22 exporting layers
+#22 exporting layers 0.5s done
+#22 exporting manifest sha256:c4784760aef9e13004f1c6052b28f26541dbc94b62d2d4808b1c6866441207b9 0.0s done
+#22 exporting config sha256:66396f9d1d15970fb33325f5b9c734215c5e7089dceb64c2f7071f2002d61d6d 0.0s done
+#22 exporting attestation manifest sha256:8ff4b46aae6b31bab99e45982f18db1ea5d0a65b7872848da24e1dba2d4024aa 0.0s done
+#22 exporting manifest list sha256:4b15af4b463f9f7ff971ad15ca51ba863ace4a3f667d07500a51a7fb6dc07b96
+#22 exporting manifest list sha256:4b15af4b463f9f7ff971ad15ca51ba863ace4a3f667d07500a51a7fb6dc07b96 0.0s done
+#22 naming to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe:latest done
+#22 unpacking to docker.io/library/alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe:latest 0.1s done
+#22 DONE 0.8s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe Built 

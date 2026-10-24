@@ -1,0 +1,34 @@
+docker.io/library/node@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40: Pulling from library/node
+Digest: sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+Status: Downloaded newer image for node@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+node_pull_exit=0
+docker.io/library/nginx@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11: Pulling from library/nginx
+5b8cb54cfa40: Pulling fs layer
+81b64ae234ef: Pulling fs layer
+885725a63a7c: Pulling fs layer
+7b229517ed22: Pulling fs layer
+9f0afb44f10e: Pulling fs layer
+f19a2d3b6951: Pulling fs layer
+bb658a254196: Pulling fs layer
+e125989d16f0: Pulling fs layer
+885725a63a7c: Download complete
+7b229517ed22: Download complete
+81b64ae234ef: Download complete
+7b229517ed22: Pull complete
+f19a2d3b6951: Download complete
+e125989d16f0: Download complete
+5b8cb54cfa40: Download complete
+9f0afb44f10e: Download complete
+9f0afb44f10e: Pull complete
+885725a63a7c: Pull complete
+81b64ae234ef: Pull complete
+f19a2d3b6951: Pull complete
+e125989d16f0: Pull complete
+bb658a254196: Download complete
+bb658a254196: Pull complete
+5b8cb54cfa40: Pull complete
+Digest: sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11
+Status: Downloaded newer image for nginx@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11
+docker.io/library/nginx:1.30.6-alpine@sha256:84ed8c0dd296c188bfc24ed506f46589e9285fb0b11cf3a04d91d524d3067e11
+nginx_pull_exit=0

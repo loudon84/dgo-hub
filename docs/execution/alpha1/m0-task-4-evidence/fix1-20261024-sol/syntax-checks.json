@@ -1,0 +1,46 @@
+[
+  {
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--check",
+      "deploy/alpha1/sales-probe.mjs"
+    ],
+    "path": "deploy/alpha1/sales-probe.mjs"
+  },
+  {
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--check",
+      "deploy/alpha1/probe-transport.mjs"
+    ],
+    "path": "deploy/alpha1/probe-transport.mjs"
+  },
+  {
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--check",
+      "deploy/alpha1/probe-focused-live.mjs"
+    ],
+    "path": "deploy/alpha1/probe-focused-live.mjs"
+  },
+  {
+    "exit_code": 0,
+    "command": [
+      "node",
+      "--check",
+      "deploy/alpha1/sales-probe.test.mjs"
+    ],
+    "path": "deploy/alpha1/sales-probe.test.mjs"
+  },
+  {
+    "parser_errors": 0,
+    "path": "deploy/alpha1/probe-sales-network.ps1"
+  },
+  {
+    "parser_errors": 0,
+    "path": "deploy/alpha1/verify-probe-fix1.ps1"
+  }
+]

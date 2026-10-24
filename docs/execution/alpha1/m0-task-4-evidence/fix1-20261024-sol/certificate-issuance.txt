@@ -1,0 +1,1 @@
+{"status":"READY","certificate_names":["sales.local","management.local","localhost","127.0.0.1"],"host_trust_store_modified":false}

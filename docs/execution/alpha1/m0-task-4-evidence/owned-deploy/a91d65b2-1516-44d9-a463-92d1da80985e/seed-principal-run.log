@@ -1,0 +1,3 @@
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal-run-45db9ac156fd Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal-run-45db9ac156fd Created 
+{"status":"PASS","principal":"synthetic-local-sales","provisionedBy":"one-shot-migrator"}

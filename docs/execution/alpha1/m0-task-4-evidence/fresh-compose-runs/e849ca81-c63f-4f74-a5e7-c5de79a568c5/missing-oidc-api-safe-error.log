@@ -1,0 +1,13 @@
+file:///app/dist/auth/oidc.js:39
+        throw new OidcConfigurationError();
+              ^
+
+OidcConfigurationError: AUTH_CONFIG_INVALID
+    at validateConfiguration (file:///app/dist/auth/oidc.js:39:15)
+    at readOidcConfiguration (file:///app/dist/auth/oidc.js:59:5)
+    at startApp (file:///app/dist/app.js:26:30)
+    at async file:///app/dist/app.js:39:5 {
+  code: 'AUTH_CONFIG_INVALID'
+}
+
+Node.js v24.14.1

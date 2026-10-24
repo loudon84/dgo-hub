@@ -1,0 +1,9 @@
+
+> data-governance-integration-service@1.0.0 record:local-checks
+> npm run build && node dist/scripts/record-local-checks.js --output-parent E:\git\dgo-hub\docs\execution\alpha1\m0-task-4-evidence\final-w0-01a166bd --run-id final-w0-20261024-01a166bd
+
+
+> data-governance-integration-service@1.0.0 build
+> tsc -p tsconfig.json
+
+{"status":"PASS","product_ready":false,"run_dir":"E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\final-w0-01a166bd\\final-w0-20261024-01a166bd"}

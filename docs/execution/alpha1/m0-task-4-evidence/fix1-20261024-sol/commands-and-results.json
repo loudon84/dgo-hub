@@ -1,0 +1,181 @@
+{
+  "source_commit": "f9ede840b11e65d57287495d69c81348101f509a",
+  "red": {
+    "command": [
+      "node",
+      "--test",
+      "deploy/alpha1/sales-probe.test.mjs"
+    ],
+    "exit": 1,
+    "stdout": "red.log",
+    "source_base": "efb18348f92cadd690da4ee2f9a2cf344a3dede4",
+    "sales_probe_sha256": "b13bb77227fcef9be141731fdf221020e5d15829918d733e11b499a4a354aaf0",
+    "note": "RED captured before implementation. Test later gained positive-TLS, plaintext old-classifier, and connection-refusal assertions; its RED-time bytes were not separately snapshotted. Original assertion failure and output are preserved; no historical output was reconstructed."
+  },
+  "green": {
+    "command": [
+      "node",
+      "--test",
+      "deploy/alpha1/sales-probe.test.mjs"
+    ],
+    "exit": 0,
+    "stdout": "green-frozen.log",
+    "stdout_sha256": "0f48160ee081a1d1b7ce185128dacd22b61ce3add68c5d662a657642d0402421",
+    "files": [
+      {
+        "path": "deploy/alpha1/sales-probe.mjs",
+        "sha256": "e541f04c1fd618b191efdedcaa98279b9ccd9436d08698a658c41326e7cf976e"
+      },
+      {
+        "path": "deploy/alpha1/probe-transport.mjs",
+        "sha256": "ae7a0115bc35725c05bb9c728e9616f73fdc0a69e991c078ceb4c804d8025803"
+      },
+      {
+        "path": "deploy/alpha1/probe-sales-network.ps1",
+        "sha256": "e6ebc68442fa6ea2e8de8dd0b1d2b976f68c4864e42e7c8322b109ef0a61b1c1"
+      },
+      {
+        "path": "deploy/alpha1/sales-probe.test.mjs",
+        "sha256": "0cd77e9ad4a64723116e0cc1690ba50d6ef6b40a10d035ce6fd73017d50b3dea"
+      },
+      {
+        "path": "deploy/alpha1/probe-focused-live.mjs",
+        "sha256": "9f36726b157fb8fb892bf48f62ee7d8edb66f38a849d82273972b41dac4c717d"
+      },
+      {
+        "path": "deploy/alpha1/verify-probe-fix1.ps1",
+        "sha256": "99012fedc862f33a796a407832ed3f29a86da16ca1b8a9b2b4a0d533df542454"
+      },
+      {
+        "path": "deploy/alpha1/Dockerfile",
+        "sha256": "457048b59a8cabf27d1b1a36ba28c0716cf1fdc5e56a997088177824fdaeee3e"
+      }
+    ]
+  },
+  "live_command": {
+    "executable": "pwsh",
+    "script": "deploy/alpha1/verify-probe-fix1.ps1",
+    "parameter": "-EvidenceDirectory",
+    "final_directory": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses",
+    "note": "Actual invocations used & ./deploy/alpha1/verify-probe-fix1.ps1 within PowerShell, with stdout/stderr redirected to each wrapper.log. wrapper-exit files capture inherited LASTEXITCODE=1 from intentional final not-found cleanup inspect, not an aggregate probe failure. See per-command exits and live-run status."
+  },
+  "runs": [
+    {
+      "dir": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/",
+      "project": "alpha1-m0-034f82d9550a4f0b96d4be8ff39171a9",
+      "status": "PASS",
+      "commands": 57,
+      "nonzero_commands": [
+        {
+          "executable": "docker",
+          "name": "db-ready-0",
+          "exit_code": 2,
+          "arguments": [
+            "exec",
+            "0733676661cbaac073a0219f99e3126c97beb0cf09df24666565f4fc20b791a8",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres"
+          ],
+          "output": "db-ready-0.log"
+        },
+        {
+          "executable": "docker",
+          "name": "db-ready-1",
+          "exit_code": 2,
+          "arguments": [
+            "exec",
+            "0733676661cbaac073a0219f99e3126c97beb0cf09df24666565f4fc20b791a8",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres"
+          ],
+          "output": "db-ready-1.log"
+        }
+      ],
+      "resources": 13,
+      "host_generated_targets_absent": [
+        true,
+        true
+      ],
+      "absence": true
+    },
+    {
+      "dir": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-final/",
+      "project": "alpha1-m0-6879797f5a6f4c3683f0f0ad47ea36ae",
+      "status": "PASS",
+      "commands": 57,
+      "nonzero_commands": [
+        {
+          "name": "db-ready-0",
+          "executable": "docker",
+          "exit_code": 2,
+          "output": "db-ready-0.log",
+          "arguments": [
+            "exec",
+            "ec3c6522aa96360f47148cfd0d733e433ddfb5b49b8d3a5ed844c92c0d81fb3f",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres"
+          ]
+        },
+        {
+          "name": "db-ready-1",
+          "executable": "docker",
+          "exit_code": 2,
+          "output": "db-ready-1.log",
+          "arguments": [
+            "exec",
+            "ec3c6522aa96360f47148cfd0d733e433ddfb5b49b8d3a5ed844c92c0d81fb3f",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres"
+          ]
+        }
+      ],
+      "resources": 13,
+      "host_generated_targets_absent": [
+        true,
+        true
+      ],
+      "absence": true
+    },
+    {
+      "dir": "docs/execution/alpha1/m0-task-4-evidence/fix1-20261024-sol/live-exact-addresses/",
+      "project": "alpha1-m0-8db20f4adc8645cf9367d900a9e63694",
+      "status": "PASS",
+      "commands": 63,
+      "nonzero_commands": [
+        {
+          "executable": "docker",
+          "arguments": [
+            "exec",
+            "d38e7ef2439555906973f2306748861c265f5c484ff801398e5f2eda398a2cb2",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres"
+          ],
+          "exit_code": 2,
+          "name": "db-ready-0",
+          "output": "db-ready-0.log"
+        }
+      ],
+      "resources": 14,
+      "host_generated_targets_absent": [
+        true,
+        true
+      ],
+      "absence": true
+    }
+  ]
+}

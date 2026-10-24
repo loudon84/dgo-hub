@@ -1,0 +1,6 @@
+    at startApp (file:///app/dist/app.js:26:30)
+    at async file:///app/dist/app.js:39:5 {
+  code: 'AUTH_CONFIG_INVALID'
+}
+
+Node.js v24.14.1

@@ -1,0 +1,11 @@
+{"old_algorithm":{"reachable":false,"code":"EPROTO"},"old_false_isolation_pass":true,"plaintext_connections_accepted":1}
+{"child_exit":1,"checks":[{"name":"untrusted_ca_rejected","status":"PASS","reason":"UNABLE_TO_VERIFY_LEAF_SIGNATURE","layer":"certificate_trust"},{"name":"wrong_hostname_rejected","status":"PASS","reason":"ERR_TLS_CERT_ALTNAME_INVALID","layer":"certificate_hostname"},{"name":"plain_http_denied","status":"PASS"},{"name":"tls_entry_without_credential_401","status":"FAIL"},{"name":"trusted_tls_mcp_initialize","status":"FAIL"},{"name":"mcp_initialized_notification","status":"PASS"},{"name":"exact_five_mcp_tools","status":"FAIL"},{"name":"context_not_ready_with_server_request_id","status":"FAIL","http_status":200,"tool_error_code":"missing","correlated_request_id":false},{"name":"admin_route_absent","status":"PASS"},{"name":"management_route_absent","status":"PASS"},{"name":"ingest_route_absent","status":"PASS"},{"name":"hasura_route_absent","status":"PASS"},{"name":"sales_network_control_not_reachable","status":"FAIL","reachable":true,"reason":"TCP_CONNECTED","layer":"tcp","host":"127.0.0.1","port":58305},{"name":"publisher_no_m0_listener","status":"INFO","reason":"NO_M0_LISTENER","network_proof":false}],"plaintext_connections_accepted":2}
+✔ live TLS negatives classify certificates and reachable plaintext fails isolation (993.7979ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1075.5973

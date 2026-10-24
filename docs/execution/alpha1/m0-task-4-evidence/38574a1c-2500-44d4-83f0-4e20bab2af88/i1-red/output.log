@@ -1,0 +1,27 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/mcp-auth.test.ts -t safely audits deeply
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/mcp-auth.test.ts (21 tests | 1 failed | 20 skipped) 2640ms
+     × safely audits deeply nested invalid arguments and correlates audit failures 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > safely audits deeply nested invalid arguments and correlates audit failures
+RangeError: Maximum call stack size exceeded
+ ❯ request acceptance-tests/mcp-auth.test.ts:55:48
+
+ ❯ callTool acceptance-tests/mcp-auth.test.ts:68:10
+ ❯ acceptance-tests/mcp-auth.test.ts:515:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 20 skipped (21)
+   Start at  09:15:06
+   Duration  3.42s (transform 137ms, setup 0ms, import 602ms, tests 2.64s, environment 0ms)
+

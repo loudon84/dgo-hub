@@ -1,0 +1,1 @@
+failed to parse E:\git\dgo-hub\deploy\alpha1\compose.yaml: go-yaml load error in parser (while parsing a flow mapping) at L257.C22-C30: did not find expected ',' or '}'

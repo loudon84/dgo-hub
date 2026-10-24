@@ -1,0 +1,93 @@
+time="2026-10-24T09:56:21+08:00" level=warning msg="Found orphan containers (alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-worker-run-2aa7cfeddf44, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-publisher-run-43b4b5475747, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-grant-probe-run-2ffd6e4886d9, alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-seed-principal-run-12181b96bac1) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Volume alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_probe-audit Creating 
+ Volume alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_probe-audit Creating 
+ Volume alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_probe-audit Created 
+ Volume alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_probe-audit Created 
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 643B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.08kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 315B done
+#4 DONE 0.0s
+
+#5 [build 1/6] FROM docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40
+#5 resolve docker.io/library/node:24.14.1-alpine@sha256:6222c83590744c8e778520946b72d1cc4309293886610dc59a4ce3fdfe6f9b40 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 6.12kB 0.1s done
+#6 DONE 0.1s
+
+#7 [build 2/6] WORKDIR /build/integration-service
+#7 CACHED
+
+#8 [stage-1  6/11] COPY --from=build /build/integration-service/migrations ./migrations
+#8 CACHED
+
+#9 [stage-1  9/11] COPY deploy/alpha1/seed-principal.mjs ./deploy/alpha1/seed-principal.mjs
+#9 CACHED
+
+#10 [stage-1  7/11] COPY deploy/alpha1/entrypoint.mjs ./deploy/alpha1/entrypoint.mjs
+#10 CACHED
+
+#11 [build 5/6] COPY integration-service/ ./
+#11 CACHED
+
+#12 [build 4/6] RUN npm ci --no-audit --no-fund
+#12 CACHED
+
+#13 [stage-1  8/11] COPY deploy/alpha1/grant-probe.mjs ./deploy/alpha1/grant-probe.mjs
+#13 CACHED
+
+#14 [build 3/6] COPY integration-service/package*.json ./
+#14 CACHED
+
+#15 [stage-1  4/11] COPY --from=build /build/integration-service/node_modules ./node_modules
+#15 CACHED
+
+#16 [build 6/6] RUN npm run build
+#16 CACHED
+
+#17 [stage-1  2/11] WORKDIR /app
+#17 CACHED
+
+#18 [stage-1  3/11] COPY --from=build /build/integration-service/package*.json ./
+#18 CACHED
+
+#19 [stage-1  5/11] COPY --from=build /build/integration-service/dist ./dist
+#19 CACHED
+
+#20 [stage-1 10/11] COPY deploy/alpha1/sales-probe.mjs ./deploy/alpha1/sales-probe.mjs
+#20 CACHED
+
+#21 [stage-1 11/11] COPY deploy/alpha1/verify-audit.mjs ./deploy/alpha1/verify-audit.mjs
+#21 CACHED
+
+#22 exporting to image
+#22 exporting layers done
+#22 exporting manifest sha256:7611108d373ef32e292cd9f625a9660ffaab5c6640e4d6d466408d722ca67593 0.0s done
+#22 exporting config sha256:5f5bfa0db730fd81e81577ee5983255ad7d17a22661ffa39015395a0a62cce09 0.0s done
+#22 exporting attestation manifest sha256:9bb06dcab221f20f8641f0e00b1bd002593ea6071f6593496dc508f6306c8c64
+#22 exporting attestation manifest sha256:9bb06dcab221f20f8641f0e00b1bd002593ea6071f6593496dc508f6306c8c64 0.0s done
+#22 exporting manifest list sha256:fab8605cbed45156e29522de62832fa36317214582d06ca6a881a701695266f6 0.0s done
+#22 naming to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe:latest done
+#22 unpacking to docker.io/library/alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe:latest 0.0s done
+#22 DONE 0.2s
+
+#23 resolving provenance for metadata file
+#23 DONE 0.0s
+ Image alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe Built 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe-run-2adad6279c94 Creating 
+ Container alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-probe-run-2adad6279c94 Created 
+{"status":"PASS","checks":[{"name":"untrusted_ca_rejected","status":"PASS"},{"name":"wrong_hostname_rejected","status":"PASS"},{"name":"plain_http_denied","status":"PASS"},{"name":"tls_entry_without_credential_401","status":"PASS"},{"name":"trusted_tls_mcp_initialize","status":"PASS"},{"name":"mcp_initialized_notification","status":"PASS"},{"name":"exact_five_mcp_tools","status":"PASS"},{"name":"context_not_ready_with_server_request_id","status":"PASS","http_status":200,"tool_error_code":"QUERY_NOT_READY","correlated_request_id":true},{"name":"admin_route_absent","status":"PASS"},{"name":"management_route_absent","status":"PASS"},{"name":"ingest_route_absent","status":"PASS"},{"name":"hasura_route_absent","status":"PASS"},{"name":"sales_network_db_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_hasura_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_api_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_publisher_not_reachable","status":"PASS","reason":"TIMEOUT"},{"name":"sales_network_mcp_not_reachable","status":"PASS","reason":"TIMEOUT"}]}
+probe_exit_code=0
+resource_identity_file=E:\git\dgo-hub\docs\execution\alpha1\m0-task-4-evidence\fresh-compose-runs\e849ca81-c63f-4f74-a5e7-c5de79a568c5\sales-probe-426e7b31d7394d5c9a73eace0783cb60-container-identity.txt

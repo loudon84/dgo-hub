@@ -1,0 +1,9 @@
+time="2026-10-24T09:39:49+08:00" level=warning msg="Found orphan containers (alpha1-m0-a91d65b2151644d9a46392d1da80985e-seed-principal-run-45db9ac156fd) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_probe-token Creating 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_probe-token Creating 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_probe-token Created 
+ Volume alpha1-m0-a91d65b2151644d9a46392d1da80985e_probe-token Created 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-3377fa13976a Creating 
+ Container alpha1-m0-a91d65b2151644d9a46392d1da80985e-grant-probe-run-3377fa13976a Created 
+{"status":"FAIL","checks":[],"error_code":"GRANT_PROBE_FAILED"}
+
