@@ -52,8 +52,8 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 |---|---|
 | M1-1 Source Registry / mappings / admission authority | Independent Spec/Quality PASS |
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
-| M1-3 strict REST / durable intake jobs | Luna implementation active at ca32853; no completion/review claim yet |
-| M1-4 reliable worker / retry | Not started |
+| M1-3 strict REST / durable intake jobs | Implemented; latest captured gate 18 files / 288 tests, typecheck/build exit 0; independent Sol review in progress |
+| M1-4 reliable worker / retry | Read-only implementation preflight prepared; coding awaits M1-3 review closure |
 | M1-5 PostgreSQL snapshot / recovery | Not started |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
 | M1-7 OpenMetadata UI / FI / Oracle | Not started |
@@ -68,3 +68,7 @@ Site IdP, real upstream CRM/orders, SQL Server and remote Hermes remain unverifi
 Independent [round 4 review](reviews/m1-task-2-rereview-4.md) passed Spec and Quality. All cumulative I1–I16 findings are closed. Approved source is e6cfa2f; migration 006 is now immutable. Latest canonical-apply evidence is 31/31 plus typecheck/build exit 0; no new whole-suite count is claimed. M1-3 builder details are finalized for strict REST batches and durable jobs; its exact base is frozen at dispatch. Worker/snapshot/SQL Server/UI work and all formal site acceptance remain pending.
 M1-3 implementation started under Luna at exact base ca32853e931ff8e0c2fdf147bd2e0c962ddf656c, after M1-2 review closure. API-015–018 and migration 007 are the active scope. No M1-3 completion/test result is claimed yet.
 
+
+## M1-3 implementation checkpoint — 2026-10-24
+
+API-015–018 and migration 007 are implemented. Source/test changes end at ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5; the independent review covers ca32853..90ce1940. The retained current-source capture at actual runner HEAD eb47494f records typecheck exit 0, 18 test files / 288 passed tests, and build exit 0, with unchanged source manifests. Historical missing raw logs remain NOT_RETAINED. See [Task3 implementation report](m1-task-3-report.md). GPT-6.1 Sol review has been dispatched; no review approval is claimed. M1-4 preflight is prepared but implementation has not started. M1 overall is incomplete, and all 48 formal acceptance rows remain NOT_RUN.
