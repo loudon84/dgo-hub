@@ -10,9 +10,9 @@ Updated 2026-10-24. E:/git/dgo-hub, `feat/alpha1-implementation`. M0 Tasks0–4 
 - Next step: sequential local M1-1 Source Registry, mappings, and source authorization implementation, followed by independent Sol review. The controller freezes the exact post-closure Git base at dispatch. Formal site acceptance remains blocked.
 - Owned Docker resources were confirmed removed. Seven generated host secret/certificate/env paths remain after policy rejected deletion; the Task4 report lists them. They are excluded from tracked evidence and Docker context. Do not retry cleanup or include them in archives.
 
-## M1 implementation in progress
+## M1 local implementation
 
-M1-1 source code is committed at `24f2af62`, with initial evidence at `7866b99f`. Its initial full checks passed 210 tests, typecheck and build, but the [independent review](reviews/m1-task-1-review.md) found nine runtime/contract/evidence issues. The original Luna implementer is correcting all nine in fix round 1; M1-1 is not approved and M1-2 coding has not started. New focused fix results remain separate from the original 210-test record. M1-2 has an immutable-baseline planning brief only and must refresh the reviewed M1-1 seams before dispatch.
+M1-1 Source Registry, mappings and current-source authorization passed independent Spec/Quality review at `0afcd73b`, after source fixes `6cf6f8ee` and `75d6640a`. All ten cumulative findings are closed in the [round 2 review](reviews/m1-task-1-rereview-2.md). The original full 210-test record remains separate from fix1 focused 27 and fix2 focused 29 results; final typecheck/build passed. REST/PostgreSQL capability evidence is local only; runtime providers remain deployment-controlled and fail closed by default. User/department identity confirmation works; canonical customer target lookup is explicitly assigned to M1-2. Next is M1-2 canonical models, tenant-safe core tables and caller-transaction aggregate apply; no intake/worker/snapshot completion is claimed.
 
 ## W0 disposition
 
