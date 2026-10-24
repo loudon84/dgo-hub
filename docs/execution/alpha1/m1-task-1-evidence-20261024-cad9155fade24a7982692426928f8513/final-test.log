@@ -1,0 +1,69 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/identity-store.test.ts (13 tests | 1 failed) 4233ms
+     × applies the current migrations and skips them on repeat while keeping migration 001 bytes intact 51ms
+ ❯ acceptance-tests/migrations.test.ts (18 tests | 1 failed) 4597ms
+     × runs the compiled CLI with an explicit environment and closes its own pool 345ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > applies the current migrations and skips them on repeat while keeping migration 001 bytes intact
+AssertionError: expected { applied: [], skipped: [ …(5) ] } to deeply equal { applied: [], skipped: [ …(4) ] }
+
+- Expected
++ Received
+
+@@ -3,7 +3,8 @@
+    "skipped": [
+      "001_init",
+      "002_identity_auth",
+      "003_mcp_audit_boundary",
+      "004_alpha1_runtime_security",
++     "005_source_registry",
+    ],
+  }
+
+ ❯ acceptance-tests/identity-store.test.ts:75:112
+     73| describe('Task1 identity and credential persistence', () => {
+     74|   it('applies the current migrations and skips them on repeat while ke…
+     75|     await expect(runMigrations(fixture.pool, { directory: migrationsDi…
+       |                                                                                                                ^
+     76|       .resolves.toEqual({ applied: [], skipped: ['001_init', '002_iden…
+     77|     const tables = await fixture.pool.query<{ name: string }>(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+AssertionError: expected { status: 'PASS', …(2) } to deeply equal { status: 'PASS', …(2) }
+
+- Expected
++ Received
+
+@@ -2,9 +2,10 @@
+    "applied": [
+      "001_init",
+      "002_identity_auth",
+      "003_mcp_audit_boundary",
+      "004_alpha1_runtime_security",
++     "005_source_registry",
+    ],
+    "skipped": [],
+    "status": "PASS",
+  }
+
+ ❯ acceptance-tests/migrations.test.ts:104:32
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 11 passed (13)
+      Tests  2 failed | 208 passed (210)
+   Start at  13:51:02
+   Duration  5.96s (transform 1.42s, setup 0ms, import 4.62s, tests 27.22s, environment 2ms)
+

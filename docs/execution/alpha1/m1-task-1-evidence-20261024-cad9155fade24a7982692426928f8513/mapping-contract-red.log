@@ -1,0 +1,51 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (18 tests | 1 failed) 3322ms
+     × does not establish TESTED when an allowed entity has no field mappings 60ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > does not establish TESTED when an allowed entity has no field mappings
+AssertionError: expected { …(4) } to match object { status: 'FAIL', report: { …(1) } }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "report": {
+      "checks": [
+-       "MAPPING_REQUIRED:customer",
++       "PROFILE_VALID",
++       "ENDPOINT_REACHABLE",
++       "SOURCE_IDENTITY_VALID",
++       "READ_ONLY",
++       "MAPPING_VALID",
++       "VERSION_DELETE_CONTRACT_VALID",
+      ],
+    },
+-   "status": "FAIL",
++   "status": "PASS",
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:420:20
+    418|       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod…
+    419|     const tested=await service.test(owner,'crm-new','1');
+    420|     expect(tested).toMatchObject({status:'FAIL',report:{checks:['MAPPI…
+       |                    ^
+    421|     await expect(service.get(owner,'crm-new')).resolves.toMatchObject(…
+    422|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 passed (18)
+   Start at  13:48:46
+   Duration  3.79s (transform 149ms, setup 0ms, import 288ms, tests 3.32s, environment 0ms)
+

@@ -1,0 +1,29 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts [ acceptance-tests/source-registry.test.ts ]
+Error: Cannot find module '../source-registry/capability-probe.js' imported from E:/git/dgo-hub/integration-service/acceptance-tests/source-registry.test.ts
+ ❯ acceptance-tests/source-registry.test.ts:11:1
+      9| import { createCredential, digestCredential } from '../auth/credential…
+     10| import { buildApp } from '../app.js';
+     11| import { createBoundedCapabilityProbe } from '../source-registry/capab…
+       | ^
+     12| import { createSourceRegistryService, type EndpointAllowlist, type Sec…
+     13| import { runMigrations } from '../migrations/runner.js';
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  13:43:29
+   Duration  406ms (transform 76ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

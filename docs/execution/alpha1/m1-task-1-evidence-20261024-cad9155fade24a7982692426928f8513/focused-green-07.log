@@ -1,0 +1,45 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:32900) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ❯ acceptance-tests/source-registry.test.ts (10 tests | 1 failed) 2582ms
+     × authenticates as hub_api while denying direct credential material reads 35ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > authenticates as hub_api while denying direct credential material reads
+AssertionError: expected [] to deeply equal [ { source_id: 'crm-main', …(2) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "source_epoch": "0",
+-     "source_id": "crm-main",
+-     "tenant_key": "m1_tenant",
+-   },
+- ]
++ []
+
+ ❯ acceptance-tests/source-registry.test.ts:214:34
+    212|         [createHash('sha256').update(token).digest()],
+    213|       );
+    214|       expect(authenticated.rows).toEqual([{source_id:'crm-main',tenant…
+       |                                  ^
+    215|       await expect(client.query('SELECT digest FROM control.source_cre…
+    216|       await expect(client.query('SELECT secret_ref FROM control.source…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  13:39:19
+   Duration  2.91s (transform 85ms, setup 0ms, import 149ms, tests 2.58s, environment 0ms)
+

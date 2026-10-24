@@ -1,0 +1,52 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (15 tests | 1 failed) 3191ms
+     × rejects a capability result if mappings change while the bounded probe runs 64ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects a capability result if mappings change while the bounded probe runs
+AssertionError: promise resolved "{ …(4) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "data_contract_ref": "crm-new/config/1/contract",
++   "report": {
++     "checks": [
++       "ENDPOINT_REACHABLE",
++       "SOURCE_IDENTITY_VALID",
++       "READ_ONLY",
++       "MAPPING_VALID",
++       "VERSION_DELETE_CONTRACT_VALID",
++     ],
++     "code": "CAPABILITY_TEST_PASSED",
++   },
++   "status": "PASS",
++   "test_report_id": "c97ce899-a163-403c-85cd-40a157fc2534",
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:361:52
+    359|       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod…
+    360|     await service.writeMappings(owner,'crm-new','1',[{entity:'customer…
+    361|     await expect(service.test(owner,'crm-new','1')).rejects.toMatchObj…
+       |                                                    ^
+    362|     await expect(service.get(owner,'crm-new')).resolves.toMatchObject(…
+    363|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 passed (15)
+   Start at  13:47:10
+   Duration  3.67s (transform 148ms, setup 0ms, import 290ms, tests 3.19s, environment 0ms)
+

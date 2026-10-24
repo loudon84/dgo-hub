@@ -1,0 +1,41 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:7888) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ❯ acceptance-tests/source-registry.test.ts (8 tests | 1 failed) 2452ms
+     × invalidates current approval and pauses on Owner reassignment while preserving the old channel identity 81ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates current approval and pauses on Owner reassignment while preserving the old channel identity
+AssertionError: expected { source_id: 'crm-new', …(4) } to match object { revision: '2', …(3) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "data_owner_user_id": "new-owner",
+-   "lifecycle": "DRAFT",
++   "lifecycle": "PAUSED",
+    "owner_revision": "2",
+    "revision": "2",
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:183:21
+    181|     const before=await fixture.pool.query<{source_epoch:string|number}…
+    182|     const updated=await service.update(owner,'crm-new',{expected_revis…
+    183|     expect(updated).toMatchObject({revision:'2',lifecycle:'DRAFT',data…
+       |                     ^
+    184|     const after=await fixture.pool.query<{source_epoch:string|number}>…
+    185|     expect(BigInt(after.rows[0].source_epoch)-BigInt(before.rows[0].so…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  13:37:29
+   Duration  2.77s (transform 85ms, setup 0ms, import 148ms, tests 2.45s, environment 0ms)
+

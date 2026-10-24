@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  13:47:56
+   Duration  3.65s (transform 147ms, setup 0ms, import 291ms, tests 3.19s, environment 0ms)
+

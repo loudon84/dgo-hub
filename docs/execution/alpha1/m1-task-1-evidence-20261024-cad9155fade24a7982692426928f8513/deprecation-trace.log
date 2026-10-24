@@ -1,0 +1,22 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:39432) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+    at Client.query (E:\git\dgo-hub\integration-service\node_modules\pg\lib\client.js:780:7)
+    at Client.query (E:/git/dgo-hub/integration-service/acceptance-tests/source-registry.test.ts:94:15)
+    at E:/git/dgo-hub/integration-service/source-registry/service.ts:364:16
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at transaction (E:/git/dgo-hub/integration-service/source-registry/service.ts:139:19)
+    at Object.test (E:/git/dgo-hub/integration-service/source-registry/service.ts:356:22)
+    at E:/git/dgo-hub/integration-service/acceptance-tests/source-registry.test.ts:132:18
+    at async file:///E:/git/dgo-hub/integration-service/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  13:40:44
+   Duration  3.47s (transform 142ms, setup 0ms, import 268ms, tests 3.03s, environment 0ms)
+

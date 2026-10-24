@@ -1,0 +1,43 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (19 tests | 1 failed) 3346ms
+     × keeps SQL Server unavailable for TESTED even when a deployment profile exists 62ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > keeps SQL Server unavailable for TESTED even when a deployment profile exists
+AssertionError: expected { …(4) } to match object { status: 'FAIL', …(1) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "report": {
+-     "code": "SOURCE_PROBE_UNAVAILABLE",
++     "code": "MAPPING_REQUIRED",
+    },
+    "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:410:20
+    408|       allowed_entities:['customer'],delete_contract:'tombstone'}});
+    409|     const tested=await service.test(owner,'crm-new','1');
+    410|     expect(tested).toMatchObject({status:'FAIL',report:{code:'SOURCE_P…
+       |                    ^
+    411|     await expect(service.get(owner,'crm-new')).resolves.toMatchObject(…
+    412|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 passed (19)
+   Start at  13:50:34
+   Duration  3.82s (transform 153ms, setup 0ms, import 292ms, tests 3.35s, environment 0ms)
+

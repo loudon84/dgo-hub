@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts acceptance-tests/identity-store.test.ts acceptance-tests/migrations.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  3 passed (3)
+      Tests  50 passed (50)
+   Start at  13:51:33
+   Duration  4.15s (transform 232ms, setup 0ms, import 522ms, tests 10.43s, environment 0ms)
+

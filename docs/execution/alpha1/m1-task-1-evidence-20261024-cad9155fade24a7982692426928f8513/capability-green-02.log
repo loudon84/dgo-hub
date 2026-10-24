@@ -1,0 +1,47 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (13 tests | 1 failed) 3063ms
+     × performs a bounded authenticated REST capability probe against an owned loopback fixture 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > performs a bounded authenticated REST capability probe against an owned loopback fixture
+AssertionError: expected { passed: false, checks: [ …(2) ] } to match object { passed: true, …(1) }
+
+- Expected
++ Received
+
+  {
+    "checks": [
+      "ENDPOINT_REACHABLE",
+-     "SOURCE_IDENTITY_VALID",
+-     "READ_ONLY",
+-     "MAPPING_VALID",
+-     "VERSION_DELETE_CONTRACT_VALID",
++     "CAPABILITY_CHECK_FAILED",
+    ],
+-   "passed": true,
++   "passed": false,
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:283:22
+    281|         secret:'fixture-secret',mappings:[{entity:'customer',source_fi…
+    282|       });
+    283|       expect(result).toMatchObject({passed:true,checks:expect.arrayCon…
+       |                      ^
+    284|       expect(seenAuthorization).toBe('Bearer fixture-secret');
+    285|     } finally { await new Promise<void>((resolve,reject)=>server.close…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed (13)
+   Start at  13:45:11
+   Duration  3.53s (transform 147ms, setup 0ms, import 284ms, tests 3.06s, environment 0ms)
+

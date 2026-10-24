@@ -1,0 +1,88 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (8 tests | 5 failed) 2902ms
+     × locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction 47ms
+     × rejects epoch, revision, pause, entity, and tenant changes after source authentication 39ms
+     × runs first activation through tested config, exact Owner approval, and an immutable single channel 53ms
+     × serializes mapping revision races and rejects a channel switch before changing config 40ms
+     × invalidates current approval and pauses on Owner reassignment while preserving the old channel identity 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction
+error: null value in column "identity_mapping_digest" of relation "source_mapping_revision" violates not-null constraint
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ activeSource acceptance-tests/source-registry.test.ts:210:3
+    208|      VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+    209|   );
+    210|   await fixture.pool.query(
+       |   ^
+    211|     `INSERT INTO control.source_mapping_revision(tenant_key,source_id,…
+    212|      VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+ ❯ acceptance-tests/source-registry.test.ts:85:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects epoch, revision, pause, entity, and tenant changes after source authentication
+error: null value in column "identity_mapping_digest" of relation "source_mapping_revision" violates not-null constraint
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ activeSource acceptance-tests/source-registry.test.ts:210:3
+    208|      VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+    209|   );
+    210|   await fixture.pool.query(
+       |   ^
+    211|     `INSERT INTO control.source_mapping_revision(tenant_key,source_id,…
+    212|      VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+ ❯ acceptance-tests/source-registry.test.ts:108:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > runs first activation through tested config, exact Owner approval, and an immutable single channel
+AuthError: AUTH_UNAVAILABLE
+ ❯ fail source-registry/service.ts:58:80
+     56| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     57|
+     58| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     59| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     60|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ transaction source-registry/service.ts:145:12
+ ❯ acceptance-tests/source-registry.test.ts:124:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes mapping revision races and rejects a channel switch before changing config
+AuthError: AUTH_UNAVAILABLE
+ ❯ fail source-registry/service.ts:58:80
+     56| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     57|
+     58| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     59| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     60|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ transaction source-registry/service.ts:145:12
+ ❯ acceptance-tests/source-registry.test.ts:153:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates current approval and pauses on Owner reassignment while preserving the old channel identity
+AuthError: AUTH_UNAVAILABLE
+ ❯ fail source-registry/service.ts:58:80
+     56| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     57|
+     58| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     59| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     60|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ transaction source-registry/service.ts:145:12
+ ❯ acceptance-tests/source-registry.test.ts:176:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 3 passed (8)
+   Start at  13:36:20
+   Duration  3.23s (transform 86ms, setup 0ms, import 151ms, tests 2.90s, environment 0ms)
+

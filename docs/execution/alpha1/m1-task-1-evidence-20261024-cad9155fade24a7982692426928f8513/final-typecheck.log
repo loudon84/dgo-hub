@@ -1,0 +1,7 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+source-registry/service.ts(268,38): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.

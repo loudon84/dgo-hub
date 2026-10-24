@@ -1,0 +1,42 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+(node:27640) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ❯ acceptance-tests/source-registry.test.ts (11 tests | 1 failed) 2832ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 279ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+Error: Transform failed with 1 error:
+
+[PARSE_ERROR] Expected `,` or `)` but found `;`
+    ╭─[ source-registry/routes.ts:48:148 ]
+    │
+ 48 │       try { return reply.send(envelope(request,await options.sourceService.get(await currentUser(request,options.authenticator),request.params.id)); }
+    │                              ┬                                                                                                                     ┬  
+    │                              ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Opened here
+    │                                                                                                                                                    │  
+    │                                                                                                                                                    ╰── `,` or `)` expected
+────╯
+
+  Plugin: vite:oxc
+  File: E:/git/dgo-hub/integration-service/source-registry/routes.ts
+ ❯ transformWithOxc node_modules/vite/dist/node/chunks/node.js:7618:19
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:7690:26
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:51
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  13:39:56
+   Duration  3.28s (transform 133ms, setup 0ms, import 265ms, tests 2.83s, environment 0ms)
+
