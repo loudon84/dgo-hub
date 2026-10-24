@@ -1,12 +1,12 @@
-# Alpha.1 M1 source-ingestion implementation ledger
+# SDD ledger — plan: docs/plans/2026-10-24-alpha1-m1-source-ingestion-implementation-plan.md
 
 ## Authoritative planning identity
 
 - Public plan: docs/plans/2026-10-24-alpha1-m1-source-ingestion-implementation-plan.md
 - Plan ID: alpha1-m1-source-ingestion-implementation-plan
 - Planning workspace: .superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/
-- Planning source/base at freeze: feat/alpha1-implementation, M0 Task5 docs work started from 7ab55f998f1dc297732884df1b1b8a5087bda40e.
-- Source implementation status: no M1 source changes started. First implementation dispatch waits on GPT-6.1 Sol whole-M0 review and the controller's exact post-review base.
+- Planning source/base at freeze: feat/alpha1-implementation, M0 Task5 began at `7ab55f998f1dc297732884df1b1b8a5087bda40e`, its Task5 handoff commit is `caf026a7eefb7005c9c036c2109515fd3e0beac6`, and scoped Task5 re-review is pending. Neither SHA is an M1 implementation base.
+- Source implementation status: no M1 source changes started. First implementation dispatch waits on closure of whole-M0 review findings and the controller's exact post-review base.
 
 ## Current status
 
@@ -21,7 +21,7 @@
 ## Frozen preflight rulings
 
 1. Keep M0 AuthService and migration runner authoritative; append migrations from 005; no duplicate credentials/registry.
-2. Add source_epoch to the existing source credential authority and assertCurrentSource(snapshot, entity, PoolClient). Activation, pause, credential rotation, endpoint/config revision and entity-scope changes serialize with intake/apply under the same row lock and commit.
+2. Add source_epoch to the existing source credential authority and assertCurrentSource(snapshot, entity, PoolClient) for new intake admission. Admission epoch changes serialize with intake. Durable jobs capture frozen approved config/mapping/channel identity and accepted security facts; they continue after ordinary pause/edit. Workers check durable current security revocation/tenant-disable/channel-retirement facts before apply. Do not equate ordinary epoch drift with revocation or let frozen jobs past a matching security barrier.
 3. REST and PostgreSQL read-only capability probes may establish TESTED before snapshot apply. SQL Server remains DRAFT/inactive until its real adapter performs actual read-only SNAPSHOT preflight.
 4. Secret resolution is an injected, deployment-controlled opaque-reference resolver; never client-provided secret bytes, paths or URLs.
 5. API-060 is planned as the sole explicit extension to original APIs 001–059. Per-source data_owner_user_id must point to an existing enabled subject in that tenant; source:write assigns/changes it with an audit record and invalidates approvals/tests. API-007 and API-060 approvals require both source:approve and exact equality to the currently bound owner user ID. Changing owner/config/mapping/candidate digest invalidates prior approval; generic scope possession alone is insufficient. No new auth scope.
@@ -30,6 +30,6 @@
 
 ## Source references
 
-- M0 approved handoff: .superpowers/sdd/2026-10-23-alpha1-m0-identity-isolation-implementation-plan/task-5-brief.md, Task1–4 reports/reviews, and context/m1-source-contract-preflight.md.
-- Read-only discovery: context/m1-discovery.md, context/m1-plan-draft.md, context/sqlserver-driver-contract.md.
-- First brief: task-1-brief.md.
+- M0 approved handoff: [Task5 brief](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/task-5-brief.md), Task1–4 reports/reviews, and [M1 source-contract preflight](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/m1-source-contract-preflight.md).
+- Read-only discovery: [M1 discovery](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/m1-discovery.md), [M1 plan draft](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/m1-plan-draft.md), [SQL Server driver contract](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/sqlserver-driver-contract.md), and [OpenMetadata UI seam discovery](../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/ui-seam-discovery.md). The public M1 plan is the sole implementation-plan authority; these remain source research, not competing plans.
+- First brief: [M1-1 builder brief](task-1-brief.md).

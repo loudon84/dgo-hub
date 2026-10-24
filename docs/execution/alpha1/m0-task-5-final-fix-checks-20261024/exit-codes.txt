@@ -1,0 +1,2 @@
+doc-checks=0
+git-diff-check=0

@@ -10,7 +10,7 @@
 
 **Spec:** docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md 第9.8/14/17章、REQ-ARCH/AUTH/OBS、API-001/046–048；主路线v1.1；W0公开合同。
 
-**状态:** Task0–4均已完成各自本地实现与独立 GPT-6.1 Sol Spec/Quality review。Task4 fix1 source `f9ede840` and evidence `73d9ce92` close I1/I2/I3; see [Task4 re-review](../execution/alpha1/reviews/m0-task-4-rereview-1.md). Task5 evidence reconciliation and M1 handoff are recorded in [Task5 report](../execution/alpha1/m0-task-5-report.md). Whole-M0 stage review remains pending. Site/remote Hermes v0.22.1 remains BLOCKED/unobserved.
+**状态:** Task0–4均已完成各自本地实现与独立 GPT-6.1 Sol Spec/Quality review。Task4 fix1 source `f9ede840` and evidence `73d9ce92` close I1/I2/I3; see [Task4 re-review](../execution/alpha1/reviews/m0-task-4-rereview-1.md). Whole-M0 review at `caf026a7` passed runtime/identity/isolation locally and identified Task5 plan findings M0-F-I1/I2/M1. Their single documentation fix wave is recorded in [Task5 report](../execution/alpha1/m0-task-5-report.md); scoped Sol re-review remains pending. Site/remote Hermes v0.22.1 remains BLOCKED/unobserved.
 
 ## Global Constraints
 
@@ -106,7 +106,8 @@
 
 - [x] 合并各任务工程证据与准确commit/测试数量；复用 Task4 fixed run only after matching the six current `integration-service` runtime/test/migration entries against its manifest (zero mismatches); record honest site entry, lock and Gate BLOCKED results.
 - [x] API-001/046–048 and strict legacy-boundary local status updated with test/report evidence; site status remains NOT_RUN/BLOCKED. Hermes v0.22.1 is recorded as user-reported remote installation with handshake/Profile/tool registration unobserved.
-- [ ] GPT-6.1 Sol whole-M0 stage review and any single bounded fix wave remain the controller's next gate. M1 detailed plan and first implementation brief are prepared; no M1 source code has been started.
+- [x] GPT-6.1 Sol whole-M0 stage review completed at `caf026a7`; local runtime/identity/isolation passed, Task5 Spec/Quality required the single bounded docs fix wave for M0-F-I1/I2/M1.
+- [ ] Scoped independent Sol re-review of the combined Task5 documentation fixes. M1 first brief is prepared; no M1 source code has started and no M1 dispatch occurs before this review closes.
 
 ## 精确身份合同与裁定
 
