@@ -1,0 +1,37 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonicalization.test.ts (7 tests | 1 failed) 13ms
+     × keeps canonical source identity separate from legacy demo models 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > keeps canonical source identity separate from legacy demo models
+AssertionError: expected null to be undefined
+
+- Expected:
+undefined
+
++ Received:
+null
+
+ ❯ acceptance-tests/canonicalization.test.ts:75:28
+     73|       source_version: '1',
+     74|     });
+     75|     expect(customer.phone).toBeUndefined();
+       |                            ^
+     76|     expect(customer.deleted_at).toBeUndefined();
+     77|     expect(customer.source_version).toBe('1');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  15:11:33
+   Duration  340ms (transform 37ms, setup 0ms, import 141ms, tests 13ms, environment 0ms)
+

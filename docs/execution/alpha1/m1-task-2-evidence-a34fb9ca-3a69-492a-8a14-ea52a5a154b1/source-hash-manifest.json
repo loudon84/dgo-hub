@@ -1,0 +1,164 @@
+{
+  "base": "2c053297685e1aabd7dfb8b681fc120f55c78f1b",
+  "source_commit": "6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e",
+  "changed_files": [
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "base_sha256": null,
+      "base_lf_sha256": null,
+      "base_blob": null,
+      "final_sha256": "29eace6cdbe3fbc995bd04a1e1934dd0f77057f9312fbce80e3a6bda6b67c0a8",
+      "final_lf_sha256": "29eace6cdbe3fbc995bd04a1e1934dd0f77057f9312fbce80e3a6bda6b67c0a8",
+      "bytes": 32943,
+      "final_blob": "85cb667fa437bda00cc8a6d76669f44e18bf0830"
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonicalization.test.ts",
+      "base_sha256": null,
+      "base_lf_sha256": null,
+      "base_blob": null,
+      "final_sha256": "d6c996705887e5d7edd0691ff98599a0d9de792e65ba9d95dc487622713cbe1b",
+      "final_lf_sha256": "d6c996705887e5d7edd0691ff98599a0d9de792e65ba9d95dc487622713cbe1b",
+      "bytes": 4968,
+      "final_blob": "75b37b347e9cce5fc27aff677e8ee38d3d4e2327"
+    },
+    {
+      "path": "integration-service/acceptance-tests/identity-store.test.ts",
+      "base_sha256": "55a279f81c64a786849ab2895a39168500d643d1abf5e07dc28dd7cccee238c9",
+      "base_lf_sha256": "55a279f81c64a786849ab2895a39168500d643d1abf5e07dc28dd7cccee238c9",
+      "base_blob": "38d111c6564bd6fa68909d360bfeae2e9c70ce7f",
+      "final_sha256": "61553fa3ed910719ddbf9974e8c909d36c70ece17f64f78e43bcaf5fce322704",
+      "final_lf_sha256": "61553fa3ed910719ddbf9974e8c909d36c70ece17f64f78e43bcaf5fce322704",
+      "bytes": 21026,
+      "final_blob": "c50b1f180f4309c13538a25dc9abc4de301df022"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "base_sha256": "eae9d4ae49d3f8a7c1ed87918b482775c060b924a7a3b34df1082a34ee34d04d",
+      "base_lf_sha256": "eae9d4ae49d3f8a7c1ed87918b482775c060b924a7a3b34df1082a34ee34d04d",
+      "base_blob": "282da85e1b048fd8a20eac136438e20a25ced1e6",
+      "final_sha256": "744c0d95188a92c1aa8a3e753f8a020a12f4fa6a5fe0d0c9c5b0f647515e1f63",
+      "final_lf_sha256": "1252329d7503bdc528093adefb09a3f123ada35ebdff0d4abd5cb9d8ba8e31ae",
+      "bytes": 16833,
+      "final_blob": "1d812836154aa7e574d12ec759a7bec6996eecf3"
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "base_sha256": "76b9b14f43b147b22a078e36ad1f12bf737a41a9714c411d8d1fd7d28484968e",
+      "base_lf_sha256": "76b9b14f43b147b22a078e36ad1f12bf737a41a9714c411d8d1fd7d28484968e",
+      "base_blob": "f4328fc799037d714c9d6697fdf88b85ad55cc2b",
+      "final_sha256": "c32b8c27523bf636e08297cf35e22ddb14644d65f6ac1c281debf13dac70aa78",
+      "final_lf_sha256": "fb32f4bdfd7c8019cbd939eab0a02a6d5f9d36bef1fe872ef3ec9cefea56f37c",
+      "bytes": 68586,
+      "final_blob": "3a94a2b8bf2f52cebfbde0b194dc3170c2256dc3"
+    },
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "base_sha256": null,
+      "base_lf_sha256": null,
+      "base_blob": null,
+      "final_sha256": "9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4",
+      "final_lf_sha256": "9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4",
+      "bytes": 31969,
+      "final_blob": "801cf53ea787a9875dbd69ab7f93a58f2a1bd64f"
+    },
+    {
+      "path": "integration-service/normalization/apply.ts",
+      "base_sha256": null,
+      "base_lf_sha256": null,
+      "base_blob": null,
+      "final_sha256": "7ab2a45dd59651f00759dc08ebdb6bf6085a95fbcc2ec62ff27eff2fb87bb017",
+      "final_lf_sha256": "7ab2a45dd59651f00759dc08ebdb6bf6085a95fbcc2ec62ff27eff2fb87bb017",
+      "bytes": 27870,
+      "final_blob": "5b416b675032000dae7cf04cde5dd1b2f4552dea"
+    },
+    {
+      "path": "integration-service/normalization/canonical.ts",
+      "base_sha256": null,
+      "base_lf_sha256": null,
+      "base_blob": null,
+      "final_sha256": "077a26e1045543bac4030be13d916dd447b90a77bbf9e4509368a4b2feb6c99a",
+      "final_lf_sha256": "077a26e1045543bac4030be13d916dd447b90a77bbf9e4509368a4b2feb6c99a",
+      "bytes": 3759,
+      "final_blob": "53568e18bd2decf52dcc949a49840a6dc736518c"
+    },
+    {
+      "path": "integration-service/normalization/models.ts",
+      "base_sha256": "458e8e388cca80e1ba46e56d4a022062f72b0363fe0fa896535489d6f249069d",
+      "base_lf_sha256": "458e8e388cca80e1ba46e56d4a022062f72b0363fe0fa896535489d6f249069d",
+      "base_blob": "8a0094e29e451d460019f96aa0c59721509cdc7c",
+      "final_sha256": "aed49a0aee49ef918b9f59a82af1acc67d7df4481de6bb01f1a7783bbe3c5409",
+      "final_lf_sha256": "aed49a0aee49ef918b9f59a82af1acc67d7df4481de6bb01f1a7783bbe3c5409",
+      "bytes": 3908,
+      "final_blob": "5eea33b996a2bf213495c6a6c27ccec372e4d802"
+    },
+    {
+      "path": "integration-service/normalization/store.ts",
+      "base_sha256": "b10e96e58a4405f339b629b871e6d593666baae08c25bd10775f364c396da7ce",
+      "base_lf_sha256": "b10e96e58a4405f339b629b871e6d593666baae08c25bd10775f364c396da7ce",
+      "base_blob": "a9bfeed5ca8d029957a6d165fb18f14fa9b9dc98",
+      "final_sha256": "b9302a79fa49a58dad8d2694895180b6f3d87074cab6127efb917d47754102ba",
+      "final_lf_sha256": "b9302a79fa49a58dad8d2694895180b6f3d87074cab6127efb917d47754102ba",
+      "bytes": 4561,
+      "final_blob": "b5a806dbac2ef0114590525fc07ba3b74309291d"
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "base_sha256": "5c6f3a24172bc52abcb78f9c1223115625ddbaaeea15da1e69e524670246b638",
+      "base_lf_sha256": "5c6f3a24172bc52abcb78f9c1223115625ddbaaeea15da1e69e524670246b638",
+      "base_blob": "dc1121a53287371b4ff391632a658ad7f2c8794a",
+      "final_sha256": "a5251537bde1bc34ddcaa0e621843aa431f57f85e68a93ded4a1a64792f1241f",
+      "final_lf_sha256": "a5251537bde1bc34ddcaa0e621843aa431f57f85e68a93ded4a1a64792f1241f",
+      "bytes": 51132,
+      "final_blob": "b6031c60bc7f621d359a80ef7d950b4dbbdd43d6"
+    }
+  ],
+  "immutable_migrations": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "base_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "final_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "same_bytes": true,
+      "sha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "lf_sha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "bytes": 4988
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "base_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "final_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "same_bytes": true,
+      "sha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "lf_sha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "bytes": 5633
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "base_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "final_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "same_bytes": true,
+      "sha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "lf_sha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "bytes": 803
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "base_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "final_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "same_bytes": true,
+      "sha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "lf_sha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "bytes": 5349
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "base_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "final_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "same_bytes": true,
+      "sha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "lf_sha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "bytes": 22627
+    }
+  ],
+  "migration_006_sha256": "9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4"
+}

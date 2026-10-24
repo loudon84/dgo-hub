@@ -1,0 +1,6 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+normalization/apply.ts(264,29): error TS2322: Type '{ readonly status: "QUARANTINED"; readonly code: "IDENTITY_MAPPING_REQUIRED"; } | { readonly status: "QUARANTINED"; readonly code: "IDENTITY_MAPPING_TARGET_INVALID"; } | undefined' is not assignable to type 'ApplyResult'.
+  Type 'undefined' is not assignable to type 'ApplyResult'.

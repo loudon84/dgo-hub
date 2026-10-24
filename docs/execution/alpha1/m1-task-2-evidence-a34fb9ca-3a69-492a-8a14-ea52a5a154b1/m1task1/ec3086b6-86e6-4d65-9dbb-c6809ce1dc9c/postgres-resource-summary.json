@@ -1,0 +1,1 @@
+{"taskLabel":"m1task1","runLabel":"ec3086b6-86e6-4d65-9dbb-c6809ce1dc9c","containerId":"65be01e04e74373aafe8711e01d1d44abcce46fe9bda2df82fa17a09179d4f4e","hostPort":49422,"ownershipConfirmed":true,"containerAbsentAfterRemoval":true,"cleanup":"manual exact-owned-fixture cleanup after observer deadlock"}

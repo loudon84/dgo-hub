@@ -1,0 +1,36 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (6 tests | 1 failed) 2365ms
+     × advances an unchanged snapshot observation receipt without emitting a second outbox event 41ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > advances an unchanged snapshot observation receipt without emitting a second outbox event
+AssertionError: expected { status: 'APPLIED', …(3) } to match object { status: 'DUPLICATE', …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "objectId": "8493754e-f995-47d2-80e2-e84c8820aab6",
+-   "status": "DUPLICATE",
++   "status": "APPLIED",
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:196:25
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  15:08:20
+   Duration  2.79s (transform 74ms, setup 0ms, import 221ms, tests 2.37s, environment 0ms)
+

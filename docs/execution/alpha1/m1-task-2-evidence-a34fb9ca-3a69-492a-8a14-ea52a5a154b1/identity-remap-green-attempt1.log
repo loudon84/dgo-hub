@@ -1,0 +1,70 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts -t exposes the source registry
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (29 tests | 1 failed | 28 skipped) 2767ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 526ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+AssertionError: expected Buffer[ 81, 81, 81, 81, 81, 81, …(-48) ] to deeply equal undefined
+
+- Expected:
+undefined
+
++ Received:
+Buffer [
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+  81,
+]
+
+ ❯ acceptance-tests/source-registry.test.ts:566:54
+    564|       expect(remapped.rows[0]).toMatchObject({owner_user_id:'new-owner…
+    565|         source_content_digest:preservedContentDigest,outbox_count:'1',…
+    566|       expect(remapped.rows[0].source_content_digest).toEqual(mappingSt…
+       |                                                      ^
+    567|       expect(BigInt(remapped.rows[0].auth_epoch)).toBe(BigInt(epochsBe…
+    568|       const ownerEpochAfter=await fixture.pool.query<{auth_epoch:strin…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 28 skipped (29)
+   Start at  15:10:54
+   Duration  3.25s (transform 188ms, setup 0ms, import 306ms, tests 2.77s, environment 0ms)
+

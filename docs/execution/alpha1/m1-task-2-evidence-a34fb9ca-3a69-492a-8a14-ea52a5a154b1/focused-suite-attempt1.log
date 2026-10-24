@@ -1,0 +1,50 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts acceptance-tests/canonical-apply.test.ts acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (29 tests | 1 failed) 4766ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 420ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+AssertionError: expected { owner_user_id: 'owner', …(7) } to match object { owner_user_id: 'new-owner', …(7) }
+
+- Expected
++ Received
+
+@@ -1,12 +1,12 @@
+  {
+    "audit_count": "1",
+    "auth_epoch": "3",
+    "canonical_object_id": "8a2efdd5-3d59-4f5f-97f9-298a68006001",
+    "fence_revision": "5",
+-   "outbox_count": "1",
+-   "owner_user_id": "new-owner",
++   "outbox_count": "0",
++   "owner_user_id": "owner",
+    "source_content_digest": {
+      "data": [
+        81,
+        81,
+        81,
+
+ ❯ acceptance-tests/source-registry.test.ts:564:32
+    562|         FROM control.source_version_receipt r JOIN hub.canonical_custo…
+    563|         WHERE r.tenant_key=$1 AND r.source_id='crm-new' AND r.source_p…
+    564|       expect(remapped.rows[0]).toMatchObject({owner_user_id:'new-owner…
+       |                                ^
+    565|         source_content_digest:preservedContentDigest,outbox_count:'1',…
+    566|       expect(remapped.rows[0].source_content_digest).toEqual(mappingSt…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 43 passed (44)
+   Start at  15:10:36
+   Duration  5.27s (transform 322ms, setup 0ms, import 784ms, tests 7.41s, environment 0ms)
+

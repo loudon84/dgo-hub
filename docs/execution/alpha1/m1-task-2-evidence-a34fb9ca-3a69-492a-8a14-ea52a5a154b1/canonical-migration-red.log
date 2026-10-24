@@ -1,0 +1,77 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (3 tests | 3 failed) 2603ms
+     × appends after the reviewed registry and records repeatable checksum history 9ms
+     × uses tenant composite keys for canonical order to customer references 3ms
+     × keeps the API principal out of canonical core DML and gives the shared worker bounded apply DML 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > appends after the reviewed registry and records repeatable checksum history
+AssertionError: expected [ { version: 4, …(1) }, …(1) ] to deeply equal [ { version: 5, …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "name": "source_registry",
+-     "version": 5,
++     "name": "alpha1_runtime_security",
++     "version": 4,
+    },
+    {
+-     "name": "canonical_data_and_receipts",
+-     "version": 6,
++     "name": "source_registry",
++     "version": 5,
+    },
+  ]
+
+ ❯ acceptance-tests/canonical-apply.test.ts:45:36
+     43|       'SELECT version,name FROM control.schema_migration ORDER BY vers…
+     44|     );
+     45|     expect(history.rows.slice(-2)).toEqual([
+       |                                    ^
+     46|       { version: 5, name: 'source_registry' },
+     47|       { version: 6, name: 'canonical_data_and_receipts' },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses tenant composite keys for canonical order to customer references
+error: relation "hub.canonical_customer" does not exist
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:54:22
+     52|
+     53|   it('uses tenant composite keys for canonical order to customer refer…
+     54|     const customer = await database.query<{ id: string }>(`INSERT INTO…
+       |                      ^
+     55|       (tenant_id,customer_name,owner_user_id,dept_id,status,source_upd…
+     56|       VALUES('tenant_a','Acme','owner_a','dept_a','ACTIVE',now(),1,'SO…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > keeps the API principal out of canonical core DML and gives the shared worker bounded apply DML
+error: relation "hub.canonical_customer" does not exist
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:64:24
+     62|
+     63|   it('keeps the API principal out of canonical core DML and gives the …
+     64|     const privileges = await database.query<{ api_insert: boolean; wor…
+       |                        ^
+     65|       SELECT has_table_privilege('hub_api','hub.canonical_customer','I…
+     66|         has_table_privilege('hub_worker','hub.canonical_customer','INS…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  14:53:13
+   Duration  2.88s (transform 42ms, setup 0ms, import 98ms, tests 2.60s, environment 0ms)
+

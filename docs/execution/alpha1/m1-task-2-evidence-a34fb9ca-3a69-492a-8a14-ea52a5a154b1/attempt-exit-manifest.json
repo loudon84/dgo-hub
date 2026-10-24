@@ -1,0 +1,225 @@
+{
+  "attempts": [
+    {
+      "log": "canonical-apply-edge-green.log",
+      "exit_file": "canonical-apply-edge-green.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-apply-edge-green2.log",
+      "exit_file": "canonical-apply-edge-green2.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-apply-edge-green3.log",
+      "exit_file": "canonical-apply-edge-green3.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-apply-green-attempt1.log",
+      "exit_file": "canonical-apply-green-attempt1.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-apply-green-attempt2.log",
+      "exit_file": "canonical-apply-green-attempt2.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-apply-red.log",
+      "exit_file": "canonical-apply-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-apply-red2.log",
+      "exit_file": "canonical-apply-red2.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-focused-attempt3.log",
+      "exit_file": "canonical-focused-attempt3.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-focused-green2.log",
+      "exit_file": "canonical-focused-green2.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-migration-fence-green.log",
+      "exit_file": "canonical-migration-fence-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-migration-fence-green2.log",
+      "exit_file": "canonical-migration-fence-green2.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-migration-green.log",
+      "exit_file": "canonical-migration-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-migration-red.log",
+      "exit_file": "canonical-migration-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-model-green.log",
+      "exit_file": "canonical-model-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-model-red.log",
+      "exit_file": "canonical-model-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-null-absent-red.log",
+      "exit_file": "canonical-null-absent-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-overflow-metadata-red.log",
+      "exit_file": "canonical-overflow-metadata-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonical-utf8-order-green.log",
+      "exit_file": "canonical-utf8-order-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonical-utf8-order-red.log",
+      "exit_file": "canonical-utf8-order-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "canonicalization-green.log",
+      "exit_file": "canonicalization-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "canonicalization-red.log",
+      "exit_file": "canonicalization-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "final-build-green.log",
+      "exit_file": "final-build-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "final-build.log",
+      "exit_file": "final-build.exit",
+      "exit": 0
+    },
+    {
+      "log": "final-test-green.log",
+      "exit_file": "final-test-green.exit",
+      "exit": 1
+    },
+    {
+      "log": "final-test.log",
+      "exit_file": "final-test.exit",
+      "exit": 1
+    },
+    {
+      "log": "final-typecheck-green.log",
+      "exit_file": "final-typecheck-green.exit",
+      "exit": 2
+    },
+    {
+      "log": "final-typecheck.log",
+      "exit_file": "final-typecheck.exit",
+      "exit": 2
+    },
+    {
+      "log": "focused-final-green.log",
+      "exit_file": "focused-final-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "focused-freeze-green.log",
+      "exit_file": "focused-freeze-green.exit",
+      "exit": 0
+    },
+    {
+      "log": "focused-suite-attempt1.log",
+      "exit_file": "focused-suite-attempt1.exit",
+      "exit": 1
+    },
+    {
+      "log": "gate-build.log",
+      "exit_file": "gate-build.exit",
+      "exit": 0
+    },
+    {
+      "log": "gate-test.log",
+      "exit_file": "gate-test.exit",
+      "exit": 0
+    },
+    {
+      "log": "gate-typecheck.log",
+      "exit_file": "gate-typecheck.exit",
+      "exit": 0
+    },
+    {
+      "log": "identity-remap-green-attempt1.log",
+      "exit_file": "identity-remap-green-attempt1.exit",
+      "exit": 1
+    },
+    {
+      "log": "identity-remap-green-attempt2.log",
+      "exit_file": "identity-remap-green-attempt2.exit",
+      "exit": 0
+    },
+    {
+      "log": "identity-remap-noop-red.log",
+      "exit_file": "identity-remap-noop-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "manual-cleanup-9f775e39.log",
+      "exit_file": "manual-cleanup-9f775e39.exit",
+      "exit": 0
+    },
+    {
+      "log": "snapshot-noop-red.log",
+      "exit_file": "snapshot-noop-red.exit",
+      "exit": 1
+    },
+    {
+      "log": "source-registry-focused-green3.log",
+      "exit_file": "source-registry-focused-green3.exit",
+      "exit": 0
+    },
+    {
+      "log": "source-registry-guard-observer-deadlock.log",
+      "exit_file": "source-registry-guard-observer-deadlock.exit",
+      "exit": 1
+    },
+    {
+      "log": "source-registry-guard-observer-green-attempt1.log",
+      "exit_file": "source-registry-guard-observer-green-attempt1.exit",
+      "exit": 1
+    },
+    {
+      "log": "source-registry-guard-observer-green-attempt2.log",
+      "exit_file": "source-registry-guard-observer-green-attempt2.exit",
+      "exit": 0
+    },
+    {
+      "log": "typecheck-repair.log",
+      "exit_file": "typecheck-repair.exit",
+      "exit": 2
+    },
+    {
+      "log": "typecheck-repair2.log",
+      "exit_file": "typecheck-repair2.exit",
+      "exit": 0
+    }
+  ],
+  "missingExitCount": 0
+}

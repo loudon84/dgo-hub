@@ -1,0 +1,54 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonicalization.test.ts (7 tests | 2 failed) 18ms
+     × normalizes decimal strings exactly at the requested scale 6ms
+     × hashes source business content before owner resolution and ignores processing metadata 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > normalizes decimal strings exactly at the requested scale
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/canonicalization.test.ts:17:62
+     15|     expect(() => canonicalDecimal('1.001', 2)).toThrow('CANONICAL_DECI…
+     16|     expect(() => canonicalDecimal('0', 6, { positive: true })).toThrow…
+     17|     expect(() => canonicalDecimal('1000000000000000000', 2)).toThrow('…
+       |                                                              ^
+     18|     expect(canonicalDecimal('-0', 2)).toBe('0.00');
+     19|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > hashes source business content before owner resolution and ignores processing metadata
+AssertionError: expected '2466abd2408cbbc7460ca61402e6d80ba4306…' to be '41fcd327f177257cee9c984c3d4afbbea2d11…' // Object.is equality
+
+Expected: "41fcd327f177257cee9c984c3d4afbbea2d11fe8ee8f30ac8911f98b4640f89d"
+Received: "2466abd2408cbbc7460ca61402e6d80ba4306b931c424446bd19fbe87e842869"
+
+ ❯ acceptance-tests/canonicalization.test.ts:49:8
+     47|     );
+     48|     expect(sourceContentDigest({ amount:'1.00', channel_id:'ch-1', ver…
+     49|       .toBe(sourceContentDigest({ amount:'1.00', channel_id:'ch-2', ve…
+       |        ^
+     50|   });
+     51|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  15:07:56
+   Duration  349ms (transform 35ms, setup 0ms, import 139ms, tests 18ms, environment 0ms)
+

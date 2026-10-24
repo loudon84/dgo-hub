@@ -1,0 +1,97 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (12 tests | 4 failed) 127437ms
+     × reserves a stable customer identity for a minimal unknown-key delete and restores only at a higher version 21ms
+     × reserves a stable order identity for a minimal unknown-key delete and accepts explicit empty-line restoration 1ms
+     × replaces the complete order line image, retains tombstones, and restores only with a higher source version 49ms
+     × rolls back the order header, first line, receipt, and outbox if a middle line write fails 5002ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts [ acceptance-tests/canonical-apply.test.ts ]
+Error: Hook timed out in 120000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ acceptance-tests/canonical-apply.test.ts:84:1
+     82| }, 120_000);
+     83|
+     84| afterAll(async () => {
+       | ^
+     85|   if (!fixture) return;
+     86|   const resource = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable customer identity for a minimal unknown-key delete and restores only at a higher version
+error: insert or update on table "canonical_source_identity" violates foreign key constraint "canonical_source_identity_tenant_key_customer_id_fkey"
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:252:5
+    250|       projection=projectionDigest({canonical_object_id:objectId,delete…
+    251|     }
+    252|     await client.query(`INSERT INTO control.canonical_source_identity(…
+       |     ^
+    253|       VALUES($1,$2,'customer',$3,$4,$4) ON CONFLICT(tenant_key,source_…
+    254|       SET canonical_object_id=EXCLUDED.canonical_object_id,customer_id…
+ ❯ acceptance-tests/canonical-apply.test.ts:215:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable order identity for a minimal unknown-key delete and accepts explicit empty-line restoration
+error: current transaction is aborted, commands ignored until end of transaction block
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ seedCustomerApplyProof acceptance-tests/canonical-apply.test.ts:30:3
+     28|   ];
+     29|   const credentialDigest = randomBytes(32);
+     30|   await database.query("INSERT INTO control.tenant(tenant_key,business…
+       |   ^
+     31|   await database.query(`INSERT INTO control.auth_subject(tenant_key,us…
+     32|     VALUES($1,$2,'sales-east','sales')`, [tenantId,ownerId]);
+ ❯ acceptance-tests/canonical-apply.test.ts:239:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > replaces the complete order line image, retains tombstones, and restores only with a higher source version
+Error: CANONICAL_DECIMAL_INVALID
+ ❯ canonicalDecimal normalization/canonical.ts:25:11
+     23| export function canonicalDecimal(value: unknown, scale: number, option…
+     24|   if (typeof value !== 'string' || !Number.isInteger(scale) || scale <…
+     25|     throw new Error('CANONICAL_DECIMAL_INVALID');
+       |           ^
+     26|   }
+     27|   const match = /^(-?)(0|[1-9][0-9]*)(?:\.([0-9]+))?$/.exec(value);
+ ❯ normalizeSourceValue normalization/canonical.ts:54:57
+ ❯ normalization/canonical.ts:70:29
+ ❯ normalizeSourceValue normalization/canonical.ts:70:8
+ ❯ canonicalSourceSerialization normalization/canonical.ts:76:25
+ ❯ sourceContentDigest normalization/canonical.ts:80:38
+ ❯ projectionDigest normalization/apply.ts:174:22
+ ❯ applyOrderAggregate normalization/apply.ts:334:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rolls back the order header, first line, receipt, and outbox if a middle line write fails
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ acceptance-tests/canonical-apply.test.ts:364:3
+    362|   });
+    363|
+    364|   it('rolls back the order header, first line, receipt, and outbox if …
+       |   ^
+    365|     const context=await seedCustomerApplyProof('SOURCE_VERSION','order…
+    366|     const client=await database.connect();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 8 passed (12)
+   Start at  15:14:41
+   Duration  127.84s (transform 78ms, setup 0ms, import 223ms, tests 127.44s, environment 0ms)
+

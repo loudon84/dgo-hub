@@ -1,0 +1,50 @@
+# M1-2 Canonical Apply implementation report
+
+Date: 2026-10-24 (Asia/Shanghai)
+Branch: `feat/alpha1-implementation`
+Implementation base: `2c053297685e1aabd7dfb8b681fc120f55c78f1b`
+Source commit: `6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e`
+Scope: canonical customer/order models, migration 006, caller-owned atomic apply, source receipts/tombstones/outbox, and explicit owner/customer identity remap integration.
+
+## Delivered
+
+- Added canonical schemas and digest serialization separately from legacy normalizer schemas and exports. Source identifiers remain exact, are limited to 128 characters, and are not trimmed. Decimal values use BigInt scaling with exact precision checks for numeric(20,2) and numeric(20,6); overflow and rounding are rejected. Source object and line ordering uses UTF-8 byte order. Version, channel, event, batch, request, and receive/processing metadata are excluded from the source content digest.
+- Added migration `006_canonical_data_and_receipts.sql` through the existing runner. It creates tenant-composite canonical customer/order/line relationships, stable source identity reservations, durable version receipts, remap fences/audit, and immutable apply outbox records. Unknown-key deletes reserve a canonical UUID and receipt while leaving the business row foreign key null; no fake customer/order defaults are inserted. Existing legacy tables and views remain in place.
+- Added `applyCustomer(client, context, input)` and `applyOrderAggregate(client, context, input)` using the caller's `PoolClient`. The functions do not begin, commit, roll back, release, or swallow transaction failures. Customer/order state, complete line replacement or tombstoning, receipt, outbox, and applicable identity effects therefore share the caller transaction. Orders require the complete line image (0–200 lines; explicit `[]` is valid); the header amount remains authoritative and is not compared with line sums.
+- Implemented receipt outcomes for exact 20-digit decimal-safe versions, including first version `0`, stale lower values, equal same-content duplicates, equal changed-content conflicts, higher applies, tombstones, and higher-version restore. An unchanged higher snapshot observation advances the receipt high-water mark without changing the core revision or writing another outbox event. Snapshot observation sequence allocation remains M1-5 work.
+- Apply checks the immutable accepted approval/config/mapping/identity/credential/channel proof, the channel retirement state, and matching typed security barriers. It does not treat ordinary pause, source epoch drift, or routine credential generation drift as a lifetime rejection. A monotonic security-fence counter is allocated under one fixed two-integer transaction advisory guard shared by apply, admission, and relevant management/barrier producers. The guard currently serializes these paths across tenants; throughput was not measured.
+- Wired the existing customer preview and API-014 confirmation to same-tenant canonical customers and the narrow identity-remap function. A confirmed correction updates affected canonical ownership/customer references, mapping revision fence, audit, outbox, and affected old/new authorization epochs in one transaction; source receipts and stable canonical UUIDs remain unchanged. A same-target confirmation is a no-op. Equal-version replay after a remap stays `DUPLICATE` without overwriting corrected core state; a higher old-mapping observation is fenced as `AUTHORITY_MAPPING_SUPERSEDED`.
+- Kept API core DML unavailable and granted the shared worker only the minimum canonical apply privileges. Tenant isolation relies on trusted frozen job proof and composite tenant foreign keys; no RLS or per-tenant database-role claim is made.
+
+## Test-first record and fixes
+
+Captured RED outputs remain in the evidence directory. The canonical model and apply regressions include `canonical-model-red.log`, `canonical-null-absent-red.log`, `canonical-overflow-metadata-red.log`, `canonical-utf8-order-red.log`, `snapshot-noop-red.log`, `identity-remap-noop-red.log`, `canonical-apply-red.log`, `canonical-apply-red2.log`, and `canonical-migration-red.log`, each paired with an exit file. The first `canonicalization-red.log` is an earlier import smoke attempt that ran zero tests because the new module did not exist yet; it is not counted as a behavioral RED.
+
+The first delete/restore integration attempt (`canonical-apply-edge-green.log`) had four failures: the reservation UUID was incorrectly used as a business-row foreign key, projection hashing received JavaScript numbers from PostgreSQL JSON numerics, and failed test transactions remained open. Those were corrected by retaining a nullable core-row ID, hashing the normalized resolved input, and rolling back failed test transactions in cleanup. The run's exact owned container was verified by its task/run labels, removed by its full ID, and verified absent; the manual cleanup output is preserved. A later focused assertion had one test-only hard-coded hub revision; it now compares against the revision observed before the no-op. The green edge rerun passed 12/12, and the final focused set passed 49/49.
+
+The first full gate retained two classes of failure. The strict typecheck exposed delete-union/test-result narrowing and nullable row-count typing; the full suite exposed two old assertions that expected five migrations. Those assertions now include migration 006 and its sixth ledger row. The successful final gate below ran against the committed source bytes.
+
+## Verification
+
+Each command ran from `integration-service`. For PostgreSQL fixture runs, the command process set `M0_RUN_EVIDENCE_ROOT` to the absolute path shown in [m1-task-2-evidence-root.txt](../../../docs/execution/alpha1/m1-task-2-evidence-root.txt); no `.env`, npmrc, ambient credential, or source-system secret was read.
+
+| Command | Raw output | Exit | Result |
+|---|---|---:|---|
+| `npm test -- --run acceptance-tests/canonicalization.test.ts acceptance-tests/canonical-apply.test.ts acceptance-tests/source-registry.test.ts` | `focused-freeze-green.log` | 0 | 49/49 tests across 3 files |
+| `npm run typecheck` | `gate-typecheck.log` | 0 | TypeScript passed |
+| `npm test` | `gate-test.log` | 0 | 240/240 tests across 15 files |
+| `npm run build` | `gate-build.log` | 0 | Build passed |
+
+Each exit is recorded in the adjacent `.exit` file. All failed and repaired outputs are retained and indexed by [attempt-exit-manifest.json](../../../docs/execution/alpha1/m1-task-2-evidence-a34fb9ca-3a69-492a-8a14-ea52a5a154b1/attempt-exit-manifest.json). Full PostgreSQL IDs, labels, image references/digests, and cleanup status are in [owned-resource-inventory.json](../../../docs/execution/alpha1/m1-task-2-evidence-a34fb9ca-3a69-492a-8a14-ea52a5a154b1/owned-resource-inventory.json). The inventory contains 47 PostgreSQL fixtures and 15 loopback HTTP fixtures. All 15 HTTP fixtures report a closed server and released port. Forty-six PostgreSQL fixtures have confirmed absence after cleanup; one prior `m1task1` observer-deadlock fixture is unconfirmed. Its run is `ec3086b6-86e6-4d65-9dbb-c6809ce1dc9c`, container ID `65be01e04e74373aafe8711e01d1d44abcce46fe9bda2df82fa17a09179d4f4e`. No cleanup retry or container inspection was attempted for that earlier blocked run, per the controller instruction. The separate failed M1-2 run manually removed after its own cleanup timeout is confirmed absent in its lifecycle record.
+
+The wrong-relative pointer at `integration-service/docs/execution/alpha1/m1-task-2-evidence-root.txt` and three small accidental path-output files `integration-service/0`, `integration-service/1`, and `integration-service/2` were preserved and not included in the source commit. The root evidence pointer used by all final commands is the absolute `E:\git\dgo-hub\docs\execution\alpha1\m1-task-2-evidence-a34fb9ca-3a69-492a-8a14-ea52a5a154b1` path.
+
+## Source and migration identity
+
+The complete base/final raw SHA-256, LF-normalized SHA-256, byte count, and Git blob inventory for all 11 source/test files is recorded in [source-hash-manifest.json](../../../docs/execution/alpha1/m1-task-2-evidence-a34fb9ca-3a69-492a-8a14-ea52a5a154b1/source-hash-manifest.json). Migration 006 SHA-256 is `9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4`.
+
+Migrations 001–005 are byte-identical to the exact implementation base. Their matching base/current Git blobs are: 001 `523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7`; 002 `4d9bb4b40fac91f65262d84834c1958d5121cdc1`; 003 `1b6f8ef3c89013cc8d5cc3e78601dd11a009be68`; 004 `d9d6dae66ee205b37e2f83418713a94c9249fc1d`; and 005 `b59b25d1e9b08790eec943e9b159e39ee3593158`. The source commit contains 11 explicit source/test files and no report or evidence directory files. No remote, deployment, merge, or push was performed.
+
+## Limits and handoff
+
+This is the M1-2 apply primitive only. Intake parsing and durable job admission, worker orchestration/retry, ETL extraction, complete snapshot staging/reconciliation and sequence allocation, SQL Server integration, query-policy changes, and UI work remain outside this task. Tests used local owned PostgreSQL 16.10 and loopback fixtures; there was no production source, IdP, external egress, SQL Server, site runtime, or deployment test. The all-tenant barrier guard is correctness-oriented and intentionally has an unmeasured cross-tenant serialization cost. Independent GPT-6.1 Sol review is owned by the controller and is not self-approved here.

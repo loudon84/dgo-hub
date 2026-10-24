@@ -1,0 +1,33 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (5 tests | 1 failed) 2248ms
+     × applies an independently specified customer and handles version receipt outcomes atomically 33ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an independently specified customer and handles version receipt outcomes atomically
+error: invalid byte sequence for encoding "UTF8": 0x00
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ lockSourceIdentity normalization/apply.ts:205:3
+    203|
+    204| async function lockSourceIdentity(client: PoolClient, context: ApplyCo…
+    205|   await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashte…
+       |   ^
+    206|     [context.tenantId,`${context.sourceId}\0${context.entity}\0${sourc…
+    207|   return client.query<{ customer_id:string|null; order_id:string|null …
+ ❯ applyCustomer normalization/apply.ts:241:20
+ ❯ acceptance-tests/canonical-apply.test.ts:160:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 10 passed (11)
+   Start at  14:59:52
+   Duration  2.64s (transform 96ms, setup 0ms, import 354ms, tests 2.26s, environment 0ms)
+
