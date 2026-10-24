@@ -52,7 +52,7 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 |---|---|
 | M1-1 Source Registry / mappings / admission authority | Independent Spec/Quality PASS |
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
-| M1-3 strict REST / durable intake jobs | Implemented; latest captured gate 18 files / 288 tests, typecheck/build exit 0; independent Sol review in progress |
+| M1-3 strict REST / durable intake jobs | R1–R5 repaired; scoped Sol re-review PASS/Approved; post-fix focused 33/33 and typecheck/build exit 0; earlier assurance gaps retained |
 | M1-4 reliable worker / retry | Read-only implementation preflight prepared; coding awaits M1-3 review closure |
 | M1-5 PostgreSQL snapshot / recovery | Not started |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
@@ -72,3 +72,7 @@ M1-3 implementation started under Luna at exact base ca32853e931ff8e0c2fdf147bd2
 ## M1-3 implementation checkpoint — 2026-10-24
 
 API-015–018 and migration 007 are implemented. Source/test changes end at ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5; the independent review covers ca32853..90ce1940. The retained current-source capture at actual runner HEAD eb47494f records typecheck exit 0, 18 test files / 288 passed tests, and build exit 0, with unchanged source manifests. Historical missing raw logs remain NOT_RETAINED. See [Task3 implementation report](m1-task-3-report.md). GPT-6.1 Sol review has been dispatched; no review approval is claimed. M1-4 preflight is prepared but implementation has not started. M1 overall is incomplete, and all 48 formal acceptance rows remain NOT_RUN.
+
+## M1-3 repair review closed — 2026-10-24
+
+User-selected GPT-6 Sol repaired R1–R5 in ccab1a0; GPT-6.1 Sol [scoped re-review](reviews/m1-task-3-rereview-1.md) confirms all five ADDRESSED, Spec PASS / Quality Approved, without new material defects in the repair diff. Post-fix focused verification is 3 files / 33 tests plus typecheck/build exit 0. The pre-fix 288-test result is retained separately. Original distinct assurance gaps remain for M1 integration/final review. M1-4 has not started coding; formal site acceptance remains NOT_RUN.
