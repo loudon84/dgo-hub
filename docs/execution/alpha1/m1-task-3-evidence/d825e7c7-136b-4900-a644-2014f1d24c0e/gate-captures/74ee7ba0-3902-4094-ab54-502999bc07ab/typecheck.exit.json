@@ -1,0 +1,15 @@
+{
+  "name": "typecheck",
+  "command": "npm run typecheck",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e",
+  "started_at_utc": "2026-10-24T10:47:39.6701736Z",
+  "finished_at_utc": "2026-10-24T10:47:43.5518083Z",
+  "exit_code": 0,
+  "stdout_file": "typecheck.stdout.txt",
+  "stderr_file": "typecheck.stderr.txt",
+  "stdout_bytes": 88,
+  "stderr_bytes": 0,
+  "stdout_sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

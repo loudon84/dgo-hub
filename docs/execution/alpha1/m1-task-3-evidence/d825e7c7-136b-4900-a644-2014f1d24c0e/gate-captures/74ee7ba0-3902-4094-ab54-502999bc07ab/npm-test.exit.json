@@ -1,0 +1,15 @@
+{
+  "name": "npm-test",
+  "command": "npm test",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e",
+  "started_at_utc": "2026-10-24T10:47:43.5661336Z",
+  "finished_at_utc": "2026-10-24T10:47:54.0447569Z",
+  "exit_code": 0,
+  "stdout_file": "npm-test.stdout.txt",
+  "stderr_file": "npm-test.stderr.txt",
+  "stdout_bytes": 15493,
+  "stderr_bytes": 0,
+  "stdout_sha256": "9a7d7bf2c36a1ed0df5f2e7bcb9f1b4ef18fd4939c9a215dc7252880b4ed12f4",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,161 @@
+{
+  "schema": "task3-current-gate-source-snapshot.v1",
+  "run_id": "74ee7ba0-3902-4094-ab54-502999bc07ab",
+  "captured_at_utc": "2026-10-24T10:47:39.6344014Z",
+  "gate_head": "eb47494fcd98ca5a2bfb6acba7fe34d4d666b03b",
+  "source_origin_commit": "ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5",
+  "source_commit_relation": "HEAD is docs/evidence-only commits after source commit",
+  "dispatch_base": "ca32853e931ff8e0c2fdf147bd2e0c962ddf656c",
+  "source_files": [
+    {
+      "path": "integration-service/.env.example",
+      "raw_sha256": "4b6389cce242bdef7374851ace91ab1fe4736c1420714b744d20c4ad22247ba3",
+      "normalized_lf_sha256": "4b6389cce242bdef7374851ace91ab1fe4736c1420714b744d20c4ad22247ba3",
+      "git_clean_blob": "15f8b2b5cd572c4abf00bf478fbd15dbe20aef88",
+      "head_blob": "15f8b2b5cd572c4abf00bf478fbd15dbe20aef88"
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "raw_sha256": "658c9602dcd2a44ebf78496489451d36b2f1c0403ffbb91d3680ecb5927f6e52",
+      "normalized_lf_sha256": "658c9602dcd2a44ebf78496489451d36b2f1c0403ffbb91d3680ecb5927f6e52",
+      "git_clean_blob": "190c3389a9a3666163122e4db4c7a4468108dac5",
+      "head_blob": "190c3389a9a3666163122e4db4c7a4468108dac5"
+    },
+    {
+      "path": "integration-service/acceptance-tests/identity-store.test.ts",
+      "raw_sha256": "f4eeab840feef4cfe7383945cd08a0cf658c0ecd5d0892d33e243c4425fbe287",
+      "normalized_lf_sha256": "f4eeab840feef4cfe7383945cd08a0cf658c0ecd5d0892d33e243c4425fbe287",
+      "git_clean_blob": "cfc681e12bda78bc3607204d339359a90bce68e7",
+      "head_blob": "cfc681e12bda78bc3607204d339359a90bce68e7"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "raw_sha256": "2fda25f97964210870679e6f46ae4db4bc3289735f1cfe7eaa04660f8ef6f8a5",
+      "normalized_lf_sha256": "5e6465e3f7f7b1a5c581bdfc2a63b329f1373693f6ad188931892f693f854918",
+      "git_clean_blob": "77dee3993451244aa9758da77b015e1532bee3fc",
+      "head_blob": "77dee3993451244aa9758da77b015e1532bee3fc"
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "raw_sha256": "5c2feb3b7e45d1049024768f84d3574e9f13953d34fce740a617e465e9c84769",
+      "normalized_lf_sha256": "31899d166a5c1814a1dfe007ffb7a6b594353ceb7ee0d4a6bc4ef3ba0fe44633",
+      "git_clean_blob": "8284bbc375008a7c9643bb4a11edfe68d6808afe",
+      "head_blob": "8284bbc375008a7c9643bb4a11edfe68d6808afe"
+    },
+    {
+      "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+      "raw_sha256": "fc3632b8e502fd3f2b348260aefb00052c887e67b908dcc2de11f9a43245387e",
+      "normalized_lf_sha256": "fc3632b8e502fd3f2b348260aefb00052c887e67b908dcc2de11f9a43245387e",
+      "git_clean_blob": "860c244f30e9b25dad7e9eaf20a34aaa1fc45873",
+      "head_blob": "860c244f30e9b25dad7e9eaf20a34aaa1fc45873"
+    },
+    {
+      "path": "integration-service/app.ts",
+      "raw_sha256": "a055ff254e8806ba439b7b6346f5519f44ce575d0229d2db862be6d21b11b302",
+      "normalized_lf_sha256": "a055ff254e8806ba439b7b6346f5519f44ce575d0229d2db862be6d21b11b302",
+      "git_clean_blob": "d5726287ab0c93f9e12c1ea9cf2dd088842ed4ae",
+      "head_blob": "d5726287ab0c93f9e12c1ea9cf2dd088842ed4ae"
+    },
+    {
+      "path": "integration-service/auth/service.ts",
+      "raw_sha256": "d2278368e9e49bf4bb66e48db780f32cf8be1e35906e1e0997dba7717b3d65d7",
+      "normalized_lf_sha256": "d2278368e9e49bf4bb66e48db780f32cf8be1e35906e1e0997dba7717b3d65d7",
+      "git_clean_blob": "96258ae581d049f015624df7285274c6c623d6b7",
+      "head_blob": "96258ae581d049f015624df7285274c6c623d6b7"
+    },
+    {
+      "path": "integration-service/auth/types.ts",
+      "raw_sha256": "91d3a31d6ff0a7db5a90488959b2f469eb8244b667d5291ce968edb7e1f45d30",
+      "normalized_lf_sha256": "91d3a31d6ff0a7db5a90488959b2f469eb8244b667d5291ce968edb7e1f45d30",
+      "git_clean_blob": "0aff85ef22907f1a715a9c54c684f220c058c5d4",
+      "head_blob": "0aff85ef22907f1a715a9c54c684f220c058c5d4"
+    },
+    {
+      "path": "integration-service/ingestion-api/routes.ts",
+      "raw_sha256": "d5026e548ea170a2c4236eded7ce1675f04e8653cd2102f11299e8fc2da3627f",
+      "normalized_lf_sha256": "d5026e548ea170a2c4236eded7ce1675f04e8653cd2102f11299e8fc2da3627f",
+      "git_clean_blob": "aba593a1511b84e88d85522ce7362594c08acb46",
+      "head_blob": "aba593a1511b84e88d85522ce7362594c08acb46"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-contract.test.ts",
+      "raw_sha256": "492f66f0645c14dad19934aff5060c00e3e4e7af1133c983251ccc7b57e8f364",
+      "normalized_lf_sha256": "492f66f0645c14dad19934aff5060c00e3e4e7af1133c983251ccc7b57e8f364",
+      "git_clean_blob": "43771fae7cfe378b2d9efaad1fa676eafab6db78",
+      "head_blob": "43771fae7cfe378b2d9efaad1fa676eafab6db78"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-contract.ts",
+      "raw_sha256": "5454ece4aa8ee878dee744bf88508d92146163d8f735e47543fc7da350f629b2",
+      "normalized_lf_sha256": "5454ece4aa8ee878dee744bf88508d92146163d8f735e47543fc7da350f629b2",
+      "git_clean_blob": "417d9486e39552c98aea29c1bb42e0911e92c22e",
+      "head_blob": "417d9486e39552c98aea29c1bb42e0911e92c22e"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-ingestion.ts",
+      "raw_sha256": "2f1364ac246d02ad43413387643af278f662a925357b704b56c6d2b6d09d20bb",
+      "normalized_lf_sha256": "2f1364ac246d02ad43413387643af278f662a925357b704b56c6d2b6d09d20bb",
+      "git_clean_blob": "1e744f558c72c18205dc923024fae7238abd6217",
+      "head_blob": "1e744f558c72c18205dc923024fae7238abd6217"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-intake.test.ts",
+      "raw_sha256": "d760182d680d47328147910475109a91d63edcd040ff1db4eaf042d1269c73fc",
+      "normalized_lf_sha256": "4374d40c553b386d6521e1ab6e2bad7d97a866a15f5b27105a6fc6cdfa18b5af",
+      "git_clean_blob": "8553afa37c61d6a3d5c023a18badb3f4e6dd5398",
+      "head_blob": "8553afa37c61d6a3d5c023a18badb3f4e6dd5398"
+    },
+    {
+      "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+      "raw_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "normalized_lf_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "git_clean_blob": "7a5dca418542976a22cf786d302e36a617ee22df",
+      "head_blob": "7a5dca418542976a22cf786d302e36a617ee22df"
+    }
+  ],
+  "historical_migrations": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "sha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "base_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "head_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "unchanged": true
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "sha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "base_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "head_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "unchanged": true
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "sha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "base_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "head_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "unchanged": true
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "sha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "base_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "head_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "unchanged": true
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "sha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "base_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "head_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "unchanged": true
+    },
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "sha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "base_blob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "head_blob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "unchanged": true
+    }
+  ],
+  "migration_007_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159"
+}
