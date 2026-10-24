@@ -1,0 +1,352 @@
+{
+  "format": "m1-task2-fix1-attempt-exit-manifest-v1",
+  "evidenceRoot": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-2-fix1-evidence-62e9a35c-8fb0-48a8-a3ae-51ec9b1084c2",
+  "note": "Every root-level captured .log is indexed, including failed setup, fixed tests, focused suites, final gates, and the interrupted/cleanup command record. Exact SHA-256 values for all whitelisted files are in evidence-whitelist.json.",
+  "attemptCount": 43,
+  "attempts": [
+    {
+      "log": "apply-remap-race-green.log",
+      "exitFile": "apply-remap-race-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 408,
+      "exitBytes": 2
+    },
+    {
+      "log": "canonical-apply-focused-all.log",
+      "exitFile": "canonical-apply-focused-all.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 3763,
+      "exitBytes": 3
+    },
+    {
+      "log": "canonical-apply-focused-all2.log",
+      "exitFile": "canonical-apply-focused-all2.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1627,
+      "exitBytes": 3
+    },
+    {
+      "log": "create-disable-race-green.log",
+      "exitFile": "create-disable-race-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 433,
+      "exitBytes": 2
+    },
+    {
+      "log": "create-disable-race.log",
+      "exitFile": "create-disable-race.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1583,
+      "exitBytes": 3
+    },
+    {
+      "log": "create-guard-green.log",
+      "exitFile": "create-guard-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 395,
+      "exitBytes": 3
+    },
+    {
+      "log": "create-guard-red.log",
+      "exitFile": "create-guard-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1338,
+      "exitBytes": 3
+    },
+    {
+      "log": "final-build.log",
+      "exitFile": "final-build.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 79,
+      "exitBytes": 2
+    },
+    {
+      "log": "final-full-test.log",
+      "exitFile": "final-full-test.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 303,
+      "exitBytes": 2
+    },
+    {
+      "log": "final-typecheck.log",
+      "exitFile": "final-typecheck.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 92,
+      "exitBytes": 2
+    },
+    {
+      "log": "fix1-focused-suite-final.log",
+      "exitFile": "fix1-focused-suite-final.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 422,
+      "exitBytes": 2
+    },
+    {
+      "log": "fix1-focused-suite.log",
+      "exitFile": "fix1-focused-suite.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 2676,
+      "exitBytes": 2
+    },
+    {
+      "log": "interrupted-observer-cleanup.log",
+      "exitFile": null,
+      "exitCode": null,
+      "status": "incomplete_or_non_test_command",
+      "logBytes": 250,
+      "exitBytes": null
+    },
+    {
+      "log": "limits-green.log",
+      "exitFile": "limits-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 342,
+      "exitBytes": 1
+    },
+    {
+      "log": "limits-red.log",
+      "exitFile": "limits-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1443,
+      "exitBytes": 1
+    },
+    {
+      "log": "line-stability-green.log",
+      "exitFile": "line-stability-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 398,
+      "exitBytes": 3
+    },
+    {
+      "log": "line-stability-red.log",
+      "exitFile": "line-stability-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1983,
+      "exitBytes": 1
+    },
+    {
+      "log": "money-green.log",
+      "exitFile": "money-green.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1974,
+      "exitBytes": 1
+    },
+    {
+      "log": "money-green2.log",
+      "exitFile": "money-green2.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 342,
+      "exitBytes": 1
+    },
+    {
+      "log": "money-red.log",
+      "exitFile": "money-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1408,
+      "exitBytes": 1
+    },
+    {
+      "log": "owner-disable-race-green.log",
+      "exitFile": null,
+      "exitCode": null,
+      "status": "incomplete_or_non_test_command",
+      "logBytes": 230,
+      "exitBytes": null
+    },
+    {
+      "log": "owner-disable-race-green2.log",
+      "exitFile": "owner-disable-race-green2.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 417,
+      "exitBytes": 3
+    },
+    {
+      "log": "owner-disable-race-red.log",
+      "exitFile": "owner-disable-race-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1342,
+      "exitBytes": 3
+    },
+    {
+      "log": "ownership-focused-green.log",
+      "exitFile": "ownership-focused-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 472,
+      "exitBytes": 3
+    },
+    {
+      "log": "projection-remap-focused-green.log",
+      "exitFile": "projection-remap-focused-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 391,
+      "exitBytes": 3
+    },
+    {
+      "log": "projection-remap-focused-green2.log",
+      "exitFile": "projection-remap-focused-green2.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 391,
+      "exitBytes": 3
+    },
+    {
+      "log": "projection-remap-focused.log",
+      "exitFile": "projection-remap-focused.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1384,
+      "exitBytes": 3
+    },
+    {
+      "log": "remap-delete-focused.log",
+      "exitFile": "remap-delete-focused.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 433,
+      "exitBytes": 3
+    },
+    {
+      "log": "remap-snapshot-focused.log",
+      "exitFile": "remap-snapshot-focused.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1720,
+      "exitBytes": 3
+    },
+    {
+      "log": "role-helper-focused.log",
+      "exitFile": "role-helper-focused.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 426,
+      "exitBytes": 2
+    },
+    {
+      "log": "rollback-matrix-focused.log",
+      "exitFile": "rollback-matrix-focused.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 383,
+      "exitBytes": 3
+    },
+    {
+      "log": "snapshot-frozen-focused.log",
+      "exitFile": "snapshot-frozen-focused.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 521,
+      "exitBytes": 3
+    },
+    {
+      "log": "source-auth-isolated.log",
+      "exitFile": "source-auth-isolated.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 443,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-debug.log",
+      "exitFile": "source-registry-debug.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 3392,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-debug2.log",
+      "exitFile": "source-registry-debug2.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 3392,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole-fixed.log",
+      "exitFile": "source-registry-whole-fixed.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 2582,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole-fixed2.log",
+      "exitFile": "source-registry-whole-fixed2.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 20314,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole-fixed3.log",
+      "exitFile": "source-registry-whole-fixed3.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 2582,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole-fixed4.log",
+      "exitFile": "source-registry-whole-fixed4.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 2582,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole-fixed5.log",
+      "exitFile": "source-registry-whole-fixed5.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 339,
+      "exitBytes": 2
+    },
+    {
+      "log": "source-registry-whole.log",
+      "exitFile": "source-registry-whole.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 2582,
+      "exitBytes": 2
+    },
+    {
+      "log": "worker-role-green.log",
+      "exitFile": "worker-role-green.exit",
+      "exitCode": 0,
+      "status": "passed",
+      "logBytes": 412,
+      "exitBytes": 3
+    },
+    {
+      "log": "worker-role-red.log",
+      "exitFile": "worker-role-red.exit",
+      "exitCode": 1,
+      "status": "failed",
+      "logBytes": 1560,
+      "exitBytes": 3
+    }
+  ]
+}

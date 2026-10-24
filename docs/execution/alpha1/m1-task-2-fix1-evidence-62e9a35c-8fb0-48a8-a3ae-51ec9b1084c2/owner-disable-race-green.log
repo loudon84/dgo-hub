@@ -1,0 +1,7 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t serializes owner eligibility with a concurrent M0 disable
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+

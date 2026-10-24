@@ -1,0 +1,7 @@
+{
+  "fixtureId": "cca5d625-87cf-452f-ae11-c0cf29d08a91",
+  "host": "127.0.0.1",
+  "port": 56905,
+  "protocol": "http",
+  "cleanup": "server closed and port released"
+}

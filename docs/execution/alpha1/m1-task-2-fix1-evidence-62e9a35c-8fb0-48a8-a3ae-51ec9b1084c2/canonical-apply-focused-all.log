@@ -1,0 +1,92 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (22 tests | 3 failed) 3109ms
+     × applies an independently specified customer and handles version receipt outcomes atomically 35ms
+     × uses one projection digest for remap and an unchanged post-remap snapshot observation 42ms
+     × preserves the complete T0 order image when header, each representative line, receipt, or outbox fails 35ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an independently specified customer and handles version receipt outcomes atomically
+AssertionError: expected { status: 'APPLIED', …(3) } to match object { status: 'APPLIED', hubRevision: '1' }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "hubRevision": "1",
++   "hubRevision": "4",
+    "status": "APPLIED",
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:271:21
+    269|       const first = await applyCustomer(client,context,customer);
+    270|       await client.query('COMMIT');
+    271|       expect(first).toMatchObject({ status:'APPLIED', hubRevision:'1' …
+       |                     ^
+    272|       const stored = await database.query<{ customer_name:string; owne…
+    273|         'SELECT customer_name,owner_user_id,source_version::text FROM …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses one projection digest for remap and an unchanged post-remap snapshot observation
+AssertionError: expected { source_version: '2', …(3) } to deeply equal { source_version: '2', …(3) }
+
+- Expected
++ Received
+
+  {
+-   "hub_revision": "2",
++   "hub_revision": "18",
+    "outbox_count": "2",
+    "owner_user_id": "owner-remap-3695b5",
+    "source_version": "2",
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:619:29
+    617|         FROM control.source_version_receipt r JOIN hub.canonical_custo…
+    618|         WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[…
+    619|       expect(state.rows[0]).toEqual({source_version:'2',owner_user_id:…
+       |                             ^
+    620|     } finally { await client.query('ROLLBACK').catch(()=>undefined); c…
+    621|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > preserves the complete T0 order image when header, each representative line, receipt, or outbox fails
+AssertionError: expected { …(5) } to match object { order_no: 'O-RB', …(3) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "amount": "3.00",
+-   "hub_revision": "1",
++   "hub_revision": "29",
+    "order_no": "O-RB",
+    "source_version": "1",
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:755:28
+    753|       orderId=requireApplied(first).objectId;
+    754|       const t0=await state();
+    755|       expect(t0.header[0]).toMatchObject({order_no:'O-RB',amount:'3.00…
+       |                            ^
+    756|       expect(t0.lines).toHaveLength(3);
+    757|       expect(t0.receipt[0]).toMatchObject({source_version:'1',canonica…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 19 passed (22)
+   Start at  15:59:41
+   Duration  3.53s (transform 90ms, setup 0ms, import 238ms, tests 3.11s, environment 0ms)
+

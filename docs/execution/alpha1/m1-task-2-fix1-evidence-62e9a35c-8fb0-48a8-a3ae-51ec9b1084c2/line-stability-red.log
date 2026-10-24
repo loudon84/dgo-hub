@@ -1,0 +1,52 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t replaces the complete order line image
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (13 tests | 1 failed | 12 skipped) 2673ms
+     × replaces the complete order line image, retains tombstones, and restores only with a higher source version 69ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > replaces the complete order line image, retains tombstones, and restores only with a higher source version
+AssertionError: expected [ { …(5) } ] to deeply equal [ { …(5) }, { …(5) } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "deleted_at": null,
+-     "id": "46aa062c-9476-47f3-99c7-230d5a9c8d5f",
++     "id": "511541cf-c4c0-442d-b4be-c65029428d1b",
+      "line_amount": "9.00",
+      "product_name": "A revised",
+      "source_line_id": "line-a",
+-   },
+-   {
+-     "deleted_at": Any<Date>,
+-     "id": "c6a28730-1180-4a19-8139-0d3216e28e85",
+-     "line_amount": "50.00",
+-     "product_name": "B",
+-     "source_line_id": "line-b",
+    },
+  ]
+
+ ❯ acceptance-tests/canonical-apply.test.ts:400:34
+    398|         'SELECT id::text,source_line_id,product_name,line_amount::text…
+    399|         [context.tenantId,requireApplied(first).objectId]);
+    400|       expect(replacedLines.rows).toEqual([
+       |                                  ^
+    401|         {id:initialLines.rows[0].id,source_line_id:'line-a',product_na…
+    402|         {id:initialLines.rows[1].id,source_line_id:'line-b',product_na…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  15:48:39
+   Duration  3.08s (transform 80ms, setup 0ms, import 228ms, tests 2.67s, environment 0ms)
+

@@ -1,0 +1,39 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonicalization.test.ts (8 tests | 1 failed) 15ms
+     × rejects negative canonical money while allowing zero values 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > rejects negative canonical money while allowing zero values
+Error: CANONICAL_DECIMAL_INVALID
+ ❯ canonicalDecimal normalization/canonical.ts:32:89
+     30|   const magnitude = BigInt(match[2]) * 10n ** BigInt(scale) + BigInt(f…
+     31|   const signed = magnitude === 0n ? 0n : match[1] === '-' ? -magnitude…
+     32|   if ((options.positive && signed <= 0n) || (options.nonnegative && si…
+       |                                                                                         ^
+     33|   const digits = (signed < 0n ? -signed : signed).toString().padStart(…
+     34|   const normalized = scale === 0 ? digits : `${digits.slice(0, -scale)…
+ ❯ Object.transform normalization/models.ts:25:86
+ ❯ inst._zod.parse node_modules/zod/v4/classic/schemas.js:1218:28
+ ❯ Internals.wrapped node_modules/zod/v4/core/memoizer.js:213:24
+ ❯ handlePipeResult node_modules/zod/v4/core/schemas.js:2325:22
+ ❯ inst._zod.parse node_modules/zod/v4/core/schemas.js:2315:16
+ ❯ eval node_modules/zod/v4/core/doc.js:35:25
+ ❯ inst._zod.parse node_modules/zod/v4/core/schemas.js:1215:23
+ ❯ Internals.wrapped node_modules/zod/v4/core/memoizer.js:239:32
+ ❯ inst._zod.run node_modules/zod/v4/core/schemas.js:112:38
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  15:47:30
+   Duration  342ms (transform 37ms, setup 0ms, import 140ms, tests 15ms, environment 0ms)
+

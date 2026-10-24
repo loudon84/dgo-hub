@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts -t locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 30 skipped (31)
+   Start at  16:03:35
+   Duration  2.80s (transform 137ms, setup 0ms, import 313ms, tests 2.32s, environment 0ms)
+

@@ -1,0 +1,34 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts -t source creation and tenant disable
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (31 tests | 1 failed | 30 skipped) 2269ms
+     × serializes source creation and tenant disable without an inverse-lock deadlock 73ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes source creation and tenant disable without an inverse-lock deadlock
+AuthError: AUTH_INVALID
+ ❯ parseCredential auth/credentials.ts:9:79
+      7|
+      8| export function parseCredential(secret: string): Buffer {
+      9|   if (typeof secret !== 'string' || !CANONICAL_CREDENTIAL.test(secret)…
+       |                                                                               ^
+     10|   const decoded = Buffer.from(secret, 'base64url');
+     11|   if (decoded.length !== 32 || decoded.toString('base64url') !== secre…
+ ❯ digestCredential auth/credentials.ts:16:38
+ ❯ provisionSourceCredential auth/service.ts:311:18
+ ❯ Object.provisionSourceCredential auth/service.ts:377:51
+ ❯ acceptance-tests/source-registry.test.ts:154:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 skipped (31)
+   Start at  16:01:26
+   Duration  2.77s (transform 135ms, setup 0ms, import 316ms, tests 2.27s, environment 0ms)
+

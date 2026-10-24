@@ -1,0 +1,31 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t one projection digest for remap
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (19 tests | 1 failed | 18 skipped) 2196ms
+     × uses one projection digest for remap and an unchanged post-remap snapshot observation 57ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses one projection digest for remap and an unchanged post-remap snapshot observation
+error: source approval authority required
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ acceptance-tests/canonical-apply.test.ts:561:7
+    559|       const revised=await approveOwnerMapping(context,newOwner);
+    560|       await client.query('BEGIN');
+    561|       await client.query('SELECT control.remap_canonical_identity($1,$…
+       |       ^
+    562|         [context.tenantId,context.sourceId,newOwner,context.ownerUserI…
+    563|       await client.query('COMMIT');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 skipped (19)
+   Start at  15:57:18
+   Duration  2.61s (transform 91ms, setup 0ms, import 241ms, tests 2.20s, environment 0ms)
+

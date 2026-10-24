@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t one projection digest for remap
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 19 skipped (20)
+   Start at  15:58:18
+   Duration  2.75s (transform 88ms, setup 0ms, import 234ms, tests 2.34s, environment 0ms)
+

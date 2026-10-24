@@ -1,0 +1,37 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonicalization.test.ts (9 tests | 1 failed) 18ms
+     × enforces PRD text limits and the order number identifier contract 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > enforces PRD text limits and the order number identifier contract
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ acceptance-tests/canonicalization.test.ts:48:105
+     46|     };
+     47|     expect(canonicalCustomerSchema.safeParse({ ...customer, customer_n…
+     48|     expect(canonicalCustomerSchema.safeParse({ ...customer, customer_n…
+       |                                                                                                         ^
+     49|     expect(canonicalCustomerSchema.safeParse({ ...customer, phone: 'x'…
+     50|     expect(canonicalCustomerSchema.safeParse({ ...customer, phone: 'x'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  15:47:52
+   Duration  339ms (transform 37ms, setup 0ms, import 140ms, tests 18ms, environment 0ms)
+

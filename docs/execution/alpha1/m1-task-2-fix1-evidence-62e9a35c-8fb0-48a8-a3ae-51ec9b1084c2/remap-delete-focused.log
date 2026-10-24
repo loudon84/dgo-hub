@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t department remap that contradicts|repeated unknown-key snapshot tombstone
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 18 skipped (20)
+   Start at  15:58:28
+   Duration  2.73s (transform 89ms, setup 0ms, import 236ms, tests 2.32s, environment 0ms)
+

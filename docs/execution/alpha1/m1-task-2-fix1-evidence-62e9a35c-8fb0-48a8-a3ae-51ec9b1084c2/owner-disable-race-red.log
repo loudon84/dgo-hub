@@ -1,0 +1,37 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t serializes owner eligibility with a concurrent M0 disable
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (15 tests | 1 failed | 14 skipped) 3631ms
+     × serializes owner eligibility with a concurrent M0 disable 1540ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes owner eligibility with a concurrent M0 disable
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ acceptance-tests/canonical-apply.test.ts:213:23
+    211|         if(!waiting) await new Promise(resolve=>setTimeout(resolve,10)…
+    212|       }
+    213|       expect(waiting).toBe(true);
+       |                       ^
+    214|       await disable.query('COMMIT');
+    215|       await expect(applyPromise).resolves.toMatchObject({status:'QUARA…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  15:51:48
+   Duration  4.04s (transform 82ms, setup 0ms, import 228ms, tests 3.63s, environment 0ms)
+

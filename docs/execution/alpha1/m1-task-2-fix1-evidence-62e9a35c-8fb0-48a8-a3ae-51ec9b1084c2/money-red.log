@@ -1,0 +1,37 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonicalization.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonicalization.test.ts (8 tests | 1 failed) 17ms
+     × rejects negative canonical money while allowing zero values 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonicalization.test.ts > strict canonical normalization > rejects negative canonical money while allowing zero values
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ acceptance-tests/canonicalization.test.ts:27:83
+     25|       source_updated_at: '2026-01-01T00:00:00Z', source_version: '1', …
+     26|     };
+     27|     expect(canonicalOrderSchema.safeParse({ ...order, amount: '-0.01' …
+       |                                                                                   ^
+     28|     expect(canonicalOrderSchema.safeParse({ ...order, amount: '0.00', …
+     29|       source_line_id: 'L1', product_code: 'SKU-1', product_name: 'One'…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  15:47:20
+   Duration  338ms (transform 36ms, setup 0ms, import 137ms, tests 17ms, environment 0ms)
+

@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t complete customer and order applies under hub_worker
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 13 skipped (14)
+   Start at  15:51:32
+   Duration  2.67s (transform 81ms, setup 0ms, import 227ms, tests 2.27s, environment 0ms)
+

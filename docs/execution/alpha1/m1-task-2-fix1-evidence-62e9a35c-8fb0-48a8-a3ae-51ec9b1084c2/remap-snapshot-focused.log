@@ -1,0 +1,42 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t department remap that contradicts|one projection digest for remap|repeated unknown-key snapshot tombstone
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (20 tests | 1 failed | 17 skipped) 2362ms
+     × uses one projection digest for remap and an unchanged post-remap snapshot observation 58ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses one projection digest for remap and an unchanged post-remap snapshot observation
+AssertionError: expected { source_version: '2', …(3) } to deeply equal { source_version: '2', …(3) }
+
+- Expected
++ Received
+
+  {
+-   "hub_revision": "2",
++   "hub_revision": "3",
+    "outbox_count": "2",
+    "owner_user_id": "owner-remap-8efd06",
+    "source_version": "2",
+  }
+
+ ❯ acceptance-tests/canonical-apply.test.ts:584:29
+    582|         FROM control.source_version_receipt r JOIN hub.canonical_custo…
+    583|         WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.source_pk=$3`,[…
+    584|       expect(state.rows[0]).toEqual({source_version:'2',owner_user_id:…
+       |                             ^
+    585|     } finally { await client.query('ROLLBACK').catch(()=>undefined); c…
+    586|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 17 skipped (20)
+   Start at  15:57:58
+   Duration  2.78s (transform 91ms, setup 0ms, import 240ms, tests 2.36s, environment 0ms)
+

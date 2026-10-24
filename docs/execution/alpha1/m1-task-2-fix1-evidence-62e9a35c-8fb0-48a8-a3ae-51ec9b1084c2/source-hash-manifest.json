@@ -1,0 +1,152 @@
+{
+  "format": "m1-task2-fix1-source-hash-manifest-v1",
+  "implementationBaseSourceCommit": "6bec79c3ab1e48fadeb6ae3449b83aadbe317f0e",
+  "fix1StartingHead": "18c5d05fda2e8e8beea59c9b7f62889f6b2b08f5",
+  "gateWorkingTreeWasUncommittedSource": true,
+  "gateRanBeforeSourceCommit": true,
+  "sourceCommit": "f7beedf74c7120261ee16d69f7e768a346be05a3",
+  "sourceCommitParent": "18c5d05fda2e8e8beea59c9b7f62889f6b2b08f5",
+  "noProductSourceEditsAfterFinalGate": true,
+  "lineEndingNormalization": "working tree/commit comparison uses UTF-8 LF normalization because Windows Git may checkout CRLF",
+  "sourceFiles": [
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "baseGitBlob": "85cb667fa437bda00cc8a6d76669f44e18bf0830",
+      "baseBlobRawSha256": "29eace6cdbe3fbc995bd04a1e1934dd0f77057f9312fbce80e3a6bda6b67c0a8",
+      "baseLfSha256": "29eace6cdbe3fbc995bd04a1e1934dd0f77057f9312fbce80e3a6bda6b67c0a8",
+      "gateAndCurrentWorkingTreeRawSha256": "52009487139da61ee09360607d0e2a8ba6ec207c648f988513d0fb858a28f9c6",
+      "currentWorkingTreeLfSha256": "52009487139da61ee09360607d0e2a8ba6ec207c648f988513d0fb858a28f9c6",
+      "currentWorkingTreeBytes": 68374,
+      "currentGitBlob": "28e3bec7ca24b9b360966858aa80a82d7010ecca",
+      "currentBlobRawSha256": "52009487139da61ee09360607d0e2a8ba6ec207c648f988513d0fb858a28f9c6",
+      "currentBlobLfSha256": "52009487139da61ee09360607d0e2a8ba6ec207c648f988513d0fb858a28f9c6",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonicalization.test.ts",
+      "baseGitBlob": "75b37b347e9cce5fc27aff677e8ee38d3d4e2327",
+      "baseBlobRawSha256": "d6c996705887e5d7edd0691ff98599a0d9de792e65ba9d95dc487622713cbe1b",
+      "baseLfSha256": "d6c996705887e5d7edd0691ff98599a0d9de792e65ba9d95dc487622713cbe1b",
+      "gateAndCurrentWorkingTreeRawSha256": "7d11ad194c2e830b7573e1bfe3242a33e0ce454f306104d32885c87a65ac921a",
+      "currentWorkingTreeLfSha256": "7d11ad194c2e830b7573e1bfe3242a33e0ce454f306104d32885c87a65ac921a",
+      "currentWorkingTreeBytes": 8895,
+      "currentGitBlob": "f1af09314e6a6e2818cfc3c6f37404ce77d5db81",
+      "currentBlobRawSha256": "7d11ad194c2e830b7573e1bfe3242a33e0ce454f306104d32885c87a65ac921a",
+      "currentBlobLfSha256": "7d11ad194c2e830b7573e1bfe3242a33e0ce454f306104d32885c87a65ac921a",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "baseGitBlob": "3a94a2b8bf2f52cebfbde0b194dc3170c2256dc3",
+      "baseBlobRawSha256": "fb32f4bdfd7c8019cbd939eab0a02a6d5f9d36bef1fe872ef3ec9cefea56f37c",
+      "baseLfSha256": "fb32f4bdfd7c8019cbd939eab0a02a6d5f9d36bef1fe872ef3ec9cefea56f37c",
+      "gateAndCurrentWorkingTreeRawSha256": "97181f6a9a35de0870cf0fe97e7d50f6016c5163fbd973abc51c34ffea6b4ab1",
+      "currentWorkingTreeLfSha256": "5885e3623653eee05b2c6fc5bc679032203eff1e49298c930bbdcf5188883278",
+      "currentWorkingTreeBytes": 73495,
+      "currentGitBlob": "0cfd6f3592ad0916769dcf50aa386c99818edfab",
+      "currentBlobRawSha256": "5885e3623653eee05b2c6fc5bc679032203eff1e49298c930bbdcf5188883278",
+      "currentBlobLfSha256": "5885e3623653eee05b2c6fc5bc679032203eff1e49298c930bbdcf5188883278",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "baseGitBlob": "801cf53ea787a9875dbd69ab7f93a58f2a1bd64f",
+      "baseBlobRawSha256": "9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4",
+      "baseLfSha256": "9c7c6472749ae2db91cde67bb0423e73ae18aa1be2939c5b9e78f4a3985bcbc4",
+      "gateAndCurrentWorkingTreeRawSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+      "currentWorkingTreeLfSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+      "currentWorkingTreeBytes": 38673,
+      "currentGitBlob": "69930a3164e6f29e1e2a1f8a340156dd71f05302",
+      "currentBlobRawSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+      "currentBlobLfSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/normalization/apply.ts",
+      "baseGitBlob": "5b416b675032000dae7cf04cde5dd1b2f4552dea",
+      "baseBlobRawSha256": "7ab2a45dd59651f00759dc08ebdb6bf6085a95fbcc2ec62ff27eff2fb87bb017",
+      "baseLfSha256": "7ab2a45dd59651f00759dc08ebdb6bf6085a95fbcc2ec62ff27eff2fb87bb017",
+      "gateAndCurrentWorkingTreeRawSha256": "85d22302958325cff194d16098a9d47aa5292bd9361d09ce301c0dd5d1a91d2e",
+      "currentWorkingTreeLfSha256": "85d22302958325cff194d16098a9d47aa5292bd9361d09ce301c0dd5d1a91d2e",
+      "currentWorkingTreeBytes": 32257,
+      "currentGitBlob": "77c1a13fd5da9ed157338a452beb8733fa94610e",
+      "currentBlobRawSha256": "85d22302958325cff194d16098a9d47aa5292bd9361d09ce301c0dd5d1a91d2e",
+      "currentBlobLfSha256": "85d22302958325cff194d16098a9d47aa5292bd9361d09ce301c0dd5d1a91d2e",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/normalization/canonical.ts",
+      "baseGitBlob": "53568e18bd2decf52dcc949a49840a6dc736518c",
+      "baseBlobRawSha256": "077a26e1045543bac4030be13d916dd447b90a77bbf9e4509368a4b2feb6c99a",
+      "baseLfSha256": "077a26e1045543bac4030be13d916dd447b90a77bbf9e4509368a4b2feb6c99a",
+      "gateAndCurrentWorkingTreeRawSha256": "704fc47e7b51d6e3ec3e21770a47603eab85480497a69e0365cee33dbcbce59e",
+      "currentWorkingTreeLfSha256": "704fc47e7b51d6e3ec3e21770a47603eab85480497a69e0365cee33dbcbce59e",
+      "currentWorkingTreeBytes": 3824,
+      "currentGitBlob": "128952261f4cb3e166979645efbcde5e8a2231f3",
+      "currentBlobRawSha256": "704fc47e7b51d6e3ec3e21770a47603eab85480497a69e0365cee33dbcbce59e",
+      "currentBlobLfSha256": "704fc47e7b51d6e3ec3e21770a47603eab85480497a69e0365cee33dbcbce59e",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/normalization/models.ts",
+      "baseGitBlob": "5eea33b996a2bf213495c6a6c27ccec372e4d802",
+      "baseBlobRawSha256": "aed49a0aee49ef918b9f59a82af1acc67d7df4481de6bb01f1a7783bbe3c5409",
+      "baseLfSha256": "aed49a0aee49ef918b9f59a82af1acc67d7df4481de6bb01f1a7783bbe3c5409",
+      "gateAndCurrentWorkingTreeRawSha256": "2db3cef6c71b7db3927c547727c924d27a46a5dbb27a55e5a3825b586212f47f",
+      "currentWorkingTreeLfSha256": "2db3cef6c71b7db3927c547727c924d27a46a5dbb27a55e5a3825b586212f47f",
+      "currentWorkingTreeBytes": 4259,
+      "currentGitBlob": "f979e07bfb844b16e4869a927c77bb513acd7360",
+      "currentBlobRawSha256": "2db3cef6c71b7db3927c547727c924d27a46a5dbb27a55e5a3825b586212f47f",
+      "currentBlobLfSha256": "2db3cef6c71b7db3927c547727c924d27a46a5dbb27a55e5a3825b586212f47f",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "baseGitBlob": "b6031c60bc7f621d359a80ef7d950b4dbbdd43d6",
+      "baseBlobRawSha256": "a5251537bde1bc34ddcaa0e621843aa431f57f85e68a93ded4a1a64792f1241f",
+      "baseLfSha256": "a5251537bde1bc34ddcaa0e621843aa431f57f85e68a93ded4a1a64792f1241f",
+      "gateAndCurrentWorkingTreeRawSha256": "3cc0ffdf85ef41fc3e1a1aacb944dfe21750f4536e415f95db36c0f242c1513e",
+      "currentWorkingTreeLfSha256": "3cc0ffdf85ef41fc3e1a1aacb944dfe21750f4536e415f95db36c0f242c1513e",
+      "currentWorkingTreeBytes": 51206,
+      "currentGitBlob": "bf1914fa89f4b38fcad06476320b5e8fee2a5921",
+      "currentBlobRawSha256": "3cc0ffdf85ef41fc3e1a1aacb944dfe21750f4536e415f95db36c0f242c1513e",
+      "currentBlobLfSha256": "3cc0ffdf85ef41fc3e1a1aacb944dfe21750f4536e415f95db36c0f242c1513e",
+      "gateSourceMatchesCommittedAfterLfNormalization": true
+    }
+  ],
+  "immutableMigrations001to005": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "baseGitBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "currentGitBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "byteIdentical": true
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "baseGitBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "currentGitBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "byteIdentical": true
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "baseGitBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "currentGitBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "byteIdentical": true
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "baseGitBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "currentGitBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "byteIdentical": true
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "baseGitBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "currentGitBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "byteIdentical": true
+    }
+  ],
+  "migration006RawSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+  "migration006LfSha256": "927ac623e8dffbd119c698f36d15851a06338227fb9f1ca12f035b0904e0db12",
+  "migration006GitBlob": "69930a3164e6f29e1e2a1f8a340156dd71f05302"
+}

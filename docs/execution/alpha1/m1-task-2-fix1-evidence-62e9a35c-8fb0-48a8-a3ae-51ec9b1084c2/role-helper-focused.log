@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts -t authenticates as hub_api while denying direct credential material reads
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 30 skipped (31)
+   Start at  16:06:18
+   Duration  2.69s (transform 135ms, setup 0ms, import 311ms, tests 2.19s, environment 0ms)
+

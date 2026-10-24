@@ -1,0 +1,33 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/canonical-apply.test.ts -t complete customer and order applies under hub_worker
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (14 tests | 1 failed | 13 skipped) 2231ms
+     × runs complete customer and order applies under hub_worker with no unrelated auth writes 32ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > runs complete customer and order applies under hub_worker with no unrelated auth writes
+error: permission denied for table source_identity_remap_fence
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ identityFenceIsNewer normalization/apply.ts:159:18
+    157|
+    158| async function identityFenceIsNewer(client: PoolClient, context: Apply…
+    159|   const result = await client.query<{ identity_mapping_revision: strin…
+       |                  ^
+    160|     SELECT identity_mapping_revision::text FROM control.source_identit…
+    161|      WHERE tenant_key=$1 AND source_id=$2 AND kind=$3 AND external_id=…
+ ❯ applyCustomer normalization/apply.ts:268:9
+ ❯ acceptance-tests/canonical-apply.test.ts:168:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
+   Start at  15:51:24
+   Duration  2.63s (transform 82ms, setup 0ms, import 226ms, tests 2.23s, environment 0ms)
+

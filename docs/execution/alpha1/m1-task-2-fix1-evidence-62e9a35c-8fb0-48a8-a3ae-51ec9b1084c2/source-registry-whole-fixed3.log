@@ -1,0 +1,53 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (31 tests | 1 failed) 4851ms
+     × locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction 56ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction
+AuthError: AUTH_UNAVAILABLE
+ ❯ authQuery auth/repository.ts:47:17
+     45| ): Promise<QueryResult<T>> {
+     46|   try { return await operation(); }
+     47|   catch { throw new AuthError('AUTH_UNAVAILABLE'); }
+       |                 ^
+     48| }
+     49|
+ ❯ Object.authenticateSource auth/service.ts:536:22
+ ❯ acceptance-tests/source-registry.test.ts:222:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Release called on client which has already been released to the pool.
+ ❯ throwOnDoubleRelease node_modules/pg-pool/index.js:27:9
+ ❯ Client.release node_modules/pg-pool/index.js:374:9
+ ❯ Query.callback node_modules/pg-pool/index.js:474:18
+ ❯ Query.handleError node_modules/pg/lib/query.js:131:19
+ ❯ node_modules/pg/lib/client.js:136:15
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:85:11
+
+This error originated in "acceptance-tests/source-registry.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "rejects epoch, revision, pause, entity, and tenant changes after source authentication". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 passed (31)
+     Errors  1 error
+   Start at  16:06:24
+   Duration  5.34s (transform 187ms, setup 0ms, import 311ms, tests 4.85s, environment 0ms)
+

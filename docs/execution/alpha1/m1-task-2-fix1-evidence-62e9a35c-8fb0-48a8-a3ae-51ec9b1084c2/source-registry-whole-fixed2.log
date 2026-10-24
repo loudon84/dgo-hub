@@ -1,0 +1,384 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/source-registry.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (31 tests | 23 failed) 3590ms
+     × takes the common security guard before owner or source row locks during creation 42ms
+     × serializes source creation and tenant disable without an inverse-lock deadlock 40ms
+     × locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction 39ms
+     × rejects epoch, revision, pause, entity, and tenant changes after source authentication 39ms
+     × serializes an admission check before pause using compatible row locks 39ms
+     × rejects current-source snapshots for wrong entity, disabled credential, disabled tenant, and pause 39ms
+     × runs first activation through tested config, exact Owner approval, and an immutable single channel 39ms
+     × serializes mapping revision races and rejects a channel switch before changing config 44ms
+     × invalidates current approval and pauses on Owner reassignment while preserving the old channel identity 40ms
+     × keeps source_epoch stable for no-op credential updates and advances it once for effective changes 40ms
+     × pauses an active source when its credential material rotates 39ms
+     × invalidates credential scope changes and admits only the approved config channels after reapproval 43ms
+     × rotates a provisioned source credential before registry onboarding 37ms
+     × rejects a previously approved test after a newer test fails 39ms
+     × allows pause and resume with the same currently valid approval 39ms
+     × authenticates as hub_api while denying direct credential material reads 37ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 44ms
+     × keeps SQL Server unavailable for TESTED even when a deployment profile exists 39ms
+     × does not establish TESTED when an allowed entity has no field mappings 39ms
+     × rejects unknown standard targets and missing required customer fields 38ms
+     × invalidates applicability when the deployment endpoint profile changes 38ms
+     × rejects activation when the deployment endpoint profile changes after approval 38ms
+     × rejects a capability result if mappings change while the bounded probe runs 38ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 23 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > takes the common security guard before owner or source row locks during creation
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:130:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes source creation and tenant disable without an inverse-lock deadlock
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:153:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:211:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects epoch, revision, pause, entity, and tenant changes after source authentication
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:234:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes an admission check before pause using compatible row locks
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:246:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects current-source snapshots for wrong entity, disabled credential, disabled tenant, and pause
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:284:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > runs first activation through tested config, exact Owner approval, and an immutable single channel
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:314:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes mapping revision races and rejects a channel switch before changing config
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:349:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates current approval and pauses on Owner reassignment while preserving the old channel identity
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:373:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > keeps source_epoch stable for no-op credential updates and advances it once for effective changes
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:395:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > pauses an active source when its credential material rotates
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:406:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates credential scope changes and admits only the approved config channels after reapproval
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:422:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rotates a provisioned source credential before registry onboarding
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ acceptance-tests/source-registry.test.ts:478:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects a previously approved test after a newer test fails
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:496:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > allows pause and resume with the same currently valid approval
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:513:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > authenticates as hub_api while denying direct credential material reads
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ activeSource acceptance-tests/source-registry.test.ts:869:3
+ ❯ acceptance-tests/source-registry.test.ts:526:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:542:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > keeps SQL Server unavailable for TESTED even when a deployment profile exists
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:777:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > does not establish TESTED when an allowed entity has no field mappings
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:789:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects unknown standard targets and missing required customer fields
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:799:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates applicability when the deployment endpoint profile changes
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:811:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects activation when the deployment endpoint profile changes after approval
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:830:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/23]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects a capability result if mappings change while the bounded probe runs
+AuthError: AUTH_UNAVAILABLE
+ ❯ withAuthTransaction auth/repository.ts:37:11
+     35|     try { await client.query('ROLLBACK'); } catch { /* Preserve the st…
+     36|     if (error instanceof AuthError) throw error;
+     37|     throw new AuthError('AUTH_UNAVAILABLE');
+       |           ^
+     38|   } finally {
+     39|     client.release();
+ ❯ provisionTenant auth/service.ts:209:3
+ ❯ prepareOwner acceptance-tests/source-registry.test.ts:902:3
+ ❯ acceptance-tests/source-registry.test.ts:848:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/23]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  23 failed | 8 passed (31)
+   Start at  16:06:01
+   Duration  4.07s (transform 133ms, setup 0ms, import 311ms, tests 3.59s, environment 0ms)
+
