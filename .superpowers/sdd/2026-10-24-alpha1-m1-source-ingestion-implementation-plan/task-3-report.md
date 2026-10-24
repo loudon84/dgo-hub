@@ -8,7 +8,7 @@
 - Product source: `ebd41c78df45e7c9affc25a76aa7d2dd9187b5f8` (`Implement durable strict batch ingestion`).
 - Compatibility regression fix: `6a401bfd3c89dc37a1217e370ecbe423dbf3c26c` (`Keep strict reads compatible with existing handlers`).
 - Recovery coverage: `ab7cfe565766c60e4de5ac8cfa2b5ab7f2334db5` (`Exercise scoped barrier owner recovery flow`).
-- Safe evidence archive: `76df2e85428778e2e765447ff230fda7b50a46de`, containing the 57 paths listed in the evidence whitelist plus the whitelist itself. Whitelist SHA-256 (the whitelist intentionally excludes its own hash): `1a83fd8718b0a517882a6ff934d79b46d6274d907490afcb314f51adf426c3fc`.
+- Safe evidence archive: `76df2e85428778e2e765447ff230fda7b50a46de`, followed by retention-record update `83bf7dc7aa3c3cb45076e621899b67d85c609697`. The updated whitelist covers 58 evidence files plus itself. Whitelist SHA-256 (the whitelist intentionally excludes its own hash): `f95788f173abf3929f86e10044058b8dce005f12e246f43d438388c534af550c`.
 - The last test/typecheck/build gates ran with the recovery test as an uncommitted source-tree change. After commit, `git hash-object integration-service/acceptance-tests/strict-ingestion.test.ts` and `git rev-parse HEAD:integration-service/acceptance-tests/strict-ingestion.test.ts` both returned `860c244f30e9b25dad7e9eaf20a34aaa1fc45873`, confirming gate bytes equal the committed blob. Gate HEAD at execution was `6a401bfd3c89dc37a1217e370ecbe423dbf3c26c`; `ab7cfe5` is the tested source commit, and later commits contain only the report and safe evidence archive.
 
 ## Scope delivered
@@ -38,6 +38,8 @@ Commands ran from `E:\git\dgo-hub\integration-service` with `M0_RUN_EVIDENCE_ROO
 
 The full-suite gate predates the final test-only recovery coverage; the product files did not change after `6a401bf`. The new acceptance test itself, typecheck, and build passed on the exact committed recovery-test bytes. No repeated full suite was run after that test-only addition.
 
+These rows record the command, observed result summary, and exit status. Complete stdout/stderr for the gates were not retained in the approved evidence root. The evidence whitelist has no command-output files, and the summaries in this report are not raw logs. Gate output retention status: `NOT_RETAINED` (see `gate-output-retention.md` in the evidence root). No output has been reconstructed or replayed for this report correction.
+
 ### Security barrier recovery coverage
 
 The acceptance test now creates a `SOURCE_SCOPE_SECURITY_REMOVAL` barrier through `AuthService.repository.recordSourceScopeSecurityBarrier`, which disables the credential and pauses the source in the existing database function. The same token gets 401 while disabled and no durable intake rows are added. The test then runs the real source-registry `pause`, re-enables the existing credential through `updateSourceCredential` with the same row, revision and entity scope, runs the injected deterministic local capability test, obtains a fresh approval as the exact OIDC Owner, activates, and admits a new job. It asserts credential row ID is unchanged, the new approval fence equals the barrier fence, and the old accepted job's approval/admission fences remain unchanged. The local capability provider is an injected fixture and does not perform a live network test.
@@ -48,16 +50,16 @@ Coverage is for the scope-removal barrier only. A CREDENTIAL_COMPROMISE barrier 
 
 Evidence root: `docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/`. Inspection was limited to this Task3-selected root. It contains 21 lifecycle runs, 21 unique run labels and container IDs, and exactly 21 `created`, 21 `image_observed`, and 21 `removed` events. Every created container has a matching exact-ID removal with `ownershipConfirmed=true` and `containerAbsentAfterRemoval=true`; there are no lifecycle error events. The image for all 21 is `postgres:16.10-alpine`, repository digest `postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`, runtime image ID `sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`.
 
-The explicit-root run has 19 resource summaries. Two lifecycle-complete runs lack the helper's summary JSON: task0 run `1a71280b-61aa-40f0-a397-27fb42bbffaf` and task3 run `ddf4acf5-d90d-4930-9ead-c88c19ec8004`. Their JSONL lifecycle events do record exact removal and confirmed absence. No attempt was made to reconstruct those summaries.
+The table below lists only the 21 explicit-root runs; the two no-env labels `9ed56b7b-e433-41a9-8f64-7c3b3a5734fb` and `ab778678-c440-4929-82ce-4b80c8ea752f` are listed in the separate six-run no-env inventory. The explicit-root run has 19 resource summaries. Two lifecycle-complete runs lack the helper's summary JSON: task0 run `1a71280b-61aa-40f0-a397-27fb42bbffaf` and task3 run `ddf4acf5-d90d-4930-9ead-c88c19ec8004`. Their JSONL lifecycle events do record exact removal and confirmed absence. No attempt was made to reconstruct those summaries.
 
 | Task label | Run label | Container ID |
 | --- | --- | --- |
 | m1task1 | 43376541-de74-4496-aa10-1d30fac0e8b9 | 17bd794d492114f38f808ad0403f353dbbb08e7fb8bf89dbe867c050a3ad21bb |
-| m1task1 | 9ed56b7b-e433-41a9-8f64-7c3b3a5734fb | 756435adcb76249456a1e1f8d4589dcc750fc8859c484f5491528e8a804fa2cc |
+
 | m1task1 | f94623b6-2925-40b7-885d-f8cae1e90099 | 71ef1273f2c10dfb78dba002d8da3a5d33e37b87aa1ce5284923155f9a9167ae |
 | task0 | 1a71280b-61aa-40f0-a397-27fb42bbffaf | db4bde7ff8ff4396ed2665f275c5208a83b5795fe0fee1299bcaa55605f5ef15 |
 | task1 | 7f957983-1c67-4a0c-a4fa-f144d4e02bbd | 1c32628b51355ab094dac20e0091602d05a74910462be00bf655830dd2cda820 |
-| task1 | ab778678-c440-4929-82ce-4b80c8ea752f | 9af73074fc00b8bdb21ec5605fd03373aa49f8572a71322617f34100e286e052 |
+
 | task2 | 13354232-d058-42c5-95a5-2023254feeaf | 8ae37428335e82501fdda4a529600adc0c8817f5f9ffcd3f1bb09b21d81dce8d |
 | task2 | 7365dcbb-4746-4f2e-a479-2bd7906bc812 | b3f1a53834f313fd04d66272342af2380cd8fcc269599b24309a2a47a06c0414 |
 | task2 | a82d9f74-c27e-4415-aba7-b0dcdfd19201 | f108fc93f91fe781c70cd93e971b8c8d75dc0b7306a37c0d314c30d86382a4fd |
@@ -83,8 +85,8 @@ After that deduplication, the evidence root accounts for 27 new runs and 27 uniq
 | Default task | New run label | Container ID | Image | Source metadata |
 | --- | --- | --- | --- | --- |
 | task0 | 742f7d48-cd03-4e59-8041-5c418e35edec | ca57f94e4b12a6044974357a99593429728fccbe058eae0d16504f3a92e26ca0 | postgres:16.10-alpine | preserved M0 foundation lifecycle and summary |
-| task1 | ab778678-c440-4929-82ce-4b80c8ea752f | 9af73074fc00b8bdb21ec5605fd03373aa49f8572a71322617f34100e286e052 | postgres:16.10-alpine | preserved M0 task1 lifecycle and summary |
-| m1task1 | 9ed56b7b-e433-41a9-8f64-7c3b3a5734fb | 756435adcb76249456a1e1f8d4589dcc750fc8859c484f5491528e8a804fa2cc | postgres:16.10-alpine | preserved M1 task1 lifecycle and summary |
+ postgres:16.10-alpine | preserved M0 task1 lifecycle and summary |
+ postgres:16.10-alpine | preserved M1 task1 lifecycle and summary |
 | task2 | 4852d06e-9dfa-483d-ba5d-2df1f0b31bff | 9f6e0053ccf516b83effbbd13d805adf41c35ddb25edeaa993eb479de14826ec | postgres:16.10-alpine | copied from `m0-task-2-evidence/review-round1/9da20160-dea9-4575-93c5-4ae7a6666fc4/` |
 | task3 | 9558e0b7-3250-48ca-93df-d2e17c9f16a6 | 3cf4ecc233aa8f939e195292280e81ef3f88e4f646780cb42e698b10a9d98920 | postgres:16.10-alpine | copied from `m0-task-3-evidence/db927681-3930-4d6a-b8f8-078f4739277e/` |
 | task2 | 738613a7-d18d-4e3b-9d1b-bd99c5e84343 | 3eb3078a041fe6ee2f0326f180f58910d092ca278989976b4cbf7aa9ff6b87f3 | postgres:16.10-alpine | copied from `integration-service/acceptance-tests/evidence/m1-task-2/` |
@@ -97,6 +99,6 @@ The task2 resources `4852…` and `7386…` have summary JSON with the helper's 
 
 The first unconfigured full-suite attempt used helper defaults. With `evidenceRoot`, the PostgreSQL helper writes under `<absolute root>/<taskLabel>/<runLabel>/`; without it, it writes to the caller's `evidenceFile`. The non-Docker boundary tests use temporary roots. Root hash-verified the six tracked lifecycle/summary files against their current contents, copied them and a preservation manifest into the Task3 evidence root, then restored exactly those six original paths to their `ca32853` Git blob bytes. The six-path `git status` check is clean after restoration. The new default output files explicitly authorized for preservation were copied, not moved, under `misplaced-suite-182538/`; their SHA-256 hashes match their original paths. The three new default run directories/files remain untouched and excluded from the package. Their PostgreSQL lifecycle records were audited by exact run label and full container ID; there is no created-only fixture and no daemon error used as evidence of absence.
 
-`evidence-file-whitelist.json` in the official evidence root lists the safe files by relative path, SHA-256, size, file category, and safe resource/lifecycle metadata; it excludes its own hash. The whitelist includes the selected evidence-root lifecycle and summary files, the preservation manifest and six snapshots, and the six authorized copies. No other scratch roots or default paths are in the whitelist. The initial failed full-suite run log was not recovered from those approved metadata paths, so no additional run ID/log is claimed.
+`evidence-file-whitelist.json` in the official evidence root lists the safe files by relative path, SHA-256, size, file category, and safe resource/lifecycle metadata; it excludes its own hash. The whitelist includes the selected evidence-root lifecycle and summary files, the preservation manifest and six snapshots, the six authorized copies, and the gate-output retention record. No other scratch roots or default paths are in the whitelist. The initial failed full-suite run log was not recovered from those approved metadata paths, so no additional run ID/log is claimed. Across all passing and failing gates, stdout/stderr files and original command tool responses are `NOT_RETAINED`; only command/result summaries and exit statuses are recorded in this report.
 
 The local test evidence does not establish disk encryption at rest, external CRM/IdP/Hermes behavior, deployment raw-storage policy configuration, site acceptance, M1-4 worker behavior, or CREDENTIAL_COMPROMISE recovery. No raw payload, credential secret, environment file, or certificate is included in this report.
