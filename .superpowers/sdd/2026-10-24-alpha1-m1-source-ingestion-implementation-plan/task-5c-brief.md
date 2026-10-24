@@ -109,3 +109,7 @@ However, this existing candidate response is not enough to reliably identify the
 
 C's acceptance trace should enumerate a customer-only run, use this API-013 mode to discover the exact source key/UUID pairs, explicitly confirm them through API-014, and then run the combined snapshot. Verify the requested source is the only source returned, source keys distinguish any candidate UUIDs, and the read mode cannot update mappings. If the source-qualified safe view/grant cannot be implemented additively in phase-owned 009 without broadening API access, stop C dispatch and return the schema/grant seam for review.
 
+
+## Controller seam ruling for D
+
+C COMPLETE certifies the successful full snapshot and all present/explicit-tombstone aggregate outcomes. D separately consumes each such run exactly once to update absence facts and persists an explicit reconciliation_status (including pending Owner approval/actions). Reserve a safe summary seam for this dimension; C must not advertise all absence reconciliation complete. D adds no eligibility to failed/partial runs. Page membership Minor S1 is C-owned: persist immutable page_no/row_ordinal in the same page-write transaction and validate counts/digests from the exact durable sequence. This is C scope, not B fix1.
