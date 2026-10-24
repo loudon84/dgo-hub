@@ -83,6 +83,7 @@ export type AuthService = Readonly<{
   revokeAgentCredential(principal: UserPrincipal, credentialId: string): Promise<void>;
   authenticateAgent(token: string): Promise<AgentPrincipal>;
   authenticateSource(token: string, entity: SourceEntity): Promise<SourcePrincipal>;
+  authenticateSourceIdentity(token: string): Promise<SourcePrincipal>;
   assertCurrentSource(snapshot: SourcePrincipal, entity: SourceEntity, client: PoolClient): Promise<void>;
   assertCurrentAgent(snapshot: AgentPrincipal): Promise<void>;
   /** Controlled repository methods; a supplied PoolClient is reused without opening a nested transaction. */

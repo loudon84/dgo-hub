@@ -4,12 +4,14 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { IdentityRouteOptions } from './ingestion-api/identity-routes.js';
 import type { SourceRegistryRouteOptions } from './source-registry/routes.js';
+import type { StrictIngestionOptions } from './ingestion-api/strict-ingestion.js';
 import { createHubLoggerOptions } from './ingestion-api/logging.js';
 import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from './contracts/runtime-config.js';
 
 export type BuildAppOptions = Readonly<{
   identity?: IdentityRouteOptions;
   sourceRegistry?: SourceRegistryRouteOptions;
+  strictIngestion?: StrictIngestionOptions;
   logger?: FastifyServerOptions['logger'];
   runtime?: HubRuntimeConfiguration;
 }>;
@@ -19,7 +21,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const logger = options.logger ?? createHubLoggerOptions();
   const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false, genReqId: () => randomUUID() });
   const { registerRoutes } = await import('./ingestion-api/routes.js');
-  await registerRoutes(app, { identity: options.identity, sourceRegistry: options.sourceRegistry, runtime: options.runtime });
+  await registerRoutes(app, { identity: options.identity, sourceRegistry: options.sourceRegistry,
+    strictIngestion: options.strictIngestion, runtime: options.runtime });
   return app;
 }
 
@@ -45,9 +48,15 @@ export async function startApp(environment: NodeJS.ProcessEnv = process.env): Pr
   ]);
   const sourceService = createSourceRegistryService({ pool, auth: authService, secretResolver: failClosedSecretResolver,
     endpointAllowlist: failClosedEndpointAllowlist, capabilityProbe: failClosedCapabilityProbe });
-  const identity = { authenticator: createOidcAuthenticator(controlledConfig, authService), authService };
+  const authenticator = createOidcAuthenticator(controlledConfig, authService);
+  const identity = { authenticator, authService };
   const sourceRegistry = { ...identity, sourceService };
-  const app = await buildApp({ identity, sourceRegistry, runtime });
+  const rawStoragePolicy = environment.HUB_RAW_STORAGE_POLICY;
+  const configuredRawPolicy = rawStoragePolicy === 'deployment_managed' ? 'deployment_managed' as const
+    : rawStoragePolicy === 'local_lab_fixture' && runtime.environmentKind === 'local_lab' ? 'local_lab_fixture' as const : undefined;
+  const app = await buildApp({ identity, sourceRegistry, runtime,
+    strictIngestion: { pool, authService, authenticator,
+      ...(configuredRawPolicy ? { rawStoragePolicy: configuredRawPolicy } : {}) } });
   await app.listen({ host: '0.0.0.0', port: Number(environment.PORT ?? 3000) });
 }
 

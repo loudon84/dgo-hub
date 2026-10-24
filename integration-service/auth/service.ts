@@ -530,8 +530,7 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
       return Object.freeze({ ...user, credentialId: row.credential_id, credentialEpoch: decimalBigint(row.credential_epoch), expiresAt: iso(row.expires_at) });
     },
 
-    async authenticateSource(token, entity): Promise<SourcePrincipal> {
-      assertEntity(entity);
+    async authenticateSourceIdentity(token): Promise<SourcePrincipal> {
       const digest = digestCredential(token);
       const result = await authQuery(() => pool.query<{
         credential_id: string; source_id: string; tenant_key: string; allowed_entities: SourceEntity[]; credential_revision: string | number;
@@ -541,9 +540,15 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
       if (!row) throw new AuthError('AUTH_INVALID');
       if (!row.enabled || !row.tenant_enabled) throw new AuthError('AUTH_REVOKED');
       const allowedEntities = sourceEntities(row.allowed_entities);
-      if (!allowedEntities.includes(entity)) throw new AuthError('AUTH_FORBIDDEN');
       return Object.freeze({ sourceId: row.source_id, tenantId: row.tenant_key, allowedEntities: Object.freeze(allowedEntities),
         credentialId: row.credential_id, revision: decimalBigint(row.credential_revision), sourceEpoch: decimalBigint(row.source_epoch) });
+    },
+
+    async authenticateSource(token, entity): Promise<SourcePrincipal> {
+      assertEntity(entity);
+      const principal = await this.authenticateSourceIdentity(token);
+      if (!principal.allowedEntities.includes(entity)) throw new AuthError('AUTH_FORBIDDEN');
+      return principal;
     },
 
     async assertCurrentSource(snapshot, entity, client) {
