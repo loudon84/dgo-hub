@@ -168,8 +168,8 @@
       "container_absent_after_removal": true
     }
   ],
-  "current_postgres_resource_summary_count": 5,
-  "current_runs_without_summary": 2,
+  "current_postgres_resource_summary_count": 6,
+  "current_runs_without_summary": 1,
   "current_postgres_resource_summaries": [
     {
       "path": "docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e\\m1task1\\003e2c56-8da2-4983-90a5-f4e9b681568b\\postgres-resource-summary.json",
@@ -215,6 +215,17 @@
       "cleanup": null,
       "image_reference": "postgres:16.10-alpine",
       "host_port": 60666
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task0/731df9d7-d065-4833-b822-dff3a74ed8a5/foundation-postgres-resource-summary.json",
+      "task_label": null,
+      "run_label": "731df9d7-d065-4833-b822-dff3a74ed8a5",
+      "container_id": "c7bae70a7b44b7c203a624f0a92eb08e795d3f6dbb25c897c0ca61ac132aafc6",
+      "cleanup": "confirmed removed by exact owned container ID",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "host_port": 60664
     }
   ],
   "http_fixture_count": 1,
@@ -240,5 +251,6 @@
     "gate_scripts_executed": false,
     "counted_as_gate": false,
     "explanation": "The initial PowerShell runner parameter name collided with automatic $args, so the wrapper launched npm with no arguments. The successful capture directory contains the correctly invoked gate sequence."
-  }
+  },
+  "current_postgres_resource_summary_paths_checked": 6
 }

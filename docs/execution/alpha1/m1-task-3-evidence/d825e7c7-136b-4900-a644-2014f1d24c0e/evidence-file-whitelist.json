@@ -1512,8 +1512,8 @@
     },
     {
       "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/gate-captures/74ee7ba0-3902-4094-ab54-502999bc07ab/capture-summary.json",
-      "sha256": "56e25f74b67ae7642048f3f70d728c487159fea1c956b5dae3d7dc190231ca5e",
-      "size_bytes": 12268,
+      "sha256": "a7b5d9f086aac1ce3260971adcdbd303c9346def919f44b8bca87c420035a856",
+      "size_bytes": 13051,
       "kind": "captured-gate-source-and-fixture-summary",
       "metadata": {
         "run_id": "74ee7ba0-3902-4094-ab54-502999bc07ab",
@@ -1993,6 +1993,21 @@
         "port": 60710,
         "protocol": "http",
         "cleanup": "server closed and port released"
+      }
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-3-evidence/d825e7c7-136b-4900-a644-2014f1d24c0e/task0/731df9d7-d065-4833-b822-dff3a74ed8a5/foundation-postgres-resource-summary.json",
+      "sha256": "3f9bf6f7ba653a653248a38e6739bf55ab7a7a005fecab40efd21434aecba17c",
+      "size_bytes": 465,
+      "kind": "owned-resource-summary-metadata",
+      "metadata": {
+        "runLabel": "731df9d7-d065-4833-b822-dff3a74ed8a5",
+        "containerId": "c7bae70a7b44b7c203a624f0a92eb08e795d3f6dbb25c897c0ca61ac132aafc6",
+        "imageReference": "postgres:16.10-alpine",
+        "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+        "hostPort": 60664,
+        "cleanup": "confirmed removed by exact owned container ID"
       }
     }
   ],
