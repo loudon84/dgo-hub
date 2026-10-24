@@ -8,6 +8,8 @@ import { createAuthService } from '../auth/service.js';
 import { createCredential } from '../auth/credentials.js';
 import { runMigrations } from '../migrations/runner.js';
 import { STRICT_INGEST_BODY_LIMIT } from '../ingestion-api/strict-contract.js';
+import { createSourceRegistryService, type EndpointAllowlist } from '../source-registry/service.js';
+import type { EndpointProfile } from '../source-registry/capability-probe.js';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
 const evidenceRoot = 'E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e';
@@ -21,6 +23,7 @@ let fixture: OwnedPostgres;
 let apiPool: pg.Pool;
 let app: Awaited<ReturnType<typeof buildApp>>;
 let jobId: string;
+let endpointProfile: EndpointProfile;
 
 const manager = async () => ({ userId: 'manager-a', tenantId, departmentId: null, businessRole: null,
   managementScopes: ['source:read'] as const, authEpoch: '0', businessTimezone: 'Asia/Shanghai', issuer: 'fixture', subject: 'manager-a' });
@@ -57,21 +60,38 @@ beforeAll(async () => {
   await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
   const seedAuth = createAuthService({ pool: fixture.pool });
   await seedAuth.repository.provisionTenant({ tenantId, businessTimezone: 'Asia/Shanghai' });
-  await seedAuth.repository.provisionSubject({ tenantId, userId: 'owner-a', businessRole: 'sales' });
+  await seedAuth.repository.provisionSubject({ tenantId, userId: 'owner-a', businessRole: 'sales', managementScopes: ['source:read','source:write','source:approve'] });
+  await seedAuth.repository.bindIdentity({ issuer: 'https://fixture.example.test', subject: 'owner-a', tenantId, userId: 'owner-a' });
   await seedAuth.repository.provisionSubject({ tenantId, userId: 'manager-a', businessRole: 'sales', managementScopes: ['source:read'] });
-  await seedAuth.repository.provisionSourceCredential({ tenantId, sourceId, token: sourceToken, secretRef: 'vault://fixture/crm', allowedEntities: ['customer','order'], revision: '1' });
+  await seedAuth.repository.provisionSourceCredential({ tenantId, sourceId, token: sourceToken, secretRef: 'vault:/fixture/crm', allowedEntities: ['customer','order'], revision: '1' });
 
-  const config = { connector: 'rest', mode: 'INCREMENTAL', version_domain: 'SOURCE_VERSION', allowed_entities: ['customer','order'] };
+  endpointProfile = { revision:'fixture-v1',connector:'rest',protocol:'https:',host:'crm.fixture.invalid',port:443,
+    path:'/capability',schema_version:'customer-v1',source_identity:'fixture-crm',entities:{
+      customer:{version_field:'source_version',delete_field:'deleted_at'},order:{version_field:'source_version',delete_field:'deleted_at'},
+    } };
+  const config = { name:'CRM fixture',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',allowed_entities:['customer','order'],
+    endpoint_allowlist_ref:'crm-fixture',secret_ref:'vault:/fixture/crm',delete_contract:'tombstone',endpoint_profile:endpointProfile };
   const configDigest = createHash('sha256').update(JSON.stringify(config)).digest();
   const mappingDigest = Buffer.alloc(32, 0x21);
   const identityDigest = Buffer.alloc(32, 0x22);
-  const endpointDigest = Buffer.alloc(32, 0x23);
+  const endpointDigest = createHash('sha256').update(JSON.stringify(endpointProfile)).digest();
   await fixture.pool.query(`INSERT INTO control.source_registry(tenant_key,source_id,lifecycle,data_owner_user_id)
     VALUES($1,$2,'ACTIVE','owner-a')`, [tenantId,sourceId]);
   await fixture.pool.query(`INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
     VALUES($1,$2,1,$3,$4,'owner-a')`, [tenantId,sourceId,configDigest,config]);
   await fixture.pool.query(`INSERT INTO control.source_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
-    VALUES($1,$2,1,$3,'[]','owner-a')`, [tenantId,sourceId,mappingDigest]);
+    VALUES($1,$2,1,$3,$4,'owner-a')`, [tenantId,sourceId,mappingDigest,JSON.stringify([
+      {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+      {entity:'customer',source_field:'owner_user_id',target_field:'owner_user_id',transform:'source-id'},
+      {entity:'customer',source_field:'dept_id',target_field:'dept_id',transform:'source-id'},
+      {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+      {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+      {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+      {entity:'order',source_field:'status',target_field:'status',transform:'identity'},
+      {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+      {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+      {entity:'order',source_field:'currency',target_field:'currency',transform:'identity'},
+    ])]);
   await fixture.pool.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
     VALUES($1,$2,1,$3,'[]','owner-a')`, [tenantId,sourceId,identityDigest]);
   const credential = await fixture.pool.query<{ id: string }>('SELECT id FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2', [tenantId,sourceId]);
@@ -230,25 +250,41 @@ describe('M1-3 strict intake and durable job reads', () => {
   it('blocks a newer typed security barrier until a fresh fenced owner approval', async () => {
     const before = await fixture.pool.query<{ approval_security_fence: string; security_barrier_fence_at_admission: string }>(
       'SELECT approval_security_fence::text,security_barrier_fence_at_admission::text FROM control.ingestion_job WHERE id=$1',[jobId]);
-    const barrier = await fixture.pool.query<{ effective_fence: string }>(`INSERT INTO control.source_security_barrier(
-      tenant_key,source_id,entity,barrier_type,reason_code,created_by)
-      VALUES($1,$2,'customer','SOURCE_SCOPE_SECURITY_REMOVAL','fixture barrier','fixture') RETURNING effective_fence::text`,[tenantId,sourceId]);
+    const managementAuth = createAuthService({ pool:fixture.pool });
+    const owner = await managementAuth.resolveOidc('https://fixture.example.test','owner-a');
+    const endpointAllowlist:EndpointAllowlist = { resolve:async reference => {
+      if(reference !== 'crm-fixture') throw new Error('unapproved endpoint reference');
+      return endpointProfile;
+    } };
+    const sourceRegistry = createSourceRegistryService({
+      pool:fixture.pool,auth:managementAuth,
+      secretResolver:{isConfiguredReference:reference=>reference==='vault:/fixture/crm',resolve:async()=> 'fixture-secret'},
+      endpointAllowlist,capabilityProbe:{run:async()=>({passed:true,checks:['FIXTURE_CAPABILITY_PASS']})},environmentKind:'site',
+    });
+    await managementAuth.repository.recordSourceScopeSecurityBarrier(sourceId,tenantId,'customer','FIXTURE_SCOPE_REMOVED');
+    const barrier = await fixture.pool.query<{ effective_fence: string }>(
+      `SELECT effective_fence::text FROM control.source_security_barrier WHERE tenant_key=$1 AND source_id=$2
+       AND entity='customer' AND barrier_type='SOURCE_SCOPE_SECURITY_REMOVAL' ORDER BY effective_fence DESC LIMIT 1`,[tenantId,sourceId]);
     expect(BigInt(barrier.rows[0]!.effective_fence)).toBeGreaterThan(BigInt(before.rows[0]!.approval_security_fence));
     const counts = await rowCounts();
     const blocked = await post(JSON.stringify(customerBatch()),'blocked-after-barrier');
-    expect(blocked.statusCode).toBe(409);
+    expect(blocked.statusCode).toBe(401);
     expect((await rowCounts()).rows[0]).toEqual(counts.rows[0]);
 
-    await fixture.pool.query(`INSERT INTO control.source_owner_approval(
-      tenant_key,source_id,owner_user_id,owner_revision,config_revision,mapping_revision,identity_mapping_revision,
-      config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
-      endpoint_profile_digest,data_contract_ref,test_report_id)
-      SELECT tenant_key,source_id,owner_user_id,owner_revision,config_revision,mapping_revision,identity_mapping_revision,
-        config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
-        endpoint_profile_digest,data_contract_ref,test_report_id
-      FROM control.source_owner_approval WHERE id=(SELECT owner_approval_id FROM control.ingestion_job WHERE id=$1)`,[jobId]);
+    const credentialBefore = await fixture.pool.query<{ id:string }>(
+      'SELECT id::text FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2',[tenantId,sourceId]);
+    await expect(sourceRegistry.pause(owner,sourceId,'1','security scope review')).resolves.toMatchObject({lifecycle:'PAUSED'});
+    await managementAuth.repository.updateSourceCredential(sourceId,tenantId,true,'1',['customer','order']);
+    const tested = await sourceRegistry.test(owner,sourceId,'1');
+    expect(tested).toMatchObject({status:'PASS'});
+    const approval = await sourceRegistry.approve(owner,sourceId,'1',tested.test_report_id,tested.data_contract_ref);
+    expect(approval).toMatchObject({status:'APPROVED'});
+    await expect(sourceRegistry.activate(owner,sourceId,'1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
     const recovered = await post(JSON.stringify(customerBatch()),'recovered-after-fresh-approval');
     expect(recovered.statusCode).toBe(202);
+    const credentialAfter = await fixture.pool.query<{ id:string }>(
+      'SELECT id::text FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2',[tenantId,sourceId]);
+    expect(credentialAfter.rows).toEqual(credentialBefore.rows);
     const newProof = await fixture.pool.query<{ approval_security_fence: string }>(
       'SELECT approval_security_fence::text FROM control.ingestion_job WHERE id=$1',[recovered.json().data.job_id]);
     expect(newProof.rows[0]!.approval_security_fence).toBe(barrier.rows[0]!.effective_fence);
