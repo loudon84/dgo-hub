@@ -81,10 +81,10 @@ describe('M1 source admission authorization', () => {
     expect((auth as unknown as { assertCurrentSource?: unknown }).assertCurrentSource).toBeTypeOf('function');
   });
 
-  it('applies migrations 005 through 007 from the clean M0 chain and skips them with the same checksums on repeat', async () => {
-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs'],skipped:[]});
+  it('applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat', async () => {
+    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'],skipped:[]});
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs'] });
+    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries'] });
     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
     );

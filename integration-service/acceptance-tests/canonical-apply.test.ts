@@ -162,9 +162,10 @@ describe('canonical migration 006', () => {
     const history = await database.query<{ version: number; name: string }>(
       'SELECT version,name FROM control.schema_migration ORDER BY version',
     );
-    expect(history.rows.slice(-2)).toEqual([
+    expect(history.rows.slice(-3)).toEqual([
       { version: 6, name: 'canonical_data_and_receipts' },
       { version: 7, name: 'durable_ingestion_jobs' },
+      { version: 8, name: 'durable_worker_leases_and_retries' },
     ]);
     await expect(runMigrations(database, { directory: migrationsDirectory, environmentKind: 'local_lab' }))
       .resolves.toEqual({ applied: [], skipped: history.rows.map(row => `${String(row.version).padStart(3, '0')}_${row.name}`) });

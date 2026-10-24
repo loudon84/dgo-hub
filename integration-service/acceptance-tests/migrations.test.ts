@@ -101,8 +101,8 @@ describe('versioned migration runner', () => {
       windowsHide: true,
       encoding: 'utf8',
     });
-    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs'], skipped: [] });
-    expect(await ledgerState()).toEqual({ exists: true, count: 7 });
+    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries'], skipped: [] });
+    expect(await ledgerState()).toEqual({ exists: true, count: 8 });
     const grants = await postgres.pool.query<{ api_registry_digest_select: boolean; api_registry_kind_select: boolean; api_subject_business_role_update: boolean; api_business_read: boolean; mcp_source_read: boolean; publisher_gate_update: boolean; publisher_close_execute: boolean; no_public_default_acl: boolean }>(`SELECT
       has_column_privilege('hub_api','control.credential_digest_registry','digest','SELECT') AS api_registry_digest_select,
       has_column_privilege('hub_api','control.credential_digest_registry','kind','SELECT') AS api_registry_kind_select,
