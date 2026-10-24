@@ -1,0 +1,42 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+AssertionError: expected undefined to deeply equal { status: 'APPLIED', …(6) }
+
+- Expected:
+{
+  "amount": "100.10",
+  "line_amount": "15.15",
+  "order_at": "2026-10-22T01:00:01.654321Z",
+  "quantity": "1.500000",
+  "source_updated_at": "2026-10-22T01:00:00.123456Z",
+  "status": "APPLIED",
+  "unit_price": "10.100000",
+}
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:536:28
+    534|       JOIN hub.canonical_order_line l ON l.tenant_id=o.tenant_id AND l…
+    535|       WHERE i.job_id=$3 AND i.source_pk='EXACT-ORDER-PK-1'`,[tenantId,…
+    536|     expect(stored.rows[0]).toEqual({status:'APPLIED',source_updated_at…
+       |                            ^
+    537|       order_at:'2026-10-22T01:00:01.654321Z',amount:'100.10',quantity:…
+    538|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+TypeError: Cannot read properties of undefined (reading 'job_id')
+ ❯ acceptance-tests/strict-ingestion.test.ts:764:32
+    762|       batch.records[0]!.source_pk=`BARRIER-WORKER-C${index+1}`;
+    763|       const accepted=await post(JSON.stringify(batch),`barrier-worker-…
+    764|       const id=accepted.json().data.job_id as string;
+       |                                ^
+    765|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+    766|         (tenant_key,source_id,credential_id,entity,channel_id,barrier_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

@@ -1,0 +1,18 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates an explicitly remapped frozen identity while completing unrelated frozen work
+error: bind message supplies 5 parameters, but prepared statement "" requires 4
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/strict-ingestion.test.ts:869:5
+    867|     const affectedId=affected.json().data.job_id as string;
+    868|     const unrelatedId=unrelated.json().data.job_id as string;
+    869|     await fixture.pool.query(`INSERT INTO control.source_identity_mapp…
+       |     ^
+    870|       (tenant_key,source_id,revision,mapping_digest,mappings,created_b…
+    871|       VALUES($1,$2,2,$3,$4::jsonb,'owner-a')`,[tenantId,sourceId,2,Buf…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 137, severity: 'ERROR', code: '08P01', detail: undefined, hint: undefined, position: undefined, internalPosition: undefined, internalQuery: undefined, where: undefined, schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'postgres.c', routine: 'exec_bind_message' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

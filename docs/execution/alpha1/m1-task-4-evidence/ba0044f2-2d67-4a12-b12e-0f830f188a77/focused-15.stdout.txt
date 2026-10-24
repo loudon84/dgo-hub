@@ -1,0 +1,88 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=applies a committed HTTP job|preserves source version outcomes|summarizes mixed terminal outcomes|quarantines an order when the frozen customer target|preserves canonical timestamp precision|keeps the retry budget|rolls back canonical writes|rolls back canonical state|recovers an expired lease|lets concurrent hub_worker|recovers after actual process termination|keeps order lines|isolates each newer typed security barrier|finishes frozen work after ordinary source epoch drift acceptance-tests/strict-ingestion.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"level":30,"time":1792845743422,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"f6dc27d4-1028-4934-91bc-46c6c81bf437","req":{"id":"f6dc27d4-1028-4934-91bc-46c6c81bf437","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743504,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"f6dc27d4-1028-4934-91bc-46c6c81bf437","res":{"statusCode":202},"responseTime":80.89309999999978,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > returns 202 only after raw, job, item, idempotency and outbox rows commit
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays a lost response with the same scoped job and rejects changed content
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > serializes concurrent same-key requests to one committed receipt
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects structure and schema errors without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > enforces the public order state and empty-lines matrix before writing
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rolls back every intake row when the final outbox write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays after ordinary pause without re-admission and blocks new admission
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary 163ms
+{"level":30,"time":1792845743573,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"ff6c569d-1f0c-4546-aab2-cb3d62240ab7","req":{"id":"ff6c569d-1f0c-4546-aab2-cb3d62240ab7","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743629,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"ff6c569d-1f0c-4546-aab2-cb3d62240ab7","res":{"statusCode":202},"responseTime":56.15069999999969,"msg":"request completed"}
+{"level":30,"time":1792845743629,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"d3f9c628-cf0b-4148-a4e3-614ee3fecc2f","req":{"id":"d3f9c628-cf0b-4148-a4e3-614ee3fecc2f","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743684,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"d3f9c628-cf0b-4148-a4e3-614ee3fecc2f","res":{"statusCode":202},"responseTime":54.4088999999999,"msg":"request completed"}
+{"level":30,"time":1792845743684,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"9b566935-3c68-4435-b64e-850063af8df1","req":{"id":"9b566935-3c68-4435-b64e-850063af8df1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743740,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"9b566935-3c68-4435-b64e-850063af8df1","res":{"statusCode":202},"responseTime":55.65719999999965,"msg":"request completed"}
+{"level":30,"time":1792845743740,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"80ee6041-6691-4c4f-8a39-e375bf9b002e","req":{"id":"80ee6041-6691-4c4f-8a39-e375bf9b002e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743795,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"80ee6041-6691-4c4f-8a39-e375bf9b002e","res":{"statusCode":202},"responseTime":54.746999999999844,"msg":"request completed"}
+{"level":30,"time":1792845743795,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"edc133ef-5fb2-4c77-ba0e-34179517c421","req":{"id":"edc133ef-5fb2-4c77-ba0e-34179517c421","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845743849,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"edc133ef-5fb2-4c77-ba0e-34179517c421","res":{"statusCode":202},"responseTime":53.73839999999973,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects 417ms
+{"level":30,"time":1792845743990,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"cbe11d42-4738-4450-af35-2082722a7192","req":{"id":"cbe11d42-4738-4450-af35-2082722a7192","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744045,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"cbe11d42-4738-4450-af35-2082722a7192","res":{"statusCode":202},"responseTime":54.46130000000039,"msg":"request completed"}
+{"level":30,"time":1792845744116,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"a5f2e334-0da2-4694-92f4-3b633adc7072","req":{"id":"a5f2e334-0da2-4694-92f4-3b633adc7072","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792845744171,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"a5f2e334-0da2-4694-92f4-3b633adc7072","res":{"statusCode":202},"responseTime":54.51279999999997,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > summarizes mixed terminal outcomes as PARTIAL with only real APPLIED effects counted 126ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple 93ms
+{"level":30,"time":1792845744210,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"c70f452b-c068-430a-9a7c-ecc6d40ae389","req":{"id":"c70f452b-c068-430a-9a7c-ecc6d40ae389","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792845744264,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"c70f452b-c068-430a-9a7c-ecc6d40ae389","res":{"statusCode":202},"responseTime":53.88200000000006,"msg":"request completed"}
+{"level":30,"time":1792845744333,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"39af8ae9-0169-4b66-9cd9-f0634c2c9e34","req":{"id":"39af8ae9-0169-4b66-9cd9-f0634c2c9e34","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744397,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"39af8ae9-0169-4b66-9cd9-f0634c2c9e34","res":{"statusCode":202},"responseTime":63.94560000000001,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter 123ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions 237ms
+{"level":30,"time":1792845744569,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"57852e3a-309d-4e83-876c-ef1f18eb172a","req":{"id":"57852e3a-309d-4e83-876c-ef1f18eb172a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744623,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"57852e3a-309d-4e83-876c-ef1f18eb172a","res":{"statusCode":202},"responseTime":54.02290000000039,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header 108ms
+{"level":30,"time":1792845744678,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4c585483-6b5f-44e3-a6b5-eb041f0e0249","req":{"id":"4c585483-6b5f-44e3-a6b5-eb041f0e0249","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744730,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4c585483-6b5f-44e3-a6b5-eb041f0e0249","res":{"statusCode":202},"responseTime":52.42590000000018,"msg":"request completed"}
+{"level":30,"time":1792845744787,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4a73d872-af33-48a9-bd5b-90681d9e9110","req":{"id":"4a73d872-af33-48a9-bd5b-90681d9e9110","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744840,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4a73d872-af33-48a9-bd5b-90681d9e9110","res":{"statusCode":202},"responseTime":52.558300000000145,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails 198ms
+{"level":30,"time":1792845744876,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4da9bbf1-2928-4046-8504-643e1a4846c3","req":{"id":"4da9bbf1-2928-4046-8504-643e1a4846c3","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845744929,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"4da9bbf1-2928-4046-8504-643e1a4846c3","res":{"statusCode":202},"responseTime":52.923199999999724,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes 106ms
+{"level":30,"time":1792845744983,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"2d2f3f06-192f-46e9-9291-2ae3b246db21","req":{"id":"2d2f3f06-192f-46e9-9291-2ae3b246db21","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845745036,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"2d2f3f06-192f-46e9-9291-2ae3b246db21","res":{"statusCode":202},"responseTime":52.924300000000585,"msg":"request completed"}
+{"level":30,"time":1792845745036,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"33f621be-b6a9-4313-beb1-539b20d5bdde","req":{"id":"33f621be-b6a9-4313-beb1-539b20d5bdde","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845745088,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"33f621be-b6a9-4313-beb1-539b20d5bdde","res":{"statusCode":202},"responseTime":52.42590000000018,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs 194ms
+{"level":30,"time":1792845745176,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"b49c2e6d-5b6f-4787-bb49-241067de502c","req":{"id":"b49c2e6d-5b6f-4787-bb49-241067de502c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845745231,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"b49c2e6d-5b6f-4787-bb49-241067de502c","res":{"statusCode":202},"responseTime":54.74449999999979,"msg":"request completed"}
+{"level":30,"time":1792845745231,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"bbb62f59-8622-4738-9b49-51804646e0ad","req":{"id":"bbb62f59-8622-4738-9b49-51804646e0ad","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845745292,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"bbb62f59-8622-4738-9b49-51804646e0ad","res":{"statusCode":202},"responseTime":60.76800000000003,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK 3156ms
+{"level":30,"time":1792845748333,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"1089cad4-6505-49cb-aff3-71107cca6485","req":{"id":"1089cad4-6505-49cb-aff3-71107cca6485","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792845748386,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"1089cad4-6505-49cb-aff3-71107cca6485","res":{"statusCode":202},"responseTime":52.8792999999996,"msg":"request completed"}
+{"level":30,"time":1792845748485,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"d254d23a-d7b1-45bf-b9da-24b2327eabe7","req":{"id":"d254d23a-d7b1-45bf-b9da-24b2327eabe7","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845748537,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"d254d23a-d7b1-45bf-b9da-24b2327eabe7","res":{"statusCode":202},"responseTime":52.11439999999948,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails 114ms
+{"level":30,"time":1792845748611,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"2c88c43e-aba2-4505-a9b0-7e1a27c03add","req":{"id":"2c88c43e-aba2-4505-a9b0-7e1a27c03add","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845748664,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"2c88c43e-aba2-4505-a9b0-7e1a27c03add","res":{"statusCode":202},"responseTime":52.98539999999957,"msg":"request completed"}
+{"level":30,"time":1792845748734,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"eecd5567-e0a5-45f5-a3b5-d97f966fa0f1","req":{"id":"eecd5567-e0a5-45f5-a3b5-d97f966fa0f1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845748791,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"eecd5567-e0a5-45f5-a3b5-d97f966fa0f1","res":{"statusCode":202},"responseTime":57.60660000000007,"msg":"request completed"}
+{"level":30,"time":1792845748869,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"ca10a782-4853-4675-9d40-03095a9ebad0","req":{"id":"ca10a782-4853-4675-9d40-03095a9ebad0","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845748923,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"ca10a782-4853-4675-9d40-03095a9ebad0","res":{"statusCode":202},"responseTime":53.89509999999973,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply 548ms
+{"level":30,"time":1792845748995,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"dab7118d-83c8-4a56-aef2-0048ae7c886c","req":{"id":"dab7118d-83c8-4a56-aef2-0048ae7c886c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845749048,"pid":34444,"hostname":"WIN-20231024AVS","reqId":"dab7118d-83c8-4a56-aef2-0048ae7c886c","res":{"statusCode":202},"responseTime":52.82460000000083,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift 109ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed | 13 skipped (27)
+   Start at  20:42:20
+   Duration  8.79s (transform 201ms, setup 0ms, import 435ms, tests 8.17s, environment 0ms)
+

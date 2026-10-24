@@ -1,0 +1,146 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > appends after the reviewed registry and records repeatable checksum history
+AssertionError: expected [ { version: 7, …(1) }, …(1) ] to deeply equal [ { version: 6, …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "name": "canonical_data_and_receipts",
+-     "version": 6,
+-   },
+-   {
+      "name": "durable_ingestion_jobs",
+      "version": 7,
++   },
++   {
++     "name": "durable_worker_leases_and_retries",
++     "version": 8,
+    },
+  ]
+
+ ❯ acceptance-tests/canonical-apply.test.ts:165:36
+    163|       'SELECT version,name FROM control.schema_migration ORDER BY vers…
+    164|     );
+    165|     expect(history.rows.slice(-2)).toEqual([
+       |                                    ^
+    166|       { version: 6, name: 'canonical_data_and_receipts' },
+    167|       { version: 7, name: 'durable_ingestion_jobs' },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > applies the current migrations and skips them on repeat while keeping migration 001 bytes intact
+AssertionError: expected { applied: [], skipped: [ …(8) ] } to deeply equal { applied: [], skipped: [ …(7) ] }
+
+- Expected
++ Received
+
+@@ -6,7 +6,8 @@
+      "003_mcp_audit_boundary",
+      "004_alpha1_runtime_security",
+      "005_source_registry",
+      "006_canonical_data_and_receipts",
+      "007_durable_ingestion_jobs",
++     "008_durable_worker_leases_and_retries",
+    ],
+  }
+
+ ❯ acceptance-tests/identity-store.test.ts:75:112
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+AssertionError: expected { status: 'PASS', …(2) } to deeply equal { status: 'PASS', …(2) }
+
+- Expected
++ Received
+
+@@ -5,9 +5,10 @@
+      "003_mcp_audit_boundary",
+      "004_alpha1_runtime_security",
+      "005_source_registry",
+      "006_canonical_data_and_receipts",
+      "007_durable_ingestion_jobs",
++     "008_durable_worker_leases_and_retries",
+    ],
+    "skipped": [],
+    "status": "PASS",
+  }
+
+ ❯ acceptance-tests/migrations.test.ts:104:32
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > applies migrations 005 through 007 from the clean M0 chain and skips them with the same checksums on repeat
+AssertionError: expected { applied: [ '001_init', …(7) ], …(1) } to deeply equal { applied: [ '001_init', …(6) ], …(1) }
+
+- Expected
++ Received
+
+@@ -5,8 +5,9 @@
+      "003_mcp_audit_boundary",
+      "004_alpha1_runtime_security",
+      "005_source_registry",
+      "006_canonical_data_and_receipts",
+      "007_durable_ingestion_jobs",
++     "008_durable_worker_leases_and_retries",
+    ],
+    "skipped": [],
+  }
+
+ ❯ acceptance-tests/source-registry.test.ts:85:36
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+AssertionError: expected { status: 'SUCCEEDED', …(7) } to deeply equal { status: 'SUCCEEDED', …(7) }
+
+- Expected
++ Received
+
+  {
+    "acknowledged": true,
+    "applied_count": 1,
+    "attempts_started": 1,
+-   "customers": "1",
+-   "events": "1",
++   "customers": "27",
++   "events": "29",
+    "item_status": "APPLIED",
+-   "receipts": "1",
++   "receipts": "29",
+    "status": "SUCCEEDED",
+  }
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:457:29
+    455|           FROM control.ingestion_job j JOIN control.ingestion_job_item…
+    456|           JOIN control.ingestion_processing_outbox o ON o.job_id=j.id …
+    457|       expect(state.rows[0]).toEqual({ status:'SUCCEEDED',applied_count…
+       |                             ^
+    458|         customers:'1',receipts:'1',events:'1',acknowledged:true });
+    459|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  acceptance-tests/evidence/gate.test.ts > fixed local check recorder > runs only the fixed allowlist, records source and log digests, and refuses overwrite
+AssertionError: expected 'sha256:2253b97909f92ecccf73dab2a64612…' to be 'sha256:1d055b002735f73fdfb2a089c685ea…' // Object.is equality
+
+Expected: "sha256:1d055b002735f73fdfb2a089c685ea34d5126e6c04341a05e9eedc53c8c698ec"
+Received: "sha256:2253b97909f92ecccf73dab2a64612dea8fadb1f0d930df92e56bffee670243e"
+
+ ❯ acceptance-tests/evidence/gate.test.ts:404:27
+    402|     for (const file of worktree.files) {
+    403|       const bytes = await readFile(join(process.cwd(), '..', file.path…
+    404|       expect(file.sha256).toBe(`sha256:${createHash('sha256').update(b…
+       |                           ^
+    405|     }
+    406|     const gate = await evaluateReleaseGate(runDir);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+

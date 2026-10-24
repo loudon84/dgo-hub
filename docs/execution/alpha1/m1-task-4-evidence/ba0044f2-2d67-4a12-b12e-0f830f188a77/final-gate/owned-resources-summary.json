@@ -1,0 +1,824 @@
+{
+  "stage": "post_gate_owned_resource_audit",
+  "gate_head": "2d9b67c2f04104afb7995bc26360f285ad89f92b",
+  "checked_at_utc": "2026-10-24T12:49:56.6812073Z",
+  "container_count": 35,
+  "ownership_and_removal_confirmed": 35,
+  "current_absent_count": 35,
+  "resources": [
+    {
+      "container_id": "c8a39c0bf702c7cbff4ad24c9ebb1bf64c1439b970c2ba7b08bddd0bca2bed73",
+      "task_label": "task0",
+      "run_label": "851379c2-e779-422d-8768-188b9a9214c4",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task0\\851379c2-e779-422d-8768-188b9a9214c4\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=c8a39c0bf702c7cbff4ad24c9ebb1bf64c1439b970c2ba7b08bddd0bca2bed73"
+    },
+    {
+      "container_id": "4d015cbdb73a75a7dd6b6d4fb42bc6d103284a4496870fd17631fcc181dd9ca7",
+      "task_label": "task0",
+      "run_label": "c6bd30f4-5b47-4fdc-ab91-f0cd04afa6ac",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task0\\c6bd30f4-5b47-4fdc-ab91-f0cd04afa6ac\\postgres-lifecycle.jsonl",
+        "task0\\c6bd30f4-5b47-4fdc-ab91-f0cd04afa6ac\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=4d015cbdb73a75a7dd6b6d4fb42bc6d103284a4496870fd17631fcc181dd9ca7"
+    },
+    {
+      "container_id": "1b31511c1f5f686c3c188d5f4369280fa67b5128e5659ab429877a08a29be367",
+      "task_label": "m1task1",
+      "run_label": "e871d809-d825-4445-bfa4-97e172dc97b4",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "m1task1\\e871d809-d825-4445-bfa4-97e172dc97b4\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=1b31511c1f5f686c3c188d5f4369280fa67b5128e5659ab429877a08a29be367"
+    },
+    {
+      "container_id": "b06ff3451cebda2a19c524d47a8cc89fd04e70320afb6e9f722fa3260ab09cd5",
+      "task_label": "task3",
+      "run_label": "59e22a01-7967-47b1-860b-9e0e8242b44c",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\59e22a01-7967-47b1-860b-9e0e8242b44c\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=b06ff3451cebda2a19c524d47a8cc89fd04e70320afb6e9f722fa3260ab09cd5"
+    },
+    {
+      "container_id": "87ee358390d64ade0f122a864d3cb20040bf74ab72ed3f2d3c39f48670616781",
+      "task_label": "task3",
+      "run_label": "ec03e485-e7ed-47c9-ac67-abd61a4b583f",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\ec03e485-e7ed-47c9-ac67-abd61a4b583f\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=87ee358390d64ade0f122a864d3cb20040bf74ab72ed3f2d3c39f48670616781"
+    },
+    {
+      "container_id": "0903dbb928846c1191e412c515556ac0e16dc00a7b7666c5cf14fe812e20aa68",
+      "task_label": "task3",
+      "run_label": "7a807f9a-ad32-4bbf-a213-2ab64cd4710f",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\7a807f9a-ad32-4bbf-a213-2ab64cd4710f\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=0903dbb928846c1191e412c515556ac0e16dc00a7b7666c5cf14fe812e20aa68"
+    },
+    {
+      "container_id": "8dff0cc4b96615f25a45075a9cf819320b6061750a3013355a6113dc844c8c29",
+      "task_label": "task3",
+      "run_label": "793bbafd-ec2a-4de4-bb4b-49508018be83",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\793bbafd-ec2a-4de4-bb4b-49508018be83\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=8dff0cc4b96615f25a45075a9cf819320b6061750a3013355a6113dc844c8c29"
+    },
+    {
+      "container_id": "c1f78078ce8102c502a81e103e56ffff0af40285f7f3f286c178922f1cb84500",
+      "task_label": "task3",
+      "run_label": "d0e74ae1-48d7-4830-94c0-833d532d3d06",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\d0e74ae1-48d7-4830-94c0-833d532d3d06\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=c1f78078ce8102c502a81e103e56ffff0af40285f7f3f286c178922f1cb84500"
+    },
+    {
+      "container_id": "23a39e7d2b3df5301964e78d3a84bcc4823cf1a7e186942ef947b254774f218d",
+      "task_label": "task3",
+      "run_label": "572951a9-083c-4620-ad96-fbe4cbbcdc06",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task3\\572951a9-083c-4620-ad96-fbe4cbbcdc06\\postgres-lifecycle.jsonl",
+        "task3\\572951a9-083c-4620-ad96-fbe4cbbcdc06\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=23a39e7d2b3df5301964e78d3a84bcc4823cf1a7e186942ef947b254774f218d"
+    },
+    {
+      "container_id": "a9504198f2d6f6089d4e780f981ffd3333e02c9901cab819c9bc006333da5490",
+      "task_label": "task1",
+      "run_label": "34a1183f-94ad-48d3-80ed-02cf11df4b7f",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task1\\34a1183f-94ad-48d3-80ed-02cf11df4b7f\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=a9504198f2d6f6089d4e780f981ffd3333e02c9901cab819c9bc006333da5490"
+    },
+    {
+      "container_id": "c089d1d1efe07abb3374896c34b57467fae83a6799b68f72ba0672a959f5fc98",
+      "task_label": "m1task1",
+      "run_label": "8df8b56c-7324-4dc8-851d-4d88a02ad794",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\m1task1\\8df8b56c-7324-4dc8-851d-4d88a02ad794\\postgres-lifecycle.jsonl",
+        "m1task1\\8df8b56c-7324-4dc8-851d-4d88a02ad794\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=c089d1d1efe07abb3374896c34b57467fae83a6799b68f72ba0672a959f5fc98"
+    },
+    {
+      "container_id": "122362b3c6d0f2852579d0903aecf55c2062d906ca1c2e89f6cdab4f2c96fff2",
+      "task_label": "task3",
+      "run_label": "56548db3-d657-495d-bdb3-22e2c4ae4813",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task3\\56548db3-d657-495d-bdb3-22e2c4ae4813\\postgres-lifecycle.jsonl",
+        "task3\\56548db3-d657-495d-bdb3-22e2c4ae4813\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=122362b3c6d0f2852579d0903aecf55c2062d906ca1c2e89f6cdab4f2c96fff2"
+    },
+    {
+      "container_id": "ff0d11a4d72b0daed7550347da71f7db58640ae41457d0feed6e3d797007fe57",
+      "task_label": "task3",
+      "run_label": "ec03c30d-6c93-42a0-a85a-3c143fa956a2",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\ec03c30d-6c93-42a0-a85a-3c143fa956a2\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=ff0d11a4d72b0daed7550347da71f7db58640ae41457d0feed6e3d797007fe57"
+    },
+    {
+      "container_id": "cf926d6474b3a795333d188762508b07ff2672117b7c90bb616ad506894f3844",
+      "task_label": "task3",
+      "run_label": "3801fd52-9f09-4a36-86c2-dad9f2e81312",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task3\\3801fd52-9f09-4a36-86c2-dad9f2e81312\\postgres-lifecycle.jsonl",
+        "task3\\3801fd52-9f09-4a36-86c2-dad9f2e81312\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=cf926d6474b3a795333d188762508b07ff2672117b7c90bb616ad506894f3844"
+    },
+    {
+      "container_id": "34f461b7afe5a8fe20720bb8b6af3e79cd1ee1dcf387b0df750074dba01df807",
+      "task_label": "task3",
+      "run_label": "acad9ea1-71c0-4de4-9251-245758ed0559",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\acad9ea1-71c0-4de4-9251-245758ed0559\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=34f461b7afe5a8fe20720bb8b6af3e79cd1ee1dcf387b0df750074dba01df807"
+    },
+    {
+      "container_id": "1c5521c0e957ec8d680102d653931b489ba0c4b8979c5f191a1a871a9b3bc98d",
+      "task_label": "task0",
+      "run_label": "9a81fcf5-cfef-4671-84eb-95f3613b4f82",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task0\\9a81fcf5-cfef-4671-84eb-95f3613b4f82\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=1c5521c0e957ec8d680102d653931b489ba0c4b8979c5f191a1a871a9b3bc98d"
+    },
+    {
+      "container_id": "d3fd0ff3249adcd17b31996995766d25db5fa7f32233335dce81569aeeeb650c",
+      "task_label": "task3",
+      "run_label": "43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=d3fd0ff3249adcd17b31996995766d25db5fa7f32233335dce81569aeeeb650c"
+    },
+    {
+      "container_id": "9ca9d1d603cd85e120ec06c5937461492d0f04dbcf54e32bbfc6e63fa95b15c2",
+      "task_label": "task3",
+      "run_label": "5da6dae4-66dc-4630-8640-3bac4e168fe0",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task3\\5da6dae4-66dc-4630-8640-3bac4e168fe0\\postgres-lifecycle.jsonl",
+        "task3\\5da6dae4-66dc-4630-8640-3bac4e168fe0\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=9ca9d1d603cd85e120ec06c5937461492d0f04dbcf54e32bbfc6e63fa95b15c2"
+    },
+    {
+      "container_id": "fde5f14a7423d933145bc29cfb98a7a931a1dd86189c861ca238fa03d755bbaa",
+      "task_label": "task2",
+      "run_label": "d15b9bf6-221b-4207-814d-3a34e39e4e64",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task2\\d15b9bf6-221b-4207-814d-3a34e39e4e64\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=fde5f14a7423d933145bc29cfb98a7a931a1dd86189c861ca238fa03d755bbaa"
+    },
+    {
+      "container_id": "e77308aaaf9ff0c06f3dc8808b055e4ae5d6bb0768f3807e9c020e8b599e5e69",
+      "task_label": "task2",
+      "run_label": "9b9b290c-adf2-49f3-8ca3-45535f523c0f",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task2\\9b9b290c-adf2-49f3-8ca3-45535f523c0f\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=e77308aaaf9ff0c06f3dc8808b055e4ae5d6bb0768f3807e9c020e8b599e5e69"
+    },
+    {
+      "container_id": "fbac3b0f10ec18b981f87bc54f8563a863ecdf7eb25626a55110b5d6e123100d",
+      "task_label": "task3",
+      "run_label": "4f062542-a5dd-4335-9857-99bafc1249b7",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\4f062542-a5dd-4335-9857-99bafc1249b7\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=fbac3b0f10ec18b981f87bc54f8563a863ecdf7eb25626a55110b5d6e123100d"
+    },
+    {
+      "container_id": "5426388a8dce5f920fbd4ee6b30bfbddc1220cb5928ec9babe2bed1c582d7c15",
+      "task_label": "task3",
+      "run_label": "6d876888-2af3-49af-b118-12d60f46ce6c",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\6d876888-2af3-49af-b118-12d60f46ce6c\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=5426388a8dce5f920fbd4ee6b30bfbddc1220cb5928ec9babe2bed1c582d7c15"
+    },
+    {
+      "container_id": "93be8a2857c068cc96a9a18bfe90eed26944f1b8ce4a46077b0a050f9c9d83af",
+      "task_label": "task3",
+      "run_label": "65af72e7-52de-4675-b9c8-ce31f3b7d903",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\65af72e7-52de-4675-b9c8-ce31f3b7d903\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=93be8a2857c068cc96a9a18bfe90eed26944f1b8ce4a46077b0a050f9c9d83af"
+    },
+    {
+      "container_id": "196d324f0962dfbb0f8e39f6364e27664e2c5f045226d6692a96f8e1ee438370",
+      "task_label": "task1",
+      "run_label": "ed0a8f15-749c-457c-9f77-f03c7b4aefe4",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task1\\ed0a8f15-749c-457c-9f77-f03c7b4aefe4\\postgres-lifecycle.jsonl",
+        "task1\\ed0a8f15-749c-457c-9f77-f03c7b4aefe4\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=196d324f0962dfbb0f8e39f6364e27664e2c5f045226d6692a96f8e1ee438370"
+    },
+    {
+      "container_id": "e3ba84dd25ceb6c8f39fc026798803accd6d7ac641010f18489037a95367e422",
+      "task_label": "task3",
+      "run_label": "3f12f407-3d97-4abf-94a9-5f1185a6b2f2",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\3f12f407-3d97-4abf-94a9-5f1185a6b2f2\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=e3ba84dd25ceb6c8f39fc026798803accd6d7ac641010f18489037a95367e422"
+    },
+    {
+      "container_id": "bfd0c08ebb8911f8b432fc4a2e0b81d2b6ef5c71fdd8f02bbb6ea2acdec65e9e",
+      "task_label": "task3",
+      "run_label": "ace5f831-2cd9-4ff4-b57b-278604899da5",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\ace5f831-2cd9-4ff4-b57b-278604899da5\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=bfd0c08ebb8911f8b432fc4a2e0b81d2b6ef5c71fdd8f02bbb6ea2acdec65e9e"
+    },
+    {
+      "container_id": "6c24fdda83ded722e19a59ce1f26cb1d53d19286beb33d01240f57c82760a822",
+      "task_label": "task3",
+      "run_label": "dcdb5eb7-99d8-4690-b4ca-961ca305391e",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\dcdb5eb7-99d8-4690-b4ca-961ca305391e\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=6c24fdda83ded722e19a59ce1f26cb1d53d19286beb33d01240f57c82760a822"
+    },
+    {
+      "container_id": "fe1a72848f43b62e43a964f38dca62e23b5579f24903149d7051f445d9d47d61",
+      "task_label": "m1task1",
+      "run_label": "01165857-01d4-465d-bdad-ecc93fd6bcb9",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "m1task1\\01165857-01d4-465d-bdad-ecc93fd6bcb9\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=fe1a72848f43b62e43a964f38dca62e23b5579f24903149d7051f445d9d47d61"
+    },
+    {
+      "container_id": "f3a07f416a16e8ed3f7bbcd0cbc13681922cb377d0bb5ce4b362d6ec710c1e3d",
+      "task_label": "task2",
+      "run_label": "94513723-a6a6-4731-88a3-b3dd01e2a2c5",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task2\\94513723-a6a6-4731-88a3-b3dd01e2a2c5\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=f3a07f416a16e8ed3f7bbcd0cbc13681922cb377d0bb5ce4b362d6ec710c1e3d"
+    },
+    {
+      "container_id": "2410ba03c14f8780f3ce9f0307cbe418a7da82103b953baaa7d5e7deef4473d4",
+      "task_label": "task1",
+      "run_label": "10597d43-dc3f-4ddb-911e-e6700707a931",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task1\\10597d43-dc3f-4ddb-911e-e6700707a931\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=2410ba03c14f8780f3ce9f0307cbe418a7da82103b953baaa7d5e7deef4473d4"
+    },
+    {
+      "container_id": "00b65dbbf2604a02e93da90f2155f3f4e2223088a8e66d965d125a5284586272",
+      "task_label": "task3",
+      "run_label": "3ddb6f04-581d-424c-9d36-dfceb083e275",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\3ddb6f04-581d-424c-9d36-dfceb083e275\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=00b65dbbf2604a02e93da90f2155f3f4e2223088a8e66d965d125a5284586272"
+    },
+    {
+      "container_id": "9f158d526df7f9a71227eb884c6da92c4437d66fe9bf34b22e2c480cb13055f0",
+      "task_label": "task3",
+      "run_label": "f8343334-0b46-416e-adc2-284ca33925fc",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\f8343334-0b46-416e-adc2-284ca33925fc\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=9f158d526df7f9a71227eb884c6da92c4437d66fe9bf34b22e2c480cb13055f0"
+    },
+    {
+      "container_id": "9687296c732f2593090f5ad9ccbad334b40d2fb8596957870b7f5bb8caddc092",
+      "task_label": "task3",
+      "run_label": "7270b26f-e824-402c-b67b-8b2afdf8934a",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "task3\\7270b26f-e824-402c-b67b-8b2afdf8934a\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=9687296c732f2593090f5ad9ccbad334b40d2fb8596957870b7f5bb8caddc092"
+    },
+    {
+      "container_id": "380879dac2dd530d6145be15dafb4b524bb63a6195ba6c1e66a7a1bc105e2c09",
+      "task_label": "task2",
+      "run_label": "75493741-daee-41a8-a5e2-4ce83f502fdb",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task2\\75493741-daee-41a8-a5e2-4ce83f502fdb\\postgres-lifecycle.jsonl",
+        "task2\\75493741-daee-41a8-a5e2-4ce83f502fdb\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=380879dac2dd530d6145be15dafb4b524bb63a6195ba6c1e66a7a1bc105e2c09"
+    },
+    {
+      "container_id": "10444de747f29a87824978f189acabc931c4f192a3ef8d239d8a97ed685ce37e",
+      "task_label": "task2",
+      "run_label": "b3dc5be1-1939-4a68-b5ee-124910f6caa9",
+      "image_reference": "postgres:16.10-alpine",
+      "repo_digest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtime_image_id": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "events": [
+        "created",
+        "image_observed",
+        "removed"
+      ],
+      "ownership_confirmed": true,
+      "absent_after_removal": true,
+      "lifecycle_paths": [
+        "final-gate\\owned-resources\\task2\\b3dc5be1-1939-4a68-b5ee-124910f6caa9\\postgres-lifecycle.jsonl",
+        "task2\\b3dc5be1-1939-4a68-b5ee-124910f6caa9\\postgres-lifecycle.jsonl"
+      ],
+      "current_absence_checked": true,
+      "current_docker_ps_exit": 0,
+      "current_docker_ps_result": "",
+      "current_absent": true,
+      "current_absence_command": "docker ps --all --quiet --no-trunc --filter id=10444de747f29a87824978f189acabc931c4f192a3ef8d239d8a97ed685ce37e"
+    }
+  ]
+}

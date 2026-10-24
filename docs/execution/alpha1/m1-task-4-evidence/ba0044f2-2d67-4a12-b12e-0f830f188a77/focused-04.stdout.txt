@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=applies a committed HTTP job|preserves source version outcomes|quarantines an order when the frozen customer target|keeps the retry budget|rolls back canonical writes|rolls back canonical state|recovers an expired lease|lets concurrent hub_worker|recovers after actual process termination|keeps order lines acceptance-tests/strict-ingestion.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  20:34:00
+   Duration  218ms (transform 0ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

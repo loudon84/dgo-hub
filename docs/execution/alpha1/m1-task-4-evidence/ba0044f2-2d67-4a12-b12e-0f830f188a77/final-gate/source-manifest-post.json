@@ -1,0 +1,78 @@
+{
+  "stage": "post_final_gate",
+  "head": "2d9b67c2f04104afb7995bc26360f285ad89f92b",
+  "files": [
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "bytes": 29589,
+      "raw_sha256": "sha256:a40c5e1de5c1d495be452ea1d8e18cc3c34c7478b5e689241dd521f96c5cf396",
+      "lf_bytes": 29589,
+      "lf_sha256": "sha256:a40c5e1de5c1d495be452ea1d8e18cc3c34c7478b5e689241dd521f96c5cf396",
+      "git_clean_blob": "faecfba3629c48993496df18a5aa99afe67420dd"
+    },
+    {
+      "path": "integration-service/etl-worker/retry.ts",
+      "bytes": 440,
+      "raw_sha256": "sha256:b60e835bf39a1b0e350245dd8b586c8094949664e024f03068060e57bd7da13a",
+      "lf_bytes": 440,
+      "lf_sha256": "sha256:b60e835bf39a1b0e350245dd8b586c8094949664e024f03068060e57bd7da13a",
+      "git_clean_blob": "5f98fe9a50a3c4200d2a43969f9e6e25424bef76"
+    },
+    {
+      "path": "integration-service/migrations/008_durable_worker_leases_and_retries.sql",
+      "bytes": 3042,
+      "raw_sha256": "sha256:a003c943d5b0474e9bffd66e94a45a76a54b250608ac5ff53b2946ffd293d025",
+      "lf_bytes": 3042,
+      "lf_sha256": "sha256:a003c943d5b0474e9bffd66e94a45a76a54b250608ac5ff53b2946ffd293d025",
+      "git_clean_blob": "beba687d246b76dceac0f1848c47786338ce0b84"
+    },
+    {
+      "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+      "bytes": 66957,
+      "raw_sha256": "sha256:4f1aea1c98d940436368571a777c6bf0aac4dab5ec3cf67bdc8573dd896564e8",
+      "lf_bytes": 66957,
+      "lf_sha256": "sha256:4f1aea1c98d940436368571a777c6bf0aac4dab5ec3cf67bdc8573dd896564e8",
+      "git_clean_blob": "3f6063bd56f60677034f728f6f824e74f90164aa"
+    },
+    {
+      "path": "integration-service/acceptance-tests/worker-crash-driver.test.ts",
+      "bytes": 950,
+      "raw_sha256": "sha256:a04905003a2da7970b1f3d153cf321cdfb94be32bc119d61b8e9ee29cbc167a0",
+      "lf_bytes": 950,
+      "lf_sha256": "sha256:a04905003a2da7970b1f3d153cf321cdfb94be32bc119d61b8e9ee29cbc167a0",
+      "git_clean_blob": "82db73f7862b8639b300d425b818e45d33c895fb"
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "bytes": 115655,
+      "raw_sha256": "sha256:8c933847b25fa3f8a580fb7d3fce1c0d9db810774283c4365f6b6a39f3b2798a",
+      "lf_bytes": 115655,
+      "lf_sha256": "sha256:8c933847b25fa3f8a580fb7d3fce1c0d9db810774283c4365f6b6a39f3b2798a",
+      "git_clean_blob": "47f20199b2988ad6b73ac66a456fb469d5207f96"
+    },
+    {
+      "path": "integration-service/acceptance-tests/identity-store.test.ts",
+      "bytes": 21097,
+      "raw_sha256": "sha256:eca8d1425a01409845ca9c020de603ebce68ca2626968b251e534d1006a9ad45",
+      "lf_bytes": 21097,
+      "lf_sha256": "sha256:eca8d1425a01409845ca9c020de603ebce68ca2626968b251e534d1006a9ad45",
+      "git_clean_blob": "83de1fdc581f3ca82eea94be136ceed0d56b6c00"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "bytes": 16904,
+      "raw_sha256": "sha256:578dfbeecb835df1867ef82c890b94a9b30967e6feb87856e55006ec8cf90565",
+      "lf_bytes": 16903,
+      "lf_sha256": "sha256:bd68c83f676db567e0cd2ec7cb4577c469996e12e52f579a2f6d4ed03b0aad41",
+      "git_clean_blob": "9024f75731fd4b6e33a730aec88831342729a79a"
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "bytes": 73622,
+      "raw_sha256": "sha256:771cea1fbf2f2392bfd62db1ac9398762319eb8678048159c13ea22ee9980b19",
+      "lf_bytes": 73621,
+      "lf_sha256": "sha256:d4db1790afc05dcadd34fba0103126e213d662d29c9f80c97e44465b749f4978",
+      "git_clean_blob": "9a64d26364e42aa842011a070e88eac895c21a0a"
+    }
+  ]
+}

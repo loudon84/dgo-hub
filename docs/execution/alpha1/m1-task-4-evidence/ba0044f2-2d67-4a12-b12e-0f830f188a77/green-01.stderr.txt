@@ -1,0 +1,23 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+error: column reference "status" is ambiguous
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ updateJobSummary etl-worker/worker.ts:128:18
+    126|
+    127| async function updateJobSummary(client: PoolClient, job: DurableJob): …
+    128|   const result = await client.query<{ status: string; applied_count: n…
+       |                  ^
+    129|     CASE WHEN count(*) FILTER (WHERE status IN ('RECEIVED','VALIDATING…
+    130|          WHEN count(*) FILTER (WHERE status='QUARANTINED')=0 THEN 'SUC…
+ ❯ etl-worker/worker.ts:236:5
+ ❯ transaction etl-worker/worker.ts:145:19
+ ❯ applyItem etl-worker/worker.ts:286:19
+ ❯ runDurableWorkerOnce etl-worker/worker.ts:361:7
+ ❯ acceptance-tests/strict-ingestion.test.ts:400:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 111, severity: 'ERROR', code: '42702', detail: undefined, hint: undefined, position: '45', internalPosition: undefined, internalQuery: undefined, where: undefined, schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'parse_relation.c', routine: 'scanRTEForColumn' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

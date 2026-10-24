@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:809:33
+    807|   it('finishes frozen work after ordinary source epoch drift', async (…
+    808|     const accepted=await post(JSON.stringify(customerBatch()),'worker-…
+    809|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    810|     const id=accepted.json().data.job_id as string;
+    811|     await createAuthService({pool:fixture.pool}).repository.advanceSou…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

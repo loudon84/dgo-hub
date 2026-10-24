@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+AssertionError: {"response":{"request_id":"1caf81f1-7126-497b-8dab-bcb3df95fe0a","error":{"code":"SOURCE_CONFLICT","message":"SOURCE_CONFLICT","retryable":false,"details":{}}},"sourceState":{"lifecycle":"ACTIVE","current_config_revision":"1","mapping_revision":"1","identity_mapping_revision":"1","owner_revision":"1","enabled":true,"revision":"1","source_epoch":"0","credential_generation":"1","tenant_enabled":true,"barrier_count":1},"barriers":[{"barrier_type":"CREDENTIAL_COMPROMISE","effective_fence":"1","source_id":"crm-demo","entity":null,"channel_id":null}]}: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:762:137
+    760|       batch.records[0]!.source_pk=`BARRIER-WORKER-C${index+1}`;
+    761|       const accepted=await post(JSON.stringify(batch),`barrier-worker-…
+    762|       expect(accepted.statusCode,JSON.stringify({response:accepted.jso…
+       |                                                                                                                                         ^
+    763|       const id=accepted.json().data.job_id as string;
+    764|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

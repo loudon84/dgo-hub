@@ -1,0 +1,6 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+etl-worker/worker.ts(264,50): error TS2339: Property 'code' does not exist on type '{ status: "DUPLICATE" | "IGNORED_STALE"; objectId: string; digest: string; } | { status: "QUARANTINED"; code: "SOURCE_VERSION_CONFLICT" | "AUTHORITY_MAPPING_SUPERSEDED" | "SECURITY_BARRIER_ACTIVE" | "IDENTITY_MAPPING_REQUIRED" | "IDENTITY_MAPPING_TARGET_INVALID"; }'.
+  Property 'code' does not exist on type '{ status: "DUPLICATE" | "IGNORED_STALE"; objectId: string; digest: string; }'.

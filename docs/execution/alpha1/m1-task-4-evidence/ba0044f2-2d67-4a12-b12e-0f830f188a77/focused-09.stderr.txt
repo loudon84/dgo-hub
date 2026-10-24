@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+AssertionError: expected 'error: invalid input syntax for type …' to be undefined
+
+- Expected:
+undefined
+
++ Received:
+"error: invalid input syntax for type uuid: \"owner-a\""
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:538:71
+    536|       LEFT JOIN hub.canonical_order_line l ON l.tenant_id=o.tenant_id …
+    537|       WHERE i.job_id=$3 AND i.source_pk='EXACT-ORDER-PK-1'`,[tenantId,…
+    538|     expect(applyError === undefined ? undefined : String(applyError)).…
+       |                                                                       ^
+    539|     expect(stored.rows[0]).toEqual({status:'APPLIED',source_updated_at…
+    540|       order_at:'2026-10-22T01:00:01.654321Z',amount:'100.10',quantity:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

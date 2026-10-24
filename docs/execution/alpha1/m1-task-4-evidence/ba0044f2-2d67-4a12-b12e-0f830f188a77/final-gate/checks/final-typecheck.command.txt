@@ -1,0 +1,1 @@
+M0_RUN_EVIDENCE_ROOT=E:\m1t4-runtime\m1-task-4-final-9b0fd52a-6a5a-4eb1-88f0-f4770281e269 npm run typecheck

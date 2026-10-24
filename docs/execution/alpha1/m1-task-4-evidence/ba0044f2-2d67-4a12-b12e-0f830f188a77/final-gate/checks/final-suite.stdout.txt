@@ -1,0 +1,473 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > rejects malformed UTF-8 and unpaired surrogate escapes 3ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > sorts object keys by Unicode code point instead of UTF-16 code unit 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > normalizes object key order and insignificant JSON whitespace while preserving public values 2ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > preserves digest distinctions for UUID case, timestamp offset, absent versus null and source ID case 5ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > rejects invalid public data without normalizing accepted strings 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for DRAFT with 0 lines 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for DRAFT with 1 lines 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for CANCELLED with 0 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for CANCELLED with 1 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for CONFIRMED with 0 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for CONFIRMED with 1 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for COMPLETED with 0 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > applies the public order line rule for COMPLETED with 1 lines 0ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > enforces the PRD 2,048-character phone limit without normalizing its content 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > rejects non-string order enums and enforces nonempty confirmed lines 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > bounds customer external identifiers without changing accepted spelling 1ms
+ ✓ ingestion-api/strict-contract.test.ts > strict hub.v1 contract > bounds parser nesting before recursive descent 0ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (CREATE TABLE control.escape_a(id integer); COMMIT; SELECT 1 / 0;) 19ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (CREATE TABLE control.escape_b(id integer); ROLLBACK; SELECT 1 / 0;) 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (START TRANSACTION;) 8ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (BEGIN WORK;) 8ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (END TRANSACTION;) 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (ABORT;) 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (PREPARE TRANSACTION 'escape';) 24ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (COMMIT PREPARED 'escape';) 18ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > accepts a complete site input with tenant-bound distinct test identities 52ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > requires issuer, source contracts, and all five approved signoffs 6ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > blocks REVIEW records and missing approval actors or timestamps 1ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects credential-bearing endpoints and invalid secret references 5ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects duplicate sources, invalid timezone, and additional secret fields 2ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > requires site HTTPS and a sales and manager identity set bound to the tenant 2ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > blocks synthetic identities in site readiness while allowing them in a local lab 2ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects password aliases in accepted endpoint query strings 2ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > allows only HTTPS or loopback HTTP for local-lab IdP URLs 3ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects credentials embedded in identity references 3ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects bare user:password@host syntax in test identity references 1ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects bare user:password@host syntax in approval actor references 0ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > rejects auth_key endpoint query aliases while retaining password aliases 1ms
+ ✓ acceptance-tests/environment.test.ts > environment and signoff contracts > does not pass an example or a mismatched environment kind as formal M0 readiness 4ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > returns a stable usage error for missing arguments 1ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > validates examples successfully while explicitly reporting product_ready false 4ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > returns exit code 2 for valid but blocked formal readiness 3ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > returns exit code 0 and entry-validation scope for a complete non-example contract 5ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects top-level transaction control before connecting (ROLLBACK PREPARED 'escape';) 10ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects transaction control after a newline-continued E string before connecting (COMMIT) 10ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects transaction control after a newline-continued E string before connecting (ROLLBACK) 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > supports legitimate newline-continued E string literals 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (SET standard_conforming_strings = off;) 7ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (SET LOCAL "standard_conforming_strings" TO 'off';) 16ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (SELECT set_config('standard_conforming_strings','off',false);) 17ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (SELECT set_config('standard_' || 'conforming_strings','off',false);) 13ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (RESET standard_conforming_strings;) 6ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > rejects migration changes to the SQL string lexer mode (RESET ALL;) 6ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > normalizes decimal strings exactly at the requested scale 4ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > rejects negative canonical money while allowing zero values 11ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > enforces PRD text limits and the order number identifier contract 7ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > accepts exactly 200 canonical order lines and rejects line 201 9ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > accepts decimal versions without converting them through Number 1ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > preserves case and rejects padded or oversized public identifiers 2ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > hashes source business content before owner resolution and ignores processing metadata 2ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > orders complete line images by their case-sensitive source line id 1ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > orders keys by UTF-8 bytes instead of runtime locale or UTF-16 collation 0ms
+ ✓ acceptance-tests/canonicalization.test.ts > strict canonical normalization > keeps canonical source identity separate from legacy demo models 2ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > returns exit code 1 for unreadable and schema-invalid inputs 5ms
+ ✓ acceptance-tests/environment.test.ts > M0 entry CLI > returns stable unreadable_input JSON for a genuinely missing signoff path 3ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > keeps the checked-in example schema-valid and release-blocked 34ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > keeps exact approved upstream source pins 4ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > keeps the exported contract aligned with distribution digest provenance fields 4ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > accepts a syntactically complete synthetic example but blocks release 3ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks release locks that describe a local lab 2ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks a missing manifest digest instead of treating an image id as the digest 7ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > accepts Docker engine identity equal to a declared distribution descriptor 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > requires an explicit distribution digest source and valid optional media type 4ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks floating latest image references 2ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks source revisions that differ from approved pins 3ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks capabilities that were not probed 2ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks missing required components 4ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks runtime observations whose probe identity does not match the image 2ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks runtime config digests that differ from the observed config 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks image references without a fixed tag or with an embedded digest 2ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > requires repository:fixed-tag image syntax while allowing registry ports 5ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > represents the same repository and tag restrictions in JSON Schema 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks source pins that drift from the approved pins file 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > blocks missing real observations without inventing a release-ready lock 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock contract > requires applicable source identity on explicitly declared extra upstream components 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock CLI > returns stable JSON for missing arguments 1ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock CLI > writes a structurally valid synthetic lock but never reports product readiness 7ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock CLI > returns nonzero stable JSON for incomplete observations in release mode 8ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > returns a structured non-pass result when required files are absent 27ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > returns stable JSON-compatible CLI results and a nonzero code for blocked input 11ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > exposes the canonical 48 acceptance ids and keeps them NOT_RUN by default 16ms
+ ✓ acceptance-tests/deployment-lock.test.ts > deployment lock CLI > returns stable nonzero JSON when the requested output cannot be written 4ms
+ ✓ acceptance-tests/migration-boundary.test.ts > migration transaction boundary > allows transaction words in comments, strings, identifiers and dollar-quoted bodies 14ms
+ ✓ acceptance-tests/migration-boundary.test.ts > owned PostgreSQL startup cleanup failure paths > routes every owned fixture lifecycle event under the explicit run evidence root 17ms
+ ✓ acceptance-tests/migration-boundary.test.ts > owned PostgreSQL startup cleanup failure paths > recovers the created ID after docker run writes its cidfile then fails 16ms
+ ✓ acceptance-tests/migration-boundary.test.ts > owned PostgreSQL startup cleanup failure paths > retains ID locator evidence when owned removal fails 22ms
+ ✓ acceptance-tests/migration-boundary.test.ts > owned PostgreSQL startup cleanup failure paths > does not remove a container when either ownership label fails inspection 8ms
+ ✓ acceptance-tests/migration-boundary.test.ts > owned PostgreSQL startup cleanup failure paths > keeps cleanup unconfirmed when Docker cannot verify absence after rm 5ms
+ ✓ acceptance-tests/record-local-checks.test.ts > local-check worktree metadata > hashes dirty tracked and untracked Chinese paths and records a deleted path as unavailable 437ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > generates canonical unpadded base64url for exactly 32 random bytes 7ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "" 2ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 1ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 1ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" 0ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" 1ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/" 1ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA " 0ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > rejects noncanonical secret shape "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB" 0ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > hashes decoded bytes instead of the UTF-8 representation 1ms
+ ✓ acceptance-tests/identity-codec.test.ts > opaque credential codec > derives the PRD execution role from a registered tenant key and trusted business role 1ms
+ ✓ acceptance-tests/integration.test.ts > sales results > sums visible paid orders in cents 3ms
+ ✓ acceptance-tests/integration.test.ts > sales results > ranks customers from visible order rows 1ms
+ ✓ acceptance-tests/integration.test.ts > binding and retries > rejects mappings to unknown physical columns 1ms
+ ✓ acceptance-tests/integration.test.ts > binding and retries > caps exponential retry delay 0ms
+ ✓ acceptance-tests/core.test.ts > normalization > rejects an order whose line total differs from the header total 9ms
+ ✓ acceptance-tests/core.test.ts > normalization > normalizes a complete customer with a stable source key 2ms
+ ✓ acceptance-tests/core.test.ts > permissions and tools > rejects columns outside the approved allowlist 1ms
+ ✓ acceptance-tests/core.test.ts > permissions and tools > binds tenant and owner row filters to Hasura session variables 2ms
+ ✓ acceptance-tests/core.test.ts > permissions and tools > exposes exactly five read-only sales tools 1ms
+{"level":30,"time":1792846057859,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"4e03af4c-c0d1-4e90-8433-419eb47588a2","req":{"id":"4e03af4c-c0d1-4e90-8433-419eb47588a2","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846057884,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"996a97b0-ba1b-44aa-8054-b213dfa90872","req":{"id":"996a97b0-ba1b-44aa-8054-b213dfa90872","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846057870,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"4e03af4c-c0d1-4e90-8433-419eb47588a2","res":{"statusCode":422},"responseTime":9.07510000000002,"msg":"request completed"}
+{"level":30,"time":1792846057886,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"996a97b0-ba1b-44aa-8054-b213dfa90872","res":{"statusCode":422},"responseTime":1.7626000000000204,"msg":"request completed"}
+{"level":30,"time":1792846057892,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"49b563f0-2c39-4e20-bd0f-9c8b2ea37368","req":{"id":"49b563f0-2c39-4e20-bd0f-9c8b2ea37368","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846057894,"pid":23264,"hostname":"WIN-20231024AVS","reqId":"49b563f0-2c39-4e20-bd0f-9c8b2ea37368","res":{"statusCode":422},"responseTime":1.0083999999999378,"msg":"request completed"}
+ ✓ ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > rejects duplicate keys at any nesting depth before source authentication 694ms
+ ✓ ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > does not reflect duplicate private property names in errors before authentication 10ms
+ ✓ ingestion-api/strict-intake.test.ts > strict hub.v1 ingestion parser > rejects deep JSON below the byte limit as a nonretryable client error 8ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness 604ms
+ ✓ acceptance-tests/worker-crash-driver.test.ts > M1-4 worker crash child > holds a claimed worker at the requested crash boundary 2ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > allows a complete unit-only release-shaped bundle through the final release branch 395ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > anchors bundle pins to the controlled repository pins even when bundle files are self-consistent 399ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference synthetic://hermes in a release-shaped bundle 218ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle 149ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference fixture://hermes in a release-shaped bundle 157ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference  synthetic://hermes in a release-shaped bundle 174ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference 	ExAmPlE://hermes in a release-shaped bundle 160ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal approval authority reference synthetic:approval:crm in a release-shaped bundle 165ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal approval authority reference  fixture://approval:crm in a release-shaped bundle 128ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > applies the current migrations and skips them on repeat while keeping migration 001 bytes intact 78ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > imports without connecting, querying, migrating, exiting, or closing a pool 12ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle 134ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > stores only SHA256 of decoded 32-byte credentials and applies server TTL boundaries 119ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool 501ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference  fixture://owner in a release-shaped bundle 142ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > returns the first secret once, replays safe metadata, conflicts on changed requests and serializes concurrent retries 108ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > orders admissions and new security barriers through one transaction fence 15ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > appends after the reviewed registry and records repeatable checksum history 23ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses tenant composite keys for canonical order to customer references 8ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > keeps the API principal out of canonical core DML and gives the shared worker bounded apply DML 2ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > lists only current user metadata with stable anchors and rejects forged or cross-user cursors 158ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > runs complete customer and order applies under hub_worker with no unrelated auth writes 104ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes owner eligibility with a concurrent M0 disable 59ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > applies 001 to an empty database, skips it on repeat, and preserves migration data 368ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts legitimate authority schemes whose names contain nonreal scheme words 246ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > traverses every owned credential across submillisecond timestamp anchors 102ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > normalizes CRLF to LF when recording the migration checksum 117ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an independently specified customer and handles version receipt outcomes atomically 68ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > fences old and new owner epochs with a source driven ownership change 73ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > revokes atomically and idempotently, invalidates in-flight snapshots, and allows fresh other credentials 102ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > requires one unique fixture input artifact for each approved source contract 155ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > imports an injectable app factory without starting a listener 56ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > serializes concurrent runners and applies each migration exactly once 130ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes a transaction-scoped current-source assertion 65ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > allows agent:revoke only for same-tenant managed targets and makes other attempts a no-op 139ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > loads only complete controlled configuration and rejects site HTTP or permissive fallbacks 65ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping 107ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > finishes frozen owner work after an ordinary Data Owner binding change 63ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a direct worker owner-change effect without a matching canonical change 33ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a PASS result when its Oracle assertion values differ 160ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat 88ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rolls back a failed migration and ledger row while preserving 001, then retries successfully 156ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > verifies RS256 and ES256 then resolves only issuer/subject facts from the database 141ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > rechecks binding, role, department and tenant state on every fresh authentication 125ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > does not grant API access to source digest or secret reference and keeps the lock function private 62ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects stale matching receipt and outbox after a partial direct core owner update 53ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > stamps receipt and outbox transaction IDs over worker supplied values 41ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > locks direct-helper owner eligibility before validating it under concurrent disable 104ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > rejects invalid signatures, unknown keys, claims, times, required claims, and unapproved algorithms 95ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string COMMIT before any migration DDL or ledger write 61ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string ROLLBACK before any migration DDL or ledger write 8ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration whose checksum changed without adding history 74ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > compares referenced Oracle JSON values while ignoring object key order 173ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > binds each authenticated snapshot to one deterministic enabled OIDC binding 88ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > keeps management-only users resolvable but prevents agent credentials and enforces role eligibility 92ms
+{"level":30,"time":1792846060937,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9bc52a2c-ff07-4caa-86c8-f281f704cbc3","req":{"id":"9bc52a2c-ff07-4caa-86c8-f281f704cbc3","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > completes the source manager workflow through the real hub_api role 232ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > rejects hostile jku and x5u without fetching their URLs, and blocks configured JWKS redirects 69ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > maps verified but unmapped or disabled subjects to stable safe authentication errors 87ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is renamed 121ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects direct-helper owner changes after M0 withdraws the business role to NULL 61ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > enforces typed barriers and newer remap fences through direct worker helper calls 79ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > uses exact filesystem identity for distinct files and rejects hardlink aliases 168ms
+{"level":30,"time":1792846061054,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9bc52a2c-ff07-4caa-86c8-f281f704cbc3","res":{"statusCode":202},"responseTime":116.4297000000006,"msg":"request completed"}
+{"level":30,"time":1792846061066,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"06888e0c-e028-4ddb-9d44-f0852cc43706","req":{"id":"06888e0c-e028-4ddb-9d44-f0852cc43706","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > does not resolve identity or enter business storage for invalid tokens 66ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > requires personal opaque Bearer auth before MCP protocol work 92ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > keeps present invalid Origin at 403 and accepts absent or exact allowed Origin 67ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > keeps source and agent credential families separate and scopes source entities 111ms
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > supports caller-owned transactions for related authorization mutations 85ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is missing 125ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > takes the common security guard before owner or source row locks during creation 95ms
+{"level":30,"time":1792846061151,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"06888e0c-e028-4ddb-9d44-f0852cc43706","res":{"statusCode":202},"responseTime":85.39309999999932,"msg":"request completed"}
+{"level":30,"time":1792846061152,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4cf605dc-fd57-4306-8d71-d2cc6b3a56d4","req":{"id":"4cf605dc-fd57-4306-8d71-d2cc6b3a56d4","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061158,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4cf605dc-fd57-4306-8d71-d2cc6b3a56d4","res":{"statusCode":202},"responseTime":6.460699999999633,"msg":"request completed"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies the first version zero and rejects a customer payload on an order channel 36ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses only the caller transaction and leaves the supplied PoolClient unreleased 35ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a frozen proof paired with a same-source channel from another connector tuple 23ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > keeps equal replay harmless after identity remap and fences later observations from the old mapping 63ms
+{"level":30,"time":1792846061159,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"29a42ea7-42ec-4f75-9465-95d6aab483c2","req":{"id":"29a42ea7-42ec-4f75-9465-95d6aab483c2","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > returns 202 only after raw, job, item, idempotency and outbox rows commit 151ms
+{"level":30,"time":1792846061167,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"29a42ea7-42ec-4f75-9465-95d6aab483c2","res":{"statusCode":409},"responseTime":7.335299999999734,"msg":"request completed"}
+{"level":30,"time":1792846061170,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e513f5df-e034-4382-866a-c91c5f31e48e","req":{"id":"e513f5df-e034-4382-866a-c91c5f31e48e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061170,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d46a7454-3f4d-45c2-b139-02b32df6dd20","req":{"id":"d46a7454-3f4d-45c2-b139-02b32df6dd20","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > formats authenticated malformed JSON as a safe correlated JSON-RPC parse error 12ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: null 172ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects duplicate version without creating phantom migration records 67ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects version gap without creating phantom migration records 6ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects invalid UTF-8 without creating phantom migration records 7ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects empty SQL without creating phantom migration records 7ms
+{"level":30,"time":1792846061255,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e513f5df-e034-4382-866a-c91c5f31e48e","res":{"statusCode":202},"responseTime":84.41780000000017,"msg":"request completed"}
+{"level":30,"time":1792846061259,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d46a7454-3f4d-45c2-b139-02b32df6dd20","res":{"statusCode":202},"responseTime":88.57770000000073,"msg":"request completed"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable customer identity for a minimal unknown-key delete and restores only at a higher version 68ms
+{"level":30,"time":1792846061262,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"a64ca4ff-185d-482d-b341-1e0b6eb5c217","req":{"id":"a64ca4ff-185d-482d-b341-1e0b6eb5c217","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/identity-store.test.ts > Task1 identity and credential persistence > maps database outages to a safe fail-closed error without preserving the driver error 66ms
+{"level":30,"time":1792846061265,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"a64ca4ff-185d-482d-b341-1e0b6eb5c217","res":{"statusCode":422},"responseTime":2.5463999999992666,"msg":"request completed"}
+{"level":30,"time":1792846061265,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"41bc196d-d275-4f4a-9a0a-7d6c467b62de","req":{"id":"41bc196d-d275-4f4a-9a0a-7d6c467b62de","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061268,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"41bc196d-d275-4f4a-9a0a-7d6c467b62de","res":{"statusCode":422},"responseTime":2.657499999999345,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays a lost response with the same scoped job and rejects changed content 104ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > serializes concurrent same-key requests to one committed receipt 90ms
+{"level":30,"time":1792846061269,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e3430037-bdb9-466e-ac5a-51b83baa6e63","req":{"id":"e3430037-bdb9-466e-ac5a-51b83baa6e63","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061269,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e3430037-bdb9-466e-ac5a-51b83baa6e63","res":{"statusCode":422},"responseTime":0.6408999999994194,"msg":"request completed"}
+{"level":30,"time":1792846061270,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c059906a-0b57-47a9-97ba-f6e470378a51","req":{"id":"c059906a-0b57-47a9-97ba-f6e470378a51","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061271,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c059906a-0b57-47a9-97ba-f6e470378a51","res":{"statusCode":422},"responseTime":1.1226000000006024,"msg":"request completed"}
+{"level":30,"time":1792846061277,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e533b1f9-e6f9-4e4d-b714-c91c9aea9be3","req":{"id":"e533b1f9-e6f9-4e4d-b714-c91c9aea9be3","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061279,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e533b1f9-e6f9-4e4d-b714-c91c9aea9be3","res":{"statusCode":422},"responseTime":2.3887000000004264,"msg":"request completed"}
+{"level":30,"time":1792846061280,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"f9797fdd-1026-476e-8758-1ea4abde31e8","req":{"id":"f9797fdd-1026-476e-8758-1ea4abde31e8","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061282,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"f9797fdd-1026-476e-8758-1ea4abde31e8","res":{"statusCode":422},"responseTime":2.480199999999968,"msg":"request completed"}
+{"level":30,"time":1792846061285,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4c02ef42-772b-404e-9ef3-464f8de26a25","req":{"id":"4c02ef42-772b-404e-9ef3-464f8de26a25","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes source creation and tenant disable without an inverse-lock deadlock 155ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > advertises exactly five fixed tools and audits all five as not ready by default 103ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > derives signed Hasura claims from the verified principal with the pinned audience and TTL 6ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards query data after credential revocation and lets another live credential make a fresh request 60ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects known 001 objects without a ledger, then adopts them only in local_lab 86ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects structure and schema errors without durable writes 14ms
+{"level":30,"time":1792846061383,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4c02ef42-772b-404e-9ef3-464f8de26a25","res":{"statusCode":202},"responseTime":98.22339999999986,"msg":"request completed"}
+{"level":30,"time":1792846061384,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"39a2eaf6-de96-4dcb-adf9-3d686d983250","req":{"id":"39a2eaf6-de96-4dcb-adf9-3d686d983250","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: "" 186ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > advances a repeated unknown-key snapshot tombstone without another revision or outbox row 72ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable order identity for a minimal unknown-key delete and accepts explicit empty-line restoration 57ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > rechecks authorization after durable audit and returns no data when the audit write overlaps revocation 40ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns AUDIT_UNAVAILABLE and no query data if the final denial event cannot be appended 45ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards a query result when the gate epoch changes during execution 22ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > discards a query result when the credential expires while the query is in flight 20ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction 105ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects epoch, revision, pause, entity, and tenant changes after source authentication 87ms
+{"level":30,"time":1792846061469,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"39a2eaf6-de96-4dcb-adf9-3d686d983250","res":{"statusCode":202},"responseTime":85.23739999999998,"msg":"request completed"}
+{"level":30,"time":1792846061472,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"db9c76ec-dbfc-4977-9515-617bd7963cfa","req":{"id":"db9c76ec-dbfc-4977-9515-617bd7963cfa","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061475,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"db9c76ec-dbfc-4977-9515-617bd7963cfa","res":{"statusCode":422},"responseTime":2.341899999999441,"msg":"request completed"}
+{"level":30,"time":1792846061475,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"714d62e1-dc16-43f4-852e-6e7ddf3c1b18","req":{"id":"714d62e1-dc16-43f4-852e-6e7ddf3c1b18","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061477,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"714d62e1-dc16-43f4-852e-6e7ddf3c1b18","res":{"statusCode":422},"responseTime":2.0731000000005224,"msg":"request completed"}
+{"level":30,"time":1792846061478,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"a2d5f460-f75f-42d3-90c8-95fe28f631ac","req":{"id":"a2d5f460-f75f-42d3-90c8-95fe28f631ac","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061480,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"a2d5f460-f75f-42d3-90c8-95fe28f631ac","res":{"statusCode":422},"responseTime":1.8722999999999956,"msg":"request completed"}
+{"level":30,"time":1792846061480,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b82d817f-fb89-4cbb-b4e7-b7912e626b1e","req":{"id":"b82d817f-fb89-4cbb-b4e7-b7912e626b1e","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846061482,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b82d817f-fb89-4cbb-b4e7-b7912e626b1e","res":{"statusCode":422},"responseTime":1.5884000000005472,"msg":"request completed"}
+{"level":30,"time":1792846061482,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8745eadb-ccca-4c14-8854-3835cfc2c2b4","req":{"id":"8745eadb-ccca-4c14-8854-3835cfc2c2b4","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061484,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8745eadb-ccca-4c14-8854-3835cfc2c2b4","res":{"statusCode":422},"responseTime":1.7240999999994528,"msg":"request completed"}
+{"level":30,"time":1792846061484,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2cf320a7-0937-40a2-bf24-01bcb9b3f24a","req":{"id":"2cf320a7-0937-40a2-bf24-01bcb9b3f24a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061486,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2cf320a7-0937-40a2-bf24-01bcb9b3f24a","res":{"statusCode":422},"responseTime":1.9525000000003274,"msg":"request completed"}
+{"level":30,"time":1792846061487,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0037550a-ea39-4b01-a3a5-b63d14164ae3","req":{"id":"0037550a-ea39-4b01-a3a5-b63d14164ae3","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061489,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0037550a-ea39-4b01-a3a5-b63d14164ae3","res":{"statusCode":422},"responseTime":1.8864999999996144,"msg":"request completed"}
+{"level":30,"time":1792846061489,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"f5161053-3b77-4fbe-9145-42cd9761aca1","req":{"id":"f5161053-3b77-4fbe-9145-42cd9761aca1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061491,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"f5161053-3b77-4fbe-9145-42cd9761aca1","res":{"statusCode":422},"responseTime":1.7732999999998356,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > enforces the public order state and empty-lines matrix before writing 195ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows 24ms
+{"level":30,"time":1792846061495,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2a6af8ac-632c-42ef-856d-63f80e00620d","req":{"id":"2a6af8ac-632c-42ef-856d-63f80e00620d","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes a matching security barrier after old admission and accepts a later trusted fence 48ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > advances an unchanged snapshot observation receipt without emitting a second outbox event 61ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns AUDIT_UNAVAILABLE without business data when durable audit fails 19ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns a correlated safe query error linked to its audit and request log 73ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > prohibits site adoption and preserves unrelated public objects 208ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: {} 182ms
+{"level":30,"time":1792846061587,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2a6af8ac-632c-42ef-856d-63f80e00620d","res":{"statusCode":202},"responseTime":92.10440000000017,"msg":"request completed"}
+{"level":30,"time":1792846061591,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b01192e4-55e1-4bf5-850b-49fa866d8068","req":{"id":"b01192e4-55e1-4bf5-850b-49fa866d8068","method":"GET","route":"/hub/v1/ingestion-jobs/:id"},"msg":"incoming request"}
+{"level":30,"time":1792846061595,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b01192e4-55e1-4bf5-850b-49fa866d8068","res":{"statusCode":200},"responseTime":3.9971000000005006,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds 101ms
+{"level":30,"time":1792846061598,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4b87b78b-d962-4dbc-b0f0-fe93eede08c5","req":{"id":"4b87b78b-d962-4dbc-b0f0-fe93eede08c5","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061600,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"4b87b78b-d962-4dbc-b0f0-fe93eede08c5","res":{"statusCode":422},"responseTime":2.2300999999997657,"msg":"request completed"}
+{"level":30,"time":1792846061601,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9788c67c-ff7a-4061-8b8b-b3eabe5be743","req":{"id":"9788c67c-ff7a-4061-8b8b-b3eabe5be743","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061601,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9788c67c-ff7a-4061-8b8b-b3eabe5be743","res":{"statusCode":422},"responseTime":0.4092999999993481,"msg":"request completed"}
+{"level":30,"time":1792846061601,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"1abe85dd-8feb-45f4-a5b0-cf09608801e2","req":{"id":"1abe85dd-8feb-45f4-a5b0-cf09608801e2","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061602,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"1abe85dd-8feb-45f4-a5b0-cf09608801e2","res":{"statusCode":422},"responseTime":0.340900000000147,"msg":"request completed"}
+{"level":30,"time":1792846061606,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8ad0f051-3c91-42e4-b7a0-77b52bb6e210","req":{"id":"8ad0f051-3c91-42e4-b7a0-77b52bb6e210","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses one projection digest for remap and an unchanged post-remap snapshot observation 82ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes a source apply with an explicit owner remap and fences the older accepted mapping 66ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes an admission check before pause using compatible row locks 119ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > keeps raw request, credential, argument, and result values out of logs and audit 46ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > rejects forged tool identity fields with safe audited validation and blocks managers without a department 31ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > validates known-tool arguments inside the audited application boundary without reflecting input 27ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > returns the Appendix A.1 envelope with a safe DB-bound current-user whitelist 538ms
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > releases its session lock after a failed migration so a later runner can proceed 116ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes 9ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > safely audits deeply nested invalid arguments and correlates audit failures 58ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > returns correlated AUDIT_UNAVAILABLE when an invalid-argument audit insert fails 13ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict sales MCP authentication and audit boundary > restores the old /mcp demo route only for explicit local_lab legacy configuration 17ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a department remap that contradicts the current M0 owner department 29ms
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > replaces the complete order line image, retains tombstones, and restores only with a higher source version 112ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: [] 176ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects current-source snapshots for wrong entity, disabled credential, disabled tenant, and pause 131ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > uses one trusted request ID in envelopes and logs while excluding rejected input and client headers 110ms
+{"level":30,"time":1792846061801,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8ad0f051-3c91-42e4-b7a0-77b52bb6e210","res":{"statusCode":202},"responseTime":195.66719999999987,"msg":"request completed"}
+{"level":30,"time":1792846061803,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"02787171-624b-4a01-8500-013a1bd4b6db","req":{"id":"02787171-624b-4a01-8500-013a1bd4b6db","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061805,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"02787171-624b-4a01-8500-013a1bd4b6db","res":{"statusCode":422},"responseTime":2.749499999999898,"msg":"request completed"}
+{"level":30,"time":1792846061806,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e6c773b3-ad8a-4920-aeb4-1dfb9da0426c","req":{"id":"e6c773b3-ad8a-4920-aeb4-1dfb9da0426c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846061813,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e6c773b3-ad8a-4920-aeb4-1dfb9da0426c","res":{"statusCode":422},"responseTime":6.835900000000038,"msg":"request completed"}
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > runs first activation through tested config, exact Owner approval, and an immutable single channel 219ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > creates personal credentials once, omits replay secrets, rejects forged bodies, and redacts logs 161ms
+{"level":30,"time":1792846061820,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"956ba91d-3e3f-4d06-bbe2-76906b5f5d39","req":{"id":"956ba91d-3e3f-4d06-bbe2-76906b5f5d39","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > preserves the complete T0 order image when header, each representative line, receipt, or outbox fails 263ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts nonempty falsey Oracle values from distinct files: false 253ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > serializes mapping revision races and rejects a channel switch before changing config 201ms
+{"level":30,"time":1792846062106,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"956ba91d-3e3f-4d06-bbe2-76906b5f5d39","res":{"statusCode":202},"responseTime":285.1739000000007,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte 504ms
+{"level":30,"time":1792846062107,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"6f112e9b-9b95-49cf-98df-a6302ebaa2e1","req":{"id":"6f112e9b-9b95-49cf-98df-a6302ebaa2e1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846062108,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"6f112e9b-9b95-49cf-98df-a6302ebaa2e1","res":{"statusCode":413},"responseTime":0.6604000000006636,"msg":"request completed"}
+{"level":30,"time":1792846062113,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0632f21b-3dc9-4386-9789-c061b8b49f5d","req":{"id":"0632f21b-3dc9-4386-9789-c061b8b49f5d","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846062183,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0632f21b-3dc9-4386-9789-c061b8b49f5d","res":{"statusCode":503},"responseTime":70.33480000000054,"msg":"request completed"}
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts nonempty falsey Oracle values from distinct files: 0 174ms
+{"level":30,"time":1792846062189,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"1f9bc840-c618-48b2-a516-44d8f26297c1","req":{"id":"1f9bc840-c618-48b2-a516-44d8f26297c1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > lists only the current user metadata with stable pagination and strict query parameters 195ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rolls back every intake row when the final outbox write fails 80ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates current approval and pauses on Owner reassignment while preserving the old channel identity 167ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > keeps delete response indistinguishable for missing and cross-user ids, then revokes own token 170ms
+{"level":30,"time":1792846062300,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"1f9bc840-c618-48b2-a516-44d8f26297c1","res":{"statusCode":202},"responseTime":110.84829999999965,"msg":"request completed"}
+{"level":30,"time":1792846062302,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"99cbd263-807b-45f1-9cdf-b28c4876811e","req":{"id":"99cbd263-807b-45f1-9cdf-b28c4876811e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846062308,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"99cbd263-807b-45f1-9cdf-b28c4876811e","res":{"statusCode":202},"responseTime":5.517100000000028,"msg":"request completed"}
+{"level":30,"time":1792846062308,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e67b552c-abea-4a95-b760-a81dba2343c0","req":{"id":"e67b552c-abea-4a95-b760-a81dba2343c0","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > keeps source_epoch stable for no-op credential updates and advances it once for effective changes 95ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects expected and actual Oracle references that alias the same file 192ms
+{"level":30,"time":1792846062394,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e67b552c-abea-4a95-b760-a81dba2343c0","res":{"statusCode":409},"responseTime":86.16030000000046,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays after ordinary pause without re-admission and blocks new admission 207ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > allows management-only identity reads but does not turn a management scope into business credential authority 104ms
+ ✓ acceptance-tests/identity-http.test.ts > M0 Task2 OIDC and current identity APIs > uses standard safe envelopes for missing or invalid bearer authentication 66ms
+{"level":30,"time":1792846062416,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9712f072-49f4-4a5e-8a9b-e215d1b33be1","req":{"id":"9712f072-49f4-4a5e-8a9b-e215d1b33be1","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846062419,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9712f072-49f4-4a5e-8a9b-e215d1b33be1","res":{"statusCode":401},"responseTime":2.685099999999693,"msg":"request completed"}
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > persists a complete 200-line order image 422ms
+{"level":30,"time":1792846062518,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"096c5804-8e30-4873-955e-49eea0f48019","req":{"id":"096c5804-8e30-4873-955e-49eea0f48019","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/mcp-auth.test.ts > strict transition route and worker guards > keeps legacy API routes absent by default and available only when explicitly selected 62ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict transition route and worker guards > requires explicit local_lab selection for legacy flags and demo source scans 2ms
+ ✓ acceptance-tests/mcp-auth.test.ts > strict transition route and worker guards > makes strict permission publisher close the gate without running the legacy bootstrap 2ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a symlink in any referenced path segment 175ms
+{"level":30,"time":1792846062600,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"096c5804-8e30-4873-955e-49eea0f48019","res":{"statusCode":202},"responseTime":81.54920000000038,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval 207ms
+{"level":30,"time":1792846062604,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"20ca6a6c-32ae-47e9-b7c5-c11b7b8f4625","req":{"id":"20ca6a6c-32ae-47e9-b7c5-c11b7b8f4625","method":"GET","route":"/hub/v1/ingestion-jobs/:id"},"msg":"incoming request"}
+{"level":30,"time":1792846062607,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"20ca6a6c-32ae-47e9-b7c5-c11b7b8f4625","res":{"statusCode":200},"responseTime":3.061200000000099,"msg":"request completed"}
+{"level":30,"time":1792846062607,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"753372e2-8e3b-4d50-b9ca-72ded5c1f1fb","req":{"id":"753372e2-8e3b-4d50-b9ca-72ded5c1f1fb","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792846062612,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"753372e2-8e3b-4d50-b9ca-72ded5c1f1fb","res":{"statusCode":200},"responseTime":4.593700000000354,"msg":"request completed"}
+{"level":30,"time":1792846062612,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2f6a35d6-be95-4236-ab47-7d069ca788d4","req":{"id":"2f6a35d6-be95-4236-ab47-7d069ca788d4","method":"GET","route":"/hub/v1/ingestion-jobs/:id"},"msg":"incoming request"}
+{"level":30,"time":1792846062614,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"2f6a35d6-be95-4236-ab47-7d069ca788d4","res":{"statusCode":200},"responseTime":1.5113000000001193,"msg":"request completed"}
+{"level":30,"time":1792846062614,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0ef03f5f-f597-441c-b1fc-1f59631d1e36","req":{"id":"0ef03f5f-f597-441c-b1fc-1f59631d1e36","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > pauses an active source when its credential material rotates 215ms
+{"level":30,"time":1792846062698,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"0ef03f5f-f597-441c-b1fc-1f59631d1e36","res":{"statusCode":202},"responseTime":83.61639999999989,"msg":"request completed"}
+{"level":30,"time":1792846062698,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d90239d5-6952-4e29-b9a0-e28de539df23","req":{"id":"d90239d5-6952-4e29-b9a0-e28de539df23","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792846062701,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d90239d5-6952-4e29-b9a0-e28de539df23","res":{"statusCode":200},"responseTime":3.1320999999998094,"msg":"request completed"}
+{"level":30,"time":1792846062703,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"182fba87-0f73-4cfd-9626-cb89814c07af","req":{"id":"182fba87-0f73-4cfd-9626-cb89814c07af","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792846062706,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"182fba87-0f73-4cfd-9626-cb89814c07af","res":{"statusCode":200},"responseTime":3.266700000000128,"msg":"request completed"}
+{"level":30,"time":1792846062707,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9dc07984-274b-4f03-9ca4-daa2766c77e9","req":{"id":"9dc07984-274b-4f03-9ca4-daa2766c77e9","method":"GET","route":"/hub/v1/ingestion-jobs/:id/items"},"msg":"incoming request"}
+{"level":30,"time":1792846062708,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9dc07984-274b-4f03-9ca4-daa2766c77e9","res":{"statusCode":422},"responseTime":1.3065999999998894,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads 109ms
+{"level":30,"time":1792846062713,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"28477555-c22c-4c9e-b6d0-8b7e475703d9","req":{"id":"28477555-c22c-4c9e-b6d0-8b7e475703d9","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects Golden Consumer separator aliases to the same underlying file 172ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates credential scope changes and admits only the approved config channels after reapproval 201ms
+{"level":30,"time":1792846062798,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"28477555-c22c-4c9e-b6d0-8b7e475703d9","res":{"statusCode":202},"responseTime":85.27810000000045,"msg":"request completed"}
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects Golden Consumer case aliases to the same underlying file on Windows 139ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rotates a provisioned source credential before registry onboarding 53ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects a previously approved test after a newer test fails 121ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > allows pause and resume with the same currently valid approval 161ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > authenticates as hub_api while denying direct credential material reads 79ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects PASS records whose source, image, or fixture identities differ from the run 468ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects evidence digest tampering and path traversal 103ms
+ ✓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a claimed golden consumer with synthetic inputs or duplicate actor evidence 60ms
+ ✓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > routes Windows npm scripts through cmd.exe with only the fixed command words 0ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references 530ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > performs a bounded authenticated REST capability probe against an owned loopback fixture 42ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > accepts an allowlisted HTTPS endpoint on the default 443 port 45ms
+ ✓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > runs only the fixed allowlist, records source and log digests, and refuses overwrite 416ms
+ ✓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > rejects arbitrary commands and unsafe run identifiers without invoking a runner 0ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > performs a read-only PostgreSQL source probe against an owned role and approved objects 94ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects column-level UPDATE grants on a PostgreSQL source object 70ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > keeps SQL Server unavailable for TESTED even when a deployment profile exists 88ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > does not establish TESTED when an allowed entity has no field mappings 80ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects unknown standard targets and missing required customer fields 73ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > invalidates applicability when the deployment endpoint profile changes 80ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects activation when the deployment endpoint profile changes after approval 94ms
+ ✓ acceptance-tests/source-registry.test.ts > M1 source admission authorization > rejects a capability result if mappings change while the bounded probe runs 90ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary 2847ms
+{"level":30,"time":1792846065561,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"05ba3339-4a35-4213-9ad5-0f2a264bbe03","req":{"id":"05ba3339-4a35-4213-9ad5-0f2a264bbe03","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846065617,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"05ba3339-4a35-4213-9ad5-0f2a264bbe03","res":{"statusCode":202},"responseTime":55.88370000000032,"msg":"request completed"}
+{"level":30,"time":1792846065617,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c24b6318-20f2-4abc-a9ab-94143a750122","req":{"id":"c24b6318-20f2-4abc-a9ab-94143a750122","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846065671,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c24b6318-20f2-4abc-a9ab-94143a750122","res":{"statusCode":202},"responseTime":54.363499999999476,"msg":"request completed"}
+{"level":30,"time":1792846065672,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"486b6cb4-135f-4837-b913-1b7ec97a281a","req":{"id":"486b6cb4-135f-4837-b913-1b7ec97a281a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846065728,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"486b6cb4-135f-4837-b913-1b7ec97a281a","res":{"statusCode":202},"responseTime":56.73919999999998,"msg":"request completed"}
+{"level":30,"time":1792846065729,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c1a81047-2283-44fd-b9e5-45bfac6c82d6","req":{"id":"c1a81047-2283-44fd-b9e5-45bfac6c82d6","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846065790,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"c1a81047-2283-44fd-b9e5-45bfac6c82d6","res":{"statusCode":202},"responseTime":61.42870000000039,"msg":"request completed"}
+{"level":30,"time":1792846065790,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ad5a793b-e935-48ca-a765-7b577b6ffa95","req":{"id":"ad5a793b-e935-48ca-a765-7b577b6ffa95","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846065844,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ad5a793b-e935-48ca-a765-7b577b6ffa95","res":{"statusCode":202},"responseTime":53.304900000001,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects 418ms
+{"level":30,"time":1792846065979,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3a78446a-5f01-4b4e-b46e-b2597e138b5b","req":{"id":"3a78446a-5f01-4b4e-b46e-b2597e138b5b","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066032,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3a78446a-5f01-4b4e-b46e-b2597e138b5b","res":{"statusCode":202},"responseTime":53.53529999999955,"msg":"request completed"}
+{"level":30,"time":1792846066099,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"dedd518b-5c5a-4aac-9a80-8ec5638bb87e","req":{"id":"dedd518b-5c5a-4aac-9a80-8ec5638bb87e","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846066151,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"dedd518b-5c5a-4aac-9a80-8ec5638bb87e","res":{"statusCode":202},"responseTime":51.868100000001505,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > summarizes mixed terminal outcomes as PARTIAL with only real APPLIED effects counted 120ms
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple 86ms
+{"level":30,"time":1792846066185,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3aed3e95-0f0d-4a11-be88-a55dc8e6ffe3","req":{"id":"3aed3e95-0f0d-4a11-be88-a55dc8e6ffe3","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846066239,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3aed3e95-0f0d-4a11-be88-a55dc8e6ffe3","res":{"statusCode":202},"responseTime":53.396200000001045,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter 113ms
+{"level":30,"time":1792846066298,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b6780119-13da-411f-8baa-31464565b621","req":{"id":"b6780119-13da-411f-8baa-31464565b621","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066351,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"b6780119-13da-411f-8baa-31464565b621","res":{"statusCode":202},"responseTime":52.801399999998466,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions 208ms
+{"level":30,"time":1792846066506,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ecc27295-dc6f-4129-bec3-83259b4160d3","req":{"id":"ecc27295-dc6f-4129-bec3-83259b4160d3","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066561,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ecc27295-dc6f-4129-bec3-83259b4160d3","res":{"statusCode":202},"responseTime":54.1804000000011,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header 107ms
+{"level":30,"time":1792846066613,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"288d394b-4b73-43e7-bc52-7317919d0770","req":{"id":"288d394b-4b73-43e7-bc52-7317919d0770","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066666,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"288d394b-4b73-43e7-bc52-7317919d0770","res":{"statusCode":202},"responseTime":52.98149999999987,"msg":"request completed"}
+{"level":30,"time":1792846066725,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"403a6b57-7dcd-419e-a176-a8f3eb192609","req":{"id":"403a6b57-7dcd-419e-a176-a8f3eb192609","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066777,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"403a6b57-7dcd-419e-a176-a8f3eb192609","res":{"statusCode":202},"responseTime":52.23319999999876,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails 202ms
+{"level":30,"time":1792846066815,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d3408be6-0065-446e-9c14-e1d76f92f291","req":{"id":"d3408be6-0065-446e-9c14-e1d76f92f291","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066869,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"d3408be6-0065-446e-9c14-e1d76f92f291","res":{"statusCode":202},"responseTime":53.710399999999936,"msg":"request completed"}
+{"level":30,"time":1792846066927,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e0b4bdd6-a6f3-45ab-9c68-0df6acbb4598","req":{"id":"e0b4bdd6-a6f3-45ab-9c68-0df6acbb4598","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846066982,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"e0b4bdd6-a6f3-45ab-9c68-0df6acbb4598","res":{"statusCode":202},"responseTime":54.92280000000028,"msg":"request completed"}
+{"level":30,"time":1792846066982,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3d288dc1-f87a-470d-acf0-1a4cace42cf8","req":{"id":"3d288dc1-f87a-470d-acf0-1a4cace42cf8","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes 112ms
+{"level":30,"time":1792846067036,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"3d288dc1-f87a-470d-acf0-1a4cace42cf8","res":{"statusCode":202},"responseTime":53.32470000000103,"msg":"request completed"}
+{"level":30,"time":1792846067117,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8dd5a9de-e79f-40f1-a29d-27a9569c524e","req":{"id":"8dd5a9de-e79f-40f1-a29d-27a9569c524e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846067170,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"8dd5a9de-e79f-40f1-a29d-27a9569c524e","res":{"statusCode":202},"responseTime":53.33380000000034,"msg":"request completed"}
+{"level":30,"time":1792846067170,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9c137b37-08cb-4aac-948f-4998696e94be","req":{"id":"9c137b37-08cb-4aac-948f-4998696e94be","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs 189ms
+{"level":30,"time":1792846067223,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"9c137b37-08cb-4aac-948f-4998696e94be","res":{"statusCode":202},"responseTime":52.74910000000091,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK 3135ms
+{"level":30,"time":1792846070252,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"aaf9f8c5-bd2f-4155-9117-a7b491c885c9","req":{"id":"aaf9f8c5-bd2f-4155-9117-a7b491c885c9","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792846070306,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"aaf9f8c5-bd2f-4155-9117-a7b491c885c9","res":{"statusCode":202},"responseTime":53.833300000000236,"msg":"request completed"}
+{"level":30,"time":1792846070395,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"36988ff9-27b1-44d0-b5f6-722ca6941558","req":{"id":"36988ff9-27b1-44d0-b5f6-722ca6941558","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846070447,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"36988ff9-27b1-44d0-b5f6-722ca6941558","res":{"statusCode":202},"responseTime":51.81030000000101,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails 112ms
+{"level":30,"time":1792846070518,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"5ab0ec02-47f2-4a8d-bcb4-bd61fe53cd12","req":{"id":"5ab0ec02-47f2-4a8d-bcb4-bd61fe53cd12","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846070570,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"5ab0ec02-47f2-4a8d-bcb4-bd61fe53cd12","res":{"statusCode":202},"responseTime":52.28909999999996,"msg":"request completed"}
+{"level":30,"time":1792846070643,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"09c6c4b2-badf-4275-a17f-8f759eaba73e","req":{"id":"09c6c4b2-badf-4275-a17f-8f759eaba73e","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846070695,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"09c6c4b2-badf-4275-a17f-8f759eaba73e","res":{"statusCode":202},"responseTime":52.41569999999956,"msg":"request completed"}
+{"level":30,"time":1792846070773,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"73ed339f-41fa-46db-a117-69b941766706","req":{"id":"73ed339f-41fa-46db-a117-69b941766706","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846070825,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"73ed339f-41fa-46db-a117-69b941766706","res":{"statusCode":202},"responseTime":52.05189999999857,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply 531ms
+{"level":30,"time":1792846070895,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"da325410-c6dd-4743-a548-70583372e004","req":{"id":"da325410-c6dd-4743-a548-70583372e004","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846070947,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"da325410-c6dd-4743-a548-70583372e004","res":{"statusCode":202},"responseTime":52.19340000000011,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift 108ms
+{"level":30,"time":1792846071003,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"7ab7deb8-a2fb-436e-996d-df2a1ef19d1c","req":{"id":"7ab7deb8-a2fb-436e-996d-df2a1ef19d1c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846071056,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"7ab7deb8-a2fb-436e-996d-df2a1ef19d1c","res":{"statusCode":202},"responseTime":52.762399999999616,"msg":"request completed"}
+{"level":30,"time":1792846071056,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ec6f996e-3b17-4ae9-84f7-b14881cbf955","req":{"id":"ec6f996e-3b17-4ae9-84f7-b14881cbf955","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792846071109,"pid":38516,"hostname":"WIN-20231024AVS","reqId":"ec6f996e-3b17-4ae9-84f7-b14881cbf955","res":{"statusCode":202},"responseTime":52.611000000000786,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates an explicitly remapped frozen identity while completing unrelated frozen work 179ms
+
+ Test Files  19 passed (19)
+      Tests  312 passed (312)
+   Start at  20:47:36
+   Duration  15.34s (transform 2.54s, setup 0ms, import 8.53s, tests 56.98s, environment 3ms)
+

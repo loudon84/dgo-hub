@@ -1,0 +1,46 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=preserves canonical timestamp precision|isolates each newer typed security barrier acceptance-tests/strict-ingestion.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"level":30,"time":1792845600750,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"a45079b6-2fcd-4394-b043-e4fb6dbeb663","req":{"id":"a45079b6-2fcd-4394-b043-e4fb6dbeb663","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1792845600831,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"a45079b6-2fcd-4394-b043-e4fb6dbeb663","res":{"statusCode":202},"responseTime":80.35429999999997,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > returns 202 only after raw, job, item, idempotency and outbox rows commit
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays a lost response with the same scoped job and rejects changed content
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > serializes concurrent same-key requests to one committed receipt
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects structure and schema errors without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > enforces the public order state and empty-lines matrix before writing
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rolls back every intake row when the final outbox write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays after ordinary pause without re-admission and blocks new admission
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter 165ms
+{"level":30,"time":1792845600905,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"da0b4ffc-34b5-4591-bc45-c58b3a5c2b26","req":{"id":"da0b4ffc-34b5-4591-bc45-c58b3a5c2b26","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845600959,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"da0b4ffc-34b5-4591-bc45-c58b3a5c2b26","res":{"statusCode":202},"responseTime":54.3788999999997,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails
+{"level":30,"time":1792845601006,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"1caf81f1-7126-497b-8dab-bcb3df95fe0a","req":{"id":"1caf81f1-7126-497b-8dab-bcb3df95fe0a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792845601055,"pid":4000,"hostname":"WIN-20231024AVS","reqId":"1caf81f1-7126-497b-8dab-bcb3df95fe0a","res":{"statusCode":409},"responseTime":48.888200000000325,"msg":"request completed"}
+ × acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply 159ms
+   → {"response":{"request_id":"1caf81f1-7126-497b-8dab-bcb3df95fe0a","error":{"code":"SOURCE_CONFLICT","message":"SOURCE_CONFLICT","retryable":false,"details":{}}},"sourceState":{"lifecycle":"ACTIVE","current_config_revision":"1","mapping_revision":"1","identity_mapping_revision":"1","owner_revision":"1","enabled":true,"revision":"1","source_epoch":"0","credential_generation":"1","tenant_enabled":true,"barrier_count":1},"barriers":[{"barrier_type":"CREDENTIAL_COMPROMISE","effective_fence":"1","source_id":"crm-demo","entity":null,"channel_id":null}]}: expected 409 to be 202 // Object.is equality
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 24 skipped (26)
+   Start at  20:39:58
+   Duration  3.32s (transform 199ms, setup 0ms, import 421ms, tests 2.73s, environment 0ms)
+

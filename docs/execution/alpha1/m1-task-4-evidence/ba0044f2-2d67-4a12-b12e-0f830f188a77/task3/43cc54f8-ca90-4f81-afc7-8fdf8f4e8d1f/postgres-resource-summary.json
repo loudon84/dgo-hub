@@ -1,0 +1,13 @@
+{
+  "taskLabel": "task3",
+  "runLabel": "43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f",
+  "containerId": "d3fd0ff3249adcd17b31996995766d25db5fa7f32233335dce81569aeeeb650c",
+  "imageReference": "postgres:16.10-alpine",
+  "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "hostPort": 50859,
+  "evidenceFile": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-4-evidence\\ba0044f2-2d67-4a12-b12e-0f830f188a77\\task3\\43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f\\postgres-lifecycle.jsonl",
+  "ownershipConfirmed": true,
+  "removedByExactContainerId": true,
+  "absentAfterRemoval": true
+}

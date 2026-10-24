@@ -1,0 +1,932 @@
+{
+  "evidence_root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-4-evidence\\ba0044f2-2d67-4a12-b12e-0f830f188a77",
+  "stage": "task4_explicit_evidence_whitelist",
+  "file_count": 185,
+  "files": [
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-build.command.txt",
+      "bytes": 104,
+      "sha256": "sha256:90bd3234271b13dbfbdc7db18dc86e7eb63204b493974e51e7ecd89a91b05eae"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-build.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-build.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-build.stdout.txt",
+      "bytes": 79,
+      "sha256": "sha256:a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-suite.command.txt",
+      "bytes": 121,
+      "sha256": "sha256:269f9884bfa2efa3737b78c3c26cbf0440b8173a2e7665e1651d874d83f2843d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-suite.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-suite.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-suite.stdout.txt",
+      "bytes": 84793,
+      "sha256": "sha256:3569bfeabf77aab8ce8499abf3e646949d45b77494ed53e070e53a2e14de49c8"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-typecheck.command.txt",
+      "bytes": 108,
+      "sha256": "sha256:dd48a85d1d8c4faf521535fa39ba0f51587a55c03c11176475ce9789210da100"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-typecheck.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-typecheck.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/checks/final-typecheck.stdout.txt",
+      "bytes": 92,
+      "sha256": "sha256:bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/copy-manifest.json",
+      "bytes": 18727,
+      "sha256": "sha256:978b73d6c3731d86fb1c0fda7f8fa6c0e6cc62116ada6e6794223654f0f643b3"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-01.command.txt",
+      "bytes": 213,
+      "sha256": "sha256:344e11f5158d0fe42205e378b92631b77088593e38ca4eb7adb099ad99d95767"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-01.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-01.stderr.txt",
+      "bytes": 1327,
+      "sha256": "sha256:013db74baaa09406218249c542a4d75bb6afbacc1fd19195b9b49a6144c79b79"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-01.stdout.txt",
+      "bytes": 5968,
+      "sha256": "sha256:95f3e3a5c3d130922b0845759568633cd897db694ab7e4e8f2e0be11562b6c5b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-02.command.txt",
+      "bytes": 213,
+      "sha256": "sha256:344e11f5158d0fe42205e378b92631b77088593e38ca4eb7adb099ad99d95767"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-02.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-02.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/focused/focused-remap-02.stdout.txt",
+      "bytes": 5889,
+      "sha256": "sha256:7bca82bb2dcecf641bd6d628cc98af9b5579812efd6de024e50d605fcee504cc"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources-summary.json",
+      "bytes": 37558,
+      "sha256": "sha256:bf743d97886782d0714daa9021d7b1118d0b50a20ea13bc1ce2481ce04c2b706"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/m1task1/8df8b56c-7324-4dc8-851d-4d88a02ad794/capability-http-resource-summary.json",
+      "bytes": 168,
+      "sha256": "sha256:d43d050bf8dbaddd7e6d72dc5fe250c82eb10112a11e66b57994b63508356bd8"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/m1task1/8df8b56c-7324-4dc8-851d-4d88a02ad794/postgres-lifecycle.jsonl",
+      "bytes": 930,
+      "sha256": "sha256:5a00fd7d5200428a4f1b9802712e74512c1fb69a43b436c567a27036753d66fd"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/m1task1/8df8b56c-7324-4dc8-851d-4d88a02ad794/postgres-resource-summary.json",
+      "bytes": 491,
+      "sha256": "sha256:9dc0a93264b770e0729bf6e99a423a94de6bbb6afcb0637ed25a82babbddbc4c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task0/c6bd30f4-5b47-4fdc-ab91-f0cd04afa6ac/foundation-postgres-resource-summary.json",
+      "bytes": 465,
+      "sha256": "sha256:005c8943f571c59f548229a4701902f082c698c43264bc16c327605a37c6057f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task0/c6bd30f4-5b47-4fdc-ab91-f0cd04afa6ac/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:e47cf7961b6eddfcac99ff50f16b9056e80433a282297384ba9b1cefff70f413"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task1/ed0a8f15-749c-457c-9f77-f03c7b4aefe4/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:742d99f1663e37c63eb5cc17627b97177f2a8f7128cdca339e4ee7583a05b6ab"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task1/ed0a8f15-749c-457c-9f77-f03c7b4aefe4/postgres-resource-summary.json",
+      "bytes": 489,
+      "sha256": "sha256:0734df7dc2f535ff359ebf9037fb6765e23dc5514cdfeb88fe09135e90857b8e"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task2/75493741-daee-41a8-a5e2-4ce83f502fdb/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:50f495870448c7643be140a79ad01c65b1cbfe2c5acded26da5fef6397f2f585"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task2/75493741-daee-41a8-a5e2-4ce83f502fdb/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "sha256:e014e58cfda7dac4519c06353fdd9aee3b82c7df4faadbe6cb9b1c184f1de3af"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task2/b3dc5be1-1939-4a68-b5ee-124910f6caa9/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:bd283fb298492525d203b6a4a27a6ebb3d975e61e35ed3450788ed2487cacb47"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task2/b3dc5be1-1939-4a68-b5ee-124910f6caa9/postgres-resource-summary.json",
+      "bytes": 489,
+      "sha256": "sha256:927c28fa299f8099bd1335039ccd9960c85b790e876521eb6c71f006cbc66db6"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/3801fd52-9f09-4a36-86c2-dad9f2e81312/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:43841369602d604de3476973bb215d0d59a15915f58940600621373d762606d8"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/56548db3-d657-495d-bdb3-22e2c4ae4813/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:8eff24054ba9d021c2993e0504d111e83ac65b23befcb479ca753af6cb293375"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/56548db3-d657-495d-bdb3-22e2c4ae4813/postgres-resource-summary.json",
+      "bytes": 687,
+      "sha256": "sha256:bedf872a2138b6aec1411fba2845cf4d53ffa0c514c17593359ec63ef95dac96"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/572951a9-083c-4620-ad96-fbe4cbbcdc06/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:258d5e699e802aada649a996605a1bd3dad7b29fdeb7605d1506e3f800acb30f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/572951a9-083c-4620-ad96-fbe4cbbcdc06/postgres-resource-summary.json",
+      "bytes": 681,
+      "sha256": "sha256:87f0b25c2def36d1abf600f43c0af70abec890b4fb43790e4a4ca48c12d8790e"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/5da6dae4-66dc-4630-8640-3bac4e168fe0/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:7017b627350b773c20d305e57865bb778af8aa87f2edd15fa7d54674b55e9716"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/owned-resources/task3/5da6dae4-66dc-4630-8640-3bac4e168fe0/postgres-resource-summary.json",
+      "bytes": 681,
+      "sha256": "sha256:f27a136d9a9256131cf40ddc7d81b9956636ed80441994231e83314f83837bf7"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/source-manifest-post.json",
+      "bytes": 3689,
+      "sha256": "sha256:7d62f75ff70bbeadb7b1479c1b9cb8a53576e39011336f04c368efe8887f1b33"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-gate/source-manifest-pre.json",
+      "bytes": 3688,
+      "sha256": "sha256:882490418a5d8df3b222f7ff996da16aed864c832aa8e6c8a5ff859aa0d61af8"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-typecheck.command.txt",
+      "bytes": 17,
+      "sha256": "sha256:982c1455e5e73c8ccab2d70a550c972e2841a0582596e26a7fcc53b80e14aa14"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-typecheck.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-typecheck.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final-typecheck.stdout.txt",
+      "bytes": 567,
+      "sha256": "sha256:2a014601e25068aebea73302ed9b468165846f498f186021fcf64454e4baa1a6"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-suite.command.txt",
+      "bytes": 144,
+      "sha256": "sha256:f556203242947202ed0ba3740f8b9e188cc3b7e13a1eb22a3836e8b8fa2d36a5"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-suite.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-suite.stderr.txt",
+      "bytes": 5405,
+      "sha256": "sha256:abc1960a7b548160d5213cb5403ec266407bddd3cfb45c4f7f0be6e6be4c35c9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-suite.stdout.txt",
+      "bytes": 84378,
+      "sha256": "sha256:a32955ac3beae3fabdc5b4c8f9050078db923ef34a6cecebdc5949baf3478a03"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-typecheck.command.txt",
+      "bytes": 17,
+      "sha256": "sha256:982c1455e5e73c8ccab2d70a550c972e2841a0582596e26a7fcc53b80e14aa14"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-typecheck.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-typecheck.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/final2-typecheck.stdout.txt",
+      "bytes": 92,
+      "sha256": "sha256:bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-02.command.txt",
+      "bytes": 233,
+      "sha256": "sha256:8e25b0504c7335e3b223fd282137f3b7bab0693ecc94ee2dd851573d8b9187ad"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-02.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-02.stderr.txt",
+      "bytes": 1397,
+      "sha256": "sha256:12dedffb5e7b2e4a68994e980ae117f652590d16e4ecd66c1c6fbbe36b18bf56"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-02.stdout.txt",
+      "bytes": 379,
+      "sha256": "sha256:df3be085b7537045709b8b1c4738edb294b4267c203cb4e99b85e92376f2b95f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-03.command.txt",
+      "bytes": 513,
+      "sha256": "sha256:f5db45df05b247839b7e8786e2e93ac3a3db374c617bf9aad15ba473c38b2405"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-03.exit.txt",
+      "bytes": 5,
+      "sha256": "sha256:057d9b6316b114eed5dbaed3413e1c81e4c6c286511b1eff9fca990366373033"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-03.stderr.txt",
+      "bytes": 439,
+      "sha256": "sha256:e818a95d78052729943b3495140587c2ed7ac1480c6830f102c7710d32c530f5"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-03.stdout.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-04.command.txt",
+      "bytes": 513,
+      "sha256": "sha256:f5db45df05b247839b7e8786e2e93ac3a3db374c617bf9aad15ba473c38b2405"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-04.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-04.stderr.txt",
+      "bytes": 1539,
+      "sha256": "sha256:6f9201f52452484414af5ec1662a9faca0a6488d1aec8bb7d7a0f13188e2e3b3"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-04.stdout.txt",
+      "bytes": 672,
+      "sha256": "sha256:e054bf3f4de7af2af687e8c3960a6711bdb8cebbc1b0a4069ace270ee7938beb"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-05.command.txt",
+      "bytes": 513,
+      "sha256": "sha256:f5db45df05b247839b7e8786e2e93ac3a3db374c617bf9aad15ba473c38b2405"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-05.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-05.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-05.stdout.txt",
+      "bytes": 12375,
+      "sha256": "sha256:0ad04f7e6db7f6f2a63f545cb4a4d8d627f3c6a7409c5eae7748edbc7e18cc93"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-06.command.txt",
+      "bytes": 651,
+      "sha256": "sha256:f041c7222a1617f9b5c457fad2ca96141f4413d89e754337073dab3abc1dcb12"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-06.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-06.stderr.txt",
+      "bytes": 1911,
+      "sha256": "sha256:e7543e15f016fffa565c867c2867f9c2c85f8c597e48ed8aec86e7fbe0b67278"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-06.stdout.txt",
+      "bytes": 14962,
+      "sha256": "sha256:74aeaa5167e64589581c63d0d5854752e6fd4ab30d4ba777e5880e61be4252bb"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-07.command.txt",
+      "bytes": 289,
+      "sha256": "sha256:f41f2067f169041ee47d852daa32a979fffc5928fe1a4862664ba37902bd1145"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-07.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-07.stderr.txt",
+      "bytes": 2347,
+      "sha256": "sha256:0f523e7e63e6746ba6a8343b7738d698bec519e26d05c2222e7994571ea4d7b6"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-07.stdout.txt",
+      "bytes": 6372,
+      "sha256": "sha256:82ebe5b89e172ea22ef64fa123e4997b0ab8a297b3dc57ed49a38f93522353dd"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-08.command.txt",
+      "bytes": 344,
+      "sha256": "sha256:f5f87ae3f6b74bf24e5a9eb0b86c695c3d9080687e0f7259f3d8e68b6b714c6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-08.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-08.stderr.txt",
+      "bytes": 3854,
+      "sha256": "sha256:c5a8a045c8a6bcf33a5b300016f273a8c64bc4942c06c0d0c9a740e8389f1723"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-08.stdout.txt",
+      "bytes": 6936,
+      "sha256": "sha256:33512809b2ed04211f8c3ae4ccd4a2c84f142f99d5d501dd4b6fb8049fda6126"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-09.command.txt",
+      "bytes": 246,
+      "sha256": "sha256:5f98b99b9803e17586af5bdfa4f5c078a4d0e85cb7e7ef96b82c3c2f8565ad2d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-09.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-09.stderr.txt",
+      "bytes": 1060,
+      "sha256": "sha256:70423c7a44d8730813ebe7f63fd56ed623efd89436573c1c9e79d980e49e4537"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-09.stdout.txt",
+      "bytes": 5175,
+      "sha256": "sha256:fd879c826947daebda329b32a9ea6c9ca9fea60657af1e1870a18720f5b58c67"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-10.command.txt",
+      "bytes": 344,
+      "sha256": "sha256:f5f87ae3f6b74bf24e5a9eb0b86c695c3d9080687e0f7259f3d8e68b6b714c6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-10.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-10.stderr.txt",
+      "bytes": 1866,
+      "sha256": "sha256:7d88747150510f82cd8b2ef00a0a3002df1a4ee819c3a3f93e2dfbdf70494f18"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-10.stdout.txt",
+      "bytes": 6852,
+      "sha256": "sha256:a1a4b48444c7af6a66e2f4f9696911899549dba5d5839932aed4a256736144b1"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-11.command.txt",
+      "bytes": 289,
+      "sha256": "sha256:f41f2067f169041ee47d852daa32a979fffc5928fe1a4862664ba37902bd1145"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-11.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-11.stderr.txt",
+      "bytes": 1389,
+      "sha256": "sha256:a6adb6c5b7dbbc64d09ffe4fe45b3fa62137e44420f808772d338e57731195ef"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-11.stdout.txt",
+      "bytes": 6558,
+      "sha256": "sha256:23c53e8b65850cc6652ab41a8eeacd0930502170ca6d917da29878d6e8dd9e68"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-12.command.txt",
+      "bytes": 289,
+      "sha256": "sha256:f41f2067f169041ee47d852daa32a979fffc5928fe1a4862664ba37902bd1145"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-12.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-12.stderr.txt",
+      "bytes": 1547,
+      "sha256": "sha256:74921f5dbfbb91f9c8b1f3b4a0c3da64cd0ca3e95b4e4af45cbaac7770dc6a2b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-12.stdout.txt",
+      "bytes": 6683,
+      "sha256": "sha256:145f83de1c4f50f4ca5acb0003c1ad75335ac89be56662eced6c0d7050fa7283"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-13.command.txt",
+      "bytes": 344,
+      "sha256": "sha256:f5f87ae3f6b74bf24e5a9eb0b86c695c3d9080687e0f7259f3d8e68b6b714c6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-13.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-13.stderr.txt",
+      "bytes": 858,
+      "sha256": "sha256:d66f8829750c5fbbb759b43acbd09147dde73331804b3d00becda9f0b301702a"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-13.stdout.txt",
+      "bytes": 7571,
+      "sha256": "sha256:30fceae607467571a51125b54a5a9f982d8e0480cffb8df3ade86a6aad3afd6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-14.command.txt",
+      "bytes": 344,
+      "sha256": "sha256:f5f87ae3f6b74bf24e5a9eb0b86c695c3d9080687e0f7259f3d8e68b6b714c6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-14.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-14.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-14.stdout.txt",
+      "bytes": 7521,
+      "sha256": "sha256:8aafc07b1b6622c26f9a9bb302442b27d7067e47fd6acab42429357c0ec2b63c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-15.command.txt",
+      "bytes": 686,
+      "sha256": "sha256:c2de0b3c81c4d495219058d1566012a48ec779f142ca2640b2bcfbebd400316c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-15.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-15.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-15.stdout.txt",
+      "bytes": 16411,
+      "sha256": "sha256:d6028cf0ae6f94fa33c3f11878835f25fd80b5c297cca6ff5bd402cf0c795ac3"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-16.command.txt",
+      "bytes": 574,
+      "sha256": "sha256:46090d69150104ab4f49979abb39dd3a2d52d9296a286082ecf87ce10620897a"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-16.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-16.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-16.stdout.txt",
+      "bytes": 26013,
+      "sha256": "sha256:9e7e054906562c3c952fc79e65d84b993baa98910dc8f1fa2a3d03138b5901be"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-17.command.txt",
+      "bytes": 234,
+      "sha256": "sha256:c47cfc6a73b1a00734ee8bc761cb21a62c9db2b9ddcac2a54a96ac0161bab594"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-17.exit.txt",
+      "bytes": 2,
+      "sha256": "sha256:9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-17.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/focused-17.stdout.txt",
+      "bytes": 5833,
+      "sha256": "sha256:ec24c845ff3487df444aa550929999ef3948582f3182aeee8dd510d85dd66d1b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-01.command.txt",
+      "bytes": 249,
+      "sha256": "sha256:04bdc3df3505fad173bed0183bbdfd261717008880360371b8cb5af517b1a5df"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-01.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-01.stderr.txt",
+      "bytes": 1502,
+      "sha256": "sha256:3533dd060320b1621a99fe506857d375b3c30826745ef7e048fe7f4cc2c01bc0"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-01.stdout.txt",
+      "bytes": 3241,
+      "sha256": "sha256:36e4b810dfd7a11343bd74cc483523c1897a0795a97c475ce1ce5993d1a5dc2f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-02.command.txt",
+      "bytes": 249,
+      "sha256": "sha256:04bdc3df3505fad173bed0183bbdfd261717008880360371b8cb5af517b1a5df"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-02.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-02.stderr.txt",
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/green-02.stdout.txt",
+      "bytes": 3196,
+      "sha256": "sha256:85deeea7d3d4a77e0f8eb02c2f03b6c2356e868b9fe0bd0f0c79994c641c06ab"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/01165857-01d4-465d-bdad-ecc93fd6bcb9/capability-http-resource-summary.json",
+      "bytes": 168,
+      "sha256": "sha256:44a031443265730c5dfaec2717a3515ada324b155f0b11bd4b2ef93be38145bf"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/01165857-01d4-465d-bdad-ecc93fd6bcb9/postgres-lifecycle.jsonl",
+      "bytes": 930,
+      "sha256": "sha256:9c0cfd22681b68e615ec1ea7eaaa3cdf6404843d2a70bdd33cbdc7cbe7e8b2b2"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/01165857-01d4-465d-bdad-ecc93fd6bcb9/postgres-resource-summary.json",
+      "bytes": 491,
+      "sha256": "sha256:19029705e1b5fbf8a32426e44a645e68de776a3d28b2d03bf0c631e9a27aa9b4"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/e871d809-d825-4445-bfa4-97e172dc97b4/capability-http-resource-summary.json",
+      "bytes": 168,
+      "sha256": "sha256:856a015a373eef3dacb3fd00efb838bc6fcf92964a5dc6c64b2a103a8440178e"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/e871d809-d825-4445-bfa4-97e172dc97b4/postgres-lifecycle.jsonl",
+      "bytes": 930,
+      "sha256": "sha256:2e1fa8bb26369e11ee0678a276f082b188e90321333c4d9cee016be0d7da47b4"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/m1task1/e871d809-d825-4445-bfa4-97e172dc97b4/postgres-resource-summary.json",
+      "bytes": 491,
+      "sha256": "sha256:359ce3814ecad340f97350c0abe406888eb846f6717ea1f86161b537601af0b5"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/red-01.command.txt",
+      "bytes": 247,
+      "sha256": "sha256:e626232bbfd9acab057059daf5c97ff4b07c00d62ae803a0731acd3c89585769"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/red-01.exit.txt",
+      "bytes": 1,
+      "sha256": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/red-01.stderr.txt",
+      "bytes": 721,
+      "sha256": "sha256:4f3c0b050df6743815fc2e51b7322eee40f307e2614d1f231b0dd962afb19d4b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/red-01.stdout.txt",
+      "bytes": 3240,
+      "sha256": "sha256:ab3d149b118c594fe80cb77dc678a2cd644b68ca4b2d18d0885f5d7ca7d8b3a5"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/run-id.txt",
+      "bytes": 36,
+      "sha256": "sha256:f1ab4b330440ce99996289dd5ad291b992e09a347366b87f00cf888bd54f8155"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/source-manifest-pre.json",
+      "bytes": 1508,
+      "sha256": "sha256:be1481532896f5ac9da40ab66ec9b54dccfb7a15ce46918901e2e9ad68e59f1a"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task0/851379c2-e779-422d-8768-188b9a9214c4/foundation-postgres-resource-summary.json",
+      "bytes": 465,
+      "sha256": "sha256:cc707ff98a2ddd0f88895a86d7759008d001d231e26b17f57462afc32a82c797"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task0/851379c2-e779-422d-8768-188b9a9214c4/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:ab72853f077794cf3b7e1e931bf11fda9e8e07fc7a203ab26a66da02d9608a6d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task0/9a81fcf5-cfef-4671-84eb-95f3613b4f82/foundation-postgres-resource-summary.json",
+      "bytes": 465,
+      "sha256": "sha256:f99079cfd320ef53bdd39b3c4a3f0c986b39839427aca06a0c344ec14f59fa15"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task0/9a81fcf5-cfef-4671-84eb-95f3613b4f82/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:e1f2dd694ecc756a833af67e6929664856e19d68f4fa26ae8cd2efeff8658f90"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task1/10597d43-dc3f-4ddb-911e-e6700707a931/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:2a7f4c7cdd0c1ecb1ac39dfeb31c64a9f4b82162c880b239aeeaaa10f8100bf4"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task1/10597d43-dc3f-4ddb-911e-e6700707a931/postgres-resource-summary.json",
+      "bytes": 489,
+      "sha256": "sha256:96b7a4430c2836f5d77e30f3727f5d2f3830ea43756144b5a099f217c73166c8"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task1/34a1183f-94ad-48d3-80ed-02cf11df4b7f/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:b9d570dd03b3e993f7819452c184e940a455d5cc94013e021f76279dce7c75c1"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task1/34a1183f-94ad-48d3-80ed-02cf11df4b7f/postgres-resource-summary.json",
+      "bytes": 489,
+      "sha256": "sha256:f4bcac11e02ab7e6fccb0523eaf96b4a91f92adfd37a0f9c1598eecd2aa6c25c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/94513723-a6a6-4731-88a3-b3dd01e2a2c5/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:e2a03ae8e07a8682ea1d903eab68f20bfef2ddd6d93a7c051f75f7464599ef2c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/94513723-a6a6-4731-88a3-b3dd01e2a2c5/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "sha256:31621ba21279c105ed16cf2d9d02976f6141ff82caa5e5b6e3fd3de7e5a964b2"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/9b9b290c-adf2-49f3-8ca3-45535f523c0f/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:d6c4a855f88dc30929cf76f9167cd432a58a15c0d7a9523f881412f17ea028ee"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/9b9b290c-adf2-49f3-8ca3-45535f523c0f/postgres-resource-summary.json",
+      "bytes": 558,
+      "sha256": "sha256:a53a47e18520061dc68cd20417f8d482054c110f51ef67266bd461c351da1be4"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/d15b9bf6-221b-4207-814d-3a34e39e4e64/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:9e63b759a4c15cbc09da0cb8d213c3fdd1635d6d5bba94c2b327bd1f396c5544"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task2/d15b9bf6-221b-4207-814d-3a34e39e4e64/postgres-resource-summary.json",
+      "bytes": 489,
+      "sha256": "sha256:0c6d3871d2fc75951d78610b0f327d829cdca470e55ce00ff425236425f9945f"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/3ddb6f04-581d-424c-9d36-dfceb083e275/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:cbd947f275f42bc31691f58390f6030341aa333e753bcb87d79e307bb20c8dbd"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/3ddb6f04-581d-424c-9d36-dfceb083e275/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:cdb36cbbf183c069cb399b25f6b62268ac8575bb7a4a1b317038b56f0c188b7c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/3f12f407-3d97-4abf-94a9-5f1185a6b2f2/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:17ae1b9da5c926fb3c6ada52b4fdc65a295a2d15c9be2d49e636e77e3fa776e3"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:a42408a65d07cb038c99259318d1bad4442252bf258a0b177f0fc78779434129"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/43cc54f8-ca90-4f81-afc7-8fdf8f4e8d1f/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:064a2b9be17c449fc55a6c18fb6b163237cd00f0b44e1a9387c580bdf1be2ad3"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/4f062542-a5dd-4335-9857-99bafc1249b7/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:54be277dc72461a1a0fd51343f1598c1e9e3eb5cc2417fc489e00d44aa5cf137"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/4f062542-a5dd-4335-9857-99bafc1249b7/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:baaf7ae53087cb8a4cf95ff9e823815df1e60bb5b13a4b1b4111f2ef3dbd0c31"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/59e22a01-7967-47b1-860b-9e0e8242b44c/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:4684c832f56ab1186187b6a885129d9c7ba9f5a93b643c154feb3f3ecced212a"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/59e22a01-7967-47b1-860b-9e0e8242b44c/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:3d3e341be9a0006724816e3e9ba603543b99b8b81dfe9e19bf3812814151f474"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/65af72e7-52de-4675-b9c8-ce31f3b7d903/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:038446d65f884613347e1a1b00e9d1e07d8975114e3488e2f204ebbe3f0fe778"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/65af72e7-52de-4675-b9c8-ce31f3b7d903/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:2b8ff7cc6fddf90a3f32e60dbd91349ad6b825f0c9a53ea1e8c3e2d3dbacc00d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/6d876888-2af3-49af-b118-12d60f46ce6c/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:f5e900d984de9c23ac933ca867b79a9e65a6d52030971e1605ceaff939fd5460"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/6d876888-2af3-49af-b118-12d60f46ce6c/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:310dea0c6f459ff52c6bdb5d4e9c4d6d1c13d3cdbe10c3a2e87bfb876a5f0a6b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/7270b26f-e824-402c-b67b-8b2afdf8934a/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:04e8fd9fbd74c743e52daeebdaf65dda3779b0a4086debb62bdb660d4bf3c189"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/7270b26f-e824-402c-b67b-8b2afdf8934a/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:29fc8c62b6f3926a26936435a36f4942aa1eb596f105067ad1e154becf002ef0"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/793bbafd-ec2a-4de4-bb4b-49508018be83/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:b2611dce99a3976af78e4f587e336d9f9d21db805dd5f90dc0fb3d57ff38e445"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/793bbafd-ec2a-4de4-bb4b-49508018be83/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:24927b2c23f7ae1a0fb0ba67402b84cc4a28c55d8edc9893918f842da3410e78"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/7a807f9a-ad32-4bbf-a213-2ab64cd4710f/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:198cb0a1e418b41fd0467e3b5cf1408d4442cde93d2aeffd0a9ad875b0a37e7c"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/7a807f9a-ad32-4bbf-a213-2ab64cd4710f/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:a146bbab1386c0d7b9a9e8bd48ebc7cab615e6f223a716fd3ee22c81af277769"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/acad9ea1-71c0-4de4-9251-245758ed0559/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:e7811127cb2ab7fdb48d750894a8c416a0e6443075237027d6eb94bb6b63b838"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/acad9ea1-71c0-4de4-9251-245758ed0559/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:f592e038ca42bf78d161e21df0a177d560a2873c04d892295fb0ce655ebfeb59"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ace5f831-2cd9-4ff4-b57b-278604899da5/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:c55a9e7b8b32b89eb9cc6e487fd933cc045bfd52c1d22659d6fc03bdfc531419"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ace5f831-2cd9-4ff4-b57b-278604899da5/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:b1dc0784155b789b3dfb62d1873a355370330f34cf9c95b7074de90dc3274730"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/d0e74ae1-48d7-4830-94c0-833d532d3d06/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:47c5229e335b6ee7f7217dc505af33b259ea643db797ac21389af4c8e58e7e9b"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/d0e74ae1-48d7-4830-94c0-833d532d3d06/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:ce0a12748ccc324e0158fb7c761d3eb99fa2eb69221c44e8a97127b193062955"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/dcdb5eb7-99d8-4690-b4ca-961ca305391e/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:4c246fc801f8fc6a6f73604ab88cdb952304f30ecb3fd4b649502b8110fcdff1"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/dcdb5eb7-99d8-4690-b4ca-961ca305391e/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:515fcde8758b08846ff3affaab87e907df8fc273eea1b9f37d94a7f3cd6bfe0d"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ec03c30d-6c93-42a0-a85a-3c143fa956a2/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:bb375eb58a72f9072e186170547c42160e428e409cc13800d33cbb0b4235fc88"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ec03c30d-6c93-42a0-a85a-3c143fa956a2/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:75ff1f54cbb97cb90e54edf559820325c6a98d4f6343aa1512cd480b7cf699d4"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ec03e485-e7ed-47c9-ac67-abd61a4b583f/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:251476309967bd44df0b71289e11c776ec16db6f575b1aaa62edd56987904c06"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/ec03e485-e7ed-47c9-ac67-abd61a4b583f/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:1c14c7a67519d991f9019059759fcda3b64993420edbd96ab52edbe1a1784559"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/f8343334-0b46-416e-adc2-284ca33925fc/postgres-lifecycle.jsonl",
+      "bytes": 926,
+      "sha256": "sha256:6d8589f32264fcedc0714eca033f6d1b88880d70ecfbc0895bdfe39dd237aec1"
+    },
+    {
+      "path": "docs/execution/alpha1/m1-task-4-evidence/ba0044f2-2d67-4a12-b12e-0f830f188a77/task3/f8343334-0b46-416e-adc2-284ca33925fc/postgres-resource-summary.json",
+      "bytes": 716,
+      "sha256": "sha256:d5e5407afa67e12374a55fd30edf7c158ffebdc3af1d4b97b5238078ff55e501"
+    }
+  ]
+}

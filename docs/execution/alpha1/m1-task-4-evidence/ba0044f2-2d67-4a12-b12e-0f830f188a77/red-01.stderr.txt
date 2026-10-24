@@ -1,0 +1,15 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+TypeError: runDurableWorkerOnce is not a function
+ ❯ acceptance-tests/strict-ingestion.test.ts:400:13
+    398|     });
+    399|     try {
+    400|       await runDurableWorkerOnce(worker);
+       |             ^
+    401|       const state = await fixture.pool.query<{ status: string; applied…
+    402|         customers: string; receipts: string; events: string; acknowled…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

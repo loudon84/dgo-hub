@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+AssertionError: {"response":{"request_id":"a8473810-4966-4bf6-abb3-7c4eb99f1c87","error":{"code":"SOURCE_CONFLICT","message":"SOURCE_CONFLICT","retryable":false,"details":{}}},"sourceState":{"lifecycle":"ACTIVE","current_config_revision":"1","mapping_revision":"1","identity_mapping_revision":"1","owner_revision":"1","enabled":true,"revision":"1","source_epoch":"0","credential_generation":"1","tenant_enabled":true,"barrier_count":1}}: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:760:110
+    758|       batch.records[0]!.source_pk=`BARRIER-WORKER-C${index+1}`;
+    759|       const accepted=await post(JSON.stringify(batch),`barrier-worker-…
+    760|       expect(accepted.statusCode,JSON.stringify({response:accepted.jso…
+       |                                                                                                              ^
+    761|       const id=accepted.json().data.job_id as string;
+    762|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

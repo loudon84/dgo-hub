@@ -1,0 +1,34 @@
+{
+  "base": "c616402a79019821da77c0434762c6970a322e61",
+  "observedHead": "2d9b67c2f04104afb7995bc26360f285ad89f92b",
+  "files": [
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "size": 5285,
+      "rawSha256": "dbfb23f3ce302e4a04824bfc02f38aede5e69b1e3dd79adcf47912cb5d13b3c4",
+      "lfSha256": "dbfb23f3ce302e4a04824bfc02f38aede5e69b1e3dd79adcf47912cb5d13b3c4",
+      "gitBlob": "6c21261d81d9b35e5bbc5eae6d957d26f70d3c07"
+    },
+    {
+      "path": "integration-service/etl-worker/retry.ts",
+      "size": 132,
+      "rawSha256": "8d7c5c78b57497a8ff79e2420a9cac44a92478add009e239aac696f829764a9c",
+      "lfSha256": "8d7c5c78b57497a8ff79e2420a9cac44a92478add009e239aac696f829764a9c",
+      "gitBlob": "a0cc8855cfcda284128a6f15d93c15db3e71e2a3"
+    },
+    {
+      "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+      "size": 13435,
+      "rawSha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "lfSha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "gitBlob": "7a5dca418542976a22cf786d302e36a617ee22df"
+    },
+    {
+      "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+      "size": 27428,
+      "rawSha256": "8aa3765e477961402a793cc71119b49e7dc71ced1eea74b994a3fb57d9a2c053",
+      "lfSha256": "8aa3765e477961402a793cc71119b49e7dc71ced1eea74b994a3fb57d9a2c053",
+      "gitBlob": "e43832cfd0b5c5062793a20e938c9ba559d26e36"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=runs only the fixed allowlist acceptance-tests/evidence/gate.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > returns a structured non-pass result when required files are absent
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > returns stable JSON-compatible CLI results and a nonzero code for blocked input
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > exposes the canonical 48 acceptance ids and keeps them NOT_RUN by default
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > distinguishes a complete synthetic structure from release readiness
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > allows a complete unit-only release-shaped bundle through the final release branch
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > anchors bundle pins to the controlled repository pins even when bundle files are self-consistent
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference synthetic://hermes in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference ExAmPlE://hermes in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference fixture://hermes in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference  synthetic://hermes in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal consumer authority reference 	ExAmPlE://hermes in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal approval authority reference synthetic:approval:crm in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal approval authority reference  fixture://approval:crm in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference fixture:owner:crm in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > blocks explicit nonreal owner authority reference  fixture://owner in a release-shaped bundle
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts legitimate authority schemes whose names contain nonreal scheme words
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > requires one unique fixture input artifact for each approved source contract
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a PASS result when its Oracle assertion values differ
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > compares referenced Oracle JSON values while ignoring object key order
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > uses exact filesystem identity for distinct files and rejects hardlink aliases
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: null
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: ""
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: {}
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects empty Oracle assertion values loaded from references: []
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts nonempty falsey Oracle values from distinct files: false
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > accepts nonempty falsey Oracle values from distinct files: 0
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects expected and actual Oracle references that alias the same file
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a symlink in any referenced path segment
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects Golden Consumer separator aliases to the same underlying file
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects Golden Consumer case aliases to the same underlying file on Windows
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects PASS records whose source, image, or fixture identities differ from the run
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects evidence digest tampering and path traversal
+ ↓ acceptance-tests/evidence/gate.test.ts > evidence release gate > rejects a claimed golden consumer with synthetic inputs or duplicate actor evidence
+ ↓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > routes Windows npm scripts through cmd.exe with only the fixed command words
+ ✓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > runs only the fixed allowlist, records source and log digests, and refuses overwrite 382ms
+ ↓ acceptance-tests/evidence/gate.test.ts > fixed local check recorder > rejects arbitrary commands and unsafe run identifiers without invoking a runner
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 35 skipped (36)
+   Start at  20:45:11
+   Duration  769ms (transform 87ms, setup 0ms, import 205ms, tests 384ms, environment 0ms)
+

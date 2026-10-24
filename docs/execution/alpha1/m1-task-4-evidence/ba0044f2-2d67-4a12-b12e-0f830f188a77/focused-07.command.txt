@@ -1,0 +1,1 @@
+M0_RUN_EVIDENCE_ROOT=E:\git\dgo-hub\docs\execution\alpha1\m1-task-4-evidence\ba0044f2-2d67-4a12-b12e-0f830f188a77 npm test -- --reporter=verbose --testNamePattern='preserves canonical timestamp precision|isolates each newer typed security barrier' acceptance-tests/strict-ingestion.test.ts

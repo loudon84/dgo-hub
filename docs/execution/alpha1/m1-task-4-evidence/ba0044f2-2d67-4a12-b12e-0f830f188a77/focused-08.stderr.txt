@@ -1,0 +1,98 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+AssertionError: expected { stored: { …(7) }, …(1) } to deeply equal { stored: { …(7) }, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "applyError": undefined,
++   "applyError": error {
++     "message": "invalid input syntax for type uuid: \"owner-a\"",
++     "length": 102,
++     "name": "error",
++     "severity": "ERROR",
++     "code": "22P02",
++     "detail": undefined,
++     "hint": undefined,
++     "position": undefined,
++     "internalPosition": undefined,
++     "internalQuery": undefined,
++     "where": undefined,
++     "schema": undefined,
++     "table": undefined,
++     "column": undefined,
++     "dataType": undefined,
++     "constraint": undefined,
++     "file": "uuid.c",
++     "line": "133",
++     "routine": "string_to_uuid",
++   },
+    "stored": {
+-     "amount": "100.10",
+-     "line_amount": "15.15",
+-     "order_at": "2026-10-22T01:00:01.654321Z",
+-     "quantity": "1.500000",
+-     "source_updated_at": "2026-10-22T01:00:00.123456Z",
+-     "status": "APPLIED",
+-     "unit_price": "10.100000",
++     "amount": null,
++     "line_amount": null,
++     "order_at": null,
++     "quantity": null,
++     "source_updated_at": null,
++     "status": "RETRY_PENDING",
++     "unit_price": null,
+    },
+  }
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:538:48
+    536|       LEFT JOIN hub.canonical_order_line l ON l.tenant_id=o.tenant_id …
+    537|       WHERE i.job_id=$3 AND i.source_pk='EXACT-ORDER-PK-1'`,[tenantId,…
+    538|     expect({stored:stored.rows[0],applyError}).toEqual({stored:{status…
+       |                                                ^
+    539|       order_at:'2026-10-22T01:00:01.654321Z',amount:'100.10',quantity:…
+    540|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+AssertionError: {"request_id":"fb4f32eb-d056-45f8-8f41-4e853f62998d","error":{"code":"SOURCE_CONFLICT","message":"SOURCE_CONFLICT","retryable":false,"details":{}}}: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:753:67
+    751|       batch.records[0]!.source_pk=`BARRIER-WORKER-C${index+1}`;
+    752|       const accepted=await post(JSON.stringify(batch),`barrier-worker-…
+    753|       expect(accepted.statusCode,JSON.stringify(accepted.json())).toBe…
+       |                                                                   ^
+    754|       const id=accepted.json().data.job_id as string;
+    755|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:780:33
+    778|   it('finishes frozen work after ordinary source epoch drift', async (…
+    779|     const accepted=await post(JSON.stringify(customerBatch()),'worker-…
+    780|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    781|     const id=accepted.json().data.job_id as string;
+    782|     await createAuthService({pool:fixture.pool}).repository.advanceSou…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
