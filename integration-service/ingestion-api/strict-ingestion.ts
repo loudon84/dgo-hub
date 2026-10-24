@@ -241,7 +241,6 @@ async function requestBody(request: FastifyRequest): Promise<Buffer> {
 
 async function registerReadRoutes(app: FastifyInstance, options?: StrictIngestionOptions): Promise<void> {
  app.register(async reads => {
-  reads.setNotFoundHandler((request, reply) => sendNotFound(request, reply));
   reads.get<{ Params: { id: string } }>('/hub/v1/ingestion-jobs/:id', async (request, reply) => {
     try {
       if (!options) throw new RouteError('INGEST_UNAVAILABLE', 503);
