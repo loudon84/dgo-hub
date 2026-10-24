@@ -1,5 +1,6 @@
 ALTER TABLE control.source_credential
-  ADD COLUMN source_epoch bigint NOT NULL DEFAULT 0 CHECK (source_epoch >= 0);
+  ADD COLUMN source_epoch bigint NOT NULL DEFAULT 0 CHECK (source_epoch >= 0),
+  ADD COLUMN credential_generation bigint NOT NULL DEFAULT 1 CHECK (credential_generation > 0);
 
 -- revision on source_credential is the currently selected approved source-config revision.
 CREATE TABLE control.source_registry (
@@ -65,6 +66,8 @@ CREATE TABLE control.source_test_report (
   mapping_digest bytea NOT NULL CHECK (octet_length(mapping_digest) = 32),
   identity_mapping_digest bytea NOT NULL CHECK (octet_length(identity_mapping_digest) = 32),
   source_credential_revision bigint NOT NULL,
+  credential_generation bigint NOT NULL,
+  endpoint_profile_digest bytea NOT NULL CHECK (octet_length(endpoint_profile_digest)=32),
   data_contract_ref text NOT NULL CHECK (length(data_contract_ref) BETWEEN 1 AND 256),
   report jsonb NOT NULL,
   status text NOT NULL CHECK (status IN ('PASS','FAIL')),
@@ -88,6 +91,8 @@ CREATE TABLE control.source_owner_approval (
   mapping_digest bytea NOT NULL CHECK (octet_length(mapping_digest) = 32),
   identity_mapping_digest bytea NOT NULL CHECK (octet_length(identity_mapping_digest) = 32),
   source_credential_revision bigint NOT NULL,
+  credential_generation bigint NOT NULL,
+  endpoint_profile_digest bytea NOT NULL CHECK (octet_length(endpoint_profile_digest)=32),
   data_contract_ref text NOT NULL CHECK (length(data_contract_ref) BETWEEN 1 AND 256),
   test_report_id uuid NOT NULL REFERENCES control.source_test_report(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -175,6 +180,28 @@ AS $function$
    FOR UPDATE OF c,t,r
 $function$;
 
+-- Manager transactions lock protected rows through narrow definer functions.
+-- The API role can acquire the lock without gaining credential/channel writes.
+CREATE FUNCTION control.lock_source_credential(p_tenant_key text,p_source_id text)
+RETURNS TABLE(id uuid,enabled boolean,allowed_entities text[],revision bigint,source_epoch bigint,credential_generation bigint)
+LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, control
+AS $function$
+  SELECT c.id,c.enabled,c.allowed_entities,c.revision,c.source_epoch,c.credential_generation
+    FROM control.source_credential c
+   WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id
+   FOR UPDATE OF c
+$function$;
+
+CREATE FUNCTION control.lock_source_channel(p_tenant_key text,p_source_id text,p_entity text)
+RETURNS TABLE(id uuid,connector text,mode text,version_domain text,channel_epoch bigint)
+LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, control
+AS $function$
+  SELECT c.id,c.connector,c.mode,c.version_domain,c.channel_epoch
+    FROM control.source_channel c
+   WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.entity=p_entity AND c.state='active'
+   FOR UPDATE OF c
+$function$;
+
 CREATE FUNCTION control.authenticate_source(p_digest bytea)
 RETURNS TABLE (credential_id uuid, source_id text, tenant_key text, allowed_entities text[], credential_revision bigint,
   source_epoch bigint, enabled boolean, tenant_enabled boolean)
@@ -192,8 +219,11 @@ CREATE FUNCTION control.upsert_source_credential(p_source_id text,p_tenant_key t
   p_allowed_entities text[],p_enabled boolean,p_revision bigint)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
 AS $function$
-DECLARE registered integer;
+DECLARE registered integer; rotated boolean := false; prior_state text;
 BEGIN
+  SELECT (c.digest IS DISTINCT FROM p_digest OR c.secret_ref IS DISTINCT FROM p_secret_ref)
+    INTO rotated FROM control.source_credential c
+   WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key FOR UPDATE;
   INSERT INTO control.credential_digest_registry(digest,kind) VALUES(p_digest,'source') ON CONFLICT(digest) DO NOTHING;
   GET DIAGNOSTICS registered = ROW_COUNT;
   IF registered <> 1 THEN RAISE EXCEPTION 'source credential digest is already registered'; END IF;
@@ -201,7 +231,18 @@ BEGIN
     VALUES(p_source_id,p_tenant_key,p_digest,'source',p_secret_ref,p_allowed_entities,p_enabled,p_revision)
   ON CONFLICT(tenant_key,source_id) DO UPDATE SET digest=EXCLUDED.digest,digest_kind='source',secret_ref=EXCLUDED.secret_ref,
     allowed_entities=EXCLUDED.allowed_entities,enabled=EXCLUDED.enabled,revision=EXCLUDED.revision,
-    source_epoch=control.source_credential.source_epoch+1;
+    source_epoch=control.source_credential.source_epoch+1,
+    credential_generation=control.source_credential.credential_generation+
+      CASE WHEN (control.source_credential.digest,control.source_credential.secret_ref) IS DISTINCT FROM (EXCLUDED.digest,EXCLUDED.secret_ref) THEN 1 ELSE 0 END;
+  IF rotated THEN
+    SELECT lifecycle INTO prior_state FROM control.source_registry WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
+    UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+    INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,details)
+      SELECT p_tenant_key,p_source_id,'system','CREDENTIAL_ROTATED',prior_state,
+        CASE WHEN prior_state='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,jsonb_build_object('credential_generation',c.credential_generation)
+        FROM control.source_credential c WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id;
+  END IF;
 END;
 $function$;
 
@@ -209,14 +250,23 @@ CREATE FUNCTION control.update_source_credential(p_source_id text,p_tenant_key t
   p_allowed_entities text[],p_secret_ref text,p_change_secret boolean)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
 AS $function$
-DECLARE changed integer;
+DECLARE changed integer; secret_changed boolean := false;
 BEGIN
+  IF p_change_secret THEN
+    SELECT c.secret_ref IS DISTINCT FROM p_secret_ref INTO secret_changed FROM control.source_credential c
+     WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key FOR UPDATE;
+  END IF;
   UPDATE control.source_credential c SET enabled=p_enabled,revision=p_revision,allowed_entities=p_allowed_entities,
-    secret_ref=CASE WHEN p_change_secret THEN p_secret_ref ELSE c.secret_ref END,source_epoch=c.source_epoch+1
+    secret_ref=CASE WHEN p_change_secret THEN p_secret_ref ELSE c.secret_ref END,source_epoch=c.source_epoch+1,
+    credential_generation=c.credential_generation+CASE WHEN secret_changed THEN 1 ELSE 0 END
    WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key AND
     (c.enabled,c.revision,c.allowed_entities) IS DISTINCT FROM (p_enabled,p_revision,p_allowed_entities) OR
     c.source_id=p_source_id AND c.tenant_key=p_tenant_key AND p_change_secret AND c.secret_ref IS DISTINCT FROM p_secret_ref;
   GET DIAGNOSTICS changed = ROW_COUNT;
+  IF changed>0 AND secret_changed THEN
+    UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
+     WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+  END IF;
   RETURN changed;
 END;
 $function$;
@@ -264,6 +314,7 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION control.lock_current_source(uuid,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION control.lock_source_credential(text,text),control.lock_source_channel(text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.authenticate_source(bytea) FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.upsert_source_credential(text,text,bytea,text,text[],boolean,bigint) FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.update_source_credential(text,text,boolean,bigint,text[],text,boolean) FROM PUBLIC;
@@ -278,7 +329,7 @@ REVOKE ALL ON control.source_registry,control.source_config_revision,control.sou
 REVOKE ALL ON FUNCTION control.lock_current_source(uuid,text,text,text) FROM hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.guard_source_channel_identity() FROM hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 
-GRANT SELECT (id,source_id,tenant_key,digest_kind,enabled,allowed_entities,revision,source_epoch) ON control.source_credential TO hub_api;
+GRANT SELECT (id,source_id,tenant_key,digest_kind,enabled,allowed_entities,revision,source_epoch,credential_generation) ON control.source_credential TO hub_api;
 GRANT SELECT (tenant_key,enabled) ON control.tenant TO hub_api;
 GRANT UPDATE (enabled) ON control.tenant TO hub_api;
 GRANT SELECT (tenant_key,user_id,enabled,management_scopes) ON control.auth_subject TO hub_api;
@@ -290,6 +341,7 @@ GRANT SELECT, INSERT ON control.source_config_revision,control.source_mapping_re
   control.source_channel,control.source_lifecycle_event,control.source_security_barrier TO hub_api;
 GRANT USAGE, SELECT ON SEQUENCE control.source_lifecycle_event_id_seq,control.source_security_barrier_id_seq TO hub_api;
 GRANT EXECUTE ON FUNCTION control.lock_current_source(uuid,text,text,text) TO hub_api;
+GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text),control.lock_source_channel(text,text,text) TO hub_api;
 GRANT EXECUTE ON FUNCTION control.authenticate_source(bytea),control.upsert_source_credential(text,text,bytea,text,text[],boolean,bigint),
   control.update_source_credential(text,text,boolean,bigint,text[],text,boolean),control.bump_source_epoch(text,text),
   control.record_tenant_security_disable(text),control.record_source_security_barrier(text,text,text,text,text) TO hub_api;

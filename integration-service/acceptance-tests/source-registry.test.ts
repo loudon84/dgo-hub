@@ -48,7 +48,7 @@ beforeAll(async () => {
     }
     response.writeHead(200,{ 'content-type':'application/json' });
     response.end(JSON.stringify({protocol:'hub.source-capability.v1',schema_version:'customer-v1',source_identity:'fixture-crm',version_domain:'SOURCE_VERSION',entities:{
-      customer:{fields:['customer_id','source_version','deleted_at'],version_field:'source_version',delete_field:'deleted_at',delete_contract:'tombstone'},
+      customer:{fields:['customer_id','customer_name','owner_user_id','dept_id','status','source_version','deleted_at'],field_types:{source_version:'integer',deleted_at:'timestamp'},version_field:'source_version',delete_field:'deleted_at',delete_contract:'tombstone'},
     }}));
   });
   await new Promise<void>(resolve => capabilityServer.listen(0,'127.0.0.1',resolve));
@@ -109,6 +109,23 @@ describe('M1 source admission authorization', () => {
       api_lock: true, public_lock: false, mcp_lock: false, mcp_source_table: false });
   });
 
+  it('completes the source manager workflow through the real hub_api role', async () => {
+    const owner=await prepareOwner();
+    const rolePool=roleScopedPool();
+    const {service}=managerService(rolePool);
+    const config:SourceConfig={name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',
+      endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
+    const created=await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
+    const mapping=await service.writeMappings(owner,'crm-new',created.revision,[
+      ...customerMappings(),
+    ]);
+    await expect(service.validateMappings(owner,'crm-new',mapping.revision)).resolves.toMatchObject({valid:true});
+    const tested=await service.test(owner,'crm-new',created.revision);
+    const approval=await service.approve(owner,'crm-new',created.revision,tested.test_report_id,tested.data_contract_ref);
+    await expect(service.activate(owner,'crm-new',created.revision,approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+    await expect(service.pause(owner,'crm-new',created.revision,'role workflow')).resolves.toMatchObject({lifecycle:'PAUSED'});
+  });
+
   it('locks and accepts only an unchanged ACTIVE source snapshot inside the caller transaction', async () => {
     const token = await activeSource();
     const client = await fixture.pool.connect();
@@ -161,7 +178,7 @@ describe('M1 source admission authorization', () => {
       let blocked=false;
       while(Date.now()<deadline) {
         const waiting=await fixture.pool.query<{waiting:boolean}>(
-          `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE 'SELECT r.*,c.enabled%') AS waiting`,
+          `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE 'SELECT * FROM control.lock_source_credential%') AS waiting`,
         );
         if(waiting.rows[0].waiting) { blocked=true; break; }
         await new Promise(resolve=>setTimeout(resolve,10));
@@ -219,16 +236,16 @@ describe('M1 source admission authorization', () => {
       endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone' };
     const created=await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
     expect(created).toMatchObject({source_id:'crm-new',revision:'1',lifecycle:'DRAFT'});
-    const mapping=await service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]);
+    const mapping=await service.writeMappings(owner,'crm-new','1',customerMappings());
     expect(mapping.revision).toBe('2');
     await expect(service.validateMappings(owner,'crm-new','2')).resolves.toMatchObject({valid:true,errors:[]});
     const tested=await service.test(owner,'crm-new','1');
     expect(tested.status).toBe('PASS');
-    const approval=await service.approve(owner,'crm-new',tested.test_report_id,tested.data_contract_ref);
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
     expect(approval.status).toBe('APPROVED');
     const activationRace=await Promise.allSettled([
-      service.activate(owner,'crm-new',approval.approval_id),
-      service.activate(owner,'crm-new',approval.approval_id),
+      service.activate(owner,'crm-new','1',approval.approval_id),
+      service.activate(owner,'crm-new','1',approval.approval_id),
     ]);
     expect(activationRace.filter(item=>item.status==='fulfilled')).toHaveLength(1);
     expect(activationRace.filter(item=>item.status==='rejected')).toHaveLength(1);
@@ -254,18 +271,18 @@ describe('M1 source admission authorization', () => {
       endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
     const outcomes=await Promise.allSettled([
-      service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]),
-      service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'id',target_field:'source_id',transform:'source-id'}]),
+      service.writeMappings(owner,'crm-new','1',customerMappings()),
+      service.writeMappings(owner,'crm-new','1',customerMappings('name')),
     ]);
     expect(outcomes.filter(item=>item.status==='fulfilled')).toHaveLength(1);
     expect(outcomes.filter(item=>item.status==='rejected')).toHaveLength(1);
     const mappings=await service.mappings(owner,'crm-new');
     await expect(service.validateMappings(owner,'crm-new',mappings.revision)).resolves.toMatchObject({valid:true});
     const tested=await service.test(owner,'crm-new','1');
-    const approval=await service.approve(owner,'crm-new',tested.test_report_id,tested.data_contract_ref);
-    await expect(service.activate({...owner,managementScopes:['source:approve']},'crm-new',approval.approval_id))
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    await expect(service.activate({...owner,managementScopes:['source:approve']},'crm-new','1',approval.approval_id))
       .rejects.toMatchObject({code:'AUTH_FORBIDDEN'});
-    await service.activate(owner,'crm-new',approval.approval_id);
+    await service.activate(owner,'crm-new','1',approval.approval_id);
     await expect(service.update(owner,'crm-new',{expected_revision:'1',config:{...config,connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'pg-prod'}}))
       .rejects.toMatchObject({code:'SOURCE_SWITCH_UNAVAILABLE'});
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({revision:'1',lifecycle:'ACTIVE',connector:'rest'});
@@ -278,10 +295,10 @@ describe('M1 source admission authorization', () => {
     const config:SourceConfig={name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',
       endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
-    await service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]);
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
     const tested=await service.test(owner,'crm-new','1');
-    const approval=await service.approve(owner,'crm-new',tested.test_report_id,tested.data_contract_ref);
-    await service.activate(owner,'crm-new',approval.approval_id);
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    await service.activate(owner,'crm-new','1',approval.approval_id);
     const before=await fixture.pool.query<{source_epoch:string|number}>("SELECT source_epoch FROM control.source_credential WHERE source_id='crm-new'");
     const updated=await service.update(owner,'crm-new',{expected_revision:'1',config,data_owner_user_id:newOwner.userId});
     expect(updated).toMatchObject({revision:'2',lifecycle:'PAUSED',data_owner_user_id:newOwner.userId,owner_revision:'2'});
@@ -290,7 +307,7 @@ describe('M1 source admission authorization', () => {
     const state=await fixture.pool.query<{lifecycle:string;connector:string;channel_epoch:string|number;state:string}>(
       `SELECT r.lifecycle,c.connector,c.channel_epoch,c.state FROM control.source_registry r JOIN control.source_channel c USING(tenant_key,source_id) WHERE r.source_id='crm-new'`);
     expect(state.rows).toEqual([{lifecycle:'PAUSED',connector:'rest',channel_epoch:'1',state:'active'}]);
-    await expect(service.activate(newOwner,'crm-new',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await expect(service.activate(newOwner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
   });
 
   it('keeps source_epoch stable for no-op credential updates and advances it once for effective changes', async () => {
@@ -302,6 +319,52 @@ describe('M1 source admission authorization', () => {
     await auth.repository.updateSourceCredential('crm-main','m1_tenant',true,'2',['customer']);
     const changed = await fixture.pool.query<{source_epoch:string|number}>("SELECT source_epoch FROM control.source_credential WHERE source_id='crm-main'");
     expect(BigInt(changed.rows[0].source_epoch)-BigInt(noop.rows[0].source_epoch)).toBe(1n);
+  });
+
+  it('pauses an active source when its credential material rotates', async () => {
+    const owner=await prepareOwner();
+    const {service}=managerService();
+    const config:SourceConfig={name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',
+      endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config});
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
+    const tested=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    await service.activate(owner,'crm-new','1',approval.approval_id);
+    const replacement=createCredential();
+    await auth.repository.provisionSourceCredential({sourceId:'crm-new',tenantId:'m1_tenant',token:replacement.secret,
+      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'1'});
+    await expect(service.get(owner,'crm-new')).resolves.toMatchObject({lifecycle:'PAUSED'});
+  });
+
+  it('rejects a previously approved test after a newer test fails', async () => {
+    const owner=await prepareOwner();
+    const base=managerService();
+    let probePass=true;
+    const service=createSourceRegistryService({pool:fixture.pool,auth,secretResolver:base.secretResolver,endpointAllowlist:base.endpointAllowlist,
+      capabilityProbe:{run:async()=>({passed:probePass,checks:[probePass?'PROFILE_VALID':'ENDPOINT_REJECTED']})},environmentKind:'local_lab'});
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
+      version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
+    const passed=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',passed.test_report_id,passed.data_contract_ref);
+    probePass=false;
+    const failed=await service.test(owner,'crm-new','1');
+    expect(failed.status).toBe('FAIL');
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+  });
+
+  it('allows pause and resume with the same currently valid approval', async () => {
+    const owner=await prepareOwner();
+    const {service}=managerService();
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
+      version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
+    const tested=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    await service.activate(owner,'crm-new','1',approval.approval_id);
+    await service.pause(owner,'crm-new','1','temporary maintenance');
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
   });
 
   it('authenticates as hub_api while denying direct credential material reads', async () => {
@@ -322,9 +385,11 @@ describe('M1 source admission authorization', () => {
 
   it('exposes the source registry through the OIDC principal tenant and redacts internal references', async () => {
     const owner=await prepareOwner();
+    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:'new-owner',departmentId:'dept-sales',managementScopes:['source:read','source:write','source:approve','mapping:write']});
     const {service}=managerService();
     const app=await buildApp({logger:false,sourceRegistry:{
-      authenticator:async token=>token==='owner-token'?owner:Promise.reject(new Error('invalid')),
+      authenticator:async token=>token==='owner-token'?owner:token==='approve-token'?{...owner,managementScopes:['source:approve']}
+        :token==='write-token'?{...owner,managementScopes:['source:write']}:Promise.reject(new Error('invalid')),
       authService:auth,
       sourceService:service,
     }});
@@ -343,6 +408,49 @@ describe('M1 source admission authorization', () => {
       expect(created.statusCode).toBe(201);
       expect(created.json()).toMatchObject({data:{source_id:'crm-new',lifecycle:'DRAFT',revision:'1'}});
       expect(created.body).not.toContain('vault:/crm/credential-v1');
+      const userCandidate=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?source_id=crm-new&kind=user&external_id=owner-ext',headers:{authorization:'Bearer approve-token'}});
+      expect(userCandidate.statusCode).toBe(200);
+      expect(userCandidate.json().data).toMatchObject({resolved:true,candidates:expect.arrayContaining([expect.objectContaining({target_id:owner.userId})])});
+      const userConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${userCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'0',target_id:owner.userId,reason:'confirm source owner mapping'}});
+      expect(userConfirmation.statusCode).toBe(200);
+      const staleConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${userCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'0',target_id:owner.userId,reason:'stale confirmation'}});
+      expect(staleConfirmation.statusCode).toBe(409);
+      const departmentCandidate=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?source_id=crm-new&kind=department&external_id=dept-ext',headers:{authorization:'Bearer approve-token'}});
+      const departmentConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${departmentCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'1',target_id:'dept-sales',reason:'confirm source department mapping'}});
+      expect(departmentConfirmation.statusCode).toBe(200);
+      const customerCandidate=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?source_id=crm-new&kind=customer&external_id=customer-ext',headers:{authorization:'Bearer approve-token'}});
+      expect(customerCandidate.json().data).toMatchObject({resolved:false,candidates:[]});
+      const customerConfirmation=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${customerCandidate.json().data.id}`,
+        headers:{authorization:'Bearer approve-token'},payload:{expected_revision:'2',target_id:'8a2efdd5-3d59-4f5f-97f9-298a68006001',reason:'unresolved customer target'}});
+      expect(customerConfirmation.statusCode).toBe(404);
+      const mapping=await service.writeMappings(owner,'crm-new','1',customerMappings());
+      const unsupportedSample=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/mappings/validate',
+        headers:{authorization:'Bearer owner-token'},payload:{revision:mapping.revision,sample_ref:'sample-1'}});
+      expect(unsupportedSample.statusCode).toBe(400);
+      expect(unsupportedSample.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
+      const tested=await service.test(owner,'crm-new',created.json().data.revision);
+      const approved=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/approve',headers:{authorization:'Bearer approve-token'},payload:{
+        revision:created.json().data.revision,test_report_id:tested.test_report_id,data_contract_ref:tested.data_contract_ref,
+      }});
+      expect(approved.statusCode).toBe(200);
+      const activated=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/activate',headers:{authorization:'Bearer write-token'},payload:{
+        revision:created.json().data.revision,approval_id:approved.json().data.approval_id,
+      }});
+      expect(activated.statusCode).toBe(200);
+      const malformed=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:'{' });
+      expect(malformed.statusCode).toBe(400);
+      expect(malformed.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
+      const unsupported=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',headers:{authorization:'Bearer owner-token','content-type':'text/plain'},payload:'{}'});
+      expect(unsupported.statusCode).toBe(415);
+      expect(unsupported.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
+      const oversizedBody=JSON.stringify({expected_revision:'1',padding:'x'.repeat(2*1024*1024)});
+      const oversized=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',
+        headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:oversizedBody});
+      expect(oversized.statusCode).toBe(413);
+      expect(oversized.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
       const fetched=await app.inject({method:'GET',url:'/hub/v1/admin/sources/crm-new',headers:{authorization:'Bearer owner-token'}});
       expect(fetched.statusCode).toBe(200);
       expect(fetched.body).not.toContain('vault:/crm/credential-v1');
@@ -356,7 +464,7 @@ describe('M1 source admission authorization', () => {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({
         protocol: 'hub.source-capability.v1', schema_version: 'customer-v1', source_identity:'fixture-crm',version_domain:'SOURCE_VERSION',
-        entities: { customer: { fields: ['customer_id','source_version','deleted_at'], version_field: 'source_version',
+        entities: { customer: { fields: ['customer_id','customer_name','owner_user_id','dept_id','status','source_version','deleted_at'],field_types:{source_version:'integer',deleted_at:'timestamp'}, version_field: 'source_version',
           delete_field:'deleted_at', delete_contract: 'tombstone' } },
       }));
     });
@@ -369,11 +477,32 @@ describe('M1 source admission authorization', () => {
           secret_ref:'vault:/fixture/rest',allowed_entities:['customer'],delete_contract:'tombstone'},
         endpoint:{revision:'fixture-v1',connector:'rest',protocol:'http:',host:'127.0.0.1',port:address.port,allow_loopback_http:true,
           path:'/capability',schema_version:'customer-v1',source_identity:'fixture-crm',entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}},
-        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}],identityMappings:[],
+        secret:'fixture-secret',mappings:customerMappings(),identityMappings:[],
       });
       expect(result).toMatchObject({passed:true,checks:expect.arrayContaining(['ENDPOINT_REACHABLE','SOURCE_IDENTITY_VALID','READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'])});
       expect(seenAuthorization).toBe('Bearer fixture-secret');
     } finally { await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve())); }
+  });
+
+  it('accepts an allowlisted HTTPS endpoint on the default 443 port', async () => {
+    let requestedUrl='';
+    const fetchMock = vi.fn(async (input:RequestInfo|URL) => { requestedUrl=String(input); return new Response(JSON.stringify({
+      protocol:'hub.source-capability.v1',schema_version:'customer-v1',source_identity:'fixture-crm',version_domain:'SOURCE_VERSION',
+      entities:{customer:{fields:['customer_id','customer_name','owner_user_id','dept_id','status','source_version','deleted_at'],field_types:{source_version:'integer',deleted_at:'timestamp'},version_field:'source_version',delete_field:'deleted_at',delete_contract:'tombstone'}},
+    }),{status:200,headers:{'content-type':'application/json'}}); });
+    vi.stubGlobal('fetch',fetchMock);
+    try {
+      const result=await createBoundedCapabilityProbe({environmentKind:'site'}).run({
+        config:{name:'fixture',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+          secret_ref:'vault:/fixture/rest',allowed_entities:['customer'],delete_contract:'tombstone'},
+        endpoint:{revision:'fixture-v1',connector:'rest',protocol:'https:',host:'crm.example.test',port:443,path:'/capability',
+          schema_version:'customer-v1',source_identity:'fixture-crm',entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}},
+        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+      });
+      expect(result.passed).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(requestedUrl).toBe('https://crm.example.test/capability');
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it('performs a read-only PostgreSQL source probe against an owned role and approved objects', async () => {
@@ -391,9 +520,45 @@ describe('M1 source admission authorization', () => {
           secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
         endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
           allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
-        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}],identityMappings:[],
+        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
       });
       expect(result).toMatchObject({passed:true,checks:expect.arrayContaining(['ENDPOINT_REACHABLE','SOURCE_IDENTITY_VALID','READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'])});
+      await fixture.pool.query(`CREATE TABLE ${schema}.bad_customer(customer_id text,source_version text,deleted_at text)`);
+      await fixture.pool.query(`GRANT SELECT ON ${schema}.bad_customer TO ${role}`);
+      const badType=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
+        config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+          secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
+        endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'bad_customer',version_field:'source_version',delete_field:'deleted_at'}}},
+        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+      });
+      expect(badType).toMatchObject({passed:false,checks:expect.arrayContaining(['VERSION_DELETE_CONTRACT_INVALID'])});
+    } finally {
+      await fixture.pool.query(`DROP SCHEMA ${schema} CASCADE`);
+      await fixture.pool.query(`DROP ROLE ${role}`);
+    }
+  });
+
+  it('rejects column-level UPDATE grants on a PostgreSQL source object', async () => {
+    const suffix=randomUUID().replaceAll('-','').slice(0,20);
+    const schema=`m1_probe_${suffix}`;
+    const role=`m1_reader_${suffix}`;
+    await fixture.pool.query(`CREATE ROLE ${role} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+    await fixture.pool.query(`CREATE SCHEMA ${schema}`);
+    await fixture.pool.query(`CREATE TABLE ${schema}.customer_data(customer_id text,source_version bigint,deleted_at timestamptz)`);
+    await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
+    await fixture.pool.query(`GRANT SELECT ON ${schema}.customer_data TO ${role}`);
+    await fixture.pool.query(`GRANT INSERT(customer_id) ON ${schema}.customer_data TO ${role}`);
+    await fixture.pool.query(`GRANT UPDATE(source_version) ON ${schema}.customer_data TO ${role}`);
+    try {
+      const result=await createBoundedCapabilityProbe({environmentKind:'local_lab'}).run({
+        config:{name:'fixture',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'fixture',
+          secret_ref:'vault:/fixture/postgres',allowed_entities:['customer'],delete_contract:'tombstone'},
+        endpoint:{revision:'fixture-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+          allow_loopback_plaintext:true,database:'postgres',user:role,schema,entities:{customer:{table:'customer_data',version_field:'source_version',delete_field:'deleted_at'}}},
+        secret:'fixture-secret',mappings:[{entity:'customer',source_field:'customer_id',target_field:'customer_name',transform:'identity'}],identityMappings:[],
+      });
+      expect(result).toMatchObject({passed:false,checks:expect.arrayContaining(['READ_ONLY_PERMISSION_INVALID'])});
     } finally {
       await fixture.pool.query(`DROP SCHEMA ${schema} CASCADE`);
       await fixture.pool.query(`DROP ROLE ${role}`);
@@ -406,7 +571,7 @@ describe('M1 source admission authorization', () => {
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'sqlserver',
       mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'sql-prod',secret_ref:'vault:/crm/credential-v1',
       allowed_entities:['customer'],delete_contract:'tombstone'}});
-    await service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]);
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
     const tested=await service.test(owner,'crm-new','1');
     expect(tested).toMatchObject({status:'FAIL',report:{code:'SOURCE_PROBE_UNAVAILABLE'}});
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({lifecycle:'DRAFT'});
@@ -418,8 +583,20 @@ describe('M1 source admission authorization', () => {
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
     const tested=await service.test(owner,'crm-new','1');
-    expect(tested).toMatchObject({status:'FAIL',report:{checks:['MAPPING_REQUIRED:customer']}});
+    expect(tested).toMatchObject({status:'FAIL',report:{checks:expect.arrayContaining(['MAPPING_REQUIRED:customer:customer_name'])}});
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({lifecycle:'DRAFT'});
+  });
+
+  it('rejects unknown standard targets and missing required customer fields', async () => {
+    const owner=await prepareOwner();
+    const {service}=managerService();
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
+      version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
+    const mapping=await service.writeMappings(owner,'crm-new','1',[
+      {entity:'customer',source_field:'customer_id',target_field:'unknown_field',transform:'identity'},
+    ]);
+    await expect(service.validateMappings(owner,'crm-new',mapping.revision)).resolves.toMatchObject({valid:false,
+      errors:expect.arrayContaining(['MAPPING_TARGET_UNSUPPORTED:customer:unknown_field','MAPPING_REQUIRED:customer:customer_name'])});
   });
 
   it('invalidates applicability when the deployment endpoint profile changes', async () => {
@@ -433,12 +610,30 @@ describe('M1 source admission authorization', () => {
     const service=createSourceRegistryService({pool:fixture.pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'site'});
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
-    await service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]);
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
     profile={...profile,revision:'fixture-v2',path:'/changed-capability'};
     await expect(service.test(owner,'crm-new','1')).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({lifecycle:'DRAFT',revision:'1'});
     const reports=await fixture.pool.query('SELECT id FROM control.source_test_report WHERE source_id=$1',['crm-new']);
     expect(reports.rowCount).toBe(0);
+  });
+
+  it('rejects activation when the deployment endpoint profile changes after approval', async () => {
+    const owner=await prepareOwner();
+    let profile={revision:'fixture-v1',connector:'rest' as const,host:'crm.fixture.invalid',port:443,protocol:'https:' as const,
+      path:'/capability',schema_version:'customer-v1',source_identity:'fixture-crm',
+      entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}};
+    const endpointAllowlist:EndpointAllowlist={resolve:async()=>profile};
+    const secretResolver:SecretResolver={isConfiguredReference:reference=>reference==='vault:/crm/credential-v1',resolve:async()=> 'fixture-secret'};
+    const service=createSourceRegistryService({pool:fixture.pool,auth,secretResolver,endpointAllowlist,
+      capabilityProbe:{run:async()=>({passed:true,checks:['PROFILE_VALID']})},environmentKind:'site'});
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
+      version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
+    const tested=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    profile={...profile,revision:'fixture-v2',path:'/changed'};
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
   });
 
   it('rejects a capability result if mappings change while the bounded probe runs', async () => {
@@ -449,13 +644,13 @@ describe('M1 source admission authorization', () => {
       protocol:'https:',path:'/capability',schema_version:'customer-v1',source_identity:'fixture-crm',entities:{customer:{version_field:'source_version',delete_field:'deleted_at'}}})};
     let service!:SourceRegistryService;
     const capabilityProbe:CapabilityProbe={run:async()=>{
-      await service.writeMappings(owner,'crm-new','2',[{entity:'customer',source_field:'id',target_field:'source_id',transform:'source-id'}]);
+      await service.writeMappings(owner,'crm-new','2',customerMappings('name'));
       return {passed:true,checks:['ENDPOINT_REACHABLE','SOURCE_IDENTITY_VALID','READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID']};
     }};
     service=createSourceRegistryService({pool:fixture.pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'site'});
     await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
-    await service.writeMappings(owner,'crm-new','1',[{entity:'customer',source_field:'customer_id',target_field:'source_id',transform:'source-id'}]);
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
     await expect(service.test(owner,'crm-new','1')).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({revision:'1',mapping_revision:'3',lifecycle:'DRAFT'});
   });
@@ -501,7 +696,7 @@ async function prepareOwner() {
   return auth.resolveOidc('https://idp.example.test','owner');
 }
 
-function managerService() {
+function managerService(pool: typeof fixture.pool = fixture.pool) {
   const seenSecrets:string[]=[];
   const secretResolver:SecretResolver={isConfiguredReference:reference=>reference==='vault:/crm/credential-v1',resolve:async reference=>{
     if(reference!=='vault:/crm/credential-v1') throw new Error('unconfigured');
@@ -516,5 +711,32 @@ function managerService() {
     throw new Error('unapproved');
   }};
   const capabilityProbe=createBoundedCapabilityProbe({environmentKind:'local_lab'});
-  return {service:createSourceRegistryService({pool:fixture.pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'local_lab'}),seenSecrets};
+  return {service:createSourceRegistryService({pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'local_lab'}),seenSecrets,
+    secretResolver,endpointAllowlist,capabilityProbe};
+}
+
+function customerMappings(firstSourceField='customer_name') {
+  return [
+    {entity:'customer' as const,source_field:firstSourceField,target_field:'customer_name',transform:'trim' as const},
+    {entity:'customer' as const,source_field:'owner_user_id',target_field:'owner_user_id',transform:'source-id' as const},
+    {entity:'customer' as const,source_field:'dept_id',target_field:'dept_id',transform:'source-id' as const},
+    {entity:'customer' as const,source_field:'status',target_field:'status',transform:'identity' as const},
+  ];
+}
+
+function roleScopedPool() {
+  const target=fixture.pool;
+  return new Proxy(target,{get(targetObject,property){
+    if(property==='connect') return async()=>{
+    const client=await target.connect();
+    await client.query('SET ROLE hub_api');
+    const release=client.release.bind(client);
+    client.release=((error?: Error | boolean)=>{
+      void client.query('RESET ROLE').then(()=>release(error),()=>release(error));
+    }) as typeof client.release;
+    return client;
+    };
+    const value=Reflect.get(targetObject,property,targetObject);
+    return typeof value==='function'?value.bind(targetObject):value;
+  }}) as unknown as typeof fixture.pool;
 }

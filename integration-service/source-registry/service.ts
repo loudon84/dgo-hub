@@ -25,9 +25,9 @@ export type FieldMapping = Readonly<{
   transform: 'identity' | 'trim' | 'decimal-string' | 'source-id';
 }>;
 export type IdentityMapping = Readonly<{
-  entity: SourceEntity;
+  kind: 'user' | 'department' | 'customer';
   external_id: string;
-  target_id: string;
+  target_id: string | null;
 }>;
 
 export type SecretResolver = Readonly<{
@@ -53,6 +53,14 @@ export type SourceRegistryDependencies = Readonly<{
 type RevisionRow = { revision: string | number; config_digest: Buffer; config: SourceConfig };
 const ENTITY = new Set<SourceEntity>(['customer','order']);
 const TRANSFORM = new Set<FieldMapping['transform']>(['identity','trim','decimal-string','source-id']);
+const TARGET_FIELDS: Readonly<Record<SourceEntity, ReadonlySet<string>>> = {
+  customer:new Set(['customer_name','owner_user_id','dept_id','status','phone','source_updated_at','source_version','deleted_at']),
+  order:new Set(['customer_id','order_no','status','order_at','amount','currency','source_updated_at','source_version','deleted_at']),
+};
+const REQUIRED_TARGET_FIELDS: Readonly<Record<SourceEntity, readonly string[]>> = {
+  customer:['customer_name','owner_user_id','dept_id','status'],
+  order:['customer_id','order_no','status','order_at','amount','currency'],
+};
 const SECRET_REF = /^(?:vault|secret|env):\/[A-Za-z0-9._/-]{1,240}$/;
 const REF = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
@@ -113,17 +121,35 @@ function parseMappings(input: unknown): readonly FieldMapping[] {
   if (new Set(keys).size !== keys.length) fail('AUTH_INPUT_INVALID');
   return Object.freeze(result);
 }
+function mappingContractErrors(entities: readonly SourceEntity[], mappings: readonly FieldMapping[]): string[] {
+  const errors:string[]=[];
+  for(const entity of entities) {
+    const entityMappings=mappings.filter(mapping=>mapping.entity===entity);
+    for(const mapping of entityMappings) {
+      if(!TARGET_FIELDS[entity].has(mapping.target_field)) errors.push(`MAPPING_TARGET_UNSUPPORTED:${entity}:${mapping.target_field}`);
+      else if(mapping.target_field==='amount' && mapping.transform!=='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      else if(mapping.target_field!=='amount' && mapping.transform==='decimal-string') errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      else if(['customer_name','phone','order_no','status','currency'].includes(mapping.target_field) &&
+        !['identity','trim'].includes(mapping.transform)) errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+      else if(['owner_user_id','dept_id','customer_id'].includes(mapping.target_field) && mapping.transform!=='source-id' && mapping.transform!=='identity')
+        errors.push(`MAPPING_TRANSFORM_INVALID:${entity}:${mapping.target_field}`);
+    }
+    const targets=new Set(entityMappings.map(mapping=>mapping.target_field));
+    for(const required of REQUIRED_TARGET_FIELDS[entity]) if(!targets.has(required)) errors.push(`MAPPING_REQUIRED:${entity}:${required}`);
+  }
+  return errors;
+}
 function parseIdentityMappings(input: unknown): readonly IdentityMapping[] {
   if (!Array.isArray(input) || input.length > 10000) fail('AUTH_INPUT_INVALID');
   const result = input.map(item => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) fail('AUTH_INPUT_INVALID');
     const value = item as Record<string, unknown>;
-    if (Object.keys(value).some(key => !['entity','external_id','target_id'].includes(key)) || !ENTITY.has(value.entity as SourceEntity) ||
+    if (Object.keys(value).some(key => !['kind','external_id','target_id'].includes(key)) || !['user','department','customer'].includes(String(value.kind)) ||
         typeof value.external_id !== 'string' || value.external_id.length < 1 || value.external_id.length > 256 || /[\u0000-\u001f\u007f]/.test(value.external_id) ||
-        typeof value.target_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.target_id)) fail('AUTH_INPUT_INVALID');
+        (value.target_id!==null && (typeof value.target_id !== 'string' || value.target_id.length<1 || value.target_id.length>256 || /[\u0000-\u001f\u007f]/.test(value.target_id)))) fail('AUTH_INPUT_INVALID');
     return Object.freeze(value as unknown as IdentityMapping);
   });
-  const keys = result.map(value => `${value.entity}\0${value.external_id}`);
+  const keys = result.map(value => `${value.kind}\0${value.external_id}`);
   if (new Set(keys).size !== keys.length) fail('AUTH_INPUT_INVALID');
   return Object.freeze(result);
 }
@@ -151,13 +177,14 @@ async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Pro
 
 async function sourceRow(client: PoolClient, tenantId: string, sourceId: string, lock = false) {
   if (!SOURCE_ID.test(sourceId)) fail('AUTH_INPUT_INVALID');
+  if (lock) await client.query('SELECT * FROM control.lock_source_credential($1,$2)',[tenantId,sourceId]);
   const result = await client.query<Record<string, unknown>>(
     `SELECT r.*,c.enabled AS credential_enabled,c.allowed_entities,c.revision AS credential_revision,c.source_epoch,
        cr.config_digest,cr.config,cr.config->>'name' AS name,cr.config->>'connector' AS connector,
        cr.config->>'mode' AS mode,cr.config->>'version_domain' AS version_domain
        FROM control.source_registry r JOIN control.source_credential c USING(tenant_key,source_id)
        JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
-      WHERE r.tenant_key=$1 AND r.source_id=$2 ${lock ? 'FOR UPDATE OF r,c' : ''}`,
+      WHERE r.tenant_key=$1 AND r.source_id=$2 ${lock ? 'FOR UPDATE OF r' : ''}`,
     [tenantId, sourceId],
   );
   if (!result.rowCount) fail('SOURCE_NOT_FOUND');
@@ -219,7 +246,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     return transaction(pool, async client => {
       await currentOwner(client, principal.tenantId, body.data_owner_user_id as string);
       const credential = await client.query<{ revision: string | number; enabled: boolean }>(
-        'SELECT revision,enabled FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2 FOR UPDATE', [principal.tenantId,body.source_id],
+        'SELECT revision,enabled FROM control.lock_source_credential($1,$2)', [principal.tenantId,body.source_id],
       );
       if (!credential.rowCount) fail('SOURCE_NOT_FOUND');
       const initialDigest = digest([]);
@@ -338,8 +365,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       if (decimal(row.mapping_revision) !== revisionInput) fail('SOURCE_CONFLICT');
       const maps = await loadMappings(client,principal.tenantId,sourceId,revisionInput,decimal(row.identity_mapping_revision));
       const configuredEntities = row.allowed_entities as SourceEntity[];
-      const unmappedEntities = configuredEntities.filter(entity => !maps.fieldMappings.some(mapping => mapping.entity === entity));
-      return { revision: revisionInput, valid: unmappedEntities.length === 0, errors: unmappedEntities.map(entity => `MAPPING_REQUIRED:${entity}`) };
+      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings);
+      return { revision: revisionInput, valid: errors.length === 0, errors };
     });
   }
 
@@ -382,20 +409,20 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
         'SELECT mapping_digest FROM control.source_identity_mapping_revision WHERE tenant_key=$1 AND source_id=$2 AND revision=$3',
         [principal.tenantId,sourceId,row.identity_mapping_revision],
       );
-      const credentialReport = await client.query<{ id: string; revision: string | number; enabled: boolean }>(
-        'SELECT id,revision,enabled FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2',
+      const credentialReport = await client.query<{ id: string; revision: string | number; enabled: boolean; credential_generation:string|number }>(
+        'SELECT id,revision,enabled,credential_generation FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2',
         [principal.tenantId,sourceId],
       );
       return { row, config, maps, configRow: configReport.rows[0], mappingDigest: mappingReport.rows[0]?.mapping_digest,
-        identityDigest: identityReport.rows[0]?.mapping_digest, credential: credentialReport.rows[0] };
+        identityDigest: identityReport.rows[0]?.mapping_digest, credential: credentialReport.rows[0],
+        endpointDigest:digest(config.endpoint_profile) };
     });
     const safeChecks: string[] = [];
     let passed = false;
-    const unmappedEntities = snapshot.config.allowed_entities.filter(entity =>
-      !snapshot.maps.fieldMappings.some(mapping => mapping.entity === entity));
-    let reportCode = unmappedEntities.length ? 'MAPPING_REQUIRED' : 'SOURCE_PROBE_UNAVAILABLE';
-    if (unmappedEntities.length) {
-      safeChecks.push(...unmappedEntities.map(entity => `MAPPING_REQUIRED:${entity}`));
+    const mappingErrors=mappingContractErrors(snapshot.config.allowed_entities,snapshot.maps.fieldMappings);
+    let reportCode = mappingErrors.length ? 'MAPPING_CONTRACT_INVALID' : 'SOURCE_PROBE_UNAVAILABLE';
+    if (mappingErrors.length) {
+      safeChecks.push(...mappingErrors);
     } else {
       try {
         if (snapshot.config.connector === 'sqlserver') fail('SOURCE_PROBE_UNAVAILABLE');
@@ -410,6 +437,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
         passed = result.passed;
         safeChecks.push(...result.checks.filter(value => /^[A-Z0-9_:-]{1,96}$/.test(value)).slice(0,32));
         reportCode = result.passed ? 'CAPABILITY_TEST_PASSED' : 'CAPABILITY_TEST_FAILED';
+        const afterProbe=await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref);
+        if (!digest(afterProbe).equals(snapshot.endpointDigest)) fail('SOURCE_CONFLICT');
       } catch (error) {
         if (error instanceof AuthError && error.code === 'SOURCE_CONFLICT') throw error;
         if (!(error instanceof AuthError)) reportCode = 'CAPABILITY_TEST_FAILED';
@@ -418,8 +447,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     }
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
-      const currentCredential = await client.query<{ id:string; revision:string|number; enabled:boolean; source_epoch:string|number }>(
-        'SELECT id,revision,enabled,source_epoch FROM control.source_credential WHERE tenant_key=$1 AND source_id=$2 FOR UPDATE',
+      const currentCredential = await client.query<{ id:string; revision:string|number; enabled:boolean; source_epoch:string|number; credential_generation:string|number }>(
+        'SELECT c.id,c.revision,c.enabled,c.source_epoch,c.credential_generation FROM control.lock_source_credential($1,$2) c',
         [principal.tenantId,sourceId],
       );
       if (decimal(row.current_config_revision) !== expected ||
@@ -429,15 +458,18 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
           !Buffer.from(row.config_digest as Buffer).equals(Buffer.from(snapshot.row.config_digest as Buffer)) ||
           !currentCredential.rowCount || currentCredential.rows[0].id !== snapshot.credential.id ||
           decimal(currentCredential.rows[0].revision) !== decimal(snapshot.credential.revision) ||
+          decimal(currentCredential.rows[0].credential_generation) !== decimal(snapshot.credential.credential_generation) ||
           currentCredential.rows[0].enabled !== snapshot.credential.enabled ||
           decimal(currentCredential.rows[0].source_epoch) !== decimal(snapshot.row.source_epoch)) fail('SOURCE_CONFLICT');
       const contractRef = `${sourceId}/config/${expected}/contract`;
       const id = await client.query<{ id: string }>(
         `INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,identity_mapping_revision,
-          config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,data_contract_ref,report,status,created_by)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+          config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,endpoint_profile_digest,
+          data_contract_ref,report,status,created_by)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
         [principal.tenantId,sourceId,expected,row.mapping_revision,row.identity_mapping_revision,snapshot.configRow.config_digest,
-         snapshot.mappingDigest,snapshot.identityDigest,expected,contractRef,JSON.stringify({ code:reportCode,checks:safeChecks }),passed?'PASS':'FAIL',principal.userId],
+         snapshot.mappingDigest,snapshot.identityDigest,expected,snapshot.credential.credential_generation,snapshot.endpointDigest,
+         contractRef,JSON.stringify({ code:reportCode,checks:safeChecks }),passed?'PASS':'FAIL',principal.userId],
       );
       await client.query(`UPDATE control.source_registry SET lifecycle=$3,updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,
         [principal.tenantId,sourceId,passed?'TESTED':'DRAFT']);
@@ -449,31 +481,42 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  async function approve(principal: UserPrincipal, sourceId: string, reportId: unknown, dataContractRef: unknown) {
+  async function approve(principal: UserPrincipal, sourceId: string, expected: unknown, reportId: unknown, dataContractRef: unknown) {
     requireScope(principal,'source:approve');
-    if (typeof reportId !== 'string' || !/^[0-9a-f-]{36}$/i.test(reportId) || typeof dataContractRef !== 'string' || dataContractRef.length < 1 || dataContractRef.length > 256) fail('AUTH_INPUT_INVALID');
+    if (typeof expected !== 'string' || !/^[1-9][0-9]*$/.test(expected) || typeof reportId !== 'string' || !/^[0-9a-f-]{36}$/i.test(reportId) || typeof dataContractRef !== 'string' || dataContractRef.length < 1 || dataContractRef.length > 256) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      if(decimal(row.current_config_revision)!==expected || row.lifecycle!=='TESTED') fail('SOURCE_CONFLICT');
       await currentOwner(client,principal.tenantId,principal.userId);
       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
+      const config=parseConfig(row.config,true);
+      if(!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
+      const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref);
+      validateEndpointProfile(config,profile,probeEnvironment);
+      const profileDigest=digest(profile);
+      if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
       const approval = await client.query<{ id: string }>(
         `INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,mapping_revision,
-          identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,data_contract_ref,test_report_id)
+          identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
+          endpoint_profile_digest,data_contract_ref,test_report_id)
          SELECT r.tenant_key,r.source_id,$3,r.owner_revision,r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,
-           t.config_digest,t.mapping_digest,t.identity_mapping_digest,c.revision,t.data_contract_ref,t.id
+           t.config_digest,t.mapping_digest,t.identity_mapping_digest,c.revision,c.credential_generation,t.endpoint_profile_digest,t.data_contract_ref,t.id
           FROM control.source_registry r
           JOIN control.source_test_report t ON t.id=$4 AND t.tenant_key=r.tenant_key AND t.source_id=r.source_id
           JOIN control.source_credential c ON (c.tenant_key,c.source_id)=(r.tenant_key,r.source_id)
          WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.data_owner_user_id=$3 AND t.status='PASS' AND t.data_contract_ref=$5
-           AND (t.config_revision,t.mapping_revision,t.identity_mapping_revision,t.source_credential_revision)=
-               (r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,c.revision)
+           AND (t.config_revision,t.mapping_revision,t.identity_mapping_revision,t.source_credential_revision,t.credential_generation)=
+               (r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,c.revision,c.credential_generation)
+           AND t.endpoint_profile_digest=$6
+           AND NOT EXISTS(SELECT 1 FROM control.source_test_report newer WHERE newer.tenant_key=t.tenant_key AND newer.source_id=t.source_id
+             AND (newer.created_at,newer.id)>(t.created_at,t.id))
            AND (t.config_digest,t.mapping_digest,t.identity_mapping_digest) = (
              SELECT cr.config_digest,m.mapping_digest,i.mapping_digest
              FROM control.source_config_revision cr
              JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(r.tenant_key,r.source_id,r.mapping_revision)
              JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
              WHERE (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision))
-         RETURNING id`,[principal.tenantId,sourceId,principal.userId,reportId,dataContractRef],
+         RETURNING id`,[principal.tenantId,sourceId,principal.userId,reportId,dataContractRef,profileDigest],
       );
       if (!approval.rowCount) fail('SOURCE_CONFLICT');
       await client.query(`UPDATE control.source_registry SET lifecycle='APPROVED',updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,sourceId]);
@@ -481,12 +524,18 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  async function activate(principal: UserPrincipal, sourceId: string, approvalId: unknown) {
+  async function activate(principal: UserPrincipal, sourceId: string, expected: unknown, approvalId: unknown) {
     requireScope(principal,'source:write');
-    if (typeof approvalId !== 'string' || !/^[0-9a-f-]{36}$/i.test(approvalId)) fail('AUTH_INPUT_INVALID');
+    if (typeof expected !== 'string' || !/^[1-9][0-9]*$/.test(expected) || typeof approvalId !== 'string' || !/^[0-9a-f-]{36}$/i.test(approvalId)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
-      if (row.lifecycle === 'ACTIVE') fail('SOURCE_CONFLICT');
+      if (decimal(row.current_config_revision)!==expected || !['APPROVED','PAUSED'].includes(String(row.lifecycle))) fail('SOURCE_CONFLICT');
+      const config = row.config as SourceConfig;
+      if (!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
+      const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref);
+      validateEndpointProfile(config,profile,probeEnvironment);
+      const profileDigest=digest(profile);
+      if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
       const owner = await client.query('SELECT enabled FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 FOR UPDATE',
         [principal.tenantId,row.data_owner_user_id]);
       if (!owner.rowCount || !owner.rows[0].enabled) fail('AUTH_FORBIDDEN');
@@ -496,22 +545,24 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
           JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(a.tenant_key,a.source_id,a.mapping_revision)
           JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision)=(a.tenant_key,a.source_id,a.identity_mapping_revision)
           JOIN control.source_credential c ON (c.tenant_key,c.source_id)=(a.tenant_key,a.source_id)
+         JOIN control.source_test_report t ON t.id=a.test_report_id
          WHERE a.id=$3 AND a.tenant_key=$1 AND a.source_id=$2 AND a.owner_user_id=$4
-           AND (a.owner_revision,a.config_revision,a.mapping_revision,a.identity_mapping_revision,a.source_credential_revision)=
+           AND (a.owner_revision,a.config_revision,a.mapping_revision,a.identity_mapping_revision,a.source_credential_revision,a.credential_generation)=
                ((SELECT owner_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
                 (SELECT current_config_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
                 (SELECT mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
-                (SELECT identity_mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),c.revision)
+                (SELECT identity_mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),c.revision,c.credential_generation)
+           AND t.status='PASS' AND (t.created_at,t.id)=(SELECT newest.created_at,newest.id FROM control.source_test_report newest
+             WHERE newest.tenant_key=$1 AND newest.source_id=$2 ORDER BY newest.created_at DESC,newest.id DESC LIMIT 1)
+           AND t.endpoint_profile_digest=$5 AND a.endpoint_profile_digest=$5
            AND (a.config_digest,a.mapping_digest,a.identity_mapping_digest)=(cr.config_digest,m.mapping_digest,i.mapping_digest)
-           AND c.enabled`,[principal.tenantId,sourceId,approvalId,row.data_owner_user_id],
+          AND c.enabled`,[principal.tenantId,sourceId,approvalId,row.data_owner_user_id,profileDigest],
       );
       if (!approved.rowCount) fail('SOURCE_CONFLICT');
-      const config = row.config as SourceConfig;
       if (config.connector === 'sqlserver') fail('SOURCE_PROBE_UNAVAILABLE');
       for (const entity of config.allowed_entities) {
         const current = await client.query<{ id: string; connector: string; mode: string; version_domain: string; channel_epoch: string | number }>(
-          `SELECT id,connector,mode,version_domain,channel_epoch FROM control.source_channel
-            WHERE tenant_key=$1 AND source_id=$2 AND entity=$3 AND state='active' FOR UPDATE`,[principal.tenantId,sourceId,entity]);
+          'SELECT id,connector,mode,version_domain,channel_epoch FROM control.lock_source_channel($1,$2,$3)',[principal.tenantId,sourceId,entity]);
         if (current.rowCount) {
           const channel = current.rows[0];
           if (channel.connector !== config.connector || channel.mode !== config.mode || channel.version_domain !== config.version_domain) fail('SOURCE_SWITCH_UNAVAILABLE');
@@ -548,35 +599,65 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  async function identityMappings(principal: UserPrincipal, sourceId?: string) {
+  async function identityMappings(principal: UserPrincipal, sourceId?: string, kind?: string, externalId?: string) {
     requireScope(principal,'source:approve');
+    if(kind!==undefined || externalId!==undefined) {
+      if(!sourceId || !['user','department','customer'].includes(String(kind)) || typeof externalId!=='string' ||
+        externalId.length<1 || externalId.length>256 || /[\u0000-\u001f\u007f]/.test(externalId)) fail('AUTH_INPUT_INVALID');
+      const source=await transaction(pool,async client=>sourceRow(client,principal.tenantId,sourceId));
+      if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
+      await currentOwnerForRead(principal);
+      const candidates=kind==='user'
+        ? await pool.query<{target_id:string;label:string}>(`SELECT user_id AS target_id,user_id AS label FROM control.auth_subject
+            WHERE tenant_key=$1 AND enabled ORDER BY user_id LIMIT 50`,[principal.tenantId])
+        : kind==='department'
+          ? await pool.query<{target_id:string;label:string}>(`SELECT DISTINCT department_id AS target_id,department_id AS label FROM control.auth_subject
+              WHERE tenant_key=$1 AND enabled AND department_id IS NOT NULL ORDER BY department_id LIMIT 50`,[principal.tenantId])
+          : {rows:[],rowCount:0};
+      return {source_id:sourceId,kind,external_id:externalId,id:Buffer.from(`${sourceId}\0${kind}\0${externalId}`,'utf8').toString('base64url'),
+        resolved:kind!=='customer',candidates:candidates.rows};
+    }
     const result = await pool.query<{ source_id:string;revision:string|number;mappings:IdentityMapping[];data_owner_user_id:string }>(
       `SELECT r.source_id,r.identity_mapping_revision AS revision,i.mappings,r.data_owner_user_id
        FROM control.source_registry r JOIN control.source_identity_mapping_revision i
        ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
        WHERE r.tenant_key=$1 AND ($2::text IS NULL OR r.source_id=$2) AND r.data_owner_user_id=$3 ORDER BY r.source_id`,
       [principal.tenantId,sourceId ?? null,principal.userId]);
-    return result.rows.map(row => ({ source_id:row.source_id,revision:decimal(row.revision),identity_mappings:row.mappings.map(mapping => ({
-      ...mapping,id:Buffer.from(`${row.source_id}\0${mapping.entity}\0${mapping.external_id}`,'utf8').toString('base64url'),
+    return result.rows.map(row => ({ source_id:row.source_id,revision:(BigInt(decimal(row.revision))-1n).toString(),identity_mappings:row.mappings.map(mapping => ({
+      ...mapping,id:Buffer.from(`${row.source_id}\0${mapping.kind}\0${mapping.external_id}`,'utf8').toString('base64url'),
     })) }));
   }
 
-  async function updateIdentityMapping(principal: UserPrincipal, sourceId: string, expected: string, targetId: string, reason: string) {
+  async function currentOwnerForRead(principal:UserPrincipal) {
+    const result=await pool.query('SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key) WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled',[principal.tenantId,principal.userId]);
+    if(!result.rowCount) fail('AUTH_FORBIDDEN');
+  }
+
+  async function updateIdentityMapping(principal: UserPrincipal, opaqueId: string, expected: string, targetId: string, reason: string) {
     requireScope(principal,'source:approve');
-    if (!/^[1-9][0-9]*$/.test(expected) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId) ||
+    if (!/^(?:0|[1-9][0-9]*)$/.test(expected) || typeof targetId!=='string' || targetId.length<1 || targetId.length>256 || /[\u0000-\u001f\u007f]/.test(targetId) ||
         typeof reason !== 'string' || reason.trim().length < 1 || reason.length > 256) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
-      const decoded = Buffer.from(sourceId,'base64url').toString('utf8').split('\0');
-      if (decoded.length !== 3 || !SOURCE_ID.test(decoded[0]) || !ENTITY.has(decoded[1] as SourceEntity)) fail('AUTH_INPUT_INVALID');
-      const [mappingSourceId, entity, externalId] = decoded;
+      const decoded = Buffer.from(opaqueId,'base64url').toString('utf8').split('\0');
+      if (decoded.length !== 3 || !SOURCE_ID.test(decoded[0]) || !['user','department','customer'].includes(decoded[1]) ||
+        Buffer.from(opaqueId,'base64url').toString('base64url')!==opaqueId) fail('AUTH_INPUT_INVALID');
+      const [mappingSourceId, kind, externalId] = decoded;
       const row = await sourceRow(client,principal.tenantId,mappingSourceId,true);
       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
       await currentOwner(client,principal.tenantId,principal.userId);
-      if (decimal(row.identity_mapping_revision) !== expected) fail('SOURCE_CONFLICT');
-      const data = await loadMappings(client,principal.tenantId,mappingSourceId,decimal(row.mapping_revision),expected);
-      if (!data.identityMappings.some(mapping => mapping.entity === entity && mapping.external_id === externalId)) fail('SOURCE_NOT_FOUND');
-      const revised = data.identityMappings.map(mapping => mapping.entity === entity && mapping.external_id === externalId ? { ...mapping,target_id:targetId } : mapping);
-      const revision = (BigInt(expected)+1n).toString();
+      const currentDbRevision=(BigInt(expected)+1n).toString();
+      if (decimal(row.identity_mapping_revision) !== currentDbRevision) fail('SOURCE_CONFLICT');
+      if(kind==='user') {
+        const target=await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 AND enabled',[principal.tenantId,targetId]);
+        if(!target.rowCount) fail('SOURCE_NOT_FOUND');
+      } else if(kind==='department') {
+        const target=await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND department_id=$2 AND enabled',[principal.tenantId,targetId]);
+        if(!target.rowCount) fail('SOURCE_NOT_FOUND');
+      } else fail('SOURCE_NOT_FOUND');
+      const data = await loadMappings(client,principal.tenantId,mappingSourceId,decimal(row.mapping_revision),currentDbRevision);
+      const revised = [...data.identityMappings.filter(mapping => !(mapping.kind===kind && mapping.external_id===externalId)),
+        {kind:kind as IdentityMapping['kind'],external_id:externalId,target_id:targetId}];
+      const revision = (BigInt(currentDbRevision)+1n).toString();
       await client.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
         VALUES($1,$2,$3,$4,$5,$6)`,[principal.tenantId,mappingSourceId,revision,digest(revised),JSON.stringify(revised),principal.userId]);
       await client.query(`UPDATE control.source_registry SET identity_mapping_revision=$3,
@@ -585,7 +666,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       await auth.repository.advanceSourceEpoch(mappingSourceId,principal.tenantId,client);
       await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,details)
         VALUES($1,$2,$3,'IDENTITY_MAPPING_CONFIRMED',jsonb_build_object('reason',$4::text,'revision',$5::text))`,[principal.tenantId,mappingSourceId,principal.userId,reason.trim(),revision]);
-      return { source_id:mappingSourceId,revision,identity_mappings:revised };
+      return { source_id:mappingSourceId,revision:expected==='0'?'1':(BigInt(expected)+1n).toString(),identity_mappings:revised };
     });
   }
 
