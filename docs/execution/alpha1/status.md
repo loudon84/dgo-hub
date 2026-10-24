@@ -10,11 +10,11 @@ Updated 2026-10-24. E:/git/dgo-hub, `feat/alpha1-implementation`. M0 Tasks0–4 
 - Next step: sequential local M1-1 Source Registry, mappings, and source authorization implementation, followed by independent Sol review. The controller freezes the exact post-closure Git base at dispatch. Formal site acceptance remains blocked.
 - Owned Docker resources were confirmed removed. Seven generated host secret/certificate/env paths remain after policy rejected deletion; the Task4 report lists them. They are excluded from tracked evidence and Docker context. Do not retry cleanup or include them in archives.
 
-## W0 disposition
-
-### M1 implementation in progress
+## M1 implementation in progress
 
 M1-1 source code is committed at `24f2af62`, with initial evidence at `7866b99f`. Its initial full checks passed 210 tests, typecheck and build, but the [independent review](reviews/m1-task-1-review.md) found nine runtime/contract/evidence issues. The original Luna implementer is correcting all nine in fix round 1; M1-1 is not approved and M1-2 coding has not started. New focused fix results remain separate from the original 210-test record. M1-2 has an immutable-baseline planning brief only and must refresh the reviewed M1-1 seams before dispatch.
+
+## W0 disposition
 
 | Work | Implementation / review | Product acceptance |
 |---|---|---|
