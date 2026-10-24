@@ -337,6 +337,80 @@ describe('M1 source admission authorization', () => {
     await expect(service.get(owner,'crm-new')).resolves.toMatchObject({lifecycle:'PAUSED'});
   });
 
+  it('invalidates credential scope changes and admits only the approved config channels after reapproval', async () => {
+    const owner=await prepareOwner();
+    const {service}=managerService();
+    await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:{name:'CRM',connector:'rest',mode:'INCREMENTAL',
+      version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'}});
+    await service.writeMappings(owner,'crm-new','1',customerMappings());
+    const tested=await service.test(owner,'crm-new','1');
+    const firstApproval=await service.approve(owner,'crm-new','1',tested.test_report_id,tested.data_contract_ref);
+    await service.activate(owner,'crm-new','1',firstApproval.approval_id);
+
+    const before=await fixture.pool.query<{credential_generation:string|number}>("SELECT credential_generation FROM control.source_credential WHERE source_id='crm-new'");
+    await auth.repository.updateSourceCredential('crm-new','m1_tenant',true,'1',['customer','order']);
+    const extended=await fixture.pool.query<{lifecycle:string;allowed_entities:string[];credential_generation:string|number}>(
+      `SELECT r.lifecycle,c.allowed_entities,c.credential_generation FROM control.source_registry r JOIN control.source_credential c USING(tenant_key,source_id) WHERE r.source_id='crm-new'`);
+    expect(extended.rows[0]).toMatchObject({lifecycle:'PAUSED',allowed_entities:['customer','order']});
+    expect(BigInt(extended.rows[0].credential_generation)-BigInt(before.rows[0].credential_generation)).toBe(1n);
+    await expect(service.activate(owner,'crm-new','1',firstApproval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+
+    const admittedOrder=await auth.authenticateSource(credentialToken,'order');
+    const orderClient=await fixture.pool.connect();
+    try {
+      await orderClient.query('BEGIN');
+      await expect(auth.assertCurrentSource(admittedOrder,'order',orderClient)).rejects.toMatchObject({code:'AUTH_CONTEXT_CHANGED'});
+      await orderClient.query('ROLLBACK');
+    } finally { orderClient.release(); }
+
+    const secondTest=await service.test(owner,'crm-new','1');
+    const secondApproval=await service.approve(owner,'crm-new','1',secondTest.test_report_id,secondTest.data_contract_ref);
+    await service.activate(owner,'crm-new','1',secondApproval.approval_id);
+    const approvedOrder=await auth.authenticateSource(credentialToken,'order');
+    const approvedClient=await fixture.pool.connect();
+    try {
+      await approvedClient.query('BEGIN');
+      await expect(auth.assertCurrentSource(approvedOrder,'order',approvedClient)).rejects.toMatchObject({code:'AUTH_CONTEXT_CHANGED'});
+      await approvedClient.query('ROLLBACK');
+    } finally { approvedClient.release(); }
+    const allowedCustomer=await auth.authenticateSource(credentialToken,'customer');
+    const customerClient=await fixture.pool.connect();
+    try { await customerClient.query('BEGIN'); await auth.assertCurrentSource(allowedCustomer,'customer',customerClient); await customerClient.query('ROLLBACK'); }
+    finally { customerClient.release(); }
+
+    const stable=await fixture.pool.query<{credential_generation:string|number}>("SELECT credential_generation FROM control.source_credential WHERE source_id='crm-new'");
+    await auth.repository.updateSourceCredential('crm-new','m1_tenant',true,'1',['customer','order']);
+    const noop=await fixture.pool.query<{credential_generation:string|number;lifecycle:string}>(
+      `SELECT c.credential_generation,r.lifecycle FROM control.source_credential c JOIN control.source_registry r USING(tenant_key,source_id) WHERE c.source_id='crm-new'`);
+    expect(BigInt(noop.rows[0].credential_generation)).toBe(BigInt(stable.rows[0].credential_generation));
+    expect(noop.rows[0].lifecycle).toBe('ACTIVE');
+
+    await auth.repository.updateSourceCredential('crm-new','m1_tenant',true,'1',['customer']);
+    const removed=await fixture.pool.query<{lifecycle:string;credential_generation:string|number}>(
+      `SELECT r.lifecycle,c.credential_generation FROM control.source_registry r JOIN control.source_credential c USING(tenant_key,source_id) WHERE r.source_id='crm-new'`);
+    expect(removed.rows[0].lifecycle).toBe('PAUSED');
+    expect(BigInt(removed.rows[0].credential_generation)-BigInt(stable.rows[0].credential_generation)).toBe(1n);
+    await expect(auth.authenticateSource(credentialToken,'order')).rejects.toMatchObject({code:'AUTH_FORBIDDEN'});
+  });
+
+  it('rotates a provisioned source credential before registry onboarding', async () => {
+    await auth.repository.provisionTenant({tenantId:'m1_tenant',businessTimezone:'UTC'});
+    const first=createCredential();
+    await auth.repository.provisionSourceCredential({sourceId:'crm-pre-registry',tenantId:'m1_tenant',token:first.secret,
+      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'1'});
+    const initial=await fixture.pool.query<{credential_generation:string|number;source_epoch:string|number}>(
+      "SELECT credential_generation,source_epoch FROM control.source_credential WHERE source_id='crm-pre-registry'");
+    const next=createCredential();
+    await expect(auth.repository.provisionSourceCredential({sourceId:'crm-pre-registry',tenantId:'m1_tenant',token:next.secret,
+      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'1'})).resolves.toBeUndefined();
+    const rotated=await fixture.pool.query<{credential_generation:string|number;source_epoch:string|number}>(
+      "SELECT credential_generation,source_epoch FROM control.source_credential WHERE source_id='crm-pre-registry'");
+    expect(BigInt(rotated.rows[0].credential_generation)-BigInt(initial.rows[0].credential_generation)).toBe(1n);
+    expect(BigInt(rotated.rows[0].source_epoch)-BigInt(initial.rows[0].source_epoch)).toBe(1n);
+    const registry=await fixture.pool.query("SELECT 1 FROM control.source_registry WHERE source_id='crm-pre-registry'");
+    expect(registry.rowCount).toBe(0);
+  });
+
   it('rejects a previously approved test after a newer test fails', async () => {
     const owner=await prepareOwner();
     const base=managerService();
@@ -429,7 +503,7 @@ describe('M1 source admission authorization', () => {
       const mapping=await service.writeMappings(owner,'crm-new','1',customerMappings());
       const unsupportedSample=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/mappings/validate',
         headers:{authorization:'Bearer owner-token'},payload:{revision:mapping.revision,sample_ref:'sample-1'}});
-      expect(unsupportedSample.statusCode).toBe(400);
+      expect(unsupportedSample.statusCode).toBe(422);
       expect(unsupportedSample.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
       const tested=await service.test(owner,'crm-new',created.json().data.revision);
       const approved=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/approve',headers:{authorization:'Bearer approve-token'},payload:{
@@ -671,7 +745,8 @@ async function activeSource(): Promise<string> {
   );
   await fixture.pool.query(
     `INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
-     VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+     VALUES('m1_tenant','crm-main',1,$1,$2,'owner')`, [digest,JSON.stringify({name:'CRM',connector:'rest',mode:'INCREMENTAL',
+       version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault://approved/m1',allowed_entities:['customer'],delete_contract:'tombstone'})],
   );
   await fixture.pool.query(
     `INSERT INTO control.source_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
@@ -680,6 +755,10 @@ async function activeSource(): Promise<string> {
   await fixture.pool.query(
     `INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
      VALUES('m1_tenant','crm-main',1,$1,'{}','owner')`, [digest],
+  );
+  await fixture.pool.query(
+    `INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
+     VALUES('m1_tenant','crm-main','customer','rest','INCREMENTAL','SOURCE_VERSION',1,'active')`,
   );
   return credentialToken;
 }

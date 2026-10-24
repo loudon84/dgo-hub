@@ -148,7 +148,8 @@ export async function registerSourceRegistryRoutes(app: FastifyInstance, options
       try {
         const principal = await currentUser(request, options.authenticator);
         const value = body(request, ['revision', 'sample_ref']);
-        if(value.sample_ref!==undefined) throw new AuthError('AUTH_INPUT_INVALID');
+        if(value.sample_ref!==undefined) return reply.code(422).send({request_id:request.id,
+          error:{code:'AUTH_INPUT_INVALID',message:'AUTH_INPUT_INVALID',retryable:false,details:{}}});
         return reply.send(envelope(request, await options.sourceService.validateMappings(principal, request.params.id, value.revision)));
       } catch (error) { return failure(request, reply, error); }
     });

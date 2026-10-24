@@ -175,9 +175,15 @@ AS $function$
     FROM control.source_credential c
     JOIN control.tenant t ON t.tenant_key=c.tenant_key
     JOIN control.source_registry r ON (r.tenant_key,r.source_id)=(c.tenant_key,c.source_id)
+    JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
+    JOIN control.source_channel ch ON (ch.tenant_key,ch.source_id,ch.entity)=(r.tenant_key,r.source_id,p_entity) AND ch.state='active'
    WHERE c.id=p_credential_id AND c.tenant_key=p_tenant_key AND c.source_id=p_source_id
+     AND c.revision=r.current_config_revision
      AND p_entity = ANY(c.allowed_entities)
-   FOR UPDATE OF c,t,r
+     AND cr.config->'allowed_entities' ? p_entity
+     AND ch.connector=cr.config->>'connector' AND ch.mode=cr.config->>'mode'
+     AND ch.version_domain=cr.config->>'version_domain'
+   FOR UPDATE OF c,t,r,ch
 $function$;
 
 -- Manager transactions lock protected rows through narrow definer functions.
@@ -219,29 +225,38 @@ CREATE FUNCTION control.upsert_source_credential(p_source_id text,p_tenant_key t
   p_allowed_entities text[],p_enabled boolean,p_revision bigint)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
 AS $function$
-DECLARE registered integer; rotated boolean := false; prior_state text;
+DECLARE registered integer; existing boolean := false; applicable_change boolean := false; prior_state text;
+  old_digest bytea; old_secret_ref text; old_allowed_entities text[]; old_enabled boolean; old_revision bigint; generation bigint;
 BEGIN
-  SELECT (c.digest IS DISTINCT FROM p_digest OR c.secret_ref IS DISTINCT FROM p_secret_ref)
-    INTO rotated FROM control.source_credential c
+  SELECT c.digest,c.secret_ref,c.allowed_entities,c.enabled,c.revision
+    INTO old_digest,old_secret_ref,old_allowed_entities,old_enabled,old_revision FROM control.source_credential c
    WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key FOR UPDATE;
-  INSERT INTO control.credential_digest_registry(digest,kind) VALUES(p_digest,'source') ON CONFLICT(digest) DO NOTHING;
-  GET DIAGNOSTICS registered = ROW_COUNT;
-  IF registered <> 1 THEN RAISE EXCEPTION 'source credential digest is already registered'; END IF;
-  INSERT INTO control.source_credential(source_id,tenant_key,digest,digest_kind,secret_ref,allowed_entities,enabled,revision)
-    VALUES(p_source_id,p_tenant_key,p_digest,'source',p_secret_ref,p_allowed_entities,p_enabled,p_revision)
-  ON CONFLICT(tenant_key,source_id) DO UPDATE SET digest=EXCLUDED.digest,digest_kind='source',secret_ref=EXCLUDED.secret_ref,
-    allowed_entities=EXCLUDED.allowed_entities,enabled=EXCLUDED.enabled,revision=EXCLUDED.revision,
-    source_epoch=control.source_credential.source_epoch+1,
-    credential_generation=control.source_credential.credential_generation+
-      CASE WHEN (control.source_credential.digest,control.source_credential.secret_ref) IS DISTINCT FROM (EXCLUDED.digest,EXCLUDED.secret_ref) THEN 1 ELSE 0 END;
-  IF rotated THEN
+  existing := FOUND;
+  applicable_change := existing AND (old_digest IS DISTINCT FROM p_digest OR old_secret_ref IS DISTINCT FROM p_secret_ref OR
+    old_allowed_entities IS DISTINCT FROM p_allowed_entities OR old_enabled IS DISTINCT FROM p_enabled OR old_revision IS DISTINCT FROM p_revision);
+  IF NOT existing OR old_digest IS DISTINCT FROM p_digest THEN
+    INSERT INTO control.credential_digest_registry(digest,kind) VALUES(p_digest,'source') ON CONFLICT(digest) DO NOTHING;
+    GET DIAGNOSTICS registered = ROW_COUNT;
+    IF registered <> 1 THEN RAISE EXCEPTION 'source credential digest is already registered'; END IF;
+  END IF;
+  IF NOT existing THEN
+    INSERT INTO control.source_credential(source_id,tenant_key,digest,digest_kind,secret_ref,allowed_entities,enabled,revision)
+      VALUES(p_source_id,p_tenant_key,p_digest,'source',p_secret_ref,p_allowed_entities,p_enabled,p_revision);
+  ELSIF applicable_change THEN
+    UPDATE control.source_credential SET digest=p_digest,digest_kind='source',secret_ref=p_secret_ref,
+      allowed_entities=p_allowed_entities,enabled=p_enabled,revision=p_revision,source_epoch=source_epoch+1,
+      credential_generation=credential_generation+1
+     WHERE tenant_key=p_tenant_key AND source_id=p_source_id
+     RETURNING credential_generation INTO generation;
     SELECT lifecycle INTO prior_state FROM control.source_registry WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
-    UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
-      WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
-    INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,details)
-      SELECT p_tenant_key,p_source_id,'system','CREDENTIAL_ROTATED',prior_state,
-        CASE WHEN prior_state='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,jsonb_build_object('credential_generation',c.credential_generation)
-        FROM control.source_credential c WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id;
+    IF FOUND THEN
+      UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle IN ('ACTIVE','PAUSED') THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
+       WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+      INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,details)
+        VALUES(p_tenant_key,p_source_id,'system',CASE WHEN old_digest IS DISTINCT FROM p_digest OR old_secret_ref IS DISTINCT FROM p_secret_ref
+          THEN 'CREDENTIAL_ROTATED' ELSE 'CREDENTIAL_POLICY_CHANGED' END,prior_state,
+          CASE WHEN prior_state IN ('ACTIVE','PAUSED') THEN 'PAUSED' ELSE 'DRAFT' END,jsonb_build_object('credential_generation',generation));
+    END IF;
   END IF;
 END;
 $function$;
@@ -250,22 +265,32 @@ CREATE FUNCTION control.update_source_credential(p_source_id text,p_tenant_key t
   p_allowed_entities text[],p_secret_ref text,p_change_secret boolean)
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control
 AS $function$
-DECLARE changed integer; secret_changed boolean := false;
+DECLARE changed integer; secret_changed boolean := false; policy_changed boolean := false; applicability_changed boolean := false;
+  old_secret_ref text; old_allowed_entities text[]; old_enabled boolean; old_revision bigint; prior_state text; generation bigint;
 BEGIN
-  IF p_change_secret THEN
-    SELECT c.secret_ref IS DISTINCT FROM p_secret_ref INTO secret_changed FROM control.source_credential c
-     WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key FOR UPDATE;
-  END IF;
+  SELECT c.secret_ref,c.allowed_entities,c.enabled,c.revision INTO old_secret_ref,old_allowed_entities,old_enabled,old_revision
+    FROM control.source_credential c WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key FOR UPDATE;
+  IF NOT FOUND THEN RETURN 0; END IF;
+  secret_changed := p_change_secret AND old_secret_ref IS DISTINCT FROM p_secret_ref;
+  policy_changed := old_allowed_entities IS DISTINCT FROM p_allowed_entities OR old_enabled IS DISTINCT FROM p_enabled;
+  applicability_changed := secret_changed OR policy_changed OR old_revision IS DISTINCT FROM p_revision;
+  IF NOT applicability_changed THEN RETURN 0; END IF;
   UPDATE control.source_credential c SET enabled=p_enabled,revision=p_revision,allowed_entities=p_allowed_entities,
     secret_ref=CASE WHEN p_change_secret THEN p_secret_ref ELSE c.secret_ref END,source_epoch=c.source_epoch+1,
-    credential_generation=c.credential_generation+CASE WHEN secret_changed THEN 1 ELSE 0 END
-   WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key AND
-    (c.enabled,c.revision,c.allowed_entities) IS DISTINCT FROM (p_enabled,p_revision,p_allowed_entities) OR
-    c.source_id=p_source_id AND c.tenant_key=p_tenant_key AND p_change_secret AND c.secret_ref IS DISTINCT FROM p_secret_ref;
+    credential_generation=c.credential_generation+1
+   WHERE c.source_id=p_source_id AND c.tenant_key=p_tenant_key
+   RETURNING c.credential_generation INTO generation;
   GET DIAGNOSTICS changed = ROW_COUNT;
-  IF changed>0 AND secret_changed THEN
-    UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle='ACTIVE' THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
-     WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+  IF changed>0 THEN
+    SELECT lifecycle INTO prior_state FROM control.source_registry WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
+    IF FOUND THEN
+      UPDATE control.source_registry SET lifecycle=CASE WHEN lifecycle IN ('ACTIVE','PAUSED') THEN 'PAUSED' ELSE 'DRAFT' END,updated_at=now()
+       WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+      INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,details)
+        VALUES(p_tenant_key,p_source_id,'system',CASE WHEN secret_changed THEN 'CREDENTIAL_ROTATED' ELSE 'CREDENTIAL_POLICY_CHANGED' END,
+          prior_state,CASE WHEN prior_state IN ('ACTIVE','PAUSED') THEN 'PAUSED' ELSE 'DRAFT' END,
+          jsonb_build_object('credential_generation',generation));
+    END IF;
   END IF;
   RETURN changed;
 END;
