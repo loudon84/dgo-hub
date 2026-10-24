@@ -11,6 +11,7 @@ import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostg
 const evidenceDirectory = fileURLToPath(new URL('../../docs/execution/alpha1/m0-task-1-evidence/round1/', import.meta.url));
 const evidenceFile = join(evidenceDirectory, 'foundation-postgres-lifecycle.jsonl');
 const controlledEvidenceRoot = fixtureEvidenceRootFromEnvironment();
+const postgresImage = 'postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297';
 const source001 = fileURLToPath(new URL('../migrations/001_init.sql', import.meta.url));
 const source002 = fileURLToPath(new URL('../migrations/002_identity_auth.sql', import.meta.url));
 const migrationsSourceDirectory = fileURLToPath(new URL('../migrations/', import.meta.url));
@@ -56,7 +57,7 @@ async function migrationRunner() {
 
 beforeAll(async () => {
   if (!controlledEvidenceRoot) await mkdir(evidenceDirectory, { recursive: true });
-  postgres = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'm1task5' });
+  postgres = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'm1task5', imageReference: postgresImage });
 }, 90_000);
 
 afterAll(async () => {

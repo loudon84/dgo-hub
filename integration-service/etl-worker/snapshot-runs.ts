@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { AuthError } from '../auth/errors.js';
-import type { SourceEntity, UserPrincipal } from '../auth/types.js';
+import type { AuthService, SourceEntity, UserPrincipal } from '../auth/types.js';
 import type { SnapshotRunSummary } from './snapshot-contract.js';
 
 const ACTIVE = new Set(['QUEUED','SCANNING','VALIDATING','READY','APPLYING']);
@@ -30,6 +30,24 @@ function unopaque(value: unknown): string {
   const result = Buffer.from(value, 'base64url').toString('utf8');
   if (opaque(result) !== value) fail('AUTH_INPUT_INVALID');
   return result;
+}
+const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+const RFC3339 = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/;
+function parseCanonicalDate(value: string): number {
+  const match = RFC3339.exec(value);
+  if (!match) fail('AUTH_INPUT_INVALID');
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , zone] = match;
+  const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+  const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (month < 1 || month > 12 || day < 1 || day > days || hour > 23 || minute > 59 || second > 59) fail('AUTH_INPUT_INVALID');
+  if (zone !== 'Z') {
+    const zoneHour = Number(zone.slice(1, 3)), zoneMinute = Number(zone.slice(4, 6));
+    if (zoneHour > 14 || zoneMinute > 59 || (zoneHour === 14 && zoneMinute !== 0)) fail('AUTH_INPUT_INVALID');
+  }
+  const time = Date.parse(value);
+  if (!Number.isFinite(time)) fail('AUTH_INPUT_INVALID');
+  return time;
 }
 
 type RunRow = Record<string, any>;
@@ -65,17 +83,11 @@ async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Pro
 }
 
 async function lockedProof(client: PoolClient, tenantId: string, sourceId: string, approvedRevision: string,
-  caller?: UserPrincipal) {
+  ) {
   // This global barrier guard is the first lock on every admission path.
   const guard = await client.query<{ lock_security_barrier_fence: string | number }>(
     'SELECT control.lock_security_barrier_fence()::text AS lock_security_barrier_fence');
   const fence = String(guard.rows[0]?.lock_security_barrier_fence ?? '0');
-  if (caller) {
-    const current = await client.query(`SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key)
-      WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled AND $3=ANY(s.management_scopes) FOR UPDATE OF t,s`,
-      [tenantId,caller.userId,'source:write']);
-    if (!current.rowCount) fail('AUTH_FORBIDDEN');
-  }
   const credentials = await client.query(`SELECT * FROM control.lock_source_credential($1,$2)`, [tenantId,sourceId]);
   if (!credentials.rowCount) fail('SOURCE_NOT_FOUND');
   const sourceLock = await client.query<{ lock_etl_snapshot_source: boolean }>(
@@ -124,7 +136,8 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
       mode: channel.mode, version_domain: channel.version_domain };
   }
   const approvalResult = await client.query<RunRow>(
-    `SELECT a.id AS approval_id,a.owner_user_id,a.owner_revision,a.data_contract_ref,t.id AS test_report_id,
+    `SELECT a.id AS approval_id,a.owner_user_id,a.owner_revision,a.approval_security_fence::text AS approval_security_fence,
+        a.data_contract_ref,t.id AS test_report_id,
         t.config_digest,t.mapping_digest,t.identity_mapping_digest,t.endpoint_profile_digest,t.status AS test_status,
         c.id AS credential_id,c.revision AS credential_revision,c.credential_generation
        FROM control.source_registry r JOIN control.source_owner_approval a
@@ -150,8 +163,15 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
     [tenantId,sourceId,approvedRevision,digestHex(endpoint)]);
   const approval = approvalResult.rows[0];
   if (!approval) fail('SOURCE_CONFLICT');
-  const barrierRows = await client.query<RunRow>(`SELECT barrier_type,entity,channel_id,credential_id,effective_fence
-    FROM control.source_security_barrier WHERE tenant_key=$1 AND source_id=$2 AND effective_fence>$3`, [tenantId,sourceId,fence]);
+  const channelIds = Object.values(channels).map((channel: any) => channel.channel_id);
+  const barrierRows = await client.query<RunRow>(`SELECT 1 FROM control.source_security_barrier b
+    WHERE b.tenant_key=$1 AND b.effective_fence>$2::bigint
+      AND (b.source_id IS NULL OR b.source_id=$3)
+      AND (b.credential_id IS NULL OR b.credential_id=$4)
+      AND (b.entity IS NULL OR b.entity=ANY($5::text[]))
+      AND (b.channel_id IS NULL OR b.channel_id=ANY($6::uuid[]))
+      AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED') LIMIT 1`,
+    [tenantId,approval.approval_security_fence,sourceId,source.credential_id,entities,channelIds]);
   if (barrierRows.rowCount) fail('SOURCE_CONFLICT');
   return { source, config, entities, channels, fence, approval };
 }
@@ -193,17 +213,14 @@ async function insertRun(client: PoolClient, proof: Awaited<ReturnType<typeof lo
   return summary(inserted.rows[0]);
 }
 
-export async function createSnapshotRun(pool: Pool, _auth: unknown, principal: UserPrincipal, sourceId: string,
+export async function createSnapshotRun(pool: Pool, auth: Pick<AuthService,'assertCurrentPrincipal'>, principal: UserPrincipal, sourceId: string,
   approvedConfigRevision: string, idempotencyKey: string): Promise<SnapshotRunSummary> {
   requireScope(principal,'source:write');
   if (!/^[A-Za-z0-9._:-]{1,160}$/.test(sourceId) || !/^[1-9][0-9]*$/.test(approvedConfigRevision) ||
       typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9._:-]{1,160}$/.test(idempotencyKey)) fail('AUTH_INPUT_INVALID');
   return transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
-    const currentPrincipal = await client.query(`SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key)
-      WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled AND $3=ANY(s.management_scopes) FOR UPDATE OF t,s`,
-      [principal.tenantId,principal.userId,'source:write']);
-    if (!currentPrincipal.rowCount) fail('AUTH_FORBIDDEN');
+    await auth.assertCurrentPrincipal(principal,'source:write',client);
     const requestDigest = digest({ approved_config_revision: approvedConfigRevision, run_mode: 'FULL_SNAPSHOT',
       request_kind: 'MANUAL', schedule_revision: null });
     const prior = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY},request_digest FROM control.etl_run
@@ -213,7 +230,7 @@ export async function createSnapshotRun(pool: Pool, _auth: unknown, principal: U
       if (!Buffer.from(prior.rows[0].request_digest).equals(requestDigest)) fail('IDEMPOTENCY_CONFLICT');
       return summary(prior.rows[0]);
     }
-    const proof = await lockedProof(client,principal.tenantId,sourceId,approvedConfigRevision,principal);
+    const proof = await lockedProof(client,principal.tenantId,sourceId,approvedConfigRevision);
     const run = await insertRun(client,proof,principal.tenantId,sourceId,'MANUAL','API-019',idempotencyKey,null);
     const schedule = await client.query(`UPDATE control.etl_snapshot_schedule SET active_run_id=$3,last_run_id=$3,updated_at=clock_timestamp()
       WHERE tenant_key=$1 AND source_id=$2 AND enabled`, [principal.tenantId,sourceId,run.run_id]);
@@ -252,41 +269,53 @@ export async function admitDueSnapshotRun(pool: Pool, tenantId: string, sourceId
   });
 }
 
-export async function listSnapshotRuns(pool: Pool, principal: UserPrincipal, filters: {
+export async function listSnapshotRuns(pool: Pool, auth: Pick<AuthService,'assertCurrentPrincipal'>, principal: UserPrincipal, filters: {
   source_id?: string; status?: string; created_from?: string; created_to?: string; cursor?: string; limit?: number;
 } = {}) {
   requireScope(principal,'source:read');
   const limit = filters.limit ?? 20;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100 || (filters.source_id !== undefined && !/^[A-Za-z0-9._:-]{1,160}$/.test(filters.source_id)) ||
       (filters.status !== undefined && !['QUEUED','SCANNING','VALIDATING','READY','APPLYING','COMPLETE','FAILED','INCOMPLETE','CANCELLED'].includes(filters.status))) fail('AUTH_INPUT_INVALID');
-  const fromTime = filters.created_from === undefined ? undefined : Date.parse(filters.created_from);
-  const toTime = filters.created_to === undefined ? undefined : Date.parse(filters.created_to);
+  const fromTime = filters.created_from === undefined ? undefined : parseCanonicalDate(filters.created_from);
+  const toTime = filters.created_to === undefined ? undefined : parseCanonicalDate(filters.created_to);
   if ((fromTime !== undefined && !Number.isFinite(fromTime)) || (toTime !== undefined && !Number.isFinite(toTime)) ||
       (fromTime !== undefined && toTime !== undefined && (fromTime >= toTime || toTime - fromTime > 366 * 24 * 60 * 60 * 1000))) {
     fail('AUTH_INPUT_INVALID');
   }
-  const anchor = filters.cursor ? unopaque(filters.cursor).split('\0') : [];
-  if (anchor.length && (anchor.length !== 2 || !/^\d{4}-\d\d-\d\dT/.test(anchor[0]) || !/^[0-9a-f-]{36}$/i.test(anchor[1]))) fail('AUTH_INPUT_INVALID');
-  const result = await pool.query<RunRow>(`SELECT ${SELECT_SUMMARY} FROM control.etl_run
-    WHERE tenant_key=$1 AND ($2::text IS NULL OR source_id=$2) AND ($3::text IS NULL OR status=$3)
-      AND ($4::timestamptz IS NULL OR created_at >= $4) AND ($5::timestamptz IS NULL OR created_at < $5)
-      AND ($6::timestamptz IS NULL OR (created_at,run_id)<($6,$7::uuid))
-    ORDER BY created_at DESC,run_id DESC LIMIT $8`,
-    [principal.tenantId,filters.source_id ?? null,filters.status ?? null,filters.created_from ?? null,filters.created_to ?? null,
-      anchor[0] ?? null,anchor[1] ?? null,limit+1]);
-  const hasMore = result.rows.length > limit;
-  const rows = result.rows.slice(0,limit);
-  return Object.freeze({ items: Object.freeze(rows.map(summary)), next_cursor: hasMore && rows.length
-    ? opaque(`${new Date(rows[rows.length-1].created_at).toISOString()}\0${rows[rows.length-1].run_id}`) : null });
+  const anchorId = filters.cursor === undefined ? null : unopaque(filters.cursor);
+  if (anchorId !== null && !UUID.test(anchorId)) fail('AUTH_INPUT_INVALID');
+  return transaction(pool, async client => {
+    await client.query('SELECT control.lock_security_barrier_fence()');
+    await auth.assertCurrentPrincipal(principal,'source:read',client);
+    if (anchorId !== null) {
+      const anchor = await client.query('SELECT 1 FROM control.etl_run WHERE tenant_key=$1 AND run_id=$2::uuid', [principal.tenantId,anchorId]);
+      if (!anchor.rowCount) fail('SOURCE_NOT_FOUND');
+    }
+    const result = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY} FROM control.etl_run
+      WHERE tenant_key=$1 AND ($2::text IS NULL OR source_id=$2) AND ($3::text IS NULL OR status=$3)
+        AND ($4::timestamptz IS NULL OR created_at >= $4) AND ($5::timestamptz IS NULL OR created_at < $5)
+        AND ($6::uuid IS NULL OR (created_at,run_id)<(SELECT created_at,run_id FROM control.etl_run WHERE tenant_key=$1 AND run_id=$6::uuid))
+      ORDER BY created_at DESC,run_id DESC LIMIT $7`,
+      [principal.tenantId,filters.source_id ?? null,filters.status ?? null,filters.created_from ?? null,filters.created_to ?? null,
+        anchorId,limit+1]);
+    const hasMore = result.rows.length > limit;
+    const rows = result.rows.slice(0,limit);
+    return Object.freeze({ items: Object.freeze(rows.map(summary)), next_cursor: hasMore && rows.length
+      ? opaque(rows[rows.length-1].run_id) : null });
+  });
 }
 
-export async function getSnapshotRun(pool: Pool, principal: UserPrincipal, runId: string) {
+export async function getSnapshotRun(pool: Pool, auth: Pick<AuthService,'assertCurrentPrincipal'>, principal: UserPrincipal, runId: string) {
   requireScope(principal,'source:read');
-  if (!/^[0-9a-f-]{36}$/i.test(runId)) fail('SOURCE_NOT_FOUND');
-  const result = await pool.query<RunRow>(`SELECT ${SELECT_SUMMARY},checkpoint_summary,completeness_summary FROM control.etl_run
-    WHERE tenant_key=$1 AND run_id=$2`, [principal.tenantId,runId]);
-  if (!result.rowCount) fail('SOURCE_NOT_FOUND');
-  return summary(result.rows[0]);
+  if (!UUID.test(runId)) fail('SOURCE_NOT_FOUND');
+  return transaction(pool, async client => {
+    await client.query('SELECT control.lock_security_barrier_fence()');
+    await auth.assertCurrentPrincipal(principal,'source:read',client);
+    const result = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY},checkpoint_summary,completeness_summary FROM control.etl_run
+      WHERE tenant_key=$1 AND run_id=$2::uuid`, [principal.tenantId,runId]);
+    if (!result.rowCount) fail('SOURCE_NOT_FOUND');
+    return summary(result.rows[0]);
+  });
 }
 
 export function isActiveSnapshotStatus(status: string): boolean { return ACTIVE.has(status); }

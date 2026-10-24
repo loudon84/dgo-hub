@@ -78,6 +78,7 @@ export type SourceCredentialProvisionInput = Readonly<{
 
 export type AuthService = Readonly<{
   resolveOidc(issuer: string, subject: string): Promise<UserPrincipal>;
+  assertCurrentPrincipal(principal: UserPrincipal, scope: AuthScope, client: PoolClient): Promise<void>;
   createAgentCredential(principal: UserPrincipal, input: CreateAgentCredentialInput, idempotencyKey: string): Promise<CreateAgentCredentialResult>;
   listAgentCredentials(principal: UserPrincipal, page?: AgentCredentialPage): Promise<AgentCredentialPageResult>;
   revokeAgentCredential(principal: UserPrincipal, credentialId: string): Promise<void>;

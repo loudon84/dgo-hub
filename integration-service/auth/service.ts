@@ -103,7 +103,8 @@ function assertEligibleBusinessUser(user: UserPrincipal): void {
 }
 
 function assertCallerMatches(caller: UserPrincipal, current: UserPrincipal): void {
-  if (caller.userId !== current.userId || caller.tenantId !== current.tenantId) throw new AuthError('AUTH_CONTEXT_CHANGED');
+  if (caller.userId !== current.userId || caller.tenantId !== current.tenantId ||
+      caller.issuer !== current.issuer || caller.subject !== current.subject) throw new AuthError('AUTH_CONTEXT_CHANGED');
 }
 
 async function identityByOidc(
@@ -401,6 +402,13 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
       if (!row) throw new AuthError('PRINCIPAL_MAPPING_MISSING');
       if (!row.binding_enabled || !row.enabled || !row.tenant_enabled) throw new AuthError('AUTH_REVOKED');
       return mapUser(row);
+    },
+
+    async assertCurrentPrincipal(principal, scope, client) {
+      validateOidcKey(principal.issuer, principal.subject);
+      const current = await identityByOidc(client, principal.issuer, principal.subject, true);
+      assertCallerMatches(principal, current);
+      if (!current.managementScopes.includes(scope)) throw new AuthError('AUTH_FORBIDDEN');
     },
 
     async createAgentCredential(principal, input, idempotencyKey): Promise<CreateAgentCredentialResult> {

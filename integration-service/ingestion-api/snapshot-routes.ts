@@ -5,7 +5,7 @@ import type { AuthService, UserPrincipal } from '../auth/types.js';
 import type { OidcAuthenticator } from '../auth/oidc.js';
 import { createSnapshotRun, getSnapshotRun, listSnapshotRuns } from '../etl-worker/snapshot-runs.js';
 
-export type SnapshotRouteOptions = Readonly<{ pool: Pool; authService: Pick<AuthService,'repository'>; authenticator: OidcAuthenticator }>;
+export type SnapshotRouteOptions = Readonly<{ pool: Pool; authService: Pick<AuthService,'repository'|'assertCurrentPrincipal'>; authenticator: OidcAuthenticator }>;
 function fail(request: FastifyRequest, reply: FastifyReply, error: unknown) {
   const code = error instanceof AuthError ? error.code : 'AUTH_UNAVAILABLE';
   const status = error instanceof AuthError ? error.status : 503;
@@ -68,14 +68,14 @@ export async function registerSnapshotRoutes(app: FastifyInstance, options: Snap
         const query = strictQuery(request);
         const limit = query.limit === undefined ? undefined : Number(query.limit);
         if (query.limit !== undefined && !/^(?:[1-9][0-9]?|100)$/.test(query.limit)) throw new AuthError('AUTH_INPUT_INVALID');
-        const result = await listSnapshotRuns(options.pool,principal,{ ...query, ...(limit === undefined ? {} : { limit }) });
+        const result = await listSnapshotRuns(options.pool,options.authService,principal,{ ...query, ...(limit === undefined ? {} : { limit }) });
         return reply.send(envelope(request,result));
       } catch (error) { return fail(request,reply,error); }
     });
     admin.get<{ Params: { id: string } }>('/hub/v1/admin/etl-runs/:id', async (request,reply) => {
       try {
         const principal = await currentUser(request,options.authenticator);
-        return reply.send(envelope(request,await getSnapshotRun(options.pool,principal,request.params.id)));
+        return reply.send(envelope(request,await getSnapshotRun(options.pool,options.authService,principal,request.params.id)));
       } catch (error) { return fail(request,reply,error); }
     });
   });

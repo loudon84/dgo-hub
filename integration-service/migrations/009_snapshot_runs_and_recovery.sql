@@ -147,6 +147,8 @@ GRANT SELECT (run_id,tenant_key,source_id,run_mode,request_kind,request_route,id
   identity_mapping_revision,completeness_summary,checkpoint_summary) ON control.etl_run TO hub_api;
 GRANT SELECT (tenant_key,source_id,schedule_revision,enabled,active_run_id,last_run_id,next_due_at,interval_seconds)
   ON control.etl_snapshot_schedule TO hub_api;
+GRANT INSERT (tenant_key,source_id,enabled,interval_seconds,next_due_at,schedule_revision)
+  ON control.etl_snapshot_schedule TO hub_api;
 GRANT INSERT (tenant_key,source_id,run_mode,request_kind,request_route,idempotency_key,request_digest,credential_id,
   credential_revision,credential_generation,source_epoch,admission_source_epoch,expected_entities,entity_channel_proof,
   config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,
@@ -168,7 +170,7 @@ GRANT SELECT (tenant_key,user_id,enabled) ON control.auth_subject TO hub_worker;
 GRANT EXECUTE ON FUNCTION control.lock_etl_snapshot_source(text,text) TO hub_api,hub_worker;
 GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text),control.lock_source_channel(text,text,text) TO hub_worker;
 GRANT INSERT (tenant_key,source_id,run_id,ordinal,operation_id,status) ON control.etl_run_attempt TO hub_api,hub_worker;
-GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at,enabled,schedule_revision) ON control.etl_snapshot_schedule TO hub_api;
+GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at,enabled,schedule_revision,interval_seconds) ON control.etl_snapshot_schedule TO hub_api;
 GRANT UPDATE (active_run_id,last_run_id,next_due_at,updated_at) ON control.etl_snapshot_schedule TO hub_worker;
 GRANT UPDATE (status,started_at,completed_at,extracted_count,applied_count,quarantined_count,error_code,completeness_summary,checkpoint_summary)
   ON control.etl_run TO hub_worker;
