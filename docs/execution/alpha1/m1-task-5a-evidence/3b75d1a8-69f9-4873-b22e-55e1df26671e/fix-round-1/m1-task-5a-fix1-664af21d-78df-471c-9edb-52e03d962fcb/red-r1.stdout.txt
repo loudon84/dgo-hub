@@ -1,0 +1,15 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/snapshot-runs.test.ts -t activates, pauses, and resumes the PostgreSQL snapshot schedule as hub_api
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/snapshot-runs.test.ts (7 tests | 1 failed | 6 skipped) 2984ms
+     × activates, pauses, and resumes the PostgreSQL snapshot schedule as hub_api 145ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 skipped (7)
+   Start at  23:33:40
+   Duration  3.44s (transform 108ms, setup 0ms, import 279ms, tests 2.98s, environment 0ms)
+

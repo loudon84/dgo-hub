@@ -1,0 +1,177 @@
+{
+  "actualHead": "515ecbcd2bbbdcaeb1c6382b110e6f373c236ac2",
+  "base": "b6177cc8b10537d07c0d25ec6654475045036f1e",
+  "capturedAt": "2026-10-24T15:44:35.3552911Z",
+  "sourceFiles": [
+    {
+      "path": "integration-service/acceptance-tests/helpers/postgres.ts",
+      "bytes": 11797,
+      "rawSha256": "d70b3620b8a9feb50b9a02691e6bd58bc07a36ce760ddea1e83fcdd2551cedbf",
+      "lfSha256": "3929d604e9f81beaba399ddbf416a2bb385a7c43c2d32a714a85ce377345726d",
+      "cleanGitBlob": "c56ee77950b33f44f534505b4da438e4cf06d41e",
+      "headBlob": "c56ee77950b33f44f534505b4da438e4cf06d41e"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "bytes": 26615,
+      "rawSha256": "d5446c31346a211cfb8a8bf921c47fe9739620b5497549671f3a3b046871b904",
+      "lfSha256": "2f2ef004f37da0c82d1ea89740214ce9b1b478ae9ea2459a8d05fe12b0ef28c6",
+      "cleanGitBlob": "36b30839793451a9048047794cda8054310129ca",
+      "headBlob": "729d2827e1ab995c4b402037d59a546ecb9950ab"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 37525,
+      "rawSha256": "ab6609e13548eaa853c3e8eeb9e15ec29ae6583b4badddf77f81414dbd8b7b1c",
+      "lfSha256": "ab6609e13548eaa853c3e8eeb9e15ec29ae6583b4badddf77f81414dbd8b7b1c",
+      "cleanGitBlob": "04680d647e207624503fb426ad4413f13946df4d",
+      "headBlob": "ebbf76a808c445d08576a685c263998c50c2dff1"
+    },
+    {
+      "path": "integration-service/app.ts",
+      "bytes": 3945,
+      "rawSha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "lfSha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "cleanGitBlob": "7748a5c150f53914d77d3026dc5a329f28e602a5",
+      "headBlob": "7748a5c150f53914d77d3026dc5a329f28e602a5"
+    },
+    {
+      "path": "integration-service/auth/errors.ts",
+      "bytes": 801,
+      "rawSha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "lfSha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "cleanGitBlob": "78da83b76777163fa076d2e70f9ec738e86b436b",
+      "headBlob": "78da83b76777163fa076d2e70f9ec738e86b436b"
+    },
+    {
+      "path": "integration-service/auth/service.ts",
+      "bytes": 33506,
+      "rawSha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+      "lfSha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+      "cleanGitBlob": "23fa7a76a31ca04b89a8a704f1bd51069ba28620",
+      "headBlob": "96258ae581d049f015624df7285274c6c623d6b7"
+    },
+    {
+      "path": "integration-service/auth/types.ts",
+      "bytes": 4857,
+      "rawSha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+      "lfSha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+      "cleanGitBlob": "0d776ebde0b102c58162e35d54b0ff7f760b93ac",
+      "headBlob": "0aff85ef22907f1a715a9c54c684f220c058c5d4"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-contract.ts",
+      "bytes": 2031,
+      "rawSha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "lfSha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "cleanGitBlob": "fd9223e7aade2f42c2f3ccbbb9fbaf7b682d6178",
+      "headBlob": "fd9223e7aade2f42c2f3ccbbb9fbaf7b682d6178"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "bytes": 24051,
+      "rawSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "lfSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "cleanGitBlob": "b12544e335955494bfea994459a383dd0102d448",
+      "headBlob": "f2b288a0dcc33ecc329a7ba0bad139f071a67fde"
+    },
+    {
+      "path": "integration-service/ingestion-api/routes.ts",
+      "bytes": 8392,
+      "rawSha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "lfSha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "cleanGitBlob": "b7fbaf57dd7413579d2d87598785122f11224763",
+      "headBlob": "b7fbaf57dd7413579d2d87598785122f11224763"
+    },
+    {
+      "path": "integration-service/ingestion-api/snapshot-routes.ts",
+      "bytes": 5301,
+      "rawSha256": "a5f0dd2186a35f0a58397c4015d815bd363212179165e134e54201378bb51939",
+      "lfSha256": "a5f0dd2186a35f0a58397c4015d815bd363212179165e134e54201378bb51939",
+      "cleanGitBlob": "83fef98f78210652ac3c0d9eefd53dd782505edf",
+      "headBlob": "c2978a3b5064c94250aa67946dc0191272477e35"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "bytes": 13193,
+      "rawSha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "lfSha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "cleanGitBlob": "814f872b34dd95f69c3fd9be77b162bd921e38d7",
+      "headBlob": "499dffbde260fa299bbb849d9b368652a60e3116"
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "bytes": 52014,
+      "rawSha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "lfSha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "cleanGitBlob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163",
+      "headBlob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163"
+    }
+  ],
+  "immutable001to008": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "bytes": 4988,
+      "rawSha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "lfSha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+      "cleanGitBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "headBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "bytes": 5633,
+      "rawSha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "lfSha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+      "cleanGitBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "headBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "bytes": 803,
+      "rawSha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "lfSha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+      "cleanGitBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "headBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "bytes": 5349,
+      "rawSha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "lfSha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+      "cleanGitBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "headBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "bytes": 22627,
+      "rawSha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "lfSha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+      "cleanGitBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "headBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+    },
+    {
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "bytes": 49406,
+      "rawSha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "lfSha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+      "cleanGitBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "headBlob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a"
+    },
+    {
+      "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+      "bytes": 13435,
+      "rawSha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "lfSha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+      "cleanGitBlob": "7a5dca418542976a22cf786d302e36a617ee22df",
+      "headBlob": "7a5dca418542976a22cf786d302e36a617ee22df"
+    },
+    {
+      "path": "integration-service/migrations/008_durable_worker_leases_and_retries.sql",
+      "bytes": 2804,
+      "rawSha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+      "lfSha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+      "cleanGitBlob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837",
+      "headBlob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837"
+    }
+  ]
+}

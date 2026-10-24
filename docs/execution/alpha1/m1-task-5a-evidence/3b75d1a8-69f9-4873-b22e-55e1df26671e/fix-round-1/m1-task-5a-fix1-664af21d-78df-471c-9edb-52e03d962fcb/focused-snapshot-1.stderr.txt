@@ -1,0 +1,37 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > rejects manual and due admission behind a historical tenant barrier until a fresh approval
+AuthError: SOURCE_CONFLICT
+ ❯ fail source-registry/service.ts:68:80
+     66| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     67|
+     68| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     69| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     70|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ source-registry/service.ts:493:87
+ ❯ transaction source-registry/service.ts:168:19
+ ❯ acceptance-tests/snapshot-runs.test.ts:242:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > revalidates OIDC binding after authentication for create, replay, detail, and list
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:277:35
+    275|         headers:{ authorization:'Bearer owner-token','idempotency-key'…
+    276|         payload:{ approved_config_revision:'1',run_mode:'FULL_SNAPSHOT…
+    277|       expect(rejected.statusCode).toBe(401);
+       |                                   ^
+    278|       expect(rejected.json().error.code).toBe('AUTH_REVOKED');
+    279|     } finally { await app.close(); await auth.repository.setIdentityBi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

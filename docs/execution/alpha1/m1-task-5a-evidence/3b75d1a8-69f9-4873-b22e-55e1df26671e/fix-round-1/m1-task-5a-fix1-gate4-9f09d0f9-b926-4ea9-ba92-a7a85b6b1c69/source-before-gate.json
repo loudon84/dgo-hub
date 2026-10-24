@@ -1,0 +1,98 @@
+{
+  "actualHead": "515ecbcd2bbbdcaeb1c6382b110e6f373c236ac2",
+  "base": "b6177cc8b10537d07c0d25ec6654475045036f1e",
+  "capturedAt": "2026-10-24T15:41:07.1666692Z",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/helpers/postgres.ts",
+      "bytes": 11797,
+      "rawSha256": "d70b3620b8a9feb50b9a02691e6bd58bc07a36ce760ddea1e83fcdd2551cedbf",
+      "lfSha256": "3929d604e9f81beaba399ddbf416a2bb385a7c43c2d32a714a85ce377345726d",
+      "gitBlob": "f5545cb336ce715e285a7661d655049d6d53be38"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "bytes": 26478,
+      "rawSha256": "1b2ced8b45a500b7f0af7f4e872838eadec5b28eb06212b74baf7b9c839f8f3a",
+      "lfSha256": "e8ba53398e2e4dff0b11d7b27995b9b1b005fea710f0fb1c58563fa3faa4488a",
+      "gitBlob": "87b1d270b6cb1d02888a90176d27b4ad8b6683b2"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 37525,
+      "rawSha256": "ab6609e13548eaa853c3e8eeb9e15ec29ae6583b4badddf77f81414dbd8b7b1c",
+      "lfSha256": "ab6609e13548eaa853c3e8eeb9e15ec29ae6583b4badddf77f81414dbd8b7b1c",
+      "gitBlob": "04680d647e207624503fb426ad4413f13946df4d"
+    },
+    {
+      "path": "integration-service/app.ts",
+      "bytes": 3945,
+      "rawSha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "lfSha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+      "gitBlob": "7748a5c150f53914d77d3026dc5a329f28e602a5"
+    },
+    {
+      "path": "integration-service/auth/errors.ts",
+      "bytes": 801,
+      "rawSha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "lfSha256": "bca5dedcb067a27557a887e78b9ceb5b3a8e21b43c9dcc002bb41241f8f17296",
+      "gitBlob": "78da83b76777163fa076d2e70f9ec738e86b436b"
+    },
+    {
+      "path": "integration-service/auth/service.ts",
+      "bytes": 33506,
+      "rawSha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+      "lfSha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+      "gitBlob": "23fa7a76a31ca04b89a8a704f1bd51069ba28620"
+    },
+    {
+      "path": "integration-service/auth/types.ts",
+      "bytes": 4857,
+      "rawSha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+      "lfSha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+      "gitBlob": "0d776ebde0b102c58162e35d54b0ff7f760b93ac"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-contract.ts",
+      "bytes": 2031,
+      "rawSha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "lfSha256": "9fb8083325daa0a019fe8d3fff8a3a5b394f41c2405190c577b52b6e48b8d5c8",
+      "gitBlob": "fd9223e7aade2f42c2f3ccbbb9fbaf7b682d6178"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "bytes": 24051,
+      "rawSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "lfSha256": "82c8e8ad3d133d8f2daf94460641c3510ee2288aa845d53f784cc12a14565976",
+      "gitBlob": "b12544e335955494bfea994459a383dd0102d448"
+    },
+    {
+      "path": "integration-service/ingestion-api/routes.ts",
+      "bytes": 8392,
+      "rawSha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "lfSha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+      "gitBlob": "b7fbaf57dd7413579d2d87598785122f11224763"
+    },
+    {
+      "path": "integration-service/ingestion-api/snapshot-routes.ts",
+      "bytes": 5301,
+      "rawSha256": "a5f0dd2186a35f0a58397c4015d815bd363212179165e134e54201378bb51939",
+      "lfSha256": "a5f0dd2186a35f0a58397c4015d815bd363212179165e134e54201378bb51939",
+      "gitBlob": "83fef98f78210652ac3c0d9eefd53dd782505edf"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "bytes": 13193,
+      "rawSha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "lfSha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "gitBlob": "814f872b34dd95f69c3fd9be77b162bd921e38d7"
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "bytes": 52014,
+      "rawSha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "lfSha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "gitBlob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163"
+    }
+  ]
+}

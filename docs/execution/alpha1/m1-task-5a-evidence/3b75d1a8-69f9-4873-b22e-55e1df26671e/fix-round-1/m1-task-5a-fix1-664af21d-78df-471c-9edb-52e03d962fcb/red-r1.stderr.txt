@@ -1,0 +1,17 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > activates, pauses, and resumes the PostgreSQL snapshot schedule as hub_api
+AuthError: AUTH_UNAVAILABLE
+ ❯ fail source-registry/service.ts:68:80
+     66| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     67|
+     68| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     69| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     70|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ transaction source-registry/service.ts:174:12
+ ❯ acceptance-tests/snapshot-runs.test.ts:91:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

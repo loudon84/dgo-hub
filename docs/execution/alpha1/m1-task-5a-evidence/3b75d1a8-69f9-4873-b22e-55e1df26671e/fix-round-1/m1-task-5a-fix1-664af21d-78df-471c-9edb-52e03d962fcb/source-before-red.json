@@ -1,0 +1,14 @@
+{
+  "actualHead": "515ecbcd2bbbdcaeb1c6382b110e6f373c236ac2",
+  "base": "b6177cc8b10537d07c0d25ec6654475045036f1e",
+  "capturedAt": "2026-10-24T15:33:28.8238447Z",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 19160,
+      "rawSha256": "24c441952ae8fc032034cb97ca0fa4b0a93dbb9c12ee63a2cb7f560637a5dcf5",
+      "lfSha256": "24c441952ae8fc032034cb97ca0fa4b0a93dbb9c12ee63a2cb7f560637a5dcf5",
+      "gitBlob": "fe82cd753f3083fee5a5b1f308aea1fc2ec048fc"
+    }
+  ]
+}
