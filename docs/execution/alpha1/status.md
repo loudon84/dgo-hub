@@ -1,6 +1,13 @@
 # Alpha.1 execution status
 
-Updated 2026-10-23. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 passed local GPT-6.1 Sol Spec/Quality review. Task3 source a7ce7d4 passed20 focused tests/typecheck/build; Sol closed I2–I5 but I1 remains open for deeply nested argument digest/audit handling. Per user instruction to continue the next implementation, Task4 starts with that blocking correction before isolated deployment/probes. No Task3 gate approval or product release is asserted.
+Updated 2026-10-24. E:/git/dgo-hub, feat/alpha1-implementation. M0 Tasks0/1/2 passed local GPT-6.1 Sol Spec/Quality review. Task4 implementation and sanitized evidence handoff are complete at `419deec30912132afe94aa5195a324d5adec2cf1`; independent GPT-6.1 Sol review is in progress. The carried Task3 I1 correction is implemented but remains pending that review. No Task3/Task4 gate approval or product release is asserted.
+
+## Current readiness
+
+- Final local checks: typecheck/test/build each exited 0; 12 test files and 191 tests passed. The recorder started at `9724f627` with Task4 changes present; identical pre/post byte manifests identify the code subsequently committed at `135b7f1`. See [Task4 report](m0-task-4-report.md).
+- Fresh PostgreSQL initialization applied migrations 001–004; 27 real runtime role checks passed. Local TLS, network isolation, five MCP tools, closed-gate auditing, and distinct-credential revocation have retained probe evidence.
+- Next local step: independent Task4 review, followed by Task5 evidence consolidation and M1 detailed handoff. M1 local implementation can begin after engineering review/closure; formal site acceptance remains blocked.
+- Owned Docker resources were confirmed removed. Seven generated host secret/certificate/env paths remain after policy rejected deletion; the Task4 report lists them. They are excluded from tracked evidence and Docker context. Do not retry cleanup or include them in archives.
 
 ## W0 disposition
 
