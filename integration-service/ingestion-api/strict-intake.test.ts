@@ -23,4 +23,26 @@ describe('strict hub.v1 ingestion parser', () => {
     expect(response.body).not.toContain('"A"');
     expect(response.body).not.toContain('"B"');
   });
+
+  it('does not reflect duplicate private property names in errors before authentication', async () => {
+    app = await buildApp();
+    for (const payload of [
+      '{"SYNTHETIC_PRIVATE_MARKER":1,"SYNTHETIC_PRIVATE_MARKER":2}',
+    ]) {
+      const response = await app.inject({ method: 'POST', url: '/hub/v1/ingest/crm/customers',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer invalid', 'idempotency-key': 'safe-path' }, payload });
+      expect(response.statusCode).toBe(422);
+      expect(response.json().error.retryable).toBe(false);
+      expect(response.body).not.toContain('SYNTHETIC_PRIVATE_MARKER');
+    }
+  });
+
+  it('rejects deep JSON below the byte limit as a nonretryable client error', async () => {
+    app = await buildApp();
+    const response = await app.inject({ method: 'POST', url: '/hub/v1/ingest/crm/customers',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer invalid', 'idempotency-key': 'deep-json' },
+      payload: '['.repeat(5000) + '0' + ']'.repeat(5000) });
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error).toMatchObject({ code: 'INGEST_INPUT_INVALID', retryable: false });
+  });
 });

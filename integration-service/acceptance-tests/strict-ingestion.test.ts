@@ -12,7 +12,8 @@ import { createSourceRegistryService, type EndpointAllowlist } from '../source-r
 import type { EndpointProfile } from '../source-registry/capability-probe.js';
 import { startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
 
-const evidenceRoot = 'E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e';
+const evidenceRoot = process.env.M0_RUN_EVIDENCE_ROOT
+  ?? 'E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-3-evidence\\d825e7c7-136b-4900-a644-2014f1d24c0e';
 const migrationsDirectory = new URL('../migrations/', import.meta.url).pathname.replace(/^\/(?:([A-Za-z]):)/, '$1:');
 const sourceToken = createCredential().secret;
 const tenantId = 'task3_tenant';
@@ -197,6 +198,59 @@ describe('M1-3 strict intake and durable job reads', () => {
       const response = await post(JSON.stringify(orderBatch(status)),`empty-lines-${status}`,orderRoute);
       expect(response.statusCode).toBe(202);
     }
+  });
+
+  it('rejects invalid enum and identifier images without durable rows', async () => {
+    const before = await rowCounts();
+    for (const [field, value] of [['status', ['CONFIRMED']], ['status', { value: 'CONFIRMED' }],
+      ['currency', ['CNY']], ['currency', { value: 'CNY' }]] as const) {
+      const body = orderBatch(field === 'currency' ? 'DRAFT' : 'CONFIRMED');
+      (body.records[0]!.data as Record<string, unknown>)[field] = value;
+      const response = await post(JSON.stringify(body), `invalid-enum-${randomUUID()}`, orderRoute);
+      expect(response.statusCode).toBe(422);
+      expect(response.json().error.retryable).toBe(false);
+    }
+    for (const field of ['owner_external_id', 'department_external_id'] as const) {
+      for (const value of ['x'.repeat(129), ' x']) {
+        const body = customerBatch();
+        (body.records[0]!.data as Record<string, unknown>)[field] = value;
+        expect((await post(JSON.stringify(body))).statusCode).toBe(422);
+      }
+    }
+    expect((await rowCounts()).rows[0]).toEqual(before.rows[0]);
+  });
+
+  it('stores chronological source range across record order, offsets and microseconds', async () => {
+    const body = customerBatch(3);
+    body.records[0]!.source_updated_at = '2026-10-22T10:00:00.123457+08:00';
+    body.records[1]!.source_updated_at = '2026-10-22T01:59:59.999999Z';
+    body.records[2]!.source_updated_at = '2026-10-21T18:00:00.123456-08:00';
+    const response = await post(JSON.stringify(body));
+    expect(response.statusCode).toBe(202);
+    const id = response.json().data.job_id;
+    const range = await fixture.pool.query<{ first: string; last: string; facts: string[] }>(`SELECT
+      to_char(j.first_source_updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US') AS first,
+      to_char(j.last_source_updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US') AS last,
+      (SELECT array_agg(i.public_record->>'source_updated_at' ORDER BY i.ordinal) FROM control.ingestion_job_item i WHERE i.job_id=j.id) AS facts
+      FROM control.ingestion_job j WHERE j.id=$1`, [id]);
+    expect(range.rows[0]).toEqual({ first: '2026-10-22T01:59:59.999999', last: '2026-10-22T02:00:00.123457',
+      facts: body.records.map(record => record.source_updated_at) });
+    const read = await app.inject({ method:'GET', url:`/hub/v1/ingestion-jobs/${id}`, headers:{authorization:`Bearer ${sourceToken}`} });
+    expect(read.statusCode).toBe(200);
+    expect(Date.parse(read.json().data.first_source_updated_at)).toBe(Date.parse('2026-10-22T01:59:59.999Z'));
+    expect(Date.parse(read.json().data.last_source_updated_at)).toBe(Date.parse('2026-10-22T02:00:00.123Z'));
+  });
+
+  it('rejects private-key and deep JSON over HTTP without durable writes', async () => {
+    const before = await rowCounts();
+    for (const payload of ['{"SYNTHETIC_PRIVATE_MARKER":1}', '{"SYNTHETIC_PRIVATE_MARKER":1,"SYNTHETIC_PRIVATE_MARKER":2}',
+      '['.repeat(5000) + '0' + ']'.repeat(5000)]) {
+      const response = await post(payload);
+      expect(response.statusCode).toBe(422);
+      expect(response.json().error.retryable).toBe(false);
+      expect(response.body).not.toContain('SYNTHETIC_PRIVATE_MARKER');
+    }
+    expect((await rowCounts()).rows[0]).toEqual(before.rows[0]);
   });
 
   it('accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte', async () => {

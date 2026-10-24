@@ -8,6 +8,11 @@ const IDENTIFIER = /^(?!\s)[\s\S]{1,128}(?<!\s)$/u;
 const DECIMAL = /^(?:0|[1-9][0-9]*)(?:\.([0-9]+))?$/;
 const VERSION = /^(?:0|[1-9][0-9]{0,19})$/;
 const RFC3339 = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const SAFE_PATH_FIELDS = new Set(['schema_version','batch_id','records','event_id','source_pk','source_version','operation',
+  'source_updated_at','data','customer_name','owner_external_id','department_external_id','status','phone','customer_ref',
+  'source_id','order_no','order_at','amount','currency','lines','source_line_id','product_code','product_name',
+  'quantity','unit_price','line_amount']);
+const MAX_JSON_DEPTH = 32;
 
 export type CustomerImage = Readonly<{
   customer_name: string;
@@ -66,8 +71,8 @@ function validUnicode(value: string, path: string): void {
 }
 
 function pointer(path: string, key: string | number): string {
-  const part = String(key).replace(/~/g, '~0').replace(/\//g, '~1');
-  return `${path}/${part}`;
+  if (typeof key === 'number') return Number.isInteger(key) && key >= 0 && key <= 200 ? `${path}/${key}` : path || '/';
+  return SAFE_PATH_FIELDS.has(key) ? `${path}/${key}` : path || '/';
 }
 
 class JsonReader {
@@ -76,7 +81,7 @@ class JsonReader {
 
   read(): unknown {
     this.space();
-    const value = this.value('');
+    const value = this.value('', 0);
     this.space();
     if (this.index !== this.text.length) throw new IngestInputError('INGEST_INPUT_INVALID', '/');
     return value;
@@ -86,10 +91,11 @@ class JsonReader {
     while (this.index < this.text.length && /[\u0009\u000a\u000d\u0020]/.test(this.text[this.index]!)) this.index += 1;
   }
 
-  private value(path: string): unknown {
+  private value(path: string, depth: number): unknown {
+    if (depth > MAX_JSON_DEPTH) throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
     const char = this.text[this.index];
-    if (char === '{') return this.object(path);
-    if (char === '[') return this.array(path);
+    if (char === '{') return this.object(path, depth);
+    if (char === '[') return this.array(path, depth);
     if (char === '"') return this.string(path);
     if (char === 't' && this.text.slice(this.index, this.index + 4) === 'true') { this.index += 4; return true; }
     if (char === 'f' && this.text.slice(this.index, this.index + 5) === 'false') { this.index += 5; return false; }
@@ -131,7 +137,7 @@ class JsonReader {
     throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
   }
 
-  private object(path: string): Record<string, unknown> {
+  private object(path: string, depth: number): Record<string, unknown> {
     this.index += 1;
     this.space();
     const output: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
@@ -147,7 +153,7 @@ class JsonReader {
       if (this.text[this.index] !== ':') throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
       this.index += 1;
       this.space();
-      output[key] = this.value(fieldPath);
+      output[key] = this.value(fieldPath, depth + 1);
       this.space();
       if (this.text[this.index] === '}') { this.index += 1; return output; }
       if (this.text[this.index] !== ',') throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
@@ -157,13 +163,13 @@ class JsonReader {
     throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
   }
 
-  private array(path: string): unknown[] {
+  private array(path: string, depth: number): unknown[] {
     this.index += 1;
     this.space();
     const output: unknown[] = [];
     if (this.text[this.index] === ']') { this.index += 1; return output; }
     while (this.index < this.text.length) {
-      output.push(this.value(pointer(path, output.length)));
+      output.push(this.value(pointer(path, output.length), depth + 1));
       this.space();
       if (this.text[this.index] === ']') { this.index += 1; return output; }
       if (this.text[this.index] !== ',') throw new IngestInputError('INGEST_INPUT_INVALID', path || '/');
@@ -220,21 +226,17 @@ function decimal(value: unknown, path: string, scale: number, positive: boolean)
   if (integerDigits > 20 - scale || (positive && /^0(?:\.0+)?$/.test(text))) return invalid(path);
   return text;
 }
-function strictStringFields(value: Record<string, unknown>, fields: readonly string[], path: string): Record<string, string> {
-  const result: Record<string, string> = Object.create(null) as Record<string, string>;
-  for (const field of fields) result[field] = string(value[field], pointer(path, field));
-  return result;
-}
-
 function parseCustomer(dataValue: unknown, path: string): CustomerImage {
   const data = object(dataValue, path);
   strictKeys(data, ['customer_name', 'owner_external_id', 'department_external_id', 'status'], ['phone'], path);
-  const values = strictStringFields(data, ['customer_name', 'owner_external_id', 'department_external_id'], path);
+  const customerName = string(data.customer_name, pointer(path, 'customer_name'));
+  const ownerExternalId = identifier(data.owner_external_id, pointer(path, 'owner_external_id'));
+  const departmentExternalId = identifier(data.department_external_id, pointer(path, 'department_external_id'));
   if (data.status !== 'ACTIVE' && data.status !== 'INACTIVE') invalid(pointer(path, 'status'));
   let phone: string | null | undefined;
   if (Object.hasOwn(data, 'phone')) phone = data.phone === null ? null : string(data.phone, pointer(path, 'phone'), 2048);
-  return Object.freeze({ customer_name: values.customer_name!, owner_external_id: values.owner_external_id!,
-    department_external_id: values.department_external_id!, status: data.status, ...(phone === undefined ? {} : { phone }) });
+  return Object.freeze({ customer_name: customerName, owner_external_id: ownerExternalId,
+    department_external_id: departmentExternalId, status: data.status, ...(phone === undefined ? {} : { phone }) });
 }
 
 function parseOrder(dataValue: unknown, path: string): OrderImage {
@@ -247,10 +249,10 @@ function parseOrder(dataValue: unknown, path: string): OrderImage {
   const sourcePk = identifier(customerRef.source_pk, pointer(pointer(path, 'customer_ref'), 'source_pk'));
   const orderNo = string(data.order_no, pointer(path, 'order_no'), 128);
   if (!IDENTIFIER.test(orderNo)) invalid(pointer(path, 'order_no'));
-  if (!['DRAFT', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(String(data.status))) invalid(pointer(path, 'status'));
+  if (typeof data.status !== 'string' || !['DRAFT', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(data.status)) invalid(pointer(path, 'status'));
   const orderAt = timestamp(data.order_at, pointer(path, 'order_at'));
   const amount = decimal(data.amount, pointer(path, 'amount'), 2, false);
-  if (!['CNY', 'USD', 'EUR'].includes(String(data.currency))) invalid(pointer(path, 'currency'));
+  if (typeof data.currency !== 'string' || !['CNY', 'USD', 'EUR'].includes(data.currency)) invalid(pointer(path, 'currency'));
   if (!Array.isArray(data.lines) || data.lines.length > 200) invalid(pointer(path, 'lines'));
   if ((data.status === 'CONFIRMED' || data.status === 'COMPLETED') && data.lines.length === 0) invalid(pointer(path, 'lines'));
   const lineIds = new Set<string>();

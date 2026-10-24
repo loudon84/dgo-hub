@@ -42,6 +42,32 @@ type IntakeProof = {
 type IntakeResult = { jobId: string; status: string; receivedCount: number; appliedCount: number; replayed: boolean };
 type ManagementActor = { kind: 'source'; principal: SourcePrincipal } | { kind: 'user'; principal: UserPrincipal };
 
+function sourceInstant(value: string): { second: number; fraction: string } {
+  const match = /^(.*T\d{2}:\d{2}:)(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(value)!;
+  const second = Date.parse(`${match[1]}${match[2] === '60' ? '59' : match[2]}${match[4]}`)
+    + (match[2] === '60' ? 1000 : 0);
+  return { second, fraction: (match[3] ?? '').padEnd(20, '0') };
+}
+
+function sourceTimeRange(batch: PublicBatch): { first: string; last: string } {
+  let first = batch.records[0]!.source_updated_at;
+  let last = first;
+  let minimum = sourceInstant(first);
+  let maximum = minimum;
+  for (const record of batch.records.slice(1)) {
+    const instant = sourceInstant(record.source_updated_at);
+    if (instant.second < minimum.second || (instant.second === minimum.second && instant.fraction < minimum.fraction)) {
+      first = record.source_updated_at;
+      minimum = instant;
+    }
+    if (instant.second > maximum.second || (instant.second === maximum.second && instant.fraction > maximum.fraction)) {
+      last = record.source_updated_at;
+      maximum = instant;
+    }
+  }
+  return { first, last };
+}
+
 function success(request: FastifyRequest, data: unknown) { return { request_id: request.id, data }; }
 function statusOf(error: unknown): number {
   if (error instanceof IngestInputError) return 422;
@@ -198,6 +224,7 @@ async function admit(options: StrictIngestionOptions, principal: SourcePrincipal
     [principal.tenantId,proof.approval_security_fence,principal.sourceId,principal.credentialId,entity,proof.channel_id]);
     if (barriers.rowCount) throw new AuthError('SOURCE_CONFLICT');
 
+    const sourceRange = sourceTimeRange(batch);
     const rawBatchId = randomUUID();
     await client.query(`INSERT INTO raw.ingestion_batch(id,tenant_key,source_id,route,body_bytes)
       VALUES($1,$2,$3,$4,$5)`, [rawBatchId,principal.tenantId,principal.sourceId,route,rawBody]);
@@ -213,7 +240,7 @@ async function admit(options: StrictIngestionOptions, principal: SourcePrincipal
         proof.version_domain,proof.owner_approval_id,proof.owner_user_id,proof.owner_revision,proof.approval_security_fence,
         proof.config_revision,proof.config_digest,proof.mapping_revision,proof.mapping_digest,proof.identity_mapping_revision,
         proof.identity_mapping_digest,proof.endpoint_profile_digest,proof.test_report_id,fence.rows[0]!.fence,
-        batch.records[0]!.source_updated_at,batch.records.at(-1)!.source_updated_at]);
+        sourceRange.first,sourceRange.last]);
     const jobId = job.rows[0]!.id;
     for (const [index, record] of batch.records.entries()) {
       await client.query(`INSERT INTO control.ingestion_job_item(job_id,ordinal,event_id,source_pk,source_version,operation,source_updated_at,public_record,status)

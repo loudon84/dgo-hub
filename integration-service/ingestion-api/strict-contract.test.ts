@@ -100,4 +100,35 @@ describe('strict hub.v1 contract', () => {
       phone: '☎'.repeat(2049) } }] };
     expect(() => validateHubBatch(parseStrictJson(json(tooLong)),'customer')).toThrow(IngestInputError);
   });
+
+  it('rejects non-string order enums and enforces nonempty confirmed lines', () => {
+    const order = { ...validCustomer, records: [{ ...validCustomer.records[0]!, data: {
+      customer_ref: { source_id: 'crm-demo', source_pk: 'C1' }, order_no: 'SO-1', status: 'CONFIRMED',
+      order_at: '2026-10-22T09:00:00+08:00', amount: '1.00', currency: 'CNY', lines: [],
+    } }] };
+    for (const [field, value] of [['status', ['CONFIRMED']], ['status', { value: 'CONFIRMED' }], ['currency', ['CNY']], ['currency', { value: 'CNY' }]] as const) {
+      const body = structuredClone(order);
+      if (field === 'currency') body.records[0]!.data.status = 'DRAFT';
+      (body.records[0]!.data as Record<string, unknown>)[field] = value;
+      expect(() => validateHubBatch(parseStrictJson(json(body)), 'order')).toThrow(IngestInputError);
+    }
+  });
+
+  it('bounds customer external identifiers without changing accepted spelling', () => {
+    for (const field of ['owner_external_id', 'department_external_id'] as const) {
+      for (const value of ['x'.repeat(129), ' x', 'x ']) {
+        const body = structuredClone(validCustomer);
+        body.records[0]!.data[field] = value;
+        expect(() => validateHubBatch(parseStrictJson(json(body)), 'customer')).toThrow(IngestInputError);
+      }
+    }
+    const accepted = structuredClone(validCustomer);
+    accepted.records[0]!.data.owner_external_id = 'Sales-MixedCase';
+    expect((validateHubBatch(parseStrictJson(json(accepted)), 'customer').records[0]!.data as { owner_external_id: string }).owner_external_id).toBe('Sales-MixedCase');
+  });
+
+  it('bounds parser nesting before recursive descent', () => {
+    const deep = Buffer.from('['.repeat(5000) + '0' + ']'.repeat(5000));
+    expect(() => parseStrictJson(deep)).toThrow(IngestInputError);
+  });
 });
