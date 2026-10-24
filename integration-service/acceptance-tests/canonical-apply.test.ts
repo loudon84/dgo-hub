@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { runMigrations } from '../migrations/runner.js';
+import { sourceContentDigest } from '../normalization/canonical.js';
 import { applyCustomer, applyOrderAggregate } from '../normalization/store.js';
 import type { ApplyContext, ApplyResult } from '../normalization/apply.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
@@ -383,6 +384,13 @@ describe('canonical migration 006', () => {
       await client.query('BEGIN');
       await client.query('SET LOCAL ROLE hub_worker');
       const second=await applyCustomer(client,frozen,{...firstPayload,owner_external_id:'ext-B',source_version:'2'});
+      const transactionProof=await client.query<{current_xid:string;receipt_xid:string;outbox_xid:string}>(`SELECT pg_current_xact_id()::text AS current_xid,
+        (SELECT apply_xid::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3) AS receipt_xid,
+        (SELECT apply_xid::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2 AND entity='customer'
+          AND canonical_object_id=$4 ORDER BY id DESC LIMIT 1) AS outbox_xid`,
+      [context.tenantId,context.sourceId,firstPayload.source_pk,requireApplied(first).objectId]);
+      expect(transactionProof.rows[0].receipt_xid).toBe(transactionProof.rows[0].current_xid);
+      expect(transactionProof.rows[0].outbox_xid).toBe(transactionProof.rows[0].current_xid);
       await client.query('COMMIT');
       expect(second).toMatchObject({status:'APPLIED',objectId:requireApplied(first).objectId});
       const after=await database.query<{user_id:string;auth_epoch:string;owner_user_id:string;source_version:string;reference_key:string;
@@ -526,6 +534,206 @@ describe('canonical migration 006', () => {
       [context.tenantId,unrelated,context.ownerUserId,context.sourceId]);
       expect(after.rows).toEqual(before.rows);
     } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('rejects stale matching receipt and outbox after a partial direct core owner update', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-stale-artifact-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const customer={source_pk:'stale-owner-artifacts',customer_name:'Stale artifact customer',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const client=await database.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      const first=await applyCustomer(client,frozen,customer);
+      await client.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+      const before=await database.query<{owner:string;hub_revision:string;version:string;projection:string;reference:string;target:string;
+        outbox:string;audit:string;old_epoch:string;new_epoch:string}>(`SELECT
+        (SELECT owner_user_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS owner,
+        (SELECT hub_revision::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS hub_revision,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS version,
+        (SELECT encode(projection_digest,'hex') FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS projection,
+        (SELECT external_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS reference,
+        (SELECT target_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS target,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3 AND canonical_object_id=$2) AS outbox,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS audit,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$5) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$6) AS new_epoch`,
+      [context.tenantId,requireApplied(first).objectId,context.sourceId,customer.source_pk,context.ownerUserId,newOwner]);
+
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      await client.query(`UPDATE hub.canonical_customer SET owner_user_id=$3
+        WHERE tenant_id=$1 AND id=$2`,[context.tenantId,requireApplied(first).objectId,newOwner]);
+      await expect(client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,customer.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,
+        frozen.versionDomain,frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,
+        frozen.identityMappingRevision,JSON.stringify([{kind:'user',external_id:'ext-B'}]),
+      ])).rejects.toMatchObject({code:'42501'});
+      await client.query('ROLLBACK');
+      const after=await database.query(`SELECT
+        (SELECT owner_user_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS owner,
+        (SELECT hub_revision::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS hub_revision,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS version,
+        (SELECT encode(projection_digest,'hex') FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS projection,
+        (SELECT external_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS reference,
+        (SELECT target_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS target,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3 AND canonical_object_id=$2) AS outbox,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS audit,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$5) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$6) AS new_epoch`,
+      [context.tenantId,requireApplied(first).objectId,context.sourceId,customer.source_pk,context.ownerUserId,newOwner]);
+      expect(after.rows).toEqual(before.rows);
+    } finally { await client.query('ROLLBACK').catch(()=>undefined); client.release(); }
+  });
+
+  it('stamps receipt and outbox transaction IDs over worker supplied values', async () => {
+    const context=await seedCustomerApplyProof();
+    const customer={source_pk:'worker-xid-stamp',customer_name:'Worker XID stamp',owner_external_id:'owner-ext',dept_external_id:'dept-ext',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const initial=await database.connect();
+    const client=await database.connect();
+    try {
+      await initial.query('BEGIN');
+      await initial.query('SET LOCAL ROLE hub_worker');
+      const applied=await applyCustomer(initial,context,customer);
+      await initial.query('COMMIT');
+      expect(applied.status).toBe('APPLIED');
+      const old=await database.query<{xid:string;outbox_id:string}>(`SELECT
+        (SELECT apply_xid::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3) AS xid,
+        (SELECT id::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2 AND canonical_object_id=$4 ORDER BY id DESC LIMIT 1) AS outbox_id`,
+      [context.tenantId,context.sourceId,customer.source_pk,requireApplied(applied).objectId]);
+      await client.query('BEGIN');
+      await client.query('SET LOCAL ROLE hub_worker');
+      const current=await client.query<{xid:string}>('SELECT pg_current_xact_id()::text AS xid');
+      await client.query(`UPDATE control.source_version_receipt SET apply_xid=$5::xid8
+        WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3 AND channel_id=$4`,
+      [context.tenantId,context.sourceId,customer.source_pk,context.channelId,old.rows[0].xid]);
+      await client.query(`INSERT INTO control.canonical_apply_outbox(tenant_key,source_id,channel_id,channel_epoch,version_domain,entity,
+        canonical_object_id,hub_revision,operation,projection_digest,source_content_digest,apply_xid)
+        SELECT tenant_key,source_id,channel_id,channel_epoch,version_domain,entity,canonical_object_id,hub_revision,operation,
+          projection_digest,source_content_digest,$2::xid8 FROM control.canonical_apply_outbox WHERE id=$1`,
+      [old.rows[0].outbox_id,old.rows[0].xid]);
+      const stamped=await client.query<{receipt_xid:string;outbox_xid:string}>(`SELECT
+        (SELECT apply_xid::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3) AS receipt_xid,
+        (SELECT apply_xid::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2 AND canonical_object_id=$4
+          ORDER BY id DESC LIMIT 1) AS outbox_xid`,
+      [context.tenantId,context.sourceId,customer.source_pk,requireApplied(applied).objectId]);
+      expect(stamped.rows[0]).toEqual({receipt_xid:current.rows[0].xid,outbox_xid:current.rows[0].xid});
+      await client.query('ROLLBACK');
+    } finally {
+      await client.query('ROLLBACK').catch(()=>undefined);
+      await initial.query('ROLLBACK').catch(()=>undefined);
+      initial.release(); client.release();
+    }
+  });
+
+  it('locks direct-helper owner eligibility before validating it under concurrent disable', async () => {
+    const context=await seedCustomerApplyProof();
+    const newOwner=`owner-direct-disable-${randomBytes(3).toString('hex')}`;
+    await database.query(`INSERT INTO control.auth_subject(tenant_key,user_id,department_id,business_role)
+      VALUES($1,$2,'sales-east','sales')`,[context.tenantId,newOwner]);
+    const customerTarget=(await database.query<{id:string}>(`SELECT id::text AS id FROM hub.canonical_customer
+      WHERE tenant_id=$1 ORDER BY id LIMIT 1`,[context.tenantId])).rows[0].id;
+    const frozen=await approveIdentityMapping(context,[
+      {kind:'user',external_id:'ext-A',target_id:context.ownerUserId},
+      {kind:'user',external_id:'ext-B',target_id:newOwner},
+      {kind:'department',external_id:'dept-D',target_id:'sales-east'},
+      {kind:'customer',external_id:'customer-ext',target_id:customerTarget},
+    ]);
+    const firstPayload={source_pk:'direct-helper-disable-race',customer_name:'Direct helper race',owner_external_id:'ext-A',dept_external_id:'dept-D',
+      status:'ACTIVE' as const,source_updated_at:'2026-01-01T00:00:00Z',source_version:'1'};
+    const initial=await database.connect();
+    const disable=await database.connect();
+    const worker=await database.connect();
+    let helperPromise:Promise<pg.QueryResult>|undefined;
+    try {
+      await initial.query('BEGIN');
+      await initial.query('SET LOCAL ROLE hub_worker');
+      const first=await applyCustomer(initial,frozen,firstPayload);
+      await initial.query('COMMIT');
+      expect(first.status).toBe('APPLIED');
+
+      await disable.query('BEGIN');
+      await disable.query('UPDATE control.auth_subject SET enabled=false WHERE tenant_key=$1 AND user_id=$2',
+        [context.tenantId,newOwner]);
+      const before=await database.query<{owner:string;hub_revision:string;version:string;reference:string;target:string;outbox:string;audit:string;
+        old_epoch:string;new_epoch:string}>(`SELECT
+        (SELECT owner_user_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS owner,
+        (SELECT hub_revision::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS hub_revision,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS version,
+        (SELECT external_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS reference,
+        (SELECT target_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS target,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3 AND canonical_object_id=$2) AS outbox,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS audit,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$5) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$6) AS new_epoch`,
+      [context.tenantId,requireApplied(first).objectId,context.sourceId,firstPayload.source_pk,context.ownerUserId,newOwner]);
+
+      await worker.query("SET application_name='m1_t2_direct_helper_auth_wait'");
+      await worker.query('BEGIN');
+      await worker.query('SET LOCAL ROLE hub_worker');
+      const secondPayload={...firstPayload,owner_external_id:'ext-B',source_version:'2'};
+      const sourceDigest=Buffer.from(sourceContentDigest(secondPayload),'hex');
+      const revision=(await worker.query<{revision:string}>("SELECT nextval('control.canonical_hub_revision_seq')::text AS revision")).rows[0].revision;
+      const projection=(await worker.query<{digest:Buffer}>(`SELECT control.canonical_projection_digest($1,$2::uuid,
+        $3::jsonb) AS digest`,[sourceDigest,requireApplied(first).objectId,
+        JSON.stringify({owner_user_id:newOwner,department_id:'sales-east'})])).rows[0].digest;
+      await worker.query(`UPDATE hub.canonical_customer SET owner_user_id=$3,source_version=2,hub_revision=$4
+        WHERE tenant_id=$1 AND id=$2`,[context.tenantId,requireApplied(first).objectId,newOwner,revision]);
+      await worker.query(`UPDATE control.source_version_receipt SET source_version=2,source_content_digest=$4,projection_digest=$5,deleted=false
+        WHERE tenant_key=$1 AND source_id=$2 AND source_pk=$3`,[context.tenantId,context.sourceId,firstPayload.source_pk,sourceDigest,projection]);
+      await worker.query(`INSERT INTO control.canonical_apply_outbox(tenant_key,source_id,channel_id,channel_epoch,version_domain,entity,
+        canonical_object_id,hub_revision,operation,projection_digest,source_content_digest)
+        VALUES($1,$2,$3,$4,$5,'customer',$6,$7,'UPSERT',$8,$9)`,[context.tenantId,context.sourceId,frozen.channelId,
+        frozen.channelEpoch,frozen.versionDomain,requireApplied(first).objectId,revision,projection,sourceDigest]);
+      helperPromise=worker.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+        context.tenantId,context.sourceId,firstPayload.source_pk,context.credentialId,frozen.channelId,frozen.channelEpoch,
+        frozen.versionDomain,frozen.securityBarrierFenceAtAdmission,frozen.ownerApprovalId,frozen.testReportId,
+        frozen.identityMappingRevision,JSON.stringify([{kind:'user',external_id:'ext-B'}]),
+      ]);
+      const deadline=Date.now()+2000;
+      let lockWaitObserved=false;
+      while(Date.now()<deadline && !lockWaitObserved) {
+        const activity=await database.query<{wait_event_type:string|null}>(`SELECT wait_event_type FROM pg_stat_activity
+          WHERE application_name='m1_t2_direct_helper_auth_wait'`);
+        lockWaitObserved=activity.rows[0]?.wait_event_type==='Lock';
+        if(!lockWaitObserved) await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      expect(lockWaitObserved).toBe(true);
+      await disable.query('COMMIT');
+      await expect(helperPromise).rejects.toMatchObject({code:'42501'});
+      await worker.query('ROLLBACK');
+      const after=await database.query(`SELECT
+        (SELECT owner_user_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS owner,
+        (SELECT hub_revision::text FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2) AS hub_revision,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS version,
+        (SELECT external_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS reference,
+        (SELECT target_id FROM control.canonical_identity_reference WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4 AND kind='user') AS target,
+        (SELECT count(*)::text FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$3 AND canonical_object_id=$2) AS outbox,
+        (SELECT count(*)::text FROM control.canonical_ownership_audit WHERE tenant_key=$1 AND source_id=$3 AND source_pk=$4) AS audit,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$5) AS old_epoch,
+        (SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$6) AS new_epoch`,
+      [context.tenantId,requireApplied(first).objectId,context.sourceId,firstPayload.source_pk,context.ownerUserId,newOwner]);
+      expect(after.rows).toEqual(before.rows);
+    } finally {
+      await disable.query('ROLLBACK').catch(()=>undefined);
+      if(helperPromise) await helperPromise.catch(()=>undefined);
+      await worker.query('ROLLBACK').catch(()=>undefined);
+      await initial.query('ROLLBACK').catch(()=>undefined);
+      initial.release(); disable.release(); worker.release();
+    }
   });
 
   it('enforces typed barriers and newer remap fences through direct worker helper calls', async () => {

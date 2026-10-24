@@ -278,6 +278,7 @@ CREATE TABLE control.source_version_receipt (
   canonical_customer_id uuid GENERATED ALWAYS AS (CASE WHEN entity='customer' THEN canonical_object_id ELSE NULL::uuid END) STORED,
   canonical_order_id uuid GENERATED ALWAYS AS (CASE WHEN entity='order' THEN canonical_object_id ELSE NULL::uuid END) STORED,
   deleted boolean NOT NULL,
+  apply_xid xid8 NOT NULL,
   committed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY (tenant_key,source_id,channel_id,entity,source_pk),
   FOREIGN KEY (channel_id,tenant_key,source_id,entity,channel_epoch,version_domain)
@@ -331,10 +332,24 @@ CREATE TABLE control.canonical_apply_outbox (
   operation text NOT NULL CHECK (operation IN ('UPSERT','DELETE','IDENTITY_REMAP')),
   projection_digest bytea NOT NULL CHECK (octet_length(projection_digest)=32),
   source_content_digest bytea CHECK (source_content_digest IS NULL OR octet_length(source_content_digest)=32),
+  apply_xid xid8 NOT NULL,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   FOREIGN KEY (channel_id,tenant_key,source_id,entity,channel_epoch,version_domain)
     REFERENCES control.source_channel(id,tenant_key,source_id,entity,channel_epoch,version_domain) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
+
+CREATE FUNCTION control.stamp_canonical_apply_xid() RETURNS trigger
+LANGUAGE plpgsql SET search_path = pg_catalog
+AS $body$
+BEGIN
+  NEW.apply_xid:=pg_catalog.pg_current_xact_id();
+  RETURN NEW;
+END;
+$body$;
+CREATE TRIGGER source_version_receipt_apply_xid BEFORE INSERT OR UPDATE ON control.source_version_receipt
+FOR EACH ROW EXECUTE FUNCTION control.stamp_canonical_apply_xid();
+CREATE TRIGGER canonical_apply_outbox_apply_xid BEFORE INSERT ON control.canonical_apply_outbox
+FOR EACH ROW EXECUTE FUNCTION control.stamp_canonical_apply_xid();
 
 CREATE FUNCTION control.lock_canonical_owner(p_tenant text,p_user text)
 RETURNS TABLE(enabled boolean,business_role text,department_id text)
@@ -384,8 +399,14 @@ DECLARE
   v_old_target text;
   v_old_external text;
   v_affected_users text[] := ARRAY[]::text[];
+  v_lock_users text[] := ARRAY[]::text[];
   v_user text;
   v_count integer;
+  v_needs_apply boolean := false;
+  v_apply_xid xid8;
+  v_subject_enabled boolean;
+  v_subject_role text;
+  v_subject_department text;
 BEGIN
   v_fence:=control.acquire_security_barrier_guard_internal();
   IF p_credential_id IS NULL OR p_channel_id IS NULL OR p_channel_epoch IS NULL OR p_admitted_fence IS NULL
@@ -453,18 +474,12 @@ BEGIN
     JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
    WHERE i.tenant_key=p_tenant AND i.source_id=p_source AND i.entity='customer' AND i.source_pk=p_source_pk
    FOR UPDATE OF i,c;
-  IF NOT FOUND OR v_customer_id IS NULL OR NOT EXISTS(
-    SELECT 1 FROM control.source_version_receipt r
-    JOIN control.canonical_apply_outbox o ON (o.tenant_key,o.source_id,o.channel_id,o.entity,o.canonical_object_id,
-      o.hub_revision,o.projection_digest)=(r.tenant_key,r.source_id,r.channel_id,r.entity,r.canonical_object_id,
-      v_hub_revision,r.projection_digest)
-    WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.channel_id=p_channel_id AND r.entity='customer'
-      AND r.source_pk=p_source_pk AND r.canonical_object_id=v_customer_id AND r.source_version=v_source_version
-      AND o.operation='UPSERT'
-  ) THEN
-    RAISE EXCEPTION 'source ownership change has no matching canonical apply' USING ERRCODE='42501';
+  IF NOT FOUND OR v_customer_id IS NULL THEN
+    RAISE EXCEPTION 'source ownership change has no canonical customer' USING ERRCODE='42501';
   END IF;
 
+  -- Resolve and lock every affected identity reference before deciding whether
+  -- this is an already-consumed replay or a new apply effect.
   FOR v_change IN SELECT e->>'kind' AS kind,e->>'external_id' AS external_id FROM jsonb_array_elements(p_changes) e
   LOOP
     IF EXISTS(SELECT 1 FROM control.source_identity_remap_fence f
@@ -491,24 +506,74 @@ BEGIN
     END IF;
 
     IF v_change.kind='user' THEN
-      IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_new_target
-          AND s.enabled AND s.business_role='sales' AND s.department_id=v_department) THEN
+      v_lock_users:=array_append(v_lock_users,v_new_target);
+      IF v_old_target IS DISTINCT FROM v_new_target THEN
+        v_lock_users:=array_append(v_lock_users,v_old_target);
+        v_affected_users:=array_append(v_affected_users,v_old_target);
+        v_affected_users:=array_append(v_affected_users,v_new_target);
+      END IF;
+    ELSE
+      v_lock_users:=array_append(v_lock_users,v_owner);
+      IF v_old_target IS DISTINCT FROM v_new_target THEN
+        v_affected_users:=array_append(v_affected_users,v_owner);
+      END IF;
+    END IF;
+    IF v_old_external IS DISTINCT FROM v_change.external_id OR v_old_target IS DISTINCT FROM v_new_target THEN
+      v_needs_apply:=true;
+    END IF;
+  END LOOP;
+
+  -- An exact replay after the reference was already consumed has no permission
+  -- effects and remains safe without asking for a fresh apply artifact.
+  IF NOT v_needs_apply THEN RETURN; END IF;
+
+  v_apply_xid:=pg_catalog.pg_current_xact_id();
+  IF NOT EXISTS(
+    SELECT 1 FROM control.source_version_receipt r
+    JOIN control.canonical_apply_outbox o ON (o.tenant_key,o.source_id,o.channel_id,o.entity,o.canonical_object_id,
+      o.hub_revision,o.projection_digest,o.source_content_digest)=(r.tenant_key,r.source_id,r.channel_id,r.entity,
+      r.canonical_object_id,v_hub_revision,r.projection_digest,r.source_content_digest)
+    WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.channel_id=p_channel_id AND r.entity='customer'
+      AND r.source_pk=p_source_pk AND r.canonical_object_id=v_customer_id AND r.source_version=v_source_version
+      AND NOT r.deleted AND r.apply_xid=v_apply_xid AND o.apply_xid=v_apply_xid AND o.operation='UPSERT'
+      AND r.projection_digest=control.canonical_projection_digest(r.source_content_digest,v_customer_id,
+        jsonb_build_object('owner_user_id',v_owner,'department_id',v_department))
+  ) THEN
+    RAISE EXCEPTION 'source ownership change has no current canonical apply' USING ERRCODE='42501';
+  END IF;
+
+  -- Lock all affected authorization subjects in one stable order before
+  -- relying on their eligibility. M0 changes serialize on these same rows.
+  FOR v_user IN SELECT DISTINCT u COLLATE "C" AS u FROM unnest(v_lock_users) AS affected(u) ORDER BY u
+  LOOP
+    PERFORM 1 FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_user FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'affected owner subject missing' USING ERRCODE='42501'; END IF;
+  END LOOP;
+
+  FOR v_change IN SELECT e->>'kind' AS kind,e->>'external_id' AS external_id FROM jsonb_array_elements(p_changes) e
+  LOOP
+    SELECT min(e->>'target_id') INTO v_new_target FROM jsonb_array_elements(v_mappings) e
+     WHERE e->>'kind'=v_change.kind AND e->>'external_id'=v_change.external_id;
+    IF v_change.kind='user' THEN
+      SELECT enabled,business_role,department_id INTO v_subject_enabled,v_subject_role,v_subject_department
+        FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_new_target;
+      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role<>'sales' OR v_subject_department IS DISTINCT FROM v_department THEN
         RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
       END IF;
     ELSE
-      IF NOT EXISTS(SELECT 1 FROM control.auth_subject s WHERE s.tenant_key=p_tenant AND s.user_id=v_owner
-          AND s.enabled AND s.business_role='sales' AND s.department_id=v_new_target) THEN
+      SELECT enabled,business_role,department_id INTO v_subject_enabled,v_subject_role,v_subject_department
+        FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_owner;
+      IF NOT FOUND OR NOT v_subject_enabled OR v_subject_role<>'sales' OR v_subject_department IS DISTINCT FROM v_new_target THEN
         RAISE EXCEPTION 'eligible owner not found' USING ERRCODE='42501';
       END IF;
     END IF;
+    SELECT r.external_id,r.target_id INTO v_old_external,v_old_target
+      FROM control.canonical_identity_reference r
+     WHERE r.tenant_key=p_tenant AND r.source_id=p_source AND r.entity='customer' AND r.source_pk=p_source_pk
+       AND r.kind=v_change.kind;
+    IF NOT FOUND THEN RAISE EXCEPTION 'source ownership reference missing' USING ERRCODE='42501'; END IF;
 
     IF v_old_target<>v_new_target THEN
-      IF v_change.kind='user' THEN
-        v_affected_users:=array_append(v_affected_users,v_old_target);
-        v_affected_users:=array_append(v_affected_users,v_new_target);
-      ELSE
-        v_affected_users:=array_append(v_affected_users,v_owner);
-      END IF;
       INSERT INTO control.canonical_ownership_audit(tenant_key,source_id,entity,source_pk,kind,external_id,old_target_id,new_target_id,
         identity_mapping_revision,actor_user_id,reason)
         VALUES(p_tenant,p_source,'customer',p_source_pk,v_change.kind,v_change.external_id,v_old_target,v_new_target,
@@ -518,11 +583,6 @@ BEGIN
      WHERE tenant_key=p_tenant AND source_id=p_source AND entity='customer' AND source_pk=p_source_pk AND kind=v_change.kind;
   END LOOP;
 
-  FOR v_user IN SELECT DISTINCT u FROM unnest(v_affected_users) AS affected(u) ORDER BY u
-  LOOP
-    PERFORM 1 FROM control.auth_subject WHERE tenant_key=p_tenant AND user_id=v_user FOR UPDATE;
-    IF NOT FOUND THEN RAISE EXCEPTION 'affected owner subject missing' USING ERRCODE='42501'; END IF;
-  END LOOP;
   FOR v_user IN SELECT DISTINCT u FROM unnest(v_affected_users) AS affected(u) ORDER BY u
   LOOP
     UPDATE control.auth_subject SET auth_epoch=auth_epoch+1 WHERE tenant_key=p_tenant AND user_id=v_user;
@@ -710,6 +770,7 @@ REVOKE ALL ON hub.canonical_customer,hub.canonical_order,hub.canonical_order_lin
   control.source_identity_remap_fence,control.canonical_ownership_audit,control.canonical_apply_outbox FROM PUBLIC;
 REVOKE ALL ON SEQUENCE control.canonical_hub_revision_seq,control.canonical_ownership_audit_id_seq,control.canonical_apply_outbox_id_seq FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.reject_canonical_outbox_mutation() FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.stamp_canonical_apply_xid() FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_worker,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.canonical_projection_digest(bytea,uuid,jsonb) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.lock_canonical_owner(text,text) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.record_canonical_customer_owner_change(text,text,text,uuid,uuid,bigint,text,bigint,uuid,uuid,bigint,jsonb)
