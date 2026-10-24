@@ -53,7 +53,7 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 | M1-1 Source Registry / mappings / admission authority | Independent Spec/Quality PASS |
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
 | M1-3 strict REST / durable intake jobs | R1–R5 repaired; scoped Sol re-review PASS/Approved; post-fix focused 33/33 and typecheck/build exit 0; earlier assurance gaps retained |
-| M1-4 reliable worker / retry | Implemented at 2189ad7; final 19 files / 312 tests, typecheck/build exit 0; independent Sol review in progress |
+| M1-4 reliable worker / retry | Implemented; R1–R3 closed by scoped Sol PASS/Approved at 7ea2e94; post-fix focused 5 tests + typecheck/build passed; assurance limits retained |
 | M1-5 PostgreSQL snapshot / recovery | Not started |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
 | M1-7 OpenMetadata UI / FI / Oracle | Not started |
@@ -76,3 +76,9 @@ API-015–018 and migration 007 are implemented. Source/test changes end at ab7c
 ## M1-3 repair review closed — 2026-10-24
 
 User-selected GPT-6 Sol repaired R1–R5 in ccab1a0; GPT-6.1 Sol [scoped re-review](reviews/m1-task-3-rereview-1.md) confirms all five ADDRESSED, Spec PASS / Quality Approved, without new material defects in the repair diff. Post-fix focused verification is 3 files / 33 tests plus typecheck/build exit 0. The pre-fix 288-test result is retained separately. Original distinct assurance gaps remain for M1 integration/final review. M1-4 has not started coding; formal site acceptance remains NOT_RUN.
+
+## M1-4 local implementation and source-finding review closed — 2026-10-24
+
+Durable Worker source 2189ad7 implemented job leases, fenced processing/ACK, atomic canonical and item outcomes, bounded retries and crash recovery. The initial full-suite gate passed 19 files / 312 tests. Independent review found three defects; source 7ea2e94 repairs populated 007-to-008 upgrade, failure-relative retry delay, and 1–256 source-ID integration. [Scoped re-review](reviews/m1-task-4-rereview-1.md) confirms all three ADDRESSED, Spec PASS / Quality Approved. Post-fix evidence is 5 focused tests plus typecheck/build exit 0; no post-fix full-suite execution is claimed. [Implementation report](m1-task-4-report.md).
+
+Migration 008 is frozen at SHA-256 4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a; migrations 001–007 remain unchanged. Snapshot/recovery work is M1-5 migration 009 and has not started. The original five worker assurance gaps and earlier Task3 limits remain for M1 integration/final review. Fix1 source binding uses a post-gate/pre-commit snapshot matched to the commit, with no independent pre-gate snapshot. Formal 48-row site acceptance remains NOT_RUN; M1 overall remains incomplete.
