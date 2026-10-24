@@ -1,0 +1,33 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts -t real hub_api role|default 443|column-level UPDATE
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (22 tests | 1 failed | 19 skipped) 2271ms
+     × completes the source manager workflow through the real hub_api role 65ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > completes the source manager workflow through the real hub_api role
+AuthError: SOURCE_NOT_FOUND
+ ❯ fail source-registry/service.ts:60:80
+     58| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     59|
+     60| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     61| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     62|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ source-registry/service.ts:225:33
+ ❯ transaction source-registry/service.ts:142:19
+ ❯ acceptance-tests/source-registry.test.ts:118:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 19 skipped (22)
+   Start at  14:12:41
+   Duration  2.74s (transform 117ms, setup 0ms, import 291ms, tests 2.27s, environment 0ms)
+

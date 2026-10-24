@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts -t exposes the source registry through|unknown standard targets|first activation|real hub_api role|credential material rotates|default 443|column-level UPDATE
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed | 17 skipped (24)
+   Start at  14:21:17
+   Duration  3.46s (transform 163ms, setup 0ms, import 307ms, tests 2.98s, environment 0ms)
+

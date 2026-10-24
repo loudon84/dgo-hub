@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 build
+> tsc -p tsconfig.json
+
+acceptance-tests/source-registry.test.ts(503,45): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+acceptance-tests/source-registry.test.ts(728,3): error TS2322: Type '(callback: (err: Error | undefined, client: PoolClient | undefined, done: (release?: any) => void) => void) => Promise<void>' is not assignable to type '{ (): Promise<PoolClient>; (callback: (err: Error | undefined, client: PoolClient | undefined, done: (release?: any) => void) => void): void; }'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+acceptance-tests/source-registry.test.ts(730,18): error TS2339: Property 'query' does not exist on type 'void'.
+acceptance-tests/source-registry.test.ts(731,26): error TS2339: Property 'release' does not exist on type 'void'.
+acceptance-tests/source-registry.test.ts(732,12): error TS2339: Property 'release' does not exist on type 'void'.
+acceptance-tests/source-registry.test.ts(733,19): error TS2339: Property 'query' does not exist on type 'void'.
+acceptance-tests/source-registry.test.ts(734,25): error TS2339: Property 'release' does not exist on type 'void'.
+source-registry/service.ts(152,45): error TS2339: Property 'entity' does not exist on type 'Readonly<Readonly<{ kind: "customer" | "user" | "department"; external_id: string; target_id: string | null; }>>'.

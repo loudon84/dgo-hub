@@ -1,0 +1,372 @@
+{
+  "evidenceRoot": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-1-fix1-evidence-20261024-b2494338b61240be98a1e3add01f84fc",
+  "postgresLifecycleCount": 19,
+  "postgresAllAbsent": true,
+  "postgres": [
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "18b4f486-eb76-4645-904f-7802b7608dfa",
+      "containerId": "0049320d9b5748b264ba87f7d60070c30be5032e075e780e887973fa9b7c3441",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58722,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\18b4f486-eb76-4645-904f-7802b7608dfa\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "20fb2668-883b-41f9-ba96-c8f0f40821ef",
+      "containerId": "2fc8bbe3aa9ff273719a2e365f9f5a8fe5e1c41cff3ff70c01b87d566baa52b4",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59326,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\20fb2668-883b-41f9-ba96-c8f0f40821ef\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "5b20cd29-4ad7-45d6-92a0-799561ef39d9",
+      "containerId": "3856a7ded90a4412f1a37415f6f563bfdeeacd6d8be1e259b6c5e4a85b58f657",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 60844,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\5b20cd29-4ad7-45d6-92a0-799561ef39d9\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "5d9968aa-ed5b-454d-989b-32aa54e18abb",
+      "containerId": "a2a8b366dc44a7f972b5a9e9093c7fcfbab8f67c13276eb49a556889c6e4375e",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 60670,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\5d9968aa-ed5b-454d-989b-32aa54e18abb\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "7e5f8451-34cd-411c-b944-b2f8e438182f",
+      "containerId": "5e8a6959ea5da47e5f3edfe6a3fb8ac74619f16dea0e062f5c2c3ce0c7b96153",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59165,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\7e5f8451-34cd-411c-b944-b2f8e438182f\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "7e9f889e-1183-419d-b5d6-4d496b6bde13",
+      "containerId": "6b1efa188188139c260e78e7f4f35995261903fd69647f9158cd23287dc8d23f",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58865,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\7e9f889e-1183-419d-b5d6-4d496b6bde13\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "7f58c937-966f-469d-85cd-0ec1b915993b",
+      "containerId": "ffff2594e04aee5db673b3133d391f0d32de0e40aa1c393c8b429886aacd69bf",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 60760,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\7f58c937-966f-469d-85cd-0ec1b915993b\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "86954e5d-8989-45c2-a083-00a55997930a",
+      "containerId": "bd901d6f15c3b48c7641931a26d38b01a7da011477e43d428d3412402741dd00",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59239,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\86954e5d-8989-45c2-a083-00a55997930a\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "96ecc85a-714b-490b-8620-0c92453ab172",
+      "containerId": "c47e971eb861546b6a75cc6c4c302602481c6944849394b1101c48db245ba46d",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58956,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\96ecc85a-714b-490b-8620-0c92453ab172\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "9ba30296-4fb0-45cc-9f35-58bc73ed296d",
+      "containerId": "f0bf5e3c3e0a9aa3aff0fa8e33ab95576b8ce9c7a9326505dadc4f589066d952",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58682,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\9ba30296-4fb0-45cc-9f35-58bc73ed296d\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "9e7aa134-c344-4117-93b6-69d48ba44f91",
+      "containerId": "d7ddec53c37a53983455e537609e58a379baa7e357e907657c271228fe4e1484",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58664,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\9e7aa134-c344-4117-93b6-69d48ba44f91\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "bc65554c-337c-4f83-9354-b64b3370dab9",
+      "containerId": "df1b1dbb0dedb84527cfad6ca688d4c60efe05f54b45aad60f9a5af509d16595",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 60106,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\bc65554c-337c-4f83-9354-b64b3370dab9\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "be94de59-8084-4473-9a3f-71e3d6cbef78",
+      "containerId": "da1b6164d345ec2ae81ad2040b187f9e47d69e4a5e6bb4a7f94d2561d4a21239",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59354,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\be94de59-8084-4473-9a3f-71e3d6cbef78\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "d030a722-1e29-4b5d-b467-90a5a1b514cd",
+      "containerId": "5f47ab8ab26772ee89a23284e4c4d6b8e3628f67aa30a83600224d2138693ac8",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": null,
+      "cleanupEvent": "removed_after_test_harness_deadlock",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\d030a722-1e29-4b5d-b467-90a5a1b514cd\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "e77fbd31-6548-49f9-87af-aee1a36fe3fd",
+      "containerId": "76270fc7118d9990b24bac5cb30e6da0d66c2bd32429d3ec35dd5451bb1ac420",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59133,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\e77fbd31-6548-49f9-87af-aee1a36fe3fd\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "edab114b-0112-4dcc-a504-bedf2df46c06",
+      "containerId": "2888b32e2cda720872ce6dc8bdc64cc53630d8f4f1c60038d4e32340fbe1ce90",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 59289,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\edab114b-0112-4dcc-a504-bedf2df46c06\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "f372686b-1585-4900-b6d5-1f8eef51ebfe",
+      "containerId": "cb3fa57d469b9276e56c9370bb8136ed2885e14c170e6b0f56b12f422d6f6ec3",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 60595,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\f372686b-1585-4900-b6d5-1f8eef51ebfe\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "fa1dda79-6aec-474e-9424-be58d7c7eb1f",
+      "containerId": "b633679772c96b09066c75e341ff5f370b44e511f2411d6b6f0e4ecb2c427d29",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58814,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\fa1dda79-6aec-474e-9424-be58d7c7eb1f\\postgres-lifecycle.jsonl"
+    },
+    {
+      "taskLabel": "m1task1",
+      "runLabel": "ffb31791-5e55-4105-8dcd-4d895c4408a8",
+      "containerId": "643312a5c742039c1224b37d29c988c6b0fe2b06fab5653d18e41c564cf356a3",
+      "imageReference": "postgres:16.10-alpine",
+      "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "hostPort": 58765,
+      "cleanupEvent": "removed",
+      "cleanupVerified": true,
+      "lifecycleFile": "m1task1\\ffb31791-5e55-4105-8dcd-4d895c4408a8\\postgres-lifecycle.jsonl"
+    }
+  ],
+  "httpFixtureCount": 19,
+  "httpCleanupVerified": true,
+  "httpFixtures": [
+    {
+      "fixtureId": "afc4c67c-9c2e-42ff-a5ee-ced8de156c8c",
+      "host": "127.0.0.1",
+      "port": 58726,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "8fdf2bd9-1c85-40f4-9eec-d7b0f4bad9d3",
+      "host": "127.0.0.1",
+      "port": 59329,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "50752274-7717-484f-ad70-5456343c69c2",
+      "host": "127.0.0.1",
+      "port": 60847,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "7a75b118-133a-45ff-b8f6-442fac577557",
+      "host": "127.0.0.1",
+      "port": 60676,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "a8ce246b-24fb-407c-a031-ddc7017243cf",
+      "host": "127.0.0.1",
+      "port": 59168,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "8f48e952-8757-497b-b7af-a14299301de7",
+      "host": "127.0.0.1",
+      "port": 58867,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "c53e4694-7914-49ff-9c87-e3661ec23bc0",
+      "host": "127.0.0.1",
+      "port": 60764,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "e1348728-9b39-4675-a8c1-97a3e76abf6e",
+      "host": "127.0.0.1",
+      "port": 59245,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "912c4489-49c2-475c-afe0-b61b5a60bc27",
+      "host": "127.0.0.1",
+      "port": 58958,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "1aef3f73-cfde-4c95-b34e-b2ed712de56a",
+      "host": "127.0.0.1",
+      "port": 58685,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "923bf26e-5c8a-4128-a3f8-eef0ae0a9391",
+      "host": "127.0.0.1",
+      "port": 58673,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "da80c04c-320a-461f-afc2-758d3b6c4aee",
+      "host": "127.0.0.1",
+      "port": 60417,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "76239ee4-fba9-4f0e-9531-1b44033adbde",
+      "host": "127.0.0.1",
+      "port": 59360,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "8726e2e9-83af-4364-8d28-500daa6eeafe",
+      "host": "127.0.0.1",
+      "port": 59552,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "82f74624-c2b6-46e5-bd12-e8123a8c12bf",
+      "host": "127.0.0.1",
+      "port": 59136,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "35828862-258a-41f1-8918-889ba93abee6",
+      "host": "127.0.0.1",
+      "port": 59300,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "e1e3f5ae-222d-4a43-a527-aa8fb9f5a015",
+      "host": "127.0.0.1",
+      "port": 60603,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "19176f99-bb60-431c-b6c1-9d57955f0182",
+      "host": "127.0.0.1",
+      "port": 58817,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    },
+    {
+      "fixtureId": "b4f58be0-46e3-4282-8881-77efbb6a994a",
+      "host": "127.0.0.1",
+      "port": 58774,
+      "protocol": "http",
+      "cleanup": "server closed and port released"
+    }
+  ]
+}

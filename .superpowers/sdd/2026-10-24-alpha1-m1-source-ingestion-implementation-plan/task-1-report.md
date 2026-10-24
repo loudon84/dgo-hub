@@ -63,3 +63,51 @@ Migration 001–004 Git blobs at base and working tree match exactly: `001_init`
 - The profile is a minimal deployment-controlled allowlist shape, not a general connector language. The current PostgreSQL probe checks declared objects, required columns, identity, read-only access, and queryability; it does not prove full snapshot completeness or implement snapshot ingestion/apply.
 - `startApp` has no default production secret/endpoint provider and therefore fails closed until deployment injects one. No new KMS or platform service was introduced.
 - M1-2 canonical apply, batch worker, durable snapshot engine, and UI remain out of scope.
+
+## Independent review fix round 1
+
+The fix round started from source base `7866b99fa2c098877b91c84f0b728f14ab4fe18f`; the repository also contained the root's docs-only status commits. The source changes are commit `6cf6f8ee5442f6fad04d9ccf3e185b08a7ca0715`.
+
+### Review findings addressed
+
+- **I1:** `hub_api` now exercises the manager's actual create, map, test, approve, activate, and pause workflow. The migration grants only execution on fixed-search-path lock functions needed by that role, revokes PUBLIC access, and keeps credential digest and `secret_ref` unreadable.
+- **I2:** Credential generation is tracked separately from the admission epoch. Effective credential changes atomically invalidate approvals/test applicability and pause an active source; unchanged credential updates preserve an approved pause. Approval and activation require the current generation, deployment profile digest, current PASS report, legal lifecycle state, exact Owner, and expected revision.
+- **I3–I4:** HTTPS origin matching normalizes explicit port 443; PostgreSQL capability checks reject table and column INSERT/UPDATE privileges while probing read-only.
+- **I5:** API012 and API006 use the same bounded mapping validator, with the PRD's allowed/required standard fields, transform compatibility, version/delete contract checks. `sample_ref` is explicitly rejected as unsupported. The PostgreSQL probe does not imply snapshot completeness.
+- **I6–I7:** Existing API013 typed candidate preview and API014 expected-revision confirmation are used. The candidate identifier is opaque and binds source, kind, and external ID; tenant comes from the authenticated principal. User and department targets must be enabled records in that same tenant. Exact Owner, `source:approve`, reason, and initial `expected_revision: 0` are required. Customer targets remain unresolved because no canonical customer target exists in the current M0 schema; preview reports unresolved and confirmation fails closed. M1-2 must supply the canonical same-tenant target lookup before customer mappings can be confirmed. The confirmation action checks expected revision under the locked transaction and uses no extra `source:read` scope.
+- **I8:** Parser, media type, and body-size errors use the Hub request ID/error envelope and the expected 400/413/415 statuses.
+- **I9:** The earlier report's source-test hash `8167f5fd1df939edc3843bae7e3cc469e943d8660bb44b11e9d52ae69cd9d01` was stale. The reviewed pre-fix test bytes were raw SHA-256 `7d1abf6a29c43ebc306bebd27fec70b278786b4e64b78b9f158a8cd6ec5bc88d` and committed LF-normalized SHA-256 `18562dc49f98dbb7ae668f4b21da70883dd3a6bbbaca8ae7a83d86d3ab735838`. The earlier 210-test run remains historical evidence for its then-current bytes only; it is not evidence for this fix-round source.
+
+### Fix-round verification
+
+In `E:\git\dgo-hub\integration-service`:
+
+| Command | Evidence | Exit | Result |
+|---|---|---:|---|
+| `npm test -- --run acceptance-tests/source-registry.test.ts` | `final-focused-test.log` | 0 | 27/27 focused tests passed; includes PostgreSQL migration/role/immutability/column privilege and owned HTTP probe/workflow coverage |
+| `npm run typecheck` | `final-typecheck-rerun.log` | 0 | TypeScript passed |
+| `npm run build` | `final-build-rerun.log` | 0 | Build passed |
+
+The retained evidence root is `docs/execution/alpha1/m1-task-1-fix1-evidence-20261024-b2494338b61240be98a1e3add01f84fc/`. It includes raw outputs from passing and failing attempts. Early failures include the expected RED cases for HTTPS:443/column UPDATE, credential rotation, hub_api workflow, and mapping validation. `focused-source-registry-first.log` is a partial run that hung when its race observer watched the old direct SQL lock query after the lock changed to a definer function; it has no claimed exit or test count. An initial full focused run also had a fixture setup mismatch; later scoped runs corrected it. These outputs are retained rather than replaced or represented as passing runs. The accepted final gate is the three commands in the table above.
+
+The M1 migration sequence is 001–005; 001–004 remain unchanged. Migration 005 was written before the first observable RED capture in the original implementation turn; this chronology is preserved and no strict schema-first TDD claim is made. Review fix regressions were captured RED before their relevant implementation changes. Migration 005 normalized SQL SHA-256 is `23b9311c6e6d1d8c67214f061eb37a55493e7356cfbcab032eef8019b05edcef`; committed Git blob is `2bfc243e61a55be73458587a674027b5202feb49`.
+
+The local fixture inventory records 19 PostgreSQL lifecycles and 19 HTTP fixtures for this fix round. Exact owned PostgreSQL container IDs were checked absent after cleanup; HTTP fixtures were closed. The partial interrupted fixture and its cleanup are recorded in the inventory and per-run lifecycle outputs. No external source, remote Hermes, site runtime, or SQL Server was available or tested.
+
+### Tested source identity
+
+These hashes describe the source bytes used by the final focused test/typecheck/build and the source commit. The test file contains one CRLF and 741 LF line endings; its raw and LF-normalized hashes are therefore both included. Git blob IDs identify the committed bytes.
+
+| File | Raw SHA-256 | LF-normalized SHA-256 | Bytes | Git blob |
+|---|---|---|---:|---|
+| `integration-service/migrations/005_source_registry.sql` | `23b9311c6e6d1d8c67214f061eb37a55493e7356cfbcab032eef8019b05edcef` | same | 20547 | `2bfc243e61a55be73458587a674027b5202feb49` |
+| `integration-service/source-registry/capability-probe.ts` | `7780d9e0f59b5cc2339bbd9aae072250e706d2b88ba186519906f390f854b1ea` | same | 13385 | `792187e039db0c2ac3a43193152589def6a3a260` |
+| `integration-service/source-registry/routes.ts` | `3e9394da2fcb621f0b204f296cafb4ece424b716b47721c2dfbab7a969b89007` | same | 10068 | `5c3bec03c2eff39903b2ac10df51e041e320d82a` |
+| `integration-service/source-registry/service.ts` | `5c6f3a24172bc52abcb78f9c1223115625ddbaaeea15da1e69e524670246b638` | same | 50085 | `dc1121a53287371b4ff391632a658ad7f2c8794a` |
+| `integration-service/acceptance-tests/source-registry.test.ts` | `ec3a589ca981f6403f7fc0e91ab4cc501c675cb08b78f4cbf05b2299901d48ee` | `a7d3becdab741e6e002b731dba6c46502c6a45181f643fbf10db209abd6526d1` | 54989 | `000165dc79aacdb292a3d577a9263810c066573d` |
+
+Commit `6cf6f8ee5442f6fad04d9ccf3e185b08a7ca0715` changes only the five files in this manifest. Root-owned `progress.md` remains unstaged. Evidence is committed separately from source.
+
+### Limits
+
+The PostgreSQL and REST probes were exercised against explicitly owned local fixtures. Production credentials, external egress, a configured source or IdP, SQL Server, remote Hermes, and the site runtime remain unverified. No full snapshot completeness or ingestion/apply behavior is claimed. M1-2 canonical apply, batch worker, durable snapshot engine, and UI remain outside this task.

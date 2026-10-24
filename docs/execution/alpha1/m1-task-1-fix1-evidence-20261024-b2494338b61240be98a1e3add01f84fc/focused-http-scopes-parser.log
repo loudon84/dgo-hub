@@ -1,0 +1,37 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/source-registry.test.ts -t exposes the source registry through
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (23 tests | 1 failed | 22 skipped) 2572ms
+     × exposes the source registry through the OIDC principal tenant and redacts internal references 387ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > exposes the source registry through the OIDC principal tenant and redacts internal references
+AssertionError: expected 400 to be 415 // Object.is equality
+
+- Expected
++ Received
+
+- 415
++ 400
+
+ ❯ acceptance-tests/source-registry.test.ts:394:38
+    392|       expect(malformed.json()).toMatchObject({request_id:expect.any(St…
+    393|       const unsupported=await app.inject({method:'POST',url:'/hub/v1/a…
+    394|       expect(unsupported.statusCode).toBe(415);
+       |                                      ^
+    395|       expect(unsupported.json()).toMatchObject({request_id:expect.any(…
+    396|       const fetched=await app.inject({method:'GET',url:'/hub/v1/admin/…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 22 skipped (23)
+   Start at  14:16:00
+   Duration  3.04s (transform 151ms, setup 0ms, import 292ms, tests 2.57s, environment 0ms)
+
