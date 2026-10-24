@@ -579,6 +579,13 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
         await client.query(`INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
           VALUES($1,$2,$3,$4,$5,$6,1,'active')`,[principal.tenantId,sourceId,entity,config.connector,config.mode,config.version_domain]);
       }
+      if (config.connector === 'postgresql' && config.mode === 'FULL_SNAPSHOT') {
+        await client.query(`INSERT INTO control.etl_snapshot_schedule(tenant_key,source_id,enabled,interval_seconds,next_due_at,schedule_revision)
+          VALUES($1,$2,true,300,clock_timestamp(),1)
+          ON CONFLICT(tenant_key,source_id) DO UPDATE SET enabled=true,interval_seconds=300,next_due_at=clock_timestamp(),
+            schedule_revision=control.etl_snapshot_schedule.schedule_revision+1,updated_at=clock_timestamp()`,
+          [principal.tenantId,sourceId]);
+      }
       await client.query(`UPDATE control.source_registry SET lifecycle='ACTIVE',updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,sourceId]);
       await auth.repository.advanceSourceEpoch(sourceId,principal.tenantId,client);
       await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,owner_revision)
@@ -595,6 +602,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       if (decimal(row.current_config_revision) !== expectedRevision) fail('SOURCE_CONFLICT');
       if (row.lifecycle !== 'PAUSED') {
         await client.query(`UPDATE control.source_registry SET lifecycle='PAUSED',updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,sourceId]);
+        await client.query(`UPDATE control.etl_snapshot_schedule SET enabled=false,schedule_revision=schedule_revision+1,updated_at=clock_timestamp()
+          WHERE tenant_key=$1 AND source_id=$2 AND enabled`,[principal.tenantId,sourceId]);
         await auth.repository.advanceSourceEpoch(sourceId,principal.tenantId,client);
         await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,details)
           VALUES($1,$2,$3,'PAUSED',$4,'PAUSED',jsonb_build_object('reason',$5::text))`,[principal.tenantId,sourceId,principal.userId,row.lifecycle,reason.trim()]);

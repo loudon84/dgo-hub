@@ -56,7 +56,7 @@ async function migrationRunner() {
 
 beforeAll(async () => {
   if (!controlledEvidenceRoot) await mkdir(evidenceDirectory, { recursive: true });
-  postgres = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'task0' });
+  postgres = await startOwnedPostgres({ evidenceFile, evidenceRoot: controlledEvidenceRoot, taskLabel: 'm1task5' });
 }, 90_000);
 
 afterAll(async () => {
@@ -75,7 +75,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await postgres.pool.query('DROP SCHEMA IF EXISTS api, hub, control CASCADE');
+  await postgres.pool.query('DROP SCHEMA IF EXISTS api, hub, control, raw CASCADE');
 });
 
 afterEach(async () => {
@@ -192,8 +192,8 @@ describe('versioned migration runner', () => {
       windowsHide: true,
       encoding: 'utf8',
     });
-    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries'], skipped: [] });
-    expect(await ledgerState()).toEqual({ exists: true, count: 8 });
+    expect(JSON.parse(output)).toEqual({ status: 'PASS', applied: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries', '009_snapshot_runs_and_recovery'], skipped: [] });
+    expect(await ledgerState()).toEqual({ exists: true, count: 9 });
     const grants = await postgres.pool.query<{ api_registry_digest_select: boolean; api_registry_kind_select: boolean; api_subject_business_role_update: boolean; api_business_read: boolean; mcp_source_read: boolean; publisher_gate_update: boolean; publisher_close_execute: boolean; no_public_default_acl: boolean }>(`SELECT
       has_column_privilege('hub_api','control.credential_digest_registry','digest','SELECT') AS api_registry_digest_select,
       has_column_privilege('hub_api','control.credential_digest_registry','kind','SELECT') AS api_registry_kind_select,

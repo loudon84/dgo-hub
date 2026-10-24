@@ -10,7 +10,7 @@ const execFile = promisify(execFileCallback);
 const IMAGE_REFERENCE = 'postgres:16.10-alpine';
 const START_TIMEOUT_MS = 75_000;
 type DockerCommand = (args: string[], stage: string, timeout?: number) => Promise<string>;
-export type OwnedTaskLabel = 'task0' | 'task1' | 'task2' | 'task3' | 'task4' | 'm1task1';
+export type OwnedTaskLabel = 'task0' | 'task1' | 'task2' | 'task3' | 'task4' | 'm1task1' | 'm1task5';
 
 type SafeFailure = 'docker_unavailable' | 'image_unavailable' | 'startup_failed' | 'readiness_timeout' | 'pool_unavailable';
 
@@ -80,9 +80,13 @@ export function fixtureEvidenceRootFromEnvironment(environment: NodeJS.ProcessEn
   return resolve(root);
 }
 
-export async function startOwnedPostgres(options: { evidenceFile: string; evidenceRoot?: string; taskLabel?: OwnedTaskLabel }, command: DockerCommand = docker): Promise<OwnedPostgres> {
+export async function startOwnedPostgres(options: { evidenceFile: string; evidenceRoot?: string; taskLabel?: OwnedTaskLabel; imageReference?: string }, command: DockerCommand = docker): Promise<OwnedPostgres> {
   const runLabel = randomUUID();
   const taskLabel = options.taskLabel ?? 'task0';
+  const imageReference = options.imageReference ?? IMAGE_REFERENCE;
+  if (imageReference.includes('@sha256:') && !/^postgres@sha256:[a-f0-9]{64}$/i.test(imageReference)) {
+    throw new OwnedPostgresError('OWNED_POSTGRES_IMAGE_REFERENCE_INVALID', 'image_reference', 'image_unavailable');
+  }
   if (options.evidenceRoot !== undefined && !isAbsolute(options.evidenceRoot)) throw new Error('OWNED_POSTGRES_EVIDENCE_ROOT_INVALID');
   const evidenceFile = options.evidenceRoot === undefined
     ? options.evidenceFile
@@ -100,17 +104,17 @@ export async function startOwnedPostgres(options: { evidenceFile: string; eviden
         '--label', `codex.m0.task=${taskLabel}`, '--label', `codex.m0.run=${runLabel}`,
         '--publish', '127.0.0.1::5432', '--tmpfs', '/var/lib/postgresql/data:rw,size=268435456',
         '--env', 'POSTGRES_USER=postgres', '--env', 'POSTGRES_DB=postgres', '--env', 'POSTGRES_HOST_AUTH_METHOD=trust',
-        IMAGE_REFERENCE,
+        imageReference,
       ], 'container_start', START_TIMEOUT_MS);
     } catch (error) { throw error; }
 
     containerId = (await readFile(cidFile, 'utf8')).trim();
     if (!/^[a-f0-9]{64}$/i.test(containerId)) throw new OwnedPostgresError('OWNED_POSTGRES_ID_INVALID', 'record_created_resource', 'startup_failed');
-    await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE });
+    await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference });
 
     const inspectRaw = await command(['inspect', '--format', '{{.Config.Image}}|{{.Image}}|{{json .Mounts}}', containerId], 'container_metadata');
-    const [imageReference, runtimeImageId, mountJson] = inspectRaw.split('|');
-    if (imageReference !== IMAGE_REFERENCE || !/^sha256:[a-f0-9]{64}$/i.test(runtimeImageId)) {
+    const [actualImageReference, runtimeImageId, mountJson] = inspectRaw.split('|');
+    if (actualImageReference !== imageReference || !/^sha256:[a-f0-9]{64}$/i.test(runtimeImageId)) {
       throw new OwnedPostgresError('OWNED_POSTGRES_IMAGE_IDENTITY_INVALID', 'container_metadata', 'startup_failed');
     }
     const mounts = JSON.parse(mountJson) as Array<{ Type: string; Destination: string }>;
@@ -118,13 +122,14 @@ export async function startOwnedPostgres(options: { evidenceFile: string; eviden
       throw new OwnedPostgresError('OWNED_POSTGRES_STORAGE_NOT_ISOLATED', 'container_metadata', 'startup_failed');
     }
 
-    const repoDigestsRaw = await command(['image', 'inspect', '--format', '{{json .RepoDigests}}', IMAGE_REFERENCE], 'image_metadata');
+    const repoDigestsRaw = await command(['image', 'inspect', '--format', '{{json .RepoDigests}}', imageReference], 'image_metadata');
     const repoDigests = JSON.parse(repoDigestsRaw) as string[] | null;
     const repoDigest = repoDigests?.find(value => value.startsWith('postgres@sha256:'));
-    if (!repoDigest || !/^postgres@sha256:[a-f0-9]{64}$/i.test(repoDigest)) {
+    if (!repoDigest || !/^postgres@sha256:[a-f0-9]{64}$/i.test(repoDigest) ||
+        (imageReference.includes('@sha256:') && repoDigest !== imageReference)) {
       throw new OwnedPostgresError('OWNED_POSTGRES_REPO_DIGEST_MISSING', 'image_metadata', 'image_unavailable');
     }
-    await appendEvidence(evidenceFile, { event: 'image_observed', runLabel, containerId, imageReference, repoDigest, runtimeImageId });
+    await appendEvidence(evidenceFile, { event: 'image_observed', runLabel, containerId, imageReference: actualImageReference, repoDigest, runtimeImageId });
 
     const readyBy = Date.now() + START_TIMEOUT_MS;
     while (Date.now() < readyBy) {
@@ -150,7 +155,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; eviden
       taskLabel,
       runLabel,
       containerId,
-      imageReference,
+      imageReference: actualImageReference,
       repoDigest,
       runtimeImageId,
       hostPort,
@@ -183,7 +188,7 @@ export async function startOwnedPostgres(options: { evidenceFile: string; eviden
         const candidate = (await readFile(cidFile, 'utf8')).trim();
         if (/^[a-f0-9]{64}$/.test(candidate)) {
           containerId = candidate;
-          await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference: IMAGE_REFERENCE, recoveredFromCidFile: true });
+        await appendEvidence(evidenceFile, { event: 'created', taskLabel, runLabel, containerId, imageReference, recoveredFromCidFile: true });
         }
       } catch { /* Keep the cidfile directory if resource identity cannot be recovered. */ }
     }
