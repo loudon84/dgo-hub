@@ -1,0 +1,1 @@
+npm.cmd test -- --run acceptance-tests/postgres-snapshot-contract.test.ts acceptance-tests/postgres-snapshot-connector.test.ts acceptance-tests/postgres-snapshot-source.test.ts acceptance-tests/snapshot-runs.test.ts acceptance-tests/migrations.test.ts acceptance-tests/source-registry.test.ts acceptance-tests/identity-store.test.ts acceptance-tests/strict-ingestion.test.ts

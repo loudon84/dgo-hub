@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/snapshot-runs.test.ts -t restarts after terminating its owned PostgreSQL reader
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 20 skipped (21)
+   Start at  00:32:03
+   Duration  5.53s (transform 166ms, setup 0ms, import 337ms, tests 5.01s, environment 0ms)
+

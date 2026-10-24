@@ -1,0 +1,309 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval
+AssertionError: expected { …(4) } to match object { status: 'PASS' }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "status": "PASS",
++   "status": "FAIL",
+  }
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:429:20
+    427|     await managementAuth.repository.updateSourceCredential(sourceId,te…
+    428|     const tested = await sourceRegistry.test(owner,sourceId,'1');
+    429|     expect(tested).toMatchObject({status:'PASS'});
+       |                    ^
+    430|     const approval = await sourceRegistry.approve(owner,sourceId,'1',t…
+    431|     expect(approval).toMatchObject({status:'APPROVED'});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:457:32
+    455|     expect(managerRead.statusCode).toBe(200);
+    456|     const pageJob = await post(JSON.stringify(customerBatch(25)),'item…
+    457|     expect(pageJob.statusCode).toBe(202);
+       |                                ^
+    458|     const firstPage = await app.inject({ method:'GET',url:`/hub/v1/ing…
+    459|     expect(firstPage.json().data.items).toHaveLength(20);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:516:33
+    514|     const sourcePk = batch.records[0]!.source_pk;
+    515|     const accepted = await post(JSON.stringify(batch), 'worker-applies…
+    516|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    517|     const worker = hubWorkerPool(2);
+    518|     try {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:560:35
+    558|     for(const [index,item] of cases.entries()) {
+    559|       const accepted=await post(JSON.stringify(item.body),`version-mat…
+    560|       expect(accepted.statusCode).toBe(202);
+       |                                   ^
+    561|       jobs.push(accepted.json().data.job_id);
+    562|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > summarizes mixed terminal outcomes as PARTIAL with only real APPLIED effects counted
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:581:33
+    579|     batch.records[1]!.data.owner_external_id='missing-owner';
+    580|     const accepted=await post(JSON.stringify(batch),'partial-worker-su…
+    581|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    582|     const id=accepted.json().data.job_id as string;
+    583|     const eventsBefore=(await fixture.pool.query<{count:string}>(`SELE…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:612:33
+    610|     batch.records[0]!.data.customer_ref.source_id='other-crm';
+    611|     const accepted=await post(JSON.stringify(batch),'cross-source-cust…
+    612|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    613|     const worker=hubWorkerPool();
+    614|     try { await runDurableWorkerOnce(worker,{limit:100}); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+TypeError: Cannot read properties of undefined (reading 'job_id')
+ ❯ acceptance-tests/strict-ingestion.test.ts:632:30
+    630|     batch.records[0]!.data.amount='100.1';
+    631|     const accepted=await post(JSON.stringify(batch),'exact-worker-adap…
+    632|     const id=accepted.json().data.job_id as string;
+       |                              ^
+    633|     await fixture.pool.query(`UPDATE control.ingestion_processing_outb…
+    634|       ELSE '2099-01-01T00:00:00Z'::timestamptz END WHERE acknowledged_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:658:33
+    656|     batch.records[0]!.source_pk='RETRY-BUDGET-C1';
+    657|     const accepted=await post(JSON.stringify(batch),'durable-retry-bud…
+    658|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    659|     const jobId=accepted.json().data.job_id as string;
+    660|     const operation=(await fixture.pool.query<{operation_id:string}>('…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:697:33
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > starts the full retry delay when a long database attempt fails and rolls back
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:727:33
+    725|     (batch.records[0]!.data as Record<string,unknown>).customer_name='…
+    726|     const accepted=await post(JSON.stringify(batch),'long-failure-retr…
+    727|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    728|     const jobId=accepted.json().data.job_id as string;
+    729|     const operation=(await fixture.pool.query<{operation_id:string}>(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:763:37
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:784:33
+    782|   it('recovers an expired lease with a fresh token and fences stale AC…
+    783|     const accepted=await post(JSON.stringify(customerBatch()),'expired…
+    784|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    785|     const jobId=accepted.json().data.job_id as string;
+    786|     const oldToken=randomUUID();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs
+TypeError: Cannot read properties of undefined (reading 'job_id')
+ ❯ acceptance-tests/strict-ingestion.test.ts:807:29
+    805|     const first=await post(JSON.stringify(customerBatch()),'concurrent…
+    806|     const second=await post(JSON.stringify(customerBatch()),'concurren…
+    807|     const ids=[first.json().data.job_id as string,second.json().data.j…
+       |                             ^
+    808|     await fixture.pool.query(`UPDATE control.ingestion_processing_outb…
+    809|     const left=hubWorkerPool(1),right=hubWorkerPool(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK
+TypeError: Cannot read properties of undefined (reading 'job_id')
+ ❯ acceptance-tests/strict-ingestion.test.ts:823:35
+    821|     const before=await post(JSON.stringify(customerBatch()),'crash-bef…
+    822|     const after=await post(JSON.stringify(customerBatch()),'crash-afte…
+    823|     const beforeJob=before.json().data.job_id as string,afterJob=after…
+       |                                   ^
+    824|     await fixture.pool.query(`UPDATE control.ingestion_processing_outb…
+    825|     const beforePk=(await fixture.pool.query<{source_pk:string}>('SELE…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:862:33
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+AuthError: SOURCE_CONFLICT
+ ❯ fail source-registry/service.ts:70:80
+     68| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     69|
+     70| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     71| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     72|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ source-registry/service.ts:500:87
+ ❯ transaction source-registry/service.ts:175:19
+ ❯ recoverApproval acceptance-tests/strict-ingestion.test.ts:904:22
+ ❯ acceptance-tests/strict-ingestion.test.ts:907:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:947:33
+    945|   it('finishes frozen work after ordinary source epoch drift', async (…
+    946|     const accepted=await post(JSON.stringify(customerBatch()),'worker-…
+    947|     expect(accepted.statusCode).toBe(202);
+       |                                 ^
+    948|     const id=accepted.json().data.job_id as string;
+    949|     await createAuthService({pool:fixture.pool}).repository.advanceSou…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/18]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates an explicitly remapped frozen identity while completing unrelated frozen work
+AssertionError: expected 409 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 409
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:968:33
+    966|     const affected=await post(JSON.stringify(affectedBatch),'worker-re…
+    967|     const unrelated=await post(JSON.stringify(unrelatedBatch),'worker-…
+    968|     expect(affected.statusCode).toBe(202);
+       |                                 ^
+    969|     expect(unrelated.statusCode).toBe(202);
+    970|     const affectedId=affected.json().data.job_id as string;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/18]⎯
+

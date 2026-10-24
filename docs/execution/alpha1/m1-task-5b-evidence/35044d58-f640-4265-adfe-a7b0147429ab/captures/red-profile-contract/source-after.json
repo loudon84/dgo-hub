@@ -1,0 +1,23 @@
+[
+  {
+    "path": "source-registry/capability-probe.ts",
+    "sha256_raw": "70796f7746833e66f855370336e4e391efdef7bcf8a99a90884b1ceae4774fb7",
+    "sha256_lf": "7780d9e0f59b5cc2339bbd9aae072250e706d2b88ba186519906f390f854b1ea",
+    "bytes": 13611,
+    "git_blob": "792187e039db0c2ac3a43193152589def6a3a260"
+  },
+  {
+    "path": "source-registry/service.ts",
+    "sha256_raw": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+    "sha256_lf": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+    "bytes": 52014,
+    "git_blob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163"
+  },
+  {
+    "path": "acceptance-tests/postgres-snapshot-contract.test.ts",
+    "sha256_raw": "de008a5078ff88ededecdbb60e8f8044b651e3682e1192525d3498f9ce967db9",
+    "sha256_lf": "de008a5078ff88ededecdbb60e8f8044b651e3682e1192525d3498f9ce967db9",
+    "bytes": 2941,
+    "git_blob": "f3bd40d4eeef7244d48da1f478b82229e7715d77"
+  }
+]

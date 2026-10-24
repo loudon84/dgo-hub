@@ -1,0 +1,18 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --run acceptance-tests/postgres-snapshot-contract.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/postgres-snapshot-contract.test.ts (4 tests | 4 failed) 9ms
+     × requires an explicit source primary key for each enabled entity 6ms
+     × requires an approved order line table and header foreign key when orders are enabled 1ms
+     × requires an explicit owner assertion that SOURCE_VERSION covers order line changes 0ms
+     × allows a missing source version field for SNAPSHOT_OBSERVATION only 1ms
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  00:08:55
+   Duration  307ms (transform 33ms, setup 0ms, import 93ms, tests 9ms, environment 0ms)
+

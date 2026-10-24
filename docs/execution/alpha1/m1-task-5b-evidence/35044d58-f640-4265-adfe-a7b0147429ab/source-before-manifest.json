@@ -1,0 +1,93 @@
+{
+  "baseline": "8283a39cde0cda9468cdbb5d77862f45b973f240",
+  "records": [
+    {
+      "path": "integration-service/acceptance-tests/identity-store.test.ts",
+      "present": true,
+      "bytes": 21097,
+      "sha256": "eca8d1425a01409845ca9c020de603ebce68ca2626968b251e534d1006a9ad45",
+      "lf_sha256": "eca8d1425a01409845ca9c020de603ebce68ca2626968b251e534d1006a9ad45",
+      "git_blob": "83de1fdc581f3ca82eea94be136ceed0d56b6c00"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "present": true,
+      "bytes": 38085,
+      "sha256": "d7f9b1acdde5f85c54b22340c186d7a36c63c7b63fd6bad9159609ec83793468",
+      "lf_sha256": "d7f9b1acdde5f85c54b22340c186d7a36c63c7b63fd6bad9159609ec83793468",
+      "git_blob": "b001ffe6860ac685655d6e1ca13a35b86f0bd2a8"
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "present": true,
+      "bytes": 73621,
+      "sha256": "d4db1790afc05dcadd34fba0103126e213d662d29c9f80c97e44465b749f4978",
+      "lf_sha256": "d4db1790afc05dcadd34fba0103126e213d662d29c9f80c97e44465b749f4978",
+      "git_blob": "9a64d26364e42aa842011a070e88eac895c21a0a"
+    },
+    {
+      "path": "integration-service/acceptance-tests/postgres-snapshot-contract.test.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/acceptance-tests/postgres-snapshot-connector.test.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/acceptance-tests/postgres-snapshot-source.test.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "present": true,
+      "bytes": 24097,
+      "sha256": "afb019513b21ebe2df3d4849e7026b0b4919ce265f0a10c7724f600371504f07",
+      "lf_sha256": "afb019513b21ebe2df3d4849e7026b0b4919ce265f0a10c7724f600371504f07",
+      "git_blob": "68eeea1c63180ab42427c1a5fc90e40f9e88875c"
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "present": true,
+      "bytes": 29796,
+      "sha256": "11e61a787323a0ed4a7d994673dc7a09cf4b3f882a829719ab15c76b736a0d96",
+      "lf_sha256": "11e61a787323a0ed4a7d994673dc7a09cf4b3f882a829719ab15c76b736a0d96",
+      "git_blob": "e58d3981b23ebc83b7d87de80fcf73e41c7c5802"
+    },
+    {
+      "path": "integration-service/etl-worker/postgres-snapshot-connector.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-stage-store.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-worker.ts",
+      "present": false
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "present": true,
+      "bytes": 13193,
+      "sha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "lf_sha256": "ef4289e68286f9042994a8f54bc72ecd566b5720ae743cfbccaa1aef82617399",
+      "git_blob": "814f872b34dd95f69c3fd9be77b162bd921e38d7"
+    },
+    {
+      "path": "integration-service/source-registry/capability-probe.ts",
+      "present": true,
+      "bytes": 13385,
+      "sha256": "7780d9e0f59b5cc2339bbd9aae072250e706d2b88ba186519906f390f854b1ea",
+      "lf_sha256": "7780d9e0f59b5cc2339bbd9aae072250e706d2b88ba186519906f390f854b1ea",
+      "git_blob": "792187e039db0c2ac3a43193152589def6a3a260"
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "present": true,
+      "bytes": 52014,
+      "sha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "lf_sha256": "6f7095e3a619c78f85c4053a325903f49b9f653b7e27aeb46deafdbe9fd38d1a",
+      "git_blob": "f123ab0dcf20fdc68a1a0d3cd363da471352b163"
+    }
+  ]
+}

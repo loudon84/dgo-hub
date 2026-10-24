@@ -1,0 +1,919 @@
+[
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "command.txt",
+    "artifact_path": "captures/source-pg-owned-role/command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source.stdout.txt",
+    "artifact_path": "captures/source-pg-owned-role/stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source.stderr.txt",
+    "artifact_path": "captures/source-pg-owned-role/stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "exit.txt",
+    "artifact_path": "captures/source-pg-owned-role/exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "head.txt",
+    "artifact_path": "captures/source-pg-owned-role/head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures/source-pg-owned-role/source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures/source-pg-owned-role/source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\red-profile-contract\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\red-profile-contract\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\red-profile-contract\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\red-profile-contract\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "actual-head.txt",
+    "artifact_path": "captures\\red-profile-contract\\actual-head.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "branch.txt",
+    "artifact_path": "captures\\red-profile-contract\\branch.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "source-before.json",
+    "artifact_path": "captures\\red-profile-contract\\source-before.json"
+  },
+  {
+    "kind": "test-capture",
+    "label": "red-profile-contract",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07ba8d04-66c7-402f-98c7-fb75ab8dba65",
+    "source_file": "source-after.json",
+    "artifact_path": "captures\\red-profile-contract\\source-after.json"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-first-run-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\disconnect-first-run-diagnostic\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "disconnect-restart-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\disconnect-restart-green\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "rest-regression-diagnostic",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\rest-regression-diagnostic\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-ingestion-rest-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\strict-ingestion-rest-green\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "focused-b-suite-green",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\focused-b-suite-green\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\typecheck\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\typecheck\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\typecheck\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\typecheck\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\typecheck\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\typecheck\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "typecheck",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-df8f759e-a254-4ce9-89cd-88ae79a7bd67",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\typecheck\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\build\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\build\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\build\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\build\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\build\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\build\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "build",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-de76d96f-3cca-4cd3-a626-34e23e9bebfb",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\build\\source-after.txt"
+  },
+  {
+    "kind": "source-manifest",
+    "label": "commit-binding",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-48ff31f1-f190-4f84-ab06-302f7968214b",
+    "source_file": "source-before-manifest.json",
+    "artifact_path": "source-before-manifest.json"
+  },
+  {
+    "kind": "source-manifest",
+    "label": "commit-binding",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-48ff31f1-f190-4f84-ab06-302f7968214b",
+    "source_file": "source-after-manifest.json",
+    "artifact_path": "source-after-manifest.json"
+  },
+  {
+    "kind": "source-manifest",
+    "label": "commit-binding",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-48ff31f1-f190-4f84-ab06-302f7968214b",
+    "source_file": "committed-source-manifest.json",
+    "artifact_path": "committed-source-manifest.json"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "strict-worker-loop-entry",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\strict-worker-loop-entry\\source-after.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "command.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "stdout.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "stderr.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "exit.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "head-before.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "snapshot-runs-final",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures\\snapshot-runs-final\\source-after.txt"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "22199742-5caa-48e1-9aee-358e9d5a389c",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07a6eef9-d401-4351-aaf7-0395f0c46d41",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-01.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "be33a817-064b-4edb-9f33-ebbeff83d046",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-02.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "17a7a0fa-ddd6-4227-90d1-0dcefb43b839",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-03.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "43c6c8e6-c8db-486d-b509-0cb4081ecd55",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-04.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "59b3e05e-5551-4257-9475-aa7eeeb52112",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-05.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "7ed83745-f4c6-47e1-bdf2-5471f2c8e582",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-06.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "86919f6c-ff3f-4b8c-85ec-f9b42c768940",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-07.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "de37c085-0538-4249-a83a-093349418bde",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-08.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "42e4adf1-c691-4e37-8739-24da5409b45c",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-1cd8aa28-1d8-4d0b-8fd5-a9868b9af6f4",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-09.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "af0b803f-dd40-40fd-ae1a-3a53671378ee",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-25baf3dd-a8c9-4434-9b12-88ac32a383d2",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-10.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "e50a42b4-cc1a-4e47-b267-6204a98d79f2",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-25baf3dd-a8c9-4434-9b12-88ac32a383d2",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-11.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "df7539b9-4cfe-41cd-82cc-18acba7cc236",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-277cf4b7-7767-4e99-972a-7c1995b1f776",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-12.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "ec6d9466-6ca7-4e07-bd7f-962c78b9683b",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-277cf4b7-7767-4e99-972a-7c1995b1f776",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-13.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "9d4e8b0b-ccf5-47bd-b4a4-5e10d369418a",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-279109c1-779d-4c92-a739-eac42de007ca",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-14.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "bb58e91e-e7d0-490a-85af-5ff8b00d587e",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-28e0bbdd-6d28-40ea-90d2-2f5213939651",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-15.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "b33df47a-99db-4b35-9dca-1263947158a9",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-2c6d4f78-124e-44fa-877a-22fb3e350d6b",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-16.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "28c3b8f7-615a-47a8-a432-88ac0a2d1a1b",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-17.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "c114b67e-77bd-45f1-84b9-bcde77a450e8",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4c0ee0fc-92db-4b12-86da-09eed694ac0f",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-18.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "8dca65b3-0cb8-4c59-9997-7f04ebece9d6",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4d193eb8-65e6-4dc2-aa4e-52ff7ff7b2d0",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-19.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "f80e5f23-d198-46b8-8e59-742cd3243d0c",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4d193eb8-65e6-4dc2-aa4e-52ff7ff7b2d0",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-20.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "4bb955ba-fbed-4dbd-9ce3-0a4ea01188ed",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-21.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "3505c556-f42f-41a9-91b2-b3e304fc7410",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-52a5624b-cbad-49a8-9bf2-beb8be77864e",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-22.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "7c290329-bcb2-4d6b-8e28-ee95f8542761",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-52a5624b-cbad-49a8-9bf2-beb8be77864e",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-23.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "c26d9f17-b389-4659-aef5-b2231986971c",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-24.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "02f89a87-59e4-4c7a-bb88-ad4e1d0dc3ac",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-25.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "23e33423-2e3a-4076-bcbe-9da6fb9eaaaf",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-26.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "5aaf3d0b-fc8e-4309-b087-a1869c38eac4",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-27.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "66521dd4-25bd-4844-9245-e74f3df88eec",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-28.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "8d01e177-1869-4caa-a131-cec911c532d4",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-29.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "a73ad327-ab2d-48de-9d40-e8db24a4598e",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5a1d768d-c38e-45cb-aace-35cb61e077a9",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-30.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "1bb8cae5-092e-4398-bfc6-13accb19c42b",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5e0fd943-55cb-462c-b5b2-cf957e4f25a0",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-31.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "c8bc8cd1-9a8e-4cb6-acf7-3a1aead6e4d3",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5e2e8973-9989-4203-806a-05f9e51348f3",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-32.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "810a26c1-4df7-4aa7-b286-98d7d35ef7a6",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-68040cae-9394-41e0-a0f5-8a59d89ab4ec",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-33.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "d3877069-e2a4-4468-b9a3-e5b69ddac8f9",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-68040cae-9394-41e0-a0f5-8a59d89ab4ec",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-34.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "a4d0e926-f035-44b0-bbb8-291a745bc4d3",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-6dc805ab-4aaa-4c60-9dc4-3e72dad9f778",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-35.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "0b297cba-9ca2-4ad7-8771-9c05e06cce4b",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-80a637e5-5c6b-4db4-9140-dd415249fbe8",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-36.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "55a75062-cfef-4028-989c-398494c88948",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a2c557cb-4094-4db3-ad43-90dc266459bf",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-37.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "77626cb5-b680-4dab-a017-601722c51db1",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a47df554-8cef-4163-944b-7e71ce4a5120",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-38.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "68a6f7ee-a8da-477d-bbc6-7d5a7f060f27",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-39.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "f7e5eabb-087f-421d-8140-5c4801809f4b",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-40.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "0e144f2a-c5e6-4096-a267-c07fff77f0ad",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-41.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "d2d1241c-99e9-463a-9ded-378cc0aea550",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-42.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "ef26b7c9-5c05-43d6-be8e-b556f047da5d",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-cd932b2c-c110-47c5-987a-cf166ed1fd24",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-43.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "a17e341e-8c78-40d5-bc2a-cb876076301f",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-ea778f46-70c0-4e31-a419-a9b71db1ab0c",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-44.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "3ee5e6b3-9e1d-44d2-acd1-d881d21227ab",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-ef0720c9-98b8-4ac4-b6e8-1e641f90a42f",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-45.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "9e1d5a8c-2720-4e9a-b3b1-52acf012c1ac",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-f24c1ca3-f51f-4e2b-bd66-14c76d64696b",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-46.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "7436b9c3-492f-4079-8d12-3f5a04bd6d00",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-47.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "a13d8466-fbfa-4f4f-a131-75b829f20b81",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-48.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "439d92c3-55bc-48a9-9859-ace752525348",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-49.jsonl"
+  },
+  {
+    "kind": "owned-postgres-lifecycle",
+    "label": "79431f2d-5010-45b1-8ad1-3cc9aa8d9dfa",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "source_file": "postgres-lifecycle.jsonl",
+    "artifact_path": "lifecycle/run-50.jsonl"
+  }
+]

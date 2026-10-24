@@ -1,0 +1,51 @@
+[
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "command.txt",
+    "artifact_path": "captures/source-pg-owned-role/command.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source.stdout.txt",
+    "artifact_path": "captures/source-pg-owned-role/stdout.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source.stderr.txt",
+    "artifact_path": "captures/source-pg-owned-role/stderr.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "exit.txt",
+    "artifact_path": "captures/source-pg-owned-role/exit.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "head.txt",
+    "artifact_path": "captures/source-pg-owned-role/head-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source-before.txt",
+    "artifact_path": "captures/source-pg-owned-role/source-before.txt"
+  },
+  {
+    "kind": "test-capture",
+    "label": "source-pg-owned-role",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "source_file": "source-after.txt",
+    "artifact_path": "captures/source-pg-owned-role/source-after.txt"
+  }
+]

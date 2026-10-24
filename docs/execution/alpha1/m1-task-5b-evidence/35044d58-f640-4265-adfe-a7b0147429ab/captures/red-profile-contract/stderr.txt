@@ -1,0 +1,79 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/postgres-snapshot-contract.test.ts > approved PostgreSQL snapshot profile contract > requires an explicit source primary key for each enabled entity
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/postgres-snapshot-contract.test.ts:21:8
+     19|   it('requires an explicit source primary key for each enabled entity'…
+     20|     expect(() => validateEndpointProfile(observationConfig, customerPr…
+     21|       .toThrow('PROFILE_INVALID');
+       |        ^
+     22|   });
+     23|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  acceptance-tests/postgres-snapshot-contract.test.ts > approved PostgreSQL snapshot profile contract > requires an approved order line table and header foreign key when orders are enabled
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/postgres-snapshot-contract.test.ts:33:94
+     31|       },
+     32|     }) as unknown as EndpointProfile;
+     33|     expect(() => validateEndpointProfile(config, profile, { environmen…
+       |                                                                                              ^
+     34|   });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  acceptance-tests/postgres-snapshot-contract.test.ts > approved PostgreSQL snapshot profile contract > requires an explicit owner assertion that SOURCE_VERSION covers order line changes
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/postgres-snapshot-contract.test.ts:43:94
+     41|         lines: { table: 'order_lines', order_fk: 'order_id' } } },
+     42|     }) as unknown as EndpointProfile;
+     43|     expect(() => validateEndpointProfile(config, profile, { environmen…
+       |                                                                                              ^
+     44|   });
+     45|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  acceptance-tests/postgres-snapshot-contract.test.ts > approved PostgreSQL snapshot profile contract > allows a missing source version field for SNAPSHOT_OBSERVATION only
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ acceptance-tests/postgres-snapshot-contract.test.ts:50:8
+     48|     const versionedConfig: SourceConfig = { ...observationConfig, vers…
+     49|     expect(() => validateEndpointProfile(versionedConfig, customerProf…
+     50|       .toThrow('PROFILE_INVALID');
+       |        ^
+     51|   });
+     52| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+

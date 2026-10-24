@@ -1,0 +1,852 @@
+[
+  {
+    "artifact_path": "lifecycle/run-01.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-07a6eef9-d401-4351-aaf7-0395f0c46d41",
+    "taskLabel": "m1task5",
+    "runLabel": "22199742-5caa-48e1-9aee-358e9d5a389c",
+    "containerId": "ee4df52eb2166d86df410dbce487ecde8acc4f7bbc430f80fbdb6b5d9cbd3fbb",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-02.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "m1task1",
+    "runLabel": "be33a817-064b-4edb-9f33-ebbeff83d046",
+    "containerId": "ee153d4cc647ddae4a44330a4a568eccf990bea6e84af1e037e14ded7c5a9143",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-03.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "m1task5",
+    "runLabel": "17a7a0fa-ddd6-4227-90d1-0dcefb43b839",
+    "containerId": "39166f102749b9df3e7266c2cdf9abb0f4a47be57e6d62c3f321848e52b05860",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-04.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "m1task5",
+    "runLabel": "43c6c8e6-c8db-486d-b509-0cb4081ecd55",
+    "containerId": "afe305bd2d6fa3102e71b20fcddd7eaf6d69d473b2dc2fc9d3e05ddcade05c6d",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-05.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "m1task5",
+    "runLabel": "59b3e05e-5551-4257-9475-aa7eeeb52112",
+    "containerId": "629dd5482cb19a127947f5f6dd957a38b0103beac84496528cc7c74663dbf747",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-06.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "m1task5",
+    "runLabel": "7ed83745-f4c6-47e1-bdf2-5471f2c8e582",
+    "containerId": "105b802654d5618d1091af1299a8ebd93e12a2251b95a1fa38ba13722292801f",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-07.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "task1",
+    "runLabel": "86919f6c-ff3f-4b8c-85ec-f9b42c768940",
+    "containerId": "e7951ef0131d9bf5c056ffcbb3b8103bb02bd1ec377d1bf129443b5088b0ccf0",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-08.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-0be37862-7fb3-455e-9f12-2cc12e29118d",
+    "taskLabel": "task3",
+    "runLabel": "de37c085-0538-4249-a83a-093349418bde",
+    "containerId": "ad7bba840c326f6d73a36d5a5aba6336978e77662abef9af8cc73337aaab0004",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-09.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-1cd8aa28-1d8-4d0b-8fd5-a9868b9af6f4",
+    "taskLabel": "m1task5",
+    "runLabel": "42e4adf1-c691-4e37-8739-24da5409b45c",
+    "containerId": "400b74a57fef58a541fdc38891d7c7ffcee37ffb11b9231940b00e1a6b5c1cc5",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-10.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-25baf3dd-a8c9-4434-9b12-88ac32a383d2",
+    "taskLabel": "m1task5",
+    "runLabel": "af0b803f-dd40-40fd-ae1a-3a53671378ee",
+    "containerId": "288556efdad3b613c9a4c9e888143fc1a3987fa3b42d4221b6114ab257efe81a",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-11.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-25baf3dd-a8c9-4434-9b12-88ac32a383d2",
+    "taskLabel": "m1task5",
+    "runLabel": "e50a42b4-cc1a-4e47-b267-6204a98d79f2",
+    "containerId": "e7789c0725cd39295688ec78e9990c171403df9f987d6df41abd958212fb7c14",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-12.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-277cf4b7-7767-4e99-972a-7c1995b1f776",
+    "taskLabel": "m1task5",
+    "runLabel": "df7539b9-4cfe-41cd-82cc-18acba7cc236",
+    "containerId": "86487490cb7486b8e5186d14702c90f0df048b3da43c7016e66e581694b81daa",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-13.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-277cf4b7-7767-4e99-972a-7c1995b1f776",
+    "taskLabel": "m1task5",
+    "runLabel": "ec6d9466-6ca7-4e07-bd7f-962c78b9683b",
+    "containerId": "7c95baf8f3a5fcbb191001d7b0905d52297efa589698043df42e1ca4b181e4b6",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-14.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-279109c1-779d-4c92-a739-eac42de007ca",
+    "taskLabel": "m1task1",
+    "runLabel": "9d4e8b0b-ccf5-47bd-b4a4-5e10d369418a",
+    "containerId": "c5bcad96832c64247dd936ca32f8e590d6d03398936e15e0436da942eb088e35",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-15.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-28e0bbdd-6d28-40ea-90d2-2f5213939651",
+    "taskLabel": "m1task5",
+    "runLabel": "bb58e91e-e7d0-490a-85af-5ff8b00d587e",
+    "containerId": "7e47f6f26ed85603e85fe5c54c053975a96fade1ea8fd0fdecf4e08e29740afd",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-16.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-2c6d4f78-124e-44fa-877a-22fb3e350d6b",
+    "taskLabel": "m1task5",
+    "runLabel": "b33df47a-99db-4b35-9dca-1263947158a9",
+    "containerId": "34135d639e827496874a3b14999a99d305d98bd6d07633ec8366e5958136694a",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-17.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-345d8a6b-8a40-4708-85fb-f47376a74f0f",
+    "taskLabel": "m1task5",
+    "runLabel": "28c3b8f7-615a-47a8-a432-88ac0a2d1a1b",
+    "containerId": "ae02fde45291f28ffd02d0916d27a23be749ac66f7c21fcd6d789fc1aa53b690",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-18.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4c0ee0fc-92db-4b12-86da-09eed694ac0f",
+    "taskLabel": "m1task5",
+    "runLabel": "c114b67e-77bd-45f1-84b9-bcde77a450e8",
+    "containerId": "4c9396a9cda929f162e5cb5ae22315b53100e5eefee74bbd578f6835ee2971e4",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-19.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4d193eb8-65e6-4dc2-aa4e-52ff7ff7b2d0",
+    "taskLabel": "m1task5",
+    "runLabel": "8dca65b3-0cb8-4c59-9997-7f04ebece9d6",
+    "containerId": "33354360fcaa571c2f38872a472c268c1def2af7f0c49fb70615d7a59a27a040",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-20.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4d193eb8-65e6-4dc2-aa4e-52ff7ff7b2d0",
+    "taskLabel": "m1task5",
+    "runLabel": "f80e5f23-d198-46b8-8e59-742cd3243d0c",
+    "containerId": "d175b3b7a9c2874967607a2f9c912fedb034713f09f7120db95bd2953c01339a",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-21.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-528510cd-ec3d-4f0d-b8ec-dca895756320",
+    "taskLabel": "task3",
+    "runLabel": "4bb955ba-fbed-4dbd-9ce3-0a4ea01188ed",
+    "containerId": "499a213928327f584f4cff2a84adeb12933522e3ae9c4181cc811fb3d669675a",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-22.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-52a5624b-cbad-49a8-9bf2-beb8be77864e",
+    "taskLabel": "m1task5",
+    "runLabel": "3505c556-f42f-41a9-91b2-b3e304fc7410",
+    "containerId": "a0ea8fdfda6e4f878b34e7bb713c96c4ccfd54ec47104c7c6f31d62b31103f76",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-23.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-52a5624b-cbad-49a8-9bf2-beb8be77864e",
+    "taskLabel": "m1task5",
+    "runLabel": "7c290329-bcb2-4d6b-8e28-ee95f8542761",
+    "containerId": "3abd699133685f25b3042406fbe5852bf5053c98f1224c2d1d3ba2d484e985bd",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-24.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "m1task1",
+    "runLabel": "c26d9f17-b389-4659-aef5-b2231986971c",
+    "containerId": "41bc792909ab3a2e31d25d44c134ec8ae907ea9936e6b25d889e2d3757c9cbe3",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-25.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "m1task5",
+    "runLabel": "02f89a87-59e4-4c7a-bb88-ad4e1d0dc3ac",
+    "containerId": "15d0a69f1af760b62040d0158e95c9d118222c24fbbfe791caf7b9b9774e48cd",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-26.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "m1task5",
+    "runLabel": "23e33423-2e3a-4076-bcbe-9da6fb9eaaaf",
+    "containerId": "c909355eddeb9501437356efe5e13744617886258a9b1e3b387b4663fa828a12",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-27.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "m1task5",
+    "runLabel": "5aaf3d0b-fc8e-4309-b087-a1869c38eac4",
+    "containerId": "390ce019b9ca47b40391870a494608cccee38885db64433727b78d77f4b3a580",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-28.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "m1task5",
+    "runLabel": "66521dd4-25bd-4844-9245-e74f3df88eec",
+    "containerId": "0e0056bf7120a5be9266250dad705c8c35d5f2d6b3a03bf3dfd634691900e880",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-29.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-596d471d-71f7-48bb-918b-f96b3cfdc7b8",
+    "taskLabel": "task1",
+    "runLabel": "8d01e177-1869-4caa-a131-cec911c532d4",
+    "containerId": "033e9f399042b4dc4536f0c7ba8b443b285c0013ac8feda8d463d0870569f52c",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-30.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5a1d768d-c38e-45cb-aace-35cb61e077a9",
+    "taskLabel": "task3",
+    "runLabel": "a73ad327-ab2d-48de-9d40-e8db24a4598e",
+    "containerId": "825caf6d164de1f55b2d10cd5ad0d529a0e59de005aa4817bc33cd9935180a2a",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-31.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5e0fd943-55cb-462c-b5b2-cf957e4f25a0",
+    "taskLabel": "m1task5",
+    "runLabel": "1bb8cae5-092e-4398-bfc6-13accb19c42b",
+    "containerId": "986dd2d3323b7ff6dd179a836bf7507142a7e0b6faede9148231b94943f1d5fc",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-32.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-5e2e8973-9989-4203-806a-05f9e51348f3",
+    "taskLabel": "m1task5",
+    "runLabel": "c8bc8cd1-9a8e-4cb6-acf7-3a1aead6e4d3",
+    "containerId": "719f2852ed2d9ef4f9678f71dc93598be1f2f120d7f2f984cb0c5bcae70be1ab",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-33.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-68040cae-9394-41e0-a0f5-8a59d89ab4ec",
+    "taskLabel": "m1task1",
+    "runLabel": "810a26c1-4df7-4aa7-b286-98d7d35ef7a6",
+    "containerId": "cba2090e6c70c0513174a838bfb318fecb26050b13c45f7cf5d3c4badbdff24d",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-34.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-68040cae-9394-41e0-a0f5-8a59d89ab4ec",
+    "taskLabel": "task1",
+    "runLabel": "d3877069-e2a4-4468-b9a3-e5b69ddac8f9",
+    "containerId": "72efaeb91d53036ccbcd84408c6a06d0d46672374aaa9a621bfb1bf529e65a34",
+    "imageReference": "postgres:16.10-alpine",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-35.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-6dc805ab-4aaa-4c60-9dc4-3e72dad9f778",
+    "taskLabel": "m1task5",
+    "runLabel": "a4d0e926-f035-44b0-bbb8-291a745bc4d3",
+    "containerId": "c613a9ceec3b63454fd32cd898c7d333cf36dee3240b52eb08a7b796704d4ec5",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-36.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-80a637e5-5c6b-4db4-9140-dd415249fbe8",
+    "taskLabel": "m1task5",
+    "runLabel": "0b297cba-9ca2-4ad7-8771-9c05e06cce4b",
+    "containerId": "8d3cc7410560b46ff44e57d1ac192840f4fc4ecfef7f6219145c864a89b66a6e",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-37.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a2c557cb-4094-4db3-ad43-90dc266459bf",
+    "taskLabel": "m1task5",
+    "runLabel": "55a75062-cfef-4028-989c-398494c88948",
+    "containerId": "4f8249954a467ded44f647c2c33b4908cb78ab4da7d471eeefecb47e55360209",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-38.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a47df554-8cef-4163-944b-7e71ce4a5120",
+    "taskLabel": "m1task5",
+    "runLabel": "77626cb5-b680-4dab-a017-601722c51db1",
+    "containerId": "22c32fe862e8248d23933059ff24cde86696f42d827155ad5f847419b8b721e9",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-39.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "taskLabel": "m1task5",
+    "runLabel": "68a6f7ee-a8da-477d-bbc6-7d5a7f060f27",
+    "containerId": "93bf165b69b4886afa71431f870f38831a8baa86590b563292ab1ed269ede186",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-40.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-a9c927c9-0f1e-4c9f-9a11-bdcffe2e8fed",
+    "taskLabel": "m1task5",
+    "runLabel": "f7e5eabb-087f-421d-8140-5c4801809f4b",
+    "containerId": "df6f6567c991709f4a683a0570ac3dcfd09d0029d8b742957aa091b5300a5179",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-41.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "taskLabel": "m1task5",
+    "runLabel": "0e144f2a-c5e6-4096-a267-c07fff77f0ad",
+    "containerId": "43251a754a5f6e0bec6ca96b21f75dc027464b6ffbd0d34b5a36146a2f46f4e0",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-42.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-bce2de40-26a8-4719-bd6a-a4ab9e1a4c7f",
+    "taskLabel": "m1task5",
+    "runLabel": "d2d1241c-99e9-463a-9ded-378cc0aea550",
+    "containerId": "3fd89606c6504e30b226584028a359e89bac675039a490542951ea09818afb65",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-43.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-cd932b2c-c110-47c5-987a-cf166ed1fd24",
+    "taskLabel": "m1task5",
+    "runLabel": "ef26b7c9-5c05-43d6-be8e-b556f047da5d",
+    "containerId": "251ffd9da0235a0257b7bf7904ec223b4fd0a61401c548f8a5b666d6ca9fe0be",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-44.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-ea778f46-70c0-4e31-a419-a9b71db1ab0c",
+    "taskLabel": "m1task5",
+    "runLabel": "a17e341e-8c78-40d5-bc2a-cb876076301f",
+    "containerId": "a434e75f5d4b09c0625d5ad4980bf53b54150b07bace93e605dcbbe3672ab55b",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-45.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-ef0720c9-98b8-4ac4-b6e8-1e641f90a42f",
+    "taskLabel": "m1task5",
+    "runLabel": "3ee5e6b3-9e1d-44d2-acd1-d881d21227ab",
+    "containerId": "c7c25dd71d3a9fe0b7baeef597e6603aec581df6795ee1d9cb65bb0390efbb5b",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-46.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-f24c1ca3-f51f-4e2b-bd66-14c76d64696b",
+    "taskLabel": "m1task5",
+    "runLabel": "9e1d5a8c-2720-4e9a-b3b1-52acf012c1ac",
+    "containerId": "ef4056a3fef87f74fab64bc259b4b6c5e2e08640cb65696355ae7562d8aba3a1",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-47.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "taskLabel": "m1task5",
+    "runLabel": "7436b9c3-492f-4079-8d12-3f5a04bd6d00",
+    "containerId": "1464410e0c16ef641d6f0cf8331658ace0d3a30907225355e76cf25eaedd262e",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-48.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-3959de4a-5c75-4f1f-adf1-23834493c435",
+    "taskLabel": "m1task5",
+    "runLabel": "a13d8466-fbfa-4f4f-a131-75b829f20b81",
+    "containerId": "70d91862e09439c9cb117faba2e3fcf971ac000043fad835b4d24a84b3fb4431",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-49.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "taskLabel": "m1task5",
+    "runLabel": "439d92c3-55bc-48a9-9859-ace752525348",
+    "containerId": "99f912cb9d755e1f0f77a8b3a93eeb7c9eee929845f55b36b31779bc579917ad",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  },
+  {
+    "artifact_path": "lifecycle/run-50.jsonl",
+    "external_root": "E:\\m1t5-runtime\\m1-task-5b-4503a700-a0ee-48ad-802a-fa8fe7cadbda",
+    "taskLabel": "m1task5",
+    "runLabel": "79431f2d-5010-45b1-8ad1-3cc9aa8d9dfa",
+    "containerId": "327ab23959b7fa9108c305333fc0a3ea5a876effdf83776e3adab9ae516a26df",
+    "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+    "ownershipConfirmed": true,
+    "containerAbsentAfterRemoval": true,
+    "events": [
+      "created",
+      "image_observed",
+      "removed"
+    ]
+  }
+]
