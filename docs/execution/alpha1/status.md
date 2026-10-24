@@ -12,7 +12,7 @@ Updated 2026-10-24. E:/git/dgo-hub, `feat/alpha1-implementation`. M0 Tasks0–4 
 
 ## M1 local implementation
 
-M1-1 Source Registry, mappings and current-source authorization passed independent Spec/Quality review at `0afcd73b`, after source fixes `6cf6f8ee` and `75d6640a`. All ten cumulative findings are closed in the [round 2 review](reviews/m1-task-1-rereview-2.md). The original full 210-test record remains separate from fix1 focused 27 and fix2 focused 29 results; final typecheck/build passed. REST/PostgreSQL capability evidence is local only; runtime providers remain deployment-controlled and fail closed by default. User/department identity confirmation works; canonical customer target lookup is explicitly assigned to M1-2. Next is M1-2 canonical models, tenant-safe core tables and caller-transaction aggregate apply; no intake/worker/snapshot completion is claimed.
+M1-1 Source Registry, mappings and current-source authorization passed independent Spec/Quality review at `0afcd73b`, after source fixes `6cf6f8ee` and `75d6640a`. All ten cumulative findings are closed in the [round 2 review](reviews/m1-task-1-rereview-2.md). The original full 210-test record remains separate from fix1 focused 27 and fix2 focused 29 results; final typecheck/build passed. REST/PostgreSQL capability evidence is local only; runtime providers remain deployment-controlled and fail closed by default. User/department identity confirmation works; canonical customer target lookup is explicitly assigned to M1-2. M1-2 is implemented with two fix rounds and awaits the second scoped review; no intake/worker/snapshot completion is claimed.
 
 ## W0 disposition
 
@@ -45,3 +45,21 @@ The six-task M0 plan is implemented task-by-task: migration runner; identity/cre
 Canonical customer/order apply implementation is committed at 6bec79c3; evidence and resource-inventory correction are committed through 89c6f458. The final source gate passed typecheck, 240 tests across 15 files, and build; the focused canonical/source-registry set passed 49 tests. All 47 PostgreSQL fixture lifecycle records confirm ownership and absence after removal; all 15 HTTP fixtures report closure. An earlier stale inventory row was corrected from existing records without retrying any cleanup. See [implementation report](m1-task-2-report.md). Independent GPT-6.1 Sol Spec/Quality review is pending. M1-3 implementation has not started. These are local engineering checks, with no change to the formal NOT_RUN/BLOCKED gate.
 
 M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAIL / Quality Needs fixes. Eleven blocking findings are in the first Luna fix round; the earlier 240-test run is retained as historical evidence and is not proof of these repairs. M1-3 code remains pending review closure; its implementation brief is prepared provisionally.
+
+## Latest M1 checkpoint — 2026-10-24
+
+| Task | Local engineering state |
+|---|---|
+| M1-1 Source Registry / mappings / admission authority | Independent Spec/Quality PASS |
+| M1-2 canonical model / caller-transaction apply / ownership effects | Source implemented; fix2 submitted; second scoped Sol review pending |
+| M1-3 strict REST / durable intake jobs | Builder brief and interface preflight prepared; implementation not started |
+| M1-4 reliable worker / retry | Not started |
+| M1-5 PostgreSQL snapshot / recovery | Not started |
+| M1-6 SQL Server adapter | Not started; real integration conditional |
+| M1-7 OpenMetadata UI / FI / Oracle | Not started |
+
+M1-2 initial review raised twelve issues. The [first scoped review](reviews/m1-task-2-rereview-1.md) closed eleven and retained I6, adding helper issues I13/I14. Fix2 source is `06155415862691175c45f294d7ecb792b7dba713`, report/evidence `891fd892e2a9179cebad8aa33cd0d82c726f94aa`. The last canonical-apply run passed 27/27, typecheck and build exited 0; the preceding 25/27 query-typing failure remains in the evidence. The prior full 255-test result belongs to fix1, not the fix2 source. Current product status is pending independent review, not M1 complete.
+
+Fix2's eleven PostgreSQL fixtures are confirmed removed and absent. Fix1 HTTP fixture count is corrected to 17, combined earlier/fix1 HTTP total 32. A duplicate untracked scratch directory `m1-task-2-fix2-evidence-9d38414e-45c4-4aee-8c57-4b9ee6e59bf3` remains after two pre-execution policy rejections; no further cleanup attempt is allowed. The reviewed fix2 evidence is the explicit-whitelist `m1-task-2-fix2-evidence-b7f3213d-4e57-4c39-95ee-fd59e20ff853` package. Raw/untracked scratch roots are excluded from delivery archives.
+
+Site IdP, real upstream CRM/orders, SQL Server and remote Hermes remain unverified; all 48 formal acceptance rows retain NOT_RUN. The global all-tenant security guard has no throughput measurement. Local continuation remains authorized.
