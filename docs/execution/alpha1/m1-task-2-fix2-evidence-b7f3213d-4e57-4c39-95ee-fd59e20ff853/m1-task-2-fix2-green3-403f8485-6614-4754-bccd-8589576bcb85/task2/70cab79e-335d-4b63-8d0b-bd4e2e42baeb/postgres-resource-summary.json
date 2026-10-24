@@ -1,0 +1,12 @@
+{
+  "taskLabel": "task2",
+  "runLabel": "70cab79e-335d-4b63-8d0b-bd4e2e42baeb",
+  "containerId": "a5936ede2b5d94e1e6617acd16c3eaa5d387f558cbf5751f4962606e79ce4517",
+  "imageReference": "postgres:16.10-alpine",
+  "repoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "runtimeImageId": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+  "hostPort": 62659,
+  "ownershipConfirmed": true,
+  "containerAbsentAfterRemoval": true,
+  "cleanup": "confirmed removed by exact owned container ID"
+}

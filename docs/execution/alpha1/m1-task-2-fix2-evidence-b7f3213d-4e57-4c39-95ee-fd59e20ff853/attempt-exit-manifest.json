@@ -1,0 +1,70 @@
+[
+  {
+    "exitPath": "m1-task-2-fix2-canonical-regression-a865b1b9-759a-4ad5-a3bb-f71b862bbb2c\\fix2-canonical-apply.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-debug1-dc646fdc-757d-4cfa-81c0-647e6fe2c864\\fix2-debug1-focused.exit",
+    "exitCode": "1"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-apply-22c6926f-2136-4250-858c-46f542d8f95d\\fix2-final-canonical-apply.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-canonical-apply-4e6c8ff4-7e11-4874-a1cb-5330a16780db\\canonical-apply.exit",
+    "exitCode": "1"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-canonical-apply-7b28d42b-dfcb-4a13-a71f-126095e0d52f\\build.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-canonical-apply-7b28d42b-dfcb-4a13-a71f-126095e0d52f\\canonical-apply.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-canonical-apply-7b28d42b-dfcb-4a13-a71f-126095e0d52f\\typecheck.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-gate-a35a531f-383f-4145-a451-e178bfab3f4d\\fix2-final-build.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-gate-a35a531f-383f-4145-a451-e178bfab3f4d\\fix2-final-typecheck.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-source-gate-5803da20-a4be-449c-9476-42ca6baea485\\fix2-final-build.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-source-gate-5803da20-a4be-449c-9476-42ca6baea485\\fix2-final-canonical-apply.exit",
+    "exitCode": "1"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-final-source-gate-5803da20-a4be-449c-9476-42ca6baea485\\fix2-final-typecheck.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-green1-394ec5b9-d55c-49a6-9468-8dfb85ba39f7\\fix2-green1-focused.exit",
+    "exitCode": "1"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-green2-15544c10-cd6e-4881-80d9-e36a73394b82\\fix2-green2-focused.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-green3-403f8485-6614-4754-bccd-8589576bcb85\\fix2-green3-focused.exit",
+    "exitCode": "0"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-red1-189ff901-5462-4e35-afc2-292ca274772c\\fix2-red1-focused.exit",
+    "exitCode": "1"
+  },
+  {
+    "exitPath": "m1-task-2-fix2-red2-708f16a7-a506-4a2d-8a7e-fd93f5ce8388\\fix2-red2-focused.exit",
+    "exitCode": "1"
+  }
+]

@@ -1,0 +1,45 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (27 tests | 2 failed) 3372ms
+     × fences old and new owner epochs with a source driven ownership change 51ms
+     × applies an owner change between two external keys in one frozen identity mapping 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > fences old and new owner epochs with a source driven ownership change
+error: operator does not exist: text = uuid
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:318:19
+    316|       await client.query('COMMIT');
+    317|       expect(changed).toMatchObject({status:'APPLIED',objectId:require…
+    318|       const after=await database.query<{user_id:string;auth_epoch:stri…
+       |                   ^
+    319|         (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.…
+    320|         (SELECT count(*)::text FROM control.canonical_ownership_audit …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping
+error: could not determine data type of parameter $5
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:364:27
+    362|       await expect(client.query('SELECT 1/0')).rejects.toMatchObject({…
+    363|       await client.query('ROLLBACK');
+    364|       const afterRollback=await database.query<{owner_user_id:string;s…
+       |                           ^
+    365|         audit_count:string;outbox_count:string}>(`SELECT
+    366|         (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 25 passed (27)
+   Start at  16:33:15
+   Duration  3.80s (transform 104ms, setup 0ms, import 254ms, tests 3.37s, environment 0ms)
+

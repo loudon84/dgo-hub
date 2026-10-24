@@ -1,0 +1,53 @@
+{
+  "preCommitHead": "37fa426a74f707cce808a08ac5968cb61fdc18bd",
+  "migration006Sha256": "e8c72d10d081653165e898e5e71051a7b85f647313b9cde66ceeb24e6c801a7e",
+  "unchangedMigrations001to005": [
+    {
+      "path": "integration-service/migrations/001_init.sql",
+      "currentBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "baseBlob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+    },
+    {
+      "path": "integration-service/migrations/002_identity_auth.sql",
+      "currentBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "baseBlob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+    },
+    {
+      "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+      "currentBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "baseBlob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "currentBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "baseBlob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+    },
+    {
+      "path": "integration-service/migrations/005_source_registry.sql",
+      "currentBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "baseBlob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+    }
+  ],
+  "baseFix1": "f7beedf74c7120261ee16d69f7e768a346be05a3",
+  "sourceCommit": "06155415862691175c45f294d7ecb792b7dba713",
+  "sourceFiles": [
+    {
+      "rawSha256": "b22e58899b799c8a32ade3f099cdb2e73f2a7423c1c2a6e3d5af42745dbf2a1e",
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "lfSha256": "b22e58899b799c8a32ade3f099cdb2e73f2a7423c1c2a6e3d5af42745dbf2a1e",
+      "gitBlob": "bca9ef6875bf33400e353082596885dd80e5014e"
+    },
+    {
+      "rawSha256": "e8c72d10d081653165e898e5e71051a7b85f647313b9cde66ceeb24e6c801a7e",
+      "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+      "lfSha256": "e8c72d10d081653165e898e5e71051a7b85f647313b9cde66ceeb24e6c801a7e",
+      "gitBlob": "644be65b454f35d97eb2f1cff296639fa66b5a8d"
+    },
+    {
+      "rawSha256": "00730582e501d1c0a6a309e19ab1cf0a4667ff266347a31b0bd49acedee2173f",
+      "path": "integration-service/normalization/apply.ts",
+      "lfSha256": "00730582e501d1c0a6a309e19ab1cf0a4667ff266347a31b0bd49acedee2173f",
+      "gitBlob": "ebe5e1dcbb479e4ff0d747ac6057c86f7fe8fdbb"
+    }
+  ]
+}

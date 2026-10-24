@@ -1,0 +1,31 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (27 tests | 1 failed) 3430ms
+     × applies an owner change between two external keys in one frozen identity mapping 47ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping
+error: could not determine data type of parameter $4
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:364:27
+    362|       await expect(client.query('SELECT 1/0')).rejects.toMatchObject({…
+    363|       await client.query('ROLLBACK');
+    364|       const afterRollback=await database.query<{owner_user_id:string;s…
+       |                           ^
+    365|         audit_count:string;outbox_count:string}>(`SELECT
+    366|         (SELECT c.owner_user_id FROM hub.canonical_customer c WHERE c.…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 26 passed (27)
+   Start at  16:32:25
+   Duration  3.87s (transform 105ms, setup 0ms, import 264ms, tests 3.43s, environment 0ms)
+

@@ -1,0 +1,60 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts -t two external keys|ordinary Data Owner binding change|direct worker owner-change
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/canonical-apply.test.ts (26 tests | 3 failed | 23 skipped) 2727ms
+     × applies an owner change between two external keys in one frozen identity mapping 64ms
+     × finishes frozen owner work after an ordinary Data Owner binding change 11ms
+     × rejects a direct worker owner-change effect without a matching canonical change 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping
+error: source ownership change does not match current projection
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ applyCustomer normalization/apply.ts:297:5
+    295|       existingAuthority.rows[0].dept_id!==resolved.departmentId)) {
+    296|     const ownerChanged=existingAuthority.rows[0].owner_user_id!==resol…
+    297|     await client.query('SELECT control.record_canonical_customer_owner…
+       |     ^
+    298|       context.tenantId,context.sourceId,customerInput.source_pk,ownerC…
+    299|       ownerChanged?customerInput.owner_external_id:customerInput.dept_…
+ ❯ acceptance-tests/canonical-apply.test.ts:358:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > finishes frozen owner work after an ordinary Data Owner binding change
+error: new row for relation "auth_subject" violates check constraint "auth_subject_business_role_check"
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:411:5
+    409|     const newOwner=`owner-after-data-owner-change-${randomBytes(3).toS…
+    410|     const replacementDataOwner=`data-owner-current-${randomBytes(3).to…
+    411|     await database.query(`INSERT INTO control.auth_subject(tenant_key,…
+       |     ^
+    412|       VALUES($1,$2,'sales-east','sales'),($1,$3,NULL,'admin')`,[contex…
+    413|     const customerTarget=(await database.query<{id:string}>(`SELECT id…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a direct worker owner-change effect without a matching canonical change
+error: new row for relation "auth_subject" violates check constraint "auth_subject_business_role_check"
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/canonical-apply.test.ts:453:5
+    451|     const unrelated=`unrelated-subject-${randomBytes(3).toString('hex'…
+    452|     const newOwner=`owner-direct-helper-${randomBytes(3).toString('hex…
+    453|     await database.query(`INSERT INTO control.auth_subject(tenant_key,…
+       |     ^
+    454|       VALUES($1,$2,NULL,'admin'),($1,$3,'sales-east','sales')`,[contex…
+    455|     const customerTarget=(await database.query<{id:string}>(`SELECT id…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 23 skipped (26)
+   Start at  16:25:23
+   Duration  3.16s (transform 101ms, setup 0ms, import 250ms, tests 2.73s, environment 0ms)
+

@@ -1,0 +1,33 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/canonical-apply.test.ts -t two external keys
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+MIGRATION_SQL_DIAGNOSTIC {"code":"42883","message":"function control.record_canonical_customer_owner_change(text, text, text, text, text, text, text, text, text, bigint, text) does not exist"}
+ ❯ acceptance-tests/canonical-apply.test.ts (26 tests | 26 skipped) 2135ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts [ acceptance-tests/canonical-apply.test.ts ]
+MigrationRunnerError: MIGRATION_APPLY_FAILED 006 canonical_data_and_receipts
+ ❯ invalid migrations/runner.ts:198:10
+    196|
+    197| function invalid(code: string, migration?: Migration): MigrationRunner…
+    198|   return new MigrationRunnerError(code, migration?.versionText, migrat…
+       |          ^
+    199| }
+    200|
+ ❯ applyMigration migrations/runner.ts:329:11
+ ❯ runMigrations migrations/runner.ts:404:7
+ ❯ acceptance-tests/canonical-apply.test.ts:119:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  26 skipped (26)
+   Start at  16:28:20
+   Duration  2.57s (transform 102ms, setup 0ms, import 252ms, tests 2.14s, environment 0ms)
+
