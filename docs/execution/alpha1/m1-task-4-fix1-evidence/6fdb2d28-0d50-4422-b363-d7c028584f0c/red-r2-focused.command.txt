@@ -1,0 +1,1 @@
+M0_RUN_EVIDENCE_ROOT=E:\m1t4-runtime\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16 npm test -- --reporter=verbose --testNamePattern='full retry delay' acceptance-tests/strict-ingestion.test.ts

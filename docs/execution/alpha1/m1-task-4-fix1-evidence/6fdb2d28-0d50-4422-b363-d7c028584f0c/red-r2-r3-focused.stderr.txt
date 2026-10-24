@@ -1,0 +1,47 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/canonical-apply.test.ts > canonical migration 006 > accepts source IDs through the registered 256-character limit without widening business IDs
+Error: CANONICAL_IDENTIFIER_INVALID
+ ❯ validateCanonicalIdentifier normalization/canonical.ts:48:11
+     46|   if (typeof value !== 'string' || value.length < 1 || value.length > …
+     47|       value.trim() !== value || !IDENTIFIER.test(value)) {
+     48|     throw new Error('CANONICAL_IDENTIFIER_INVALID');
+       |           ^
+     49|   }
+     50|   return value;
+ ❯ applyCustomer normalization/apply.ts:229:3
+ ❯ acceptance-tests/canonical-apply.test.ts:1501:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > starts the full retry delay when a long database attempt fails and rolls back
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ acceptance-tests/strict-ingestion.test.ts:653:3
+    651|   });
+    652|
+    653|   it('starts the full retry delay when a long database attempt fails a…
+       |   ^
+    654|     const batch=customerBatch();
+    655|     batch.records[0]!.source_pk='LONG-FAILURE-RETRY-C1';
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Connection terminated unexpectedly
+ ❯ Connection.<anonymous> node_modules/pg/lib/client.js:204:73
+ ❯ Object.onceWrapper node:events:622:28
+ ❯ Connection.emit node:events:508:28
+ ❯ Socket.<anonymous> node_modules/pg/lib/connection.js:64:12
+ ❯ Socket.emit node:events:508:28
+ ❯ TCP.<anonymous> node:net:346:12
+
+This error originated in "acceptance-tests/strict-ingestion.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+

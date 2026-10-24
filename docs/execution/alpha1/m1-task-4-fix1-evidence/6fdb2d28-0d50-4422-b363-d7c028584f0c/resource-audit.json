@@ -1,0 +1,115 @@
+{
+  "resources": [
+    {
+      "containerId": "d1f531db386cb024f3ad1ac7557b1376c20af7a6db3eff5b8ec5be0842899684",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task0",
+      "imageObserved": true,
+      "runLabel": "0c147c8a-f177-4464-8bb8-4184d3622b35",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task0\\0c147c8a-f177-4464-8bb8-4184d3622b35\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "c269e133af35143f8498a6bd693bbbc493e438fe84d689556026c0939d0562f6",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task0",
+      "imageObserved": true,
+      "runLabel": "410adfc6-583a-43a2-b783-b4c515b36bdf",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task0\\410adfc6-583a-43a2-b783-b4c515b36bdf\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "4a06ca02fb65fd9336fe38b4c379ad202ed5162befa19ae1ec2225e0577c7f62",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task0",
+      "imageObserved": true,
+      "runLabel": "8a8562cd-b2b7-49fa-b546-2e290ccea697",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task0\\8a8562cd-b2b7-49fa-b546-2e290ccea697\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "c6a9cbc713de3291973182c9408c448a24d13e22ee5e6940676d1ef1371eac18",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task0",
+      "imageObserved": true,
+      "runLabel": "b99ba336-db66-4ca2-9636-4bc727bb3e24",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task0\\b99ba336-db66-4ca2-9636-4bc727bb3e24\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "33c9b5e9bd5cfcc6fdda892ef8d65b40abfa74941a67c79208054c2c5728ba5b",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task2",
+      "imageObserved": true,
+      "runLabel": "12254136-6146-462b-a4fb-8c2edb061a0e",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task2\\12254136-6146-462b-a4fb-8c2edb061a0e\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "6300633f55e3b6b77d93dffcd3710a35b9f9400b9d5942a33663222fbe488fa9",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task2",
+      "imageObserved": true,
+      "runLabel": "42b7c860-71ad-4069-ba5e-483562a75f64",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task2\\42b7c860-71ad-4069-ba5e-483562a75f64\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "aeeb6d3916305b69bc0fefe0545fce1b2eef4ceac6e01fe409329cc5cba5f666",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task2",
+      "imageObserved": true,
+      "runLabel": "4e5447d4-a4bf-42df-b9bf-f99d0b2a5990",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task2\\4e5447d4-a4bf-42df-b9bf-f99d0b2a5990\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "5e374d889cf4d2a6f42406a5edd0a4aefa8f7fe79ebe06982174e71772f276fb",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task3",
+      "imageObserved": true,
+      "runLabel": "039374a3-7b95-4764-9e36-f2c5b360a317",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task3\\039374a3-7b95-4764-9e36-f2c5b360a317\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "2bfeab1a06c428b8bb29a6886fb769402a05375aadc0cf653d829462e7c65472",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task3",
+      "imageObserved": true,
+      "runLabel": "54d82952-af33-48d6-b305-bba1a97bad4e",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task3\\54d82952-af33-48d6-b305-bba1a97bad4e\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "af38ab4c44f69562d7fd74ed52728811a10c1b9a316118596a664f064a6b9f52",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task3",
+      "imageObserved": true,
+      "runLabel": "6b7edcef-2fe7-4177-b2a9-4ae01bdd9a6a",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task3\\6b7edcef-2fe7-4177-b2a9-4ae01bdd9a6a\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "237f2d056705d8f775bcb663ea5ed5b748c7e0dfd9766abaa5aeeb31643f31e5",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task3",
+      "imageObserved": true,
+      "runLabel": "caa53f09-16e3-43c4-98a9-63d3ecd8dbd6",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task3\\caa53f09-16e3-43c4-98a9-63d3ecd8dbd6\\postgres-lifecycle.jsonl"
+    },
+    {
+      "containerId": "79f22ad50ccfa0ca2eb13dde2cb4265033528efd1b31f281196f43819c8a4d6a",
+      "removedByExactOwnedId": true,
+      "absentAfterRemoval": true,
+      "taskLabel": "task3",
+      "imageObserved": true,
+      "runLabel": "fdcb45f2-0508-45a4-8e23-63f7b7b9d12c",
+      "evidenceFile": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16\\task3\\fdcb45f2-0508-45a4-8e23-63f7b7b9d12c\\postgres-lifecycle.jsonl"
+    }
+  ],
+  "lifecycleFiles": 12,
+  "runtimeRoot": "E:\\m1t4-runtime\\m1-task-4-fix1-7d8fad1f-349f-45e5-8691-3e54fa720f16",
+  "allOwnedRemovedAbsent": true
+}

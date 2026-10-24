@@ -1,0 +1,46 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies frozen HTTP jobs with 128, 129, and 256 character source IDs unchanged
+AssertionError: expected [ { …(5) }, { …(5) }, { …(5) } ] to deeply equal [ { …(5) }, { …(5) }, { …(5) } ]
+
+- Expected
++ Received
+
+@@ -5,19 +5,19 @@
+      "job_status": "SUCCEEDED",
+      "source_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "source_pk": "LONG-SOURCE-128",
+    },
+    {
+-     "applied_count": 1,
+-     "item_status": "APPLIED",
+-     "job_status": "SUCCEEDED",
++     "applied_count": 0,
++     "item_status": "RETRY_PENDING",
++     "job_status": "PROCESSING",
+      "source_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "source_pk": "LONG-SOURCE-129",
+    },
+    {
+-     "applied_count": 1,
+-     "item_status": "APPLIED",
+-     "job_status": "SUCCEEDED",
++     "applied_count": 0,
++     "item_status": "RETRY_PENDING",
++     "job_status": "PROCESSING",
+      "source_id": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "source_pk": "LONG-SOURCE-256",
+    },
+  ]
+
+ ❯ acceptance-tests/strict-ingestion.test.ts:504:27
+    502|       FROM control.ingestion_job j JOIN control.ingestion_job_item i O…
+    503|       ORDER BY j.source_id`,[jobs]);
+    504|     expect(outcomes.rows).toEqual(sources.map((id,index)=>({source_id:…
+       |                           ^
+    505|       item_status:'APPLIED',job_status:'SUCCEEDED',applied_count:1})).…
+    506|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

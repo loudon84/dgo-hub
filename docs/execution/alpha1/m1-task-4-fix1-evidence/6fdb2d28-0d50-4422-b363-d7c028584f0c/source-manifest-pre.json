@@ -1,0 +1,55 @@
+{
+  "gateHead": "6f9b7cc1bacf364b143c622914c5848dacffd935",
+  "files": [
+    {
+      "path": "integration-service/migrations/008_durable_worker_leases_and_retries.sql",
+      "cleanBlob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837",
+      "rawSha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+      "lfSha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+      "bytes": 2804
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "cleanBlob": "e58d3981b23ebc83b7d87de80fcf73e41c7c5802",
+      "rawSha256": "11e61a787323a0ed4a7d994673dc7a09cf4b3f882a829719ab15c76b736a0d96",
+      "lfSha256": "11e61a787323a0ed4a7d994673dc7a09cf4b3f882a829719ab15c76b736a0d96",
+      "bytes": 29796
+    },
+    {
+      "path": "integration-service/normalization/canonical.ts",
+      "cleanBlob": "4ad867680e89199a3a6d37d0a06e28371d39dbc1",
+      "rawSha256": "15a1b95dc860f177f16594579cca2ebfe9e744f062662b848564381107167a06",
+      "lfSha256": "15a1b95dc860f177f16594579cca2ebfe9e744f062662b848564381107167a06",
+      "bytes": 4085
+    },
+    {
+      "path": "integration-service/normalization/apply.ts",
+      "cleanBlob": "5ca57404992df9bc49ac15e966ba24bdf588528d",
+      "rawSha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+      "lfSha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+      "bytes": 32386
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "cleanBlob": "1bdecae2c9f6a817483040dfc8423346ddf7b29c",
+      "rawSha256": "66ec6c5efe105f9085cb1c3699662040594a34368c6c92a9cade4e34cbf0fde2",
+      "lfSha256": "a34393ad983b8e150365807b373dc28ff55056d53b9131c6567d67c0bf67952d",
+      "bytes": 26437
+    },
+    {
+      "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+      "cleanBlob": "a14bc5e26ada7e929d77abf226f1ef0a076a873d",
+      "rawSha256": "f9cb3c728b257fdd923280b8f575fa23b4815bdd05a9d731e074d811fcf6aee5",
+      "lfSha256": "f9cb3c728b257fdd923280b8f575fa23b4815bdd05a9d731e074d811fcf6aee5",
+      "bytes": 75315
+    },
+    {
+      "path": "integration-service/acceptance-tests/canonical-apply.test.ts",
+      "cleanBlob": "0971008e30a3e829d2fdb004426e5a182afec236",
+      "rawSha256": "91ddf6691121c024bb253a330a883ea09ac9d31445e22763b1e8004a2b645ada",
+      "lfSha256": "91ddf6691121c024bb253a330a883ea09ac9d31445e22763b1e8004a2b645ada",
+      "bytes": 117717
+    }
+  ],
+  "phase": "post-focused-gate-pre-source-commit"
+}

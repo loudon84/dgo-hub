@@ -1,0 +1,18 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > upgrades accepted 007 ingestion facts through 008 and preserves them on repeat
+AssertionError: promise rejected "MigrationRunnerError: MIGRATION_APPLY_FAI… { …(3) }" instead of resolving
+ ❯ acceptance-tests/migrations.test.ts:147:94
+
+
+Caused by: MigrationRunnerError: MIGRATION_APPLY_FAILED 008 durable_worker_leases_and_retries
+ ❯ invalid migrations/runner.ts:198:10
+ ❯ applyMigration migrations/runner.ts:325:11
+ ❯ runMigrations migrations/runner.ts:400:7
+ ❯ acceptance-tests/migrations.test.ts:147:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'MIGRATION_APPLY_FAILED', version: '008', migrationName: 'durable_worker_leases_and_retries' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

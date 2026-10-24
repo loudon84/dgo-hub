@@ -1,0 +1,65 @@
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > upgrades accepted 007 ingestion facts through 008 and preserves them on repeat
+AssertionError: promise rejected "MigrationRunnerError: MIGRATION_APPLY_FAI… { …(3) }" instead of resolving
+ ❯ acceptance-tests/migrations.test.ts:147:94
+
+
+Caused by: MigrationRunnerError: MIGRATION_APPLY_FAILED 008 durable_worker_leases_and_retries
+ ❯ invalid migrations/runner.ts:198:10
+ ❯ applyMigration migrations/runner.ts:325:11
+ ❯ runMigrations migrations/runner.ts:400:7
+ ❯ acceptance-tests/migrations.test.ts:147:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'MIGRATION_APPLY_FAILED', version: '008', migrationName: 'durable_worker_leases_and_retries' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/21]⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > upgrades accepted 007 ingestion facts through 008 and preserves them on repeat
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > imports without connecting, querying, migrating, exiting, or closing a pool
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > applies 001 to an empty database, skips it on repeat, and preserves migration data
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > normalizes CRLF to LF when recording the migration checksum
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > serializes concurrent runners and applies each migration exactly once
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rolls back a failed migration and ledger row while preserving 001, then retries successfully
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string COMMIT before any migration DDL or ledger write
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string ROLLBACK before any migration DDL or ledger write
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration whose checksum changed without adding history
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is renamed
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is missing
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects duplicate version without creating phantom migration records
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects version gap without creating phantom migration records
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects invalid UTF-8 without creating phantom migration records
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects empty SQL without creating phantom migration records
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > rejects known 001 objects without a ledger, then adopts them only in local_lab
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > prohibits site adoption and preserves unrelated public objects
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > releases its session lock after a failed migration so a later runner can proceed
+Error: test migration directory escaped its temporary root
+ ❯ acceptance-tests/migrations.test.ts:84:73
+     82|   for (const root of migrationDirectories) {
+     83|     const absolute = resolve(root);
+     84|     if (!absolute.startsWith(resolve(tmpdir(), 'm0-migration-'))) thro…
+       |                                                                         ^
+     85|     await rm(absolute, { recursive: true, force: true });
+     86|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/21]⎯
+
+ FAIL  acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+Error: Command failed: C:\nvm4w\nodejs\node.exe dist/migrate.js --environment-kind local_lab
+{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}
+
+ ❯ acceptance-tests/migrations.test.ts:180:20
+    178|   it('runs the compiled CLI with an explicit environment and closes it…
+    179|     const connectionString = `postgres://postgres@127.0.0.1:${postgres…
+    180|     const output = execFileSync(process.execPath, ['dist/migrate.js', …
+       |                    ^
+    181|       cwd: process.cwd(),
+    182|       env: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { status: 1, signal: null, output: [ null, '', '{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}\n' ], pid: 34356, stdout: '', stderr: '{"status":"FAIL","code":"MIGRATION_APPLY_FAILED","version":"007","migrationName":"durable_ingestion_jobs"}\n' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/21]⎯
+

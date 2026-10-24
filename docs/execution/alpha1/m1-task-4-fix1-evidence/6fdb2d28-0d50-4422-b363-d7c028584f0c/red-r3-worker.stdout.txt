@@ -1,0 +1,50 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=128, 129, and 256 character source IDs acceptance-tests/strict-ingestion.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"level":30,"time":1792847275131,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"d0209fa0-ea0a-4378-bd9e-d96357a9a719","req":{"id":"d0209fa0-ea0a-4378-bd9e-d96357a9a719","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847275210,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"d0209fa0-ea0a-4378-bd9e-d96357a9a719","res":{"statusCode":202},"responseTime":78.21960000000036,"msg":"request completed"}
+{"level":30,"time":1792847275220,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"f1cf482f-ce93-4e79-b5dd-055d9370d7c2","req":{"id":"f1cf482f-ce93-4e79-b5dd-055d9370d7c2","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847275276,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"f1cf482f-ce93-4e79-b5dd-055d9370d7c2","res":{"statusCode":202},"responseTime":55.359500000000025,"msg":"request completed"}
+{"level":30,"time":1792847275285,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"3c05d3f1-632c-43be-9aea-4a5e42db978c","req":{"id":"3c05d3f1-632c-43be-9aea-4a5e42db978c","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847275342,"pid":39524,"hostname":"WIN-20231024AVS","reqId":"3c05d3f1-632c-43be-9aea-4a5e42db978c","res":{"statusCode":202},"responseTime":56.490800000000036,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > returns 202 only after raw, job, item, idempotency and outbox rows commit
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays a lost response with the same scoped job and rejects changed content
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > serializes concurrent same-key requests to one committed receipt
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects structure and schema errors without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > enforces the public order state and empty-lines matrix before writing
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rolls back every intake row when the final outbox write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays after ordinary pause without re-admission and blocks new admission
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads
+ × acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies frozen HTTP jobs with 128, 129, and 256 character source IDs unchanged 358ms
+   → expected [ { …(5) }, { …(5) }, { …(5) } ] to deeply equal [ { …(5) }, { …(5) }, { …(5) } ]
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > summarizes mixed terminal outcomes as PARTIAL with only real APPLIED effects counted
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > starts the full retry delay when a long database attempt fails and rolls back
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates an explicitly remapped frozen identity while completing unrelated frozen work
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 29 skipped (30)
+   Start at  21:07:52
+   Duration  3.62s (transform 207ms, setup 0ms, import 438ms, tests 2.99s, environment 0ms)
+

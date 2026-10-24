@@ -1,0 +1,33 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=upgrades accepted 007 acceptance-tests/migrations.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ × acceptance-tests/migrations.test.ts > versioned migration runner > upgrades accepted 007 ingestion facts through 008 and preserves them on repeat 332ms
+   → promise rejected "MigrationRunnerError: MIGRATION_APPLY_FAI… { …(3) }" instead of resolving
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > imports without connecting, querying, migrating, exiting, or closing a pool
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > applies 001 to an empty database, skips it on repeat, and preserves migration data
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > normalizes CRLF to LF when recording the migration checksum
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > serializes concurrent runners and applies each migration exactly once
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rolls back a failed migration and ledger row while preserving 001, then retries successfully
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string COMMIT before any migration DDL or ledger write
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string ROLLBACK before any migration DDL or ledger write
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration whose checksum changed without adding history
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is renamed
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is missing
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects duplicate version without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects version gap without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects invalid UTF-8 without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects empty SQL without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects known 001 objects without a ledger, then adopts them only in local_lab
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > prohibits site adoption and preserves unrelated public objects
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > releases its session lock after a failed migration so a later runner can proceed
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 skipped (19)
+   Start at  21:05:36
+   Duration  2.65s (transform 55ms, setup 0ms, import 97ms, tests 2.37s, environment 0ms)
+

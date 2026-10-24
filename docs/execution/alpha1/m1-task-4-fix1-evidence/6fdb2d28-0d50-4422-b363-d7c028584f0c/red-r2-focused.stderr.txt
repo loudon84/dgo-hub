@@ -1,0 +1,15 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > starts the full retry delay when a long database attempt fails and rolls back
+AssertionError: expected -546 to be greater than 4000
+ ❯ acceptance-tests/strict-ingestion.test.ts:678:41
+    676|       FROM control.ingestion_job_item i WHERE i.job_id=$1`,[jobId]);
+    677|     expect(state.rows[0]).toMatchObject({status:'RETRY_PENDING',attemp…
+    678|     expect(state.rows[0]!.remaining_ms).toBeGreaterThan(4_000);
+       |                                         ^
+    679|     const retryWorker=hubWorkerPool();
+    680|     try { await runDurableWorkerOnce(retryWorker,{limit:100}); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

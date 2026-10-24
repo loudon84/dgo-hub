@@ -1,0 +1,104 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose --testNamePattern=upgrades accepted 007|keeps the retry budget|full retry delay|registered 256-character limit|128, 129, and 256 character source IDs acceptance-tests/migrations.test.ts acceptance-tests/strict-ingestion.test.ts acceptance-tests/canonical-apply.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ✓ acceptance-tests/migrations.test.ts > versioned migration runner > upgrades accepted 007 ingestion facts through 008 and preserves them on repeat 378ms
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > imports without connecting, querying, migrating, exiting, or closing a pool
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > runs the compiled CLI with an explicit environment and closes its own pool
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > applies 001 to an empty database, skips it on repeat, and preserves migration data
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > normalizes CRLF to LF when recording the migration checksum
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > serializes concurrent runners and applies each migration exactly once
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rolls back a failed migration and ledger row while preserving 001, then retries successfully
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string COMMIT before any migration DDL or ledger write
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects a newline-continued E-string ROLLBACK before any migration DDL or ledger write
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration whose checksum changed without adding history
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is renamed
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects an applied migration file that is missing
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects duplicate version without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects version gap without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects invalid UTF-8 without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects empty SQL without creating phantom migration records
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > rejects known 001 objects without a ledger, then adopts them only in local_lab
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > prohibits site adoption and preserves unrelated public objects
+ ↓ acceptance-tests/migrations.test.ts > versioned migration runner > releases its session lock after a failed migration so a later runner can proceed
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > orders admissions and new security barriers through one transaction fence
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > appends after the reviewed registry and records repeatable checksum history
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses tenant composite keys for canonical order to customer references
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > keeps the API principal out of canonical core DML and gives the shared worker bounded apply DML
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > runs complete customer and order applies under hub_worker with no unrelated auth writes
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes owner eligibility with a concurrent M0 disable
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an independently specified customer and handles version receipt outcomes atomically
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > fences old and new owner epochs with a source driven ownership change
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies an owner change between two external keys in one frozen identity mapping
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > finishes frozen owner work after an ordinary Data Owner binding change
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a direct worker owner-change effect without a matching canonical change
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects stale matching receipt and outbox after a partial direct core owner update
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > stamps receipt and outbox transaction IDs over worker supplied values
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > locks direct-helper owner eligibility before validating it under concurrent disable
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects direct-helper owner changes after M0 withdraws the business role to NULL
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > enforces typed barriers and newer remap fences through direct worker helper calls
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > applies the first version zero and rejects a customer payload on an order channel
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses only the caller transaction and leaves the supplied PoolClient unreleased
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a frozen proof paired with a same-source channel from another connector tuple
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > keeps equal replay harmless after identity remap and fences later observations from the old mapping
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable customer identity for a minimal unknown-key delete and restores only at a higher version
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > advances a repeated unknown-key snapshot tombstone without another revision or outbox row
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > reserves a stable order identity for a minimal unknown-key delete and accepts explicit empty-line restoration
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes a matching security barrier after old admission and accepts a later trusted fence
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > advances an unchanged snapshot observation receipt without emitting a second outbox event
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > uses one projection digest for remap and an unchanged post-remap snapshot observation
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > serializes a source apply with an explicit owner remap and fences the older accepted mapping
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > rejects a department remap that contradicts the current M0 owner department
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > replaces the complete order line image, retains tombstones, and restores only with a higher source version
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > preserves the complete T0 order image when header, each representative line, receipt, or outbox fails
+ ↓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > persists a complete 200-line order image
+ ✓ acceptance-tests/canonical-apply.test.ts > canonical migration 006 > accepts source IDs through the registered 256-character limit without widening business IDs 123ms
+{"level":30,"time":1792847316550,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"d2b0717b-b351-4870-8bfd-f73e5d067f58","req":{"id":"d2b0717b-b351-4870-8bfd-f73e5d067f58","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > returns 202 only after raw, job, item, idempotency and outbox rows commit
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays a lost response with the same scoped job and rejects changed content
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > serializes concurrent same-key requests to one committed receipt
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects structure and schema errors without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > enforces the public order state and empty-lines matrix before writing
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects invalid enum and identifier images without durable rows
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > stores chronological source range across record order, offsets and microseconds
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rejects private-key and deep JSON over HTTP without durable writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > accepts 100 records and exactly 4 MiB while rejecting 0, 101 and 4 MiB plus one byte
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > rolls back every intake row when the final outbox write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > replays after ordinary pause without re-admission and blocks new admission
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > blocks a newer typed security barrier until a fresh fenced owner approval
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-3 strict intake and durable job reads > uses source ownership and same-tenant source:read manager scope for safe job reads
+{"level":30,"time":1792847316636,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"d2b0717b-b351-4870-8bfd-f73e5d067f58","res":{"statusCode":202},"responseTime":85.25590000000011,"msg":"request completed"}
+{"level":30,"time":1792847316647,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"f178d19b-0a5d-4a0d-a214-879bbbafd813","req":{"id":"f178d19b-0a5d-4a0d-a214-879bbbafd813","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847316711,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"f178d19b-0a5d-4a0d-a214-879bbbafd813","res":{"statusCode":202},"responseTime":64.02070000000003,"msg":"request completed"}
+{"level":30,"time":1792847316727,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"e285e0a1-0a2f-4913-a03c-ac059eb9276b","req":{"id":"e285e0a1-0a2f-4913-a03c-ac059eb9276b","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847316801,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"e285e0a1-0a2f-4913-a03c-ac059eb9276b","res":{"statusCode":202},"responseTime":73.92519999999968,"msg":"request completed"}
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies frozen HTTP jobs with 128, 129, and 256 character source IDs unchanged 449ms
+{"level":30,"time":1792847316969,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"f7dd1513-6dcc-4c45-8c43-36d6d3b5187a","req":{"id":"f7dd1513-6dcc-4c45-8c43-36d6d3b5187a","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847317033,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"f7dd1513-6dcc-4c45-8c43-36d6d3b5187a","res":{"statusCode":202},"responseTime":64.10630000000037,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > applies a committed HTTP job as hub_worker and records the canonical effect with its terminal summary
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves source version outcomes and counts only committed APPLIED effects
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > summarizes mixed terminal outcomes as PARTIAL with only real APPLIED effects counted
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > quarantines an order when the frozen customer target disagrees with the full source reference tuple
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > preserves canonical timestamp precision and exact decimal scale at the worker adapter
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps the retry budget, due times, and operation identity across failed transactions 251ms
+{"level":30,"time":1792847317220,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"3d972e84-60d4-499b-aafd-cf952771af6f","req":{"id":"3d972e84-60d4-499b-aafd-cf952771af6f","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1792847317277,"pid":2696,"hostname":"WIN-20231024AVS","reqId":"3d972e84-60d4-499b-aafd-cf952771af6f","res":{"statusCode":202},"responseTime":57.30119999999988,"msg":"request completed"}
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical writes when a database trigger rejects a written customer header
+ ✓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > starts the full retry delay when a long database attempt fails and rolls back 5634ms
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > rolls back canonical state when item status or the pre-commit boundary fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers an expired lease with a fresh token and fences stale ACK writes
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > lets concurrent hub_worker processes claim distinct jobs
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > recovers after actual process termination before apply and after commit before ACK
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > keeps order lines, receipts, and business outbox atomic when a selected line write fails
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates each newer typed security barrier during worker apply
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > finishes frozen work after ordinary source epoch drift
+ ↓ acceptance-tests/strict-ingestion.test.ts > M1-4 durable strict worker > isolates an explicitly remapped frozen identity while completing unrelated frozen work
+
+ Test Files  3 passed (3)
+      Tests  5 passed | 76 skipped (81)
+   Start at  21:08:33
+   Duration  9.69s (transform 437ms, setup 0ms, import 951ms, tests 14.42s, environment 0ms)
+
