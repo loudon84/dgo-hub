@@ -1,0 +1,1272 @@
+{
+  "schema_version": "alpha1.v1",
+  "git_sha": "9724f627daceb6315bb05446667eed56c66fd987",
+  "dirty": true,
+  "files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "sha256:3bd861337267c7883fc6d73f2815dfe007ca618ac0a5ec0fc139c8c728c0b551"
+    },
+    {
+      "path": "deploy/alpha1/Dockerfile",
+      "sha256": "sha256:02bfce5b4b47e3aa22383be05b3ac6ec415af6840b6ba353b83a6a98159877c5"
+    },
+    {
+      "path": "deploy/alpha1/New-LocalCertificates.ps1",
+      "sha256": "sha256:637093195011f496aa8a050600316d8283c425ffb4382047e7500d18ab5faff1"
+    },
+    {
+      "path": "deploy/alpha1/README.md",
+      "sha256": "sha256:61b5945985c0be19800f96ec6c1436b51dfef84d57fc32f2b5b59c3616e78443"
+    },
+    {
+      "path": "deploy/alpha1/compose-vars.example",
+      "sha256": "sha256:38788c910b675440c64241e9c3758761e10e1042df943b42ab63191aed5a7b27"
+    },
+    {
+      "path": "deploy/alpha1/compose.yaml",
+      "sha256": "sha256:abe3cfd0a16ddcf7eb240f66325c74fb6cfed2913eaa82698613811325133dbc"
+    },
+    {
+      "path": "deploy/alpha1/credential-revoke-sequence.mjs",
+      "sha256": "sha256:1dbca895e494be974d365a581548c72b82bedfe5a807c7dcf37a5ff1097dc8d1"
+    },
+    {
+      "path": "deploy/alpha1/db-init/00-roles.sh",
+      "sha256": "sha256:f462fde7910cb4f321b0c30550ce5e8bcf399a9cb7f232199bcb263cbfae726c"
+    },
+    {
+      "path": "deploy/alpha1/entrypoint.mjs",
+      "sha256": "sha256:74e914338840ad181e5205fda55156e8fa88df60c7863d973feb6d8b2ac2a920"
+    },
+    {
+      "path": "deploy/alpha1/grant-probe.mjs",
+      "sha256": "sha256:b6ea900eb8021a7e22ddb35a660a9189efc38b30bd8747a9aa75e2f69565c650"
+    },
+    {
+      "path": "deploy/alpha1/management-probe.mjs",
+      "sha256": "sha256:3d29ad95dd8501dd93788c5ec34db1bede84402db52c47fe695cb7ed931e870e"
+    },
+    {
+      "path": "deploy/alpha1/nginx/management.conf",
+      "sha256": "sha256:b54f734c9b3fc2113ac9257799186b1e5dab3dc2428c9b01f8fd3a9a2e25adb0"
+    },
+    {
+      "path": "deploy/alpha1/nginx/sales.conf",
+      "sha256": "sha256:1ef7f9a90ea6258b8d2db325717529bb34ab7e9caa1030ab0178864ae42638b5"
+    },
+    {
+      "path": "deploy/alpha1/prepare-local-run.mjs",
+      "sha256": "sha256:910a31b940caf56de8da434da0fb45b9166c4ae9b224710203546444ec115914"
+    },
+    {
+      "path": "deploy/alpha1/probe-sales-network.ps1",
+      "sha256": "sha256:61daea968a0392551d8dc8d83de999cce2b443fb636871e311f475dc4b0546bc"
+    },
+    {
+      "path": "deploy/alpha1/sales-probe.mjs",
+      "sha256": "sha256:b13bb77227fcef9be141731fdf221020e5d15829918d733e11b499a4a354aaf0"
+    },
+    {
+      "path": "deploy/alpha1/sales-revoke-http-probe.mjs",
+      "sha256": "sha256:1532e4caad4fddf5a45c607fc83159044afbef325becdc9b29e5375896dad4e7"
+    },
+    {
+      "path": "deploy/alpha1/seed-principal.mjs",
+      "sha256": "sha256:067c98f27cd977e002e09a4ac2484c8b28adb62cd45682256a03abaae361b981"
+    },
+    {
+      "path": "deploy/alpha1/verify-audit.mjs",
+      "sha256": "sha256:6fb78a566de92f2a706595310654a7e9e160c39ce410070d24f6a87ae4c4ba41"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/06a9278b-fcbe-4d5b-afa8-9c2bbc395b81/postgres-lifecycle.jsonl",
+      "sha256": "sha256:5f671b6b644676e3149e50043cd796ae0058b08394af9648efd7be65dccd5fcb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/59728eb1-91d1-4cf9-8f4e-aa8685cf5d01/postgres-lifecycle.jsonl",
+      "sha256": "sha256:3e82034c1ee17521b52634c829a12c26fbec633276baf119d30d71b2051c4746"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/860d4763-a978-44f3-9e23-2d40f0e8df9a/postgres-lifecycle.jsonl",
+      "sha256": "sha256:e6ebe3c1e28532ccc3cbb003562b14cf82177e8efe0137dda69eabb7c7e2f69a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/8c2271b8-9a9c-414b-ba34-545b8d2dd99a/postgres-lifecycle.jsonl",
+      "sha256": "sha256:ccfdd91851006eb3cc6d7f60c2d0554643d926b4f251c20a67a9d534ce936176"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/b96f5bf8-f523-43e9-93e1-a25f86ffcb73/postgres-lifecycle.jsonl",
+      "sha256": "sha256:e1b305408d0e490ae864b787f3be81bb15e5e65af31cb66f9027c45727f97e46"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/bea6b189-e180-4a03-b6f5-b41a7a57d78f/postgres-lifecycle.jsonl",
+      "sha256": "sha256:077d5f8ad54c67cb37d9c94426ec9b22e55dba5b8c7c67493d2541768f765302"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/d59cd673-7519-44c1-9f8a-6b512e082302/postgres-lifecycle.jsonl",
+      "sha256": "sha256:a178d185d406ecade412b90e0ddefd0470e9dc1edf457bbb655686b18141458c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-3-evidence/da61f0d2-17f7-4057-95ac-d8ebcb3245c4/postgres-lifecycle.jsonl",
+      "sha256": "sha256:a9ceba9c85d7263d0797239d97a7c33f3261a058d346707dc432f757682dd78a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/061fe6cf-8091-4272-a2ac-ddc4900dd3c5/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/061fe6cf-8091-4272-a2ac-ddc4900dd3c5/i1-red/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/061fe6cf-8091-4272-a2ac-ddc4900dd3c5/i1-red/source.txt",
+      "sha256": "sha256:d7137274694d710d02e2d17d83930fa4fd525d09821ee2ed93e1e40abc01e485"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/0d219e3c-75e9-436a-99b6-681a7deaf7dc/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/235cc03d-efaa-4778-873d-98d3d8687cfe/mcp-auth/command.txt",
+      "sha256": "sha256:c23c68f40add22fe61e5b4b46ee866fd19e450e1a9fa35fae820dcc700b3f1e4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/235cc03d-efaa-4778-873d-98d3d8687cfe/mcp-auth/exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/235cc03d-efaa-4778-873d-98d3d8687cfe/source.txt",
+      "sha256": "sha256:65c41b9c73e0c58229ba207a47fa30e748f788c5dc0474f97650cb4cc80763db"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/235cc03d-efaa-4778-873d-98d3d8687cfe/typecheck/command.txt",
+      "sha256": "sha256:25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/235cc03d-efaa-4778-873d-98d3d8687cfe/typecheck/exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/2e39d005-c81d-4a29-a893-146bfbf89fd2/i1-green/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/2e39d005-c81d-4a29-a893-146bfbf89fd2/i1-green/exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/2e39d005-c81d-4a29-a893-146bfbf89fd2/i1-green/source.txt",
+      "sha256": "sha256:81b5b123e3374d9dbc915768334b859823a642c9df935b7094a8be6662765123"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/absent.txt",
+      "sha256": "sha256:b625e5139b05722842537c7016e2e78c22d36212eaeae63fce2b2005b7808f33"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/command.txt",
+      "sha256": "sha256:e288b57b8db56afc881fd0f8195039c0e1664e4dac6175225669d70659f3f463"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/container.cid",
+      "sha256": "sha256:e046de28d7c05d18a84c98ef8cd789ebc0729293113dea57a626be0bfcf1722b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/ownership.txt",
+      "sha256": "sha256:64884d8d54649ad862769876149e1a65a48e73fbdc422311b696218d8a52e97e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/published-address.txt",
+      "sha256": "sha256:9b3d57450f9c7aeb32d7d110ce465dce6c2f4bbe886ab30b1f0835a7e18f4b47"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/ready.txt",
+      "sha256": "sha256:ca4a016eae14ab0c7ebb935a6e24ae8b512958f25c788f11eb99566d066b7957"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/resource-id.txt",
+      "sha256": "sha256:acb13ae4a0f486fde9f39fd83ae487b5ba6ec227ab02f7a4bc03adbf1bbfb9d1"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/37221825-22e7-4cbf-908c-885c0cecf857/postgres-diagnostic/tcp-test.txt",
+      "sha256": "sha256:ca4a016eae14ab0c7ebb935a6e24ae8b512958f25c788f11eb99566d066b7957"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/38574a1c-2500-44d4-83f0-4e20bab2af88/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/38574a1c-2500-44d4-83f0-4e20bab2af88/i1-red/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/38574a1c-2500-44d4-83f0-4e20bab2af88/i1-red/source.txt",
+      "sha256": "sha256:10308671ed6d177e7623960c56697c1fb89bd183a6ded82963c60574163a94bb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/4fdcfe6c-db9f-463a-bbe7-2c3fd3ec3fc2/evidence-routing-red-green/command.txt",
+      "sha256": "sha256:16b6a7acdb940134c3c0d01ffcedd0bae7278481cc06b950a5f8082cf57ba722"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/4fdcfe6c-db9f-463a-bbe7-2c3fd3ec3fc2/evidence-routing-red-green/exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/4fdcfe6c-db9f-463a-bbe7-2c3fd3ec3fc2/evidence-routing-red-green/source.txt",
+      "sha256": "sha256:4340461972eb17fe7e9ae14c46bb78762c62206810343019d5e5741a20f46435"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/9be32420-a976-476c-a114-7a568b68f8e6/i1-green/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/9be32420-a976-476c-a114-7a568b68f8e6/i1-green/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/9be32420-a976-476c-a114-7a568b68f8e6/i1-green/source.txt",
+      "sha256": "sha256:04c64c2679a3ab2cdaca0aea93556a4c07bc2f0c1f8332ff9f17a4a5177cb71f"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/absence-proof.txt",
+      "sha256": "sha256:090dcdef8181f696a73c0f054c56111b610e6f45f194feb07060a3508402c01c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/absent.txt",
+      "sha256": "sha256:ca4a016eae14ab0c7ebb935a6e24ae8b512958f25c788f11eb99566d066b7957"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/command.txt",
+      "sha256": "sha256:9243c121d7dff458801f88911ad9dc993d6e86878ac67667fcbdd0a809ed7e5b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/container.cid",
+      "sha256": "sha256:cfd3367bf9afa5071e15dabc77787a2612779187e784076756c7bc1bc4004ea1"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/ownership.txt",
+      "sha256": "sha256:90feb294cdfd11f361d69faeae5743bce08430bd7f8961fad65bd655dfde04e7"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/published-address.txt",
+      "sha256": "sha256:09b8b3446bb2ed5243f155bf495db091089c12702cec624b6133cd9ca449eaee"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a5159891-5a30-400f-bd4f-ff6281951d91/postgres-diagnostic/resource-id.txt",
+      "sha256": "sha256:fbcf65273f26043405bb1b6cf7c6d049033f468ca377a69c5184c0f806ca4dff"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a93aa094-325b-4a55-ab34-06459e1c45a5/evidence-routing/command.txt",
+      "sha256": "sha256:16b6a7acdb940134c3c0d01ffcedd0bae7278481cc06b950a5f8082cf57ba722"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a93aa094-325b-4a55-ab34-06459e1c45a5/evidence-routing/exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a93aa094-325b-4a55-ab34-06459e1c45a5/evidence-routing/source.txt",
+      "sha256": "sha256:4340461972eb17fe7e9ae14c46bb78762c62206810343019d5e5741a20f46435"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a93aa094-325b-4a55-ab34-06459e1c45a5/evidence-routing/typecheck.command.txt",
+      "sha256": "sha256:25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/a93aa094-325b-4a55-ab34-06459e1c45a5/evidence-routing/typecheck.exit.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/ba707be1-ea5b-44c6-bcf2-5af94b87fea2/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/ba707be1-ea5b-44c6-bcf2-5af94b87fea2/i1-red/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/ba707be1-ea5b-44c6-bcf2-5af94b87fea2/i1-red/source.txt",
+      "sha256": "sha256:9188a4ca8b6552d327ec20c8b976b10275de120a4d53931a1a52a4adeea9d34c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/c45d5838-514d-4738-afc5-a94860e12245/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/c45d5838-514d-4738-afc5-a94860e12245/i1-red/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/c45d5838-514d-4738-afc5-a94860e12245/i1-red/source.txt",
+      "sha256": "sha256:d7137274694d710d02e2d17d83930fa4fd525d09821ee2ed93e1e40abc01e485"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/debug-build/exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-check/exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-focused-green-2/exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-focused-green/exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry/exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry/probe.mjs",
+      "sha256": "sha256:1e5f519418191d1bf3f32bcbb20ae354f1cb097c7f4ef70abdeb7e66cdc14629"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry2/exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry2/probe.mjs",
+      "sha256": "sha256:d3b1960fe8ee276087ac986a23ce3f281c772348de57bb733b3719d54ceffbd3"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry3/exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry3/probe.mjs",
+      "sha256": "sha256:10b08d0e74a3826172b315f6780f0a6adc3509a579845a5cb57d44a9b642b921"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate-retry3/task4/fa9c612c-9df6-496c-a3a1-76b44d374ca6/postgres-lifecycle.jsonl",
+      "sha256": "sha256:bc60c38ef29b02789c6dc86db5e12cf62924b13a336b3946ba9b8327fd0e9a13"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate/exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/migration-004-sqlstate/probe.mjs",
+      "sha256": "sha256:1e67260fb40f6bcbd07ef10f37ba2a96dc167d5ffee4d514b0631f8308f2beb0"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/16324f0d-beb1-4367-8f12-31410cb7ee1a/foundation-postgres-resource-summary.json",
+      "sha256": "sha256:73a62da5011a2486c53970a0c97896147748bdbd6786d1916aed55c36e97f2c6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/16324f0d-beb1-4367-8f12-31410cb7ee1a/postgres-lifecycle.jsonl",
+      "sha256": "sha256:57c9a5a88a7006ed37df1b97279c2b6fb61da1c72366c8196daea1f2d7069b85"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/34e72824-7651-4910-88ce-6e66f5c02f4c/foundation-postgres-resource-summary.json",
+      "sha256": "sha256:2a5f4ae014c69b8ed79c483cb84343133057fa9410fcd250271b6d9b11579fc9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/34e72824-7651-4910-88ce-6e66f5c02f4c/postgres-lifecycle.jsonl",
+      "sha256": "sha256:a980767518ac71ccaa8e29d580e2f37d46852202abbc6846e202ca472c561dd6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/e7ee1648-6cf9-408b-8a41-3e14193bd1c0/foundation-postgres-resource-summary.json",
+      "sha256": "sha256:32bc8d3219ff701e1e63060d6c9b1aafc4096d04e2668c1d53380a8321c2fbd8"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task0/e7ee1648-6cf9-408b-8a41-3e14193bd1c0/postgres-lifecycle.jsonl",
+      "sha256": "sha256:7179033d6c97bac004f12270eee49bf02cb2c93e026760211b33606585c84714"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/2e0699de-812d-4ffa-be0a-8b1233bb3ae8/postgres-lifecycle.jsonl",
+      "sha256": "sha256:6a07ae3219bb8a491480f4a569d7879988f9e6ed4b6a1da067341c797928fd02"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/2e0699de-812d-4ffa-be0a-8b1233bb3ae8/postgres-resource-summary.json",
+      "sha256": "sha256:1c1399c1102adfef1aec1178ccf0786f2fe866f5f8b42b0c2ce71f21aead1728"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/64c3375b-24b6-4495-a8e4-3c060b39e6ee/postgres-lifecycle.jsonl",
+      "sha256": "sha256:5b8ee30d2f1b7444529604454b57ac48a061240256bff6a984e439c8c9adbf78"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/64c3375b-24b6-4495-a8e4-3c060b39e6ee/postgres-resource-summary.json",
+      "sha256": "sha256:be86a5fefc89e5885af3cf5c65e424032044f9fc5f2a3795138d010208257ff4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/ea43eb1f-1cc5-492b-bfc9-b2cd3f4c7265/postgres-lifecycle.jsonl",
+      "sha256": "sha256:f67d46044673b8e21dbc2f36d5bb3ed3dd548b69447565cf5c3ca55de51abe95"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f2d6b327-00eb-4298-b21c-6338a592765b/task1/ea43eb1f-1cc5-492b-bfc9-b2cd3f4c7265/postgres-resource-summary.json",
+      "sha256": "sha256:000f94b3f718edd3de2d2a0f44bbea5f0f19fafa1c5c1bdf6fa03266308691e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f862f184-11ba-44ec-a106-7c677809f5c4/i1-red/command.txt",
+      "sha256": "sha256:b8f1afd7cf8554bd4fe2440cc465a91a9a236557f9db9fe97cf8b24f63dbbf1e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f862f184-11ba-44ec-a106-7c677809f5c4/i1-red/exit.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f862f184-11ba-44ec-a106-7c677809f5c4/i1-red/source.txt",
+      "sha256": "sha256:9f19900b45c8a20069973de209da8e5ba5e9d7f94988263fbb5362298785bab2"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/absence-proof.txt",
+      "sha256": "sha256:796f7250b2f6256911edc6f1f48f803bc890c66363772ec24f5e8ff25f450acb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/absent.txt",
+      "sha256": "sha256:ca4a016eae14ab0c7ebb935a6e24ae8b512958f25c788f11eb99566d066b7957"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/command.txt",
+      "sha256": "sha256:4bd5ae9d22779a8e4475817324fd19fa3732a7184d33ac10f5144478fb465eb6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/container.cid",
+      "sha256": "sha256:fa90ec2f5b19f408a775bdcc24ae28fc3a18e93b22d2edb389618c2375d872a0"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/helper.sha256.txt",
+      "sha256": "sha256:3c582b1266fc6b0d36dc1a4a554f0871f665785cabbf11c972c6d4f905cfd652"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/internal-ready.txt",
+      "sha256": "sha256:bb048d1e9b3e3aa519332337f0430935af3ef40dc7f4f980f8a485497bf9ef2b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/ownership.txt",
+      "sha256": "sha256:d2bff6518ad3cd9009bcda2be76a6cb266869ebdbc8b21ccb978d90e9b2828ed"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/published-address.txt",
+      "sha256": "sha256:c4f0e251c8e7ed93b1b1e238438748ed1e39712646d32147df2139a34c1c7929"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/f8e9b1c4-a2b8-4a39-92c5-5ce374dab854/postgres-readiness-trace/resource-id.txt",
+      "sha256": "sha256:aee36f54a8827f1c98fe0e4ffef58646ef94c22ebf4c827916936413d200b902"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/acceptance-results.json",
+      "sha256": "sha256:92ec378731af1472dfb930f26e267f1e3aff2b65da3aa388b5f3f27cca7573d2"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/final-w0-20261024-01a166bd/run.json",
+      "sha256": "sha256:afab8c490180beb8a841b0c59c2c35c9567ad5a12b64e2f06ed8086036a852ee"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/final-w0-01a166bd/source-sha256-pre-run.txt",
+      "sha256": "sha256:a409256ae83f51a3e0a94a6f1b6b265b29de6ae5940e85882910e2b90c0ad352"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/focused-migration-102bb628a94b4ea3aee727beaaef0b49/task0/714e7a45-2825-4535-b347-e9a054698f67/foundation-postgres-resource-summary.json",
+      "sha256": "sha256:371ccc207133f7d0715c8500a2be1761fc874d8a3aa1773c812d52ae99e7c3be"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/focused-migration-102bb628a94b4ea3aee727beaaef0b49/task0/714e7a45-2825-4535-b347-e9a054698f67/postgres-lifecycle.jsonl",
+      "sha256": "sha256:d1322f4f53c17f69d9f6a259254813f4cf0f62c9c82e5c0591e7b6184be12993"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/focused-migration-rerun-537ac4b5eedb422c82c5438a4e6d938d/exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/focused-migration-rerun-537ac4b5eedb422c82c5438a4e6d938d/task0/0501e5b2-7e7b-4aec-b850-cbda91281741/foundation-postgres-resource-summary.json",
+      "sha256": "sha256:cb6e08e7bc1b840d3da1d58d17d99ccb9628338fadfef02dd07431ed830dbec2"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/focused-migration-rerun-537ac4b5eedb422c82c5438a4e6d938d/task0/0501e5b2-7e7b-4aec-b850-cbda91281741/postgres-lifecycle.jsonl",
+      "sha256": "sha256:419c0dd4d5fb11cf97349474aabc89a9d97a7925cc2d093bc9990b16a36916ba"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/app-container-image-identities.txt",
+      "sha256": "sha256:79f41b06861f13f1d98dd047a939a46c6b4b8224bbb7e589e770767b348afce8"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/certificate-generation-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/certs/ca.pem",
+      "sha256": "sha256:78277992fbd35e7701d6111f9ef4be5aee2dc812b14f90ecfeb1eb9e35654205"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/certs/leaf-key.pem",
+      "sha256": "sha256:0887a7538b40d1d41fe02cb7ea5ae99270a28152a32fcfd071b5e52701797628"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/certs/leaf.pem",
+      "sha256": "sha256:9575bf3c49304c5487ca3cdf9013baa49dfd367310a2062be23c271d4d30773f"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-config-quiet-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-config-quiet-rerun-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-state-local-lab.txt",
+      "sha256": "sha256:804fd92d8edfcb34c6cf7a1b431da0ed7b0ce7e5ce910127fbeb4805873b2c81"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-up-local-lab-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-up-missing-oidc-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-vars-no-oidc.env",
+      "sha256": "sha256:3063cf805d8eed009b9b13ac702edd034d96e20eb39badfac0b5341e63f095ef"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/compose-vars.env",
+      "sha256": "sha256:c95f9009f7ed4cea25b38f6f95ffeb5fbd2ec4101d3c07c3158cbfa1d415dcf0"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/container-identities-local-lab.txt",
+      "sha256": "sha256:2d37e61a7bd260dab80612e3e4f0ae146517ca71c55d7df4d76b7346aa25c0be"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/credential-sequence-prepare-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/credential-sequence-prepare-identity.txt",
+      "sha256": "sha256:6d8891a1835bd9f0b2c4e1470a5d52ea4824559b05ab740fbbc43f6b07bad38b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/credential-sequence-revoke-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/credential-sequence-revoke-identity.txt",
+      "sha256": "sha256:6d8891a1835bd9f0b2c4e1470a5d52ea4824559b05ab740fbbc43f6b07bad38b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-grant-probe-active-token-sequence-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-grant-probe-active-token-sequence-identity.txt",
+      "sha256": "sha256:f6e6163f636b70734ef8a9090cd4efb84f9958b434a2f6015bfa46f1a3cb1e5c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-grant-probe-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-grant-probe-identity.txt",
+      "sha256": "sha256:cd877223d659fcb0b3c799657b2860b31173dbc0aa5cc856bf9578276cbab599"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-seed-principal-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-seed-principal-identity.txt",
+      "sha256": "sha256:f4586abf49ec3d4fde0e542f4d4d1a072fec95cfec9f1189a57eb931c0214333"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-audit-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-audit-identity.txt",
+      "sha256": "sha256:faf0a9519c060a87c434e71aad8a39323c0342d998c82005a133a9066e9c90d7"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-revoke-sequence-audit-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-revoke-sequence-audit-identity.txt",
+      "sha256": "sha256:c5a1db94d6dc794fb83706c97bbe27bfe316c8e46dd49c82fde506548f4e7488"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-revoke-sequence-audit-rerun-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/fresh-verify-revoke-sequence-audit-rerun-identity.txt",
+      "sha256": "sha256:eee8f2bb43d32622b842fa5410bb8b4476d503faf4c2aed5a13addcec96044f5"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/management-probe-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/management-proxy-restart-state.txt",
+      "sha256": "sha256:16e3e014fc4088d1787e7a78376fc4abdba7d684d0c6dad9dcf8bf0df9655726"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/missing-oidc-api-state.txt",
+      "sha256": "sha256:c8048e7bb548b9b2ea6d33c9b85644e1809080f22a124e5994a642f9e99774e9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-cleanup-lifecycle.txt",
+      "sha256": "sha256:d87d4589b98f8e403cc283df957489c63fa712edf0d73b25a34146a127f2dd08"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-container-inventory-precleanup-final.json",
+      "sha256": "sha256:296e51c2193aea23872482d68940d8f38d190e927bb33f0437a99e130490190c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-container-inventory-precleanup-final.txt",
+      "sha256": "sha256:b9ba5c2aa1bc953bbd07b5b588ba847ac96c0095fbc5d4872d3291039e82964b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-container-inventory-precleanup.json",
+      "sha256": "sha256:296e51c2193aea23872482d68940d8f38d190e927bb33f0437a99e130490190c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-container-inventory-precleanup.txt",
+      "sha256": "sha256:59ec3befb953bade5ccf7bef59a680e315d0d6b8f7549385767e420576dc5928"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-network-inventory-precleanup-final.json",
+      "sha256": "sha256:e6eca8098bfeb2a5e498cb71782f61dd96d1d3c9885b88772487ffe97d59818a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-network-inventory-precleanup-final.txt",
+      "sha256": "sha256:ed02cc00f3a5675054d7ae2a545c4ea99aec0bbaa7f69ba05276f9d7a5007d4c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-network-inventory-precleanup.json",
+      "sha256": "sha256:e6eca8098bfeb2a5e498cb71782f61dd96d1d3c9885b88772487ffe97d59818a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-network-inventory-precleanup.txt",
+      "sha256": "sha256:ed02cc00f3a5675054d7ae2a545c4ea99aec0bbaa7f69ba05276f9d7a5007d4c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-volume-inventory-precleanup-final.txt",
+      "sha256": "sha256:06230a0e76857ee0a8452bc695043daaa6b781ab6b0e1b1e59a7dacfbbc6b866"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/owned-volume-inventory-precleanup.txt",
+      "sha256": "sha256:06230a0e76857ee0a8452bc695043daaa6b781ab6b0e1b1e59a7dacfbbc6b866"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/pinned-image-identities.txt",
+      "sha256": "sha256:4eea64571897e281c78d3792d324c7c18d384f847a4f039bcfa88978eb88796b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/revoke-sequence-image-build-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/run-metadata.json",
+      "sha256": "sha256:dd286f468261cbb7ec4c4e1c9defe27b65924978fb44641d95ba4447109acf95"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-probe-426e7b31d7394d5c9a73eace0783cb60-container-identity.txt",
+      "sha256": "sha256:5c76667c72b94e17b8a720d25f8fb3ff72a67b1be6315e78a53e7fae35404130"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-probe-426e7b31d7394d5c9a73eace0783cb60-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-probe-wrapper-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-image-build-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-image-build-rerun-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-final-identity.txt",
+      "sha256": "sha256:dca06739edeb4900d9515aecc97652f2749758c9bc7c3c7eca7583728ae15540"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-identity.txt",
+      "sha256": "sha256:43245ff4831786eff31416b86ff8b02efadd7b1f0061b4236aa20c63e2f36a57"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-rerun-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-initialize-rerun-identity.txt",
+      "sha256": "sha256:43245ff4831786eff31416b86ff8b02efadd7b1f0061b4236aa20c63e2f36a57"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/sales-revoke-sequence-post-revoke-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/api_database_url",
+      "sha256": "sha256:52dfe0b9fb1601cff18ee3f5fa4fafeb42a08007cc0e36c7388b00a051aa1d15"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/api_db_password",
+      "sha256": "sha256:df09f5d6a743b3c1c6e4f602b1a62321b0a174035d69e2bc046aa170249dc227"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_admin_secret",
+      "sha256": "sha256:0547655214e180c44b5aa65e0015885082340d86a6b4a6a78290be2a60d81dfc"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_jwt_secret",
+      "sha256": "sha256:a30f9a61f60590c367d87c3f5811a4d70cc0c1231fe89c003bc02bc29267b73d"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_metadata_business_database_url",
+      "sha256": "sha256:14677ced10c071851e36793f212852b544ce64793a14293319ea6aaf8bc7474e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_metadata_database_url",
+      "sha256": "sha256:37f9084807cba95d43fb5d42cf84d34cf7cf08a0b396a82350af7fb9b94e413c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_metadata_db_password",
+      "sha256": "sha256:a0da3e60f0702ff3c23485b6e5c60dabb88741445f24a78b12128cefaf4c35a5"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_read_database_url",
+      "sha256": "sha256:937728615d4b6a46e93b8679a943e95a2458cabd3b9b63445c05427123250414"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/hasura_read_db_password",
+      "sha256": "sha256:7adf5e9bdedad17608cd5649ac5d20a46c0646e74577752b881cc7e28fffb2b8"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/mcp_database_url",
+      "sha256": "sha256:743d7d304e4da1f95bf7b2e8b1df6fb816574b6614e29200bf3d48fa1268fce5"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/mcp_db_password",
+      "sha256": "sha256:3efe1d914ba092e62d89639f2f02613089f4706e94db086da12314c4ff387197"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/migrator_database_url",
+      "sha256": "sha256:71102967ec8b3f6d1bb1c9c04bbce3fa0617f1e86b4cd9ab98b79a5b50d40f82"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/migrator_db_password",
+      "sha256": "sha256:df311f7008df8fc86825ade280d8cee2340c77b162485cfd15c77ad803b657d4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/postgres_password",
+      "sha256": "sha256:698d83515ece63cd1078b07b221a45e66d93737114b2d86f2f5a9f0b01954dfb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/publisher_database_url",
+      "sha256": "sha256:507d27087e812ea769158e45d8bcdebdaaa7d138e3c67c1eb992e45ece00c7af"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/publisher_db_password",
+      "sha256": "sha256:1fadf9057b3f39387fe6057ad7ecb2fdbd234fcb81d2d4c8c949dce71019c6fb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/secrets/worker_db_password",
+      "sha256": "sha256:447b6d7a8ee418925c99404a40935316c9648d186d77af196bb6e50c2214c548"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/strict-publisher-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/strict-publisher-identity.txt",
+      "sha256": "sha256:31f66ba14bb078d8988ed722546b8fd9506ea1c146c2d1818266297735d84fb2"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/strict-worker-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/fresh-compose-runs/e849ca81-c63f-4f74-a5e7-c5de79a568c5/strict-worker-identity.txt",
+      "sha256": "sha256:7f8250672c7d4525a86161ea395c9d1edb651a46d7d43ca6dda22d5fd4259711"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/migration004-final-focused-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/api-state.txt",
+      "sha256": "sha256:3965fd9b3e1d8b95aeb10d46da272d4d1d101270a4cf75e2ed89436b464ebee6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/app-image-identities.txt",
+      "sha256": "sha256:22c5997f4fd58542d96a4b3bfd7cee71e2fab9a66239332a086cd23b81f25b99"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/certificate-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/certs/ca.pem",
+      "sha256": "sha256:d8e318fa83be30507487e4822a46636250b0c220117a02c205620f7029a8b4f0"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/certs/leaf-key.pem",
+      "sha256": "sha256:10672032591cfb726c1900e11d92c352d9e63bdfafc9861ee92712699a9f18c6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/certs/leaf.pem",
+      "sha256": "sha256:71971de2a4b1c208d234148934efa22efd8ef2f32019080560236b4d8a5c197d"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-config-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-config-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-local-api-state.txt",
+      "sha256": "sha256:52462608d52f06b45a518934367994ae46079e86a94e956bc3a5d420eb676362"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-local-api-up-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-local-api-up-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-state-final.txt",
+      "sha256": "sha256:a244ef4b6708afc06cb664a8bf2a66a54e1e77370b1bd8490f104c1416161d7a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-up-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-up-refresh-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-vars-redacted.txt",
+      "sha256": "sha256:2955b49d97558650220cb73d9358e08426d4576bd589c44513283e69378711d4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/compose-vars.env",
+      "sha256": "sha256:497bf64743b727532d11baa33dfb52896e7a5467c350f7003bc32bdc9d758433"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/container-identities.txt",
+      "sha256": "sha256:1eba1d0c73dcc361943a325b561984c6705fd9d63e32b26f37c66edd5884b723"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/container-ids-refresh.txt",
+      "sha256": "sha256:86b135abb1c5c72536d0244eda17088a5cf0bce3f9d367fe5720eab8bd6906cb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/container-ids.txt",
+      "sha256": "sha256:29a31eecbdd38e0a0bc045cbb37444ba886b7a1d1f94d4eb6c87f378f98ba77a"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/db-container-identity-pre-grant.txt",
+      "sha256": "sha256:da802c8f0c577fa7cfdd65d5ac59a1ef8670b3ca12fc516771dd57049cc6de03"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-id-2.txt",
+      "sha256": "sha256:ec3103096826e22aa6c7f7fe900976e17a3dd256dd790f6b7eccc2b1f0598f78"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-id-3.txt",
+      "sha256": "sha256:01d3412826c5a4d01196084b56ea60bde3e945b92c173a98d8a2c212a5a0f7bb"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-id-final.txt",
+      "sha256": "sha256:ba8b02152d89d421a3252f03a3319dd777b693b53cf8727250b9e51affbcc540"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-id.txt",
+      "sha256": "sha256:ec3103096826e22aa6c7f7fe900976e17a3dd256dd790f6b7eccc2b1f0598f78"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity-2.txt",
+      "sha256": "sha256:85b4efa3592876c3c8aa852e9e1e303a786da5e9036bfa9300f9462171a8ebaf"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity-3.txt",
+      "sha256": "sha256:28b77cbc7e69c2bbf837e24e224e1595bb5d3a3de28259bc19dc6d12c05fa1bc"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity-final.txt",
+      "sha256": "sha256:dbce845a024d71929a57f10fc5b85d228c32cbb8ee6e7778da7b6dbb1d4f8f66"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity-final2.txt",
+      "sha256": "sha256:808b25aea2b08f92fd2d6d33e7187e8a02db6445ef820ac02b6e63e29857d42b"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity-final3.txt",
+      "sha256": "sha256:047b22fb53846caf986b087ba24642c3809d552e3a101d102033f7477b490d68"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-container-identity.txt",
+      "sha256": "sha256:85b4efa3592876c3c8aa852e9e1e303a786da5e9036bfa9300f9462171a8ebaf"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-rebuild-3-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-rebuild-4-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-rebuild-5-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-rebuild-6-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-2-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-3-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-4-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-5-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-6-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-final2-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/grant-probe-run-final3-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/image-build-all-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/image-build-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/image-identities.txt",
+      "sha256": "sha256:c575718de6f0c42e8f616e67dbda5f61fc1db574f94ce2df99b7031b873003a4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-probe-diagnostic-2-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-probe-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-probe-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-proxy-identity-ingress.txt",
+      "sha256": "sha256:26b50c5726011ca3269f1086065df2a53cd6de5b347a79ae47fcbac027361305"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-proxy-listeners.txt",
+      "sha256": "sha256:6b92fbdb1da60811b32dd3f38bc3782040b30fcf1e6af6ebce8f922b4ec2588f"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/management-proxy-port-state.txt",
+      "sha256": "sha256:9e5d379adf14f1c0c111be2c860fa2c412a29c2768adf4c1d8710209a1255e64"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/migrator-log.txt",
+      "sha256": "sha256:8898dc48fb8e42384ac03f155075387a46dbd1eb09af04558bd37f8b7611c8fa"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/network-identities-final.txt",
+      "sha256": "sha256:876d48cd75829ef421392b0998aa361b946d8eb9e121111a2e4ac0d03b0ec0b4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/network-identities.txt",
+      "sha256": "sha256:a23377fa5e106f532b2fb458e4b5732ed0a031058828abeea2b731ec7db2e27d"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/network-ids.txt",
+      "sha256": "sha256:10250fe56a92c95299436570a6c4aa6a4a525117b51a42a9be765aa04d71c9af"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-cleanup-lifecycle.txt",
+      "sha256": "sha256:98529ae4b5c75fa2ab1d340ae30ccfae3685d41602164287b38634be24a5c13c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-container-inventory-precleanup.json",
+      "sha256": "sha256:08be959a548ef63b5350ba8f79c5250a80373d6f015a42e6b3dc843731a20862"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-container-inventory-precleanup.txt",
+      "sha256": "sha256:89eee8e962e7bc1fd91ef90d23d0bef151fcb936028be1900492707512518ab9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-db-api-digest-grant-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-network-inventory-precleanup.json",
+      "sha256": "sha256:8420906f361e5190d2cfc4fb52f854c2d85ba5f5c8e86810a2035e1f8522297c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-network-inventory-precleanup.txt",
+      "sha256": "sha256:bc6aa08872d7e1e078fc4784610bc0a0e7e1f65d3b0f42d9a70341951b7bf6e5"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/owned-volume-inventory-precleanup.txt",
+      "sha256": "sha256:5c4d20b3f947bdfe68fcd69c7aa7214c34a56eb288b4d5e1bdd47d1ea7841a90"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/proxy-recreate-ingress-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-40613ddc05694f9899fccff943f5955e-container-identity.txt",
+      "sha256": "sha256:034429e138a5f7a4e0717faa0a36719a445594a6de255e685acd27d83d34aa07"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-40613ddc05694f9899fccff943f5955e-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-bc17a9460fd44dd4b40b42fb31695662-container-identity.txt",
+      "sha256": "sha256:7d9222583717d80061419a599f6351f93dcf6ca6b36f7c1ae8283b18a859e782"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-bc17a9460fd44dd4b40b42fb31695662-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-build-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-d8e8e001bc074af980f1e6741a5abaad-container-identity.txt",
+      "sha256": "sha256:453c9f3db6e7bb995d1bf63e1f596025c7363f065d1d045501fe3e6325f408fd"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-d8e8e001bc074af980f1e6741a5abaad-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-ee149714b5bb4615ab1a8d32f90da190-container-identity.txt",
+      "sha256": "sha256:46cee2bd0a7883c0592347a38487d1eb327481ba471e1e8c683541f6596325b2"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-probe-ee149714b5bb4615ab1a8d32f90da190-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-proxy-host-bindings.txt",
+      "sha256": "sha256:06c67680ccff0aa9af3c85c9862c958e3042d39d189d8769ea5b99f8fcfe9866"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-proxy-identity-ingress.txt",
+      "sha256": "sha256:aa7f5f7e95f6081127721aad7931e3abf1b9e096c82400e0237dcba1e263f9ef"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/sales-proxy-port-state.txt",
+      "sha256": "sha256:6a1dde7d94bdf4fce1c1ed00aa2eb371342ef3cf61135efff27c542a29584ab6"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/api_database_url",
+      "sha256": "sha256:8bb5c73b6a5f2949ef6a59a995ff5b24cf2fb97f4a1196b1d2e70c7d9d94871e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/api_db_password",
+      "sha256": "sha256:8c12253aec7fb3d44a69155cf6a8fd1f15b6471d4315fe359afdec3158f79818"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_admin_secret",
+      "sha256": "sha256:fbce07661abbf1615b12958b38c922a7a3773b27b68bd5d94bdafe1959b3e126"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_jwt_secret",
+      "sha256": "sha256:b3c9dab0a9e3469945a5da11ac9f8eeb880e9f786f8d506dff5dcd416d009d22"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_metadata_business_database_url",
+      "sha256": "sha256:43242d43c00faf48831f58ff56943075263789b9ebc27c8c5502caa10f6db9ec"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_metadata_database_url",
+      "sha256": "sha256:364220d8dae7c7ad56008850e3a2a861b40bc539bec8739bde118f3592a39803"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_metadata_db_password",
+      "sha256": "sha256:25ee173270facf9aedaff4fcecf8f4d54ddd220a6b127e3bc4215427064f414f"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_read_database_url",
+      "sha256": "sha256:cc3b656a00a4ed6443871cc28ae5bcc27990816a0dde63db54d5bdcca107e01f"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/hasura_read_db_password",
+      "sha256": "sha256:94a70ca97340a4d2e835821bd07a6d4b2307b7c578758d53ae5576be513e6bfd"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/mcp_database_url",
+      "sha256": "sha256:423497125c1876ff05e20e31a1667bf4bb644430d346c528a008ee0ac3c33606"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/mcp_db_password",
+      "sha256": "sha256:0234f1d45389663c0720a636c360231f135baedba4bd309d2d70c12026518679"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/migrator_database_url",
+      "sha256": "sha256:ef9b33babfc855bfe5454abec010cddf8ad758f2dab7e4cbc4de05980418713e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/migrator_db_password",
+      "sha256": "sha256:0f85b215f0790496d9d80750230fae77e56dde767c6bcc46bef1330f67da9468"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/postgres_password",
+      "sha256": "sha256:c9a1a964be43d3aab97619a9e59c1e8c1efc1e6ee8567c99138bb9286c8ea8a8"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/publisher_database_url",
+      "sha256": "sha256:034147cf88e28634d4eada8d0c389964e7a27b1e143bfdc8ae7a27743a0bbe96"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/publisher_db_password",
+      "sha256": "sha256:c5d8d151460e1251aee19e62d33f0668d937e64da3b2b94268a1f962e2d0a1d1"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/secrets/worker_db_password",
+      "sha256": "sha256:1f348516853d63711600302851b21bd61ec86594270a2d360eda3e4447ccbeaf"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/seed-principal-container-id.txt",
+      "sha256": "sha256:050335da6da9a8657a6f238a863c5cf2f27fd026f2d9c8f6eb8d11068d8f541c"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/seed-principal-container-identity.txt",
+      "sha256": "sha256:69cb64021705e67357c79ceb5f300b41bc2a85628481e2cd13ee95d0dbf467f4"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/seed-principal-run-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-audit-before-retry-container-identity.txt",
+      "sha256": "sha256:1c43fcc33035e8a99fa4c429c4a43ad7f1447efd797287e9e69d2dc51cdb680e"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-audit-before-retry-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-audit-container-identity-final.txt",
+      "sha256": "sha256:e7f5211908b1b5b1e8a16905c3c1b9258d40f293a3b7d9c6a3bfa59df2d71cc1"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-audit-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-images-build-exit-code.txt",
+      "sha256": "sha256:f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-images-build-retry-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-probe-build-final-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-probe-build-final2-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/verify-probe-build-final3-exit-code.txt",
+      "sha256": "sha256:13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/volume-identities.txt",
+      "sha256": "sha256:b768471dea2a554fd6119e3177a34eaa36a31b6780d2a26bf9747e87bb854fab"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/a91d65b2-1516-44d9-a463-92d1da80985e/volume-names.txt",
+      "sha256": "sha256:0ea83c7470296f12355d0d571f99744fbb9668d1a7b1cf0af556788c7469a757"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/owned-deploy/prepare-output.json",
+      "sha256": "sha256:07ff829b653ecd336a96f4a6bdc47830b1447201fc8af736a7eab927e2e369f9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/task1-historic-path-recovery/foundation-postgres-lifecycle-current-copy.jsonl",
+      "sha256": "sha256:70e8db76e2045453d4b20054116bf0e7a28a562db31d457a419871e5d1313dd9"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/task1-historic-path-recovery/foundation-postgres-resource-summary-current-copy.json",
+      "sha256": "sha256:d0396d56acc9061c1f13e2efe97c6d21ada8954a94dd3cbd9316cc923ee59004"
+    },
+    {
+      "path": "docs/execution/alpha1/m0-task-4-evidence/task1-historic-path-recovery/preserved-copy-sha256.txt",
+      "sha256": "sha256:446853fcce336a0c233fe35727de351d50ad15f77a680d8158e887c2b89de027"
+    },
+    {
+      "path": "integration-service/acceptance-tests/identity-store.test.ts",
+      "sha256": "sha256:e2ac5c2d86c71e78648dc4cb9d59b3575592e9b1bbb7cea7818a8df93f22066f"
+    },
+    {
+      "path": "integration-service/acceptance-tests/migrations.test.ts",
+      "sha256": "sha256:d381be83fdf623b6b417e0c445336af60744c6b2e66d5e6d2522cd82d3c61e55"
+    },
+    {
+      "path": "integration-service/auth/service.ts",
+      "sha256": "sha256:97549c856becf794fa38f0004f842a781456862b49ae0e5bc0bac75f4eee5a69"
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "sha256": "sha256:dbfb23f3ce302e4a04824bfc02f38aede5e69b1e3dd79adcf47912cb5d13b3c4"
+    },
+    {
+      "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+      "sha256": "sha256:11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298"
+    },
+    {
+      "path": "integration-service/permission-publish/worker.ts",
+      "sha256": "sha256:b32144c211487f88cab283ca140c379f8c44023b828aa7f48e5a1295b5748cfd"
+    }
+  ],
+  "unavailable_paths": []
+}

@@ -1,0 +1,10 @@
+{
+  "status": "READY",
+  "run_id": "e849ca81-c63f-4f74-a5e7-c5de79a568c5",
+  "run_root": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\fresh-compose-runs\\e849ca81-c63f-4f74-a5e7-c5de79a568c5",
+  "secret_directory": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\fresh-compose-runs\\e849ca81-c63f-4f74-a5e7-c5de79a568c5\\secrets",
+  "certificate_directory": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\fresh-compose-runs\\e849ca81-c63f-4f74-a5e7-c5de79a568c5\\certs",
+  "compose_vars": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m0-task-4-evidence\\fresh-compose-runs\\e849ca81-c63f-4f74-a5e7-c5de79a568c5\\compose-vars.env",
+  "sales_port": 52139,
+  "management_port": 52140
+}

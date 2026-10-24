@@ -1,0 +1,62 @@
+{
+  "schema_version": "alpha1.v1",
+  "run_id": "final-w0-20261024-01a166bd",
+  "git_sha": "9724f627daceb6315bb05446667eed56c66fd987",
+  "image_digests": {},
+  "worktree": {
+    "path": "worktree-manifest.json",
+    "sha256": "sha256:c3c3aa3ec4b13d02e9d9963b08edb12d5f282b4f1e94ead578053828418438aa"
+  },
+  "checks": [
+    {
+      "id": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "path": "local-checks/typecheck.stdout.log",
+        "sha256": "sha256:187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e"
+      },
+      "stderr": {
+        "path": "local-checks/typecheck.stderr.log",
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "id": "test",
+      "command": [
+        "npm",
+        "test"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "path": "local-checks/test.stdout.log",
+        "sha256": "sha256:8b6146ce59cb3320c76cedf59dba5ef32b5ac08667652e740e725fb4c92b002e"
+      },
+      "stderr": {
+        "path": "local-checks/test.stderr.log",
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "id": "build",
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "path": "local-checks/build.stdout.log",
+        "sha256": "sha256:463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a"
+      },
+      "stderr": {
+        "path": "local-checks/build.stderr.log",
+        "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ]
+}

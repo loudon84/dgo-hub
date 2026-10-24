@@ -1,0 +1,1 @@
+docker run --detach with task4/run labels, isolated tmpfs Postgres 16.10, loopback ephemeral port; probe using integration-service pg client; inspect logs; remove exact owned id

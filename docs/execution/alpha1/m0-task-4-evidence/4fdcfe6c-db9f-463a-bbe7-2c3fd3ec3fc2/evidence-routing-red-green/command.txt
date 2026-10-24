@@ -1,0 +1,1 @@
+npm test -- --run acceptance-tests/migration-boundary.test.ts -t "routes every owned fixture lifecycle event"

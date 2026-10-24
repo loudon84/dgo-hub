@@ -67,3 +67,14 @@ These generated artifacts are outside Git source tracking. The fixed runner's wo
 - Task5 handoff's pre-recorded evidence-root input remains the controller-recorded `9724f627` value; this report does not overwrite it.
 
 
+
+## Final source identity clarification and Task5 SQL handoff
+
+The final recorder `run.json` records its starting Git HEAD as `9724f627daceb6315bb05446667eed56c66fd987`. At that moment the Task4 code/tests were in the worktree and their actual bytes were captured by the 24-entry `source-sha256-pre-run.txt` and `source-sha256-post-run.txt` manifests. I compared both manifests (24 entries, zero differences) and recomputed the current 24 worktree file hashes (zero mismatches). Those checked source bytes are the Task4 source subsequently committed as `135b7f102920f6ee89efb654cd85fb1405007f60`; 9724 is the recorder's base commit identity, not the sole identity of the tested final source.
+
+For Task5 SQL/runtime integration, `integration-service/migrations/004_alpha1_runtime_security.sql` defines `control.lock_api_identity(p_issuer text, p_subject text)` and `control.lock_agent_credential_idempotency(p_tenant_key text, p_user_id text, p_idempotency_key text)`, granted only to `hub_api`, plus `control.close_query_gate()`, granted only to `hub_publisher`. Each function revokes PUBLIC execute and fixes `search_path`. The exact role/database setup and PUBLIC CONNECT revocations live in `deploy/alpha1/db-init/00-roles.sh`. Extend grants through controlled migrations there, retaining the Task4 role separation and consumer boundaries.
+
+## Evidence handoff manifest
+
+`docs/execution/alpha1/m0-task-4-evidence/EVIDENCE-WHITELIST.txt` is the reviewed file-by-file handoff list: 257 untracked sanitized text/JSON/JSONL/log/exit/identity/lifecycle/probe files from the carried Task3 and Task4 evidence roots. A local scan inspected those candidate bytes without printing contents; no credential, authorization, private-key, credential-bearing URL, or JWT patterns were found. The four migration SQLSTATE probe `.mjs` sources were scanned too and included; every `secrets/` and `certs/` tree and every `compose-vars*.env` file is excluded. `m0-task-4-evidence/.gitignore` adds narrow future guards for `**/secrets/`, `**/certs/`, and `**/compose-vars*.env`. The root `.dockerignore` starts with a blanket `**` exclusion and only re-includes the service/deploy inputs needed for the image, so evidence and residual generated files are outside Docker build context. No recursive ZIP/archive was created; any future evidence packaging must consume this explicit whitelist, since Git ignore rules do not constrain archive tools.
+

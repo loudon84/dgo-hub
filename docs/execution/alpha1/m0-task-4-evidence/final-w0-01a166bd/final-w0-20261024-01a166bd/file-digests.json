@@ -1,0 +1,12 @@
+{
+  "acceptance-results.json": "sha256:92ec378731af1472dfb930f26e267f1e3aff2b65da3aa388b5f3f27cca7573d2",
+  "check-results.json": "sha256:1647c03ff27877e7b036c1fb0248e26f97ca285a5f4bf43d4d345457a35a6fa9",
+  "local-checks/build.stderr.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "local-checks/build.stdout.log": "sha256:463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+  "local-checks/test.stderr.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "local-checks/test.stdout.log": "sha256:8b6146ce59cb3320c76cedf59dba5ef32b5ac08667652e740e725fb4c92b002e",
+  "local-checks/typecheck.stderr.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "local-checks/typecheck.stdout.log": "sha256:187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+  "run.json": "sha256:afab8c490180beb8a841b0c59c2c35c9567ad5a12b64e2f06ed8086036a852ee",
+  "worktree-manifest.json": "sha256:c3c3aa3ec4b13d02e9d9963b08edb12d5f282b4f1e94ead578053828418438aa"
+}

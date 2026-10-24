@@ -1,0 +1,7 @@
+a40f9ab04019|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1|running|Up Less than a second
+1003d0d901dd|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1|running|Up 20 seconds (healthy)
+79adad820cc3|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-hasura-1|running|Up 15 seconds
+983bab244b4d|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1|restarting|Restarting (1) 3 seconds ago
+b5f243a1c202|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp-1|running|Up 14 seconds
+e9b64a729d5f|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-migrator-1|exited|Exited (0) 1 second ago
+1f2e1aa25a68|alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-proxy-1|running|Up 13 seconds

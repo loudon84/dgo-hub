@@ -1,0 +1,38 @@
+[
+  {
+    "task": "task0",
+    "run": "8f4c249f-d297-4d5d-af17-98b11a6eb3fd",
+    "id": "e241d76e539966613dd51bdeb131f941bd1bce1c172afd35e30835e55603386f",
+    "image": "postgres:16.10-alpine",
+    "observed": 1,
+    "removed": true,
+    "poolcheck_failure": false
+  },
+  {
+    "task": "task1",
+    "run": "72449ef9-8007-401b-94cd-499a2ffecac6",
+    "id": "a40f49d548faae6b10045a4d5e5fd6250554dd11063ae304c7bf5bc94d2220d1",
+    "image": "postgres:16.10-alpine",
+    "observed": 1,
+    "removed": true,
+    "poolcheck_failure": false
+  },
+  {
+    "task": "task2",
+    "run": "226589c5-4b63-45f7-8fef-4080c1916f85",
+    "id": "aca297fd82a116a96f77b2eea9df272b7f00d65f69a35d516c604e39bf80eb80",
+    "image": "postgres:16.10-alpine",
+    "observed": 1,
+    "removed": true,
+    "poolcheck_failure": false
+  },
+  {
+    "task": "task3",
+    "run": "02f0db33-1eb2-4b97-b31b-c0473e407aa2",
+    "id": "41b0e49ea269a5b19ff3ee629e0b24384e9a84c5adf6b19bc3f65a892efa3c0c",
+    "image": "postgres:16.10-alpine",
+    "observed": 1,
+    "removed": true,
+    "poolcheck_failure": false
+  }
+]

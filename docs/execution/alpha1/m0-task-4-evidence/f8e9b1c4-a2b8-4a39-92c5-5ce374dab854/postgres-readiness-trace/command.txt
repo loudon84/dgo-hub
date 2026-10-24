@@ -1,0 +1,1 @@
+start task4-owned tmpfs Postgres, wait only for internal pg_isready as helper does, then immediately repeat exact pg.Pool connectionString query; capture safe error metadata, remove exact owned ID

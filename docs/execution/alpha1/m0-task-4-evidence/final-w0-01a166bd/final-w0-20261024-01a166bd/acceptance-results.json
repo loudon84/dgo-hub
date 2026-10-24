@@ -1,0 +1,345 @@
+{
+  "schema_version": "alpha1.v1",
+  "run_id": "final-w0-20261024-01a166bd",
+  "results": [
+    {
+      "acceptance_id": "A-ARCH-001",
+      "requirement_ids": [
+        "REQ-ARCH-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-ARCH-001",
+      "requirement_ids": [
+        "REQ-ARCH-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-AUTH-001",
+      "requirement_ids": [
+        "REQ-AUTH-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-AUTH-001",
+      "requirement_ids": [
+        "REQ-AUTH-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-SRC-001",
+      "requirement_ids": [
+        "REQ-SRC-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-SRC-001",
+      "requirement_ids": [
+        "REQ-SRC-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-ING-001",
+      "requirement_ids": [
+        "REQ-ING-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-ING-001",
+      "requirement_ids": [
+        "REQ-ING-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-ETL-001",
+      "requirement_ids": [
+        "REQ-ETL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-ETL-001",
+      "requirement_ids": [
+        "REQ-ETL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-DATA-001",
+      "requirement_ids": [
+        "REQ-DATA-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-DATA-001",
+      "requirement_ids": [
+        "REQ-DATA-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-GOV-001",
+      "requirement_ids": [
+        "REQ-GOV-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-GOV-001",
+      "requirement_ids": [
+        "REQ-GOV-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-ONT-001",
+      "requirement_ids": [
+        "REQ-ONT-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-ONT-001",
+      "requirement_ids": [
+        "REQ-ONT-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-PUB-001",
+      "requirement_ids": [
+        "REQ-PUB-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-PUB-001",
+      "requirement_ids": [
+        "REQ-PUB-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-SEC-001",
+      "requirement_ids": [
+        "REQ-SEC-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-SEC-001",
+      "requirement_ids": [
+        "REQ-SEC-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-POL-001",
+      "requirement_ids": [
+        "REQ-POL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-POL-001",
+      "requirement_ids": [
+        "REQ-POL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-API-001",
+      "requirement_ids": [
+        "REQ-API-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-API-001",
+      "requirement_ids": [
+        "REQ-API-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-MCP-001",
+      "requirement_ids": [
+        "REQ-MCP-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-MCP-001",
+      "requirement_ids": [
+        "REQ-MCP-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-AGENT-001",
+      "requirement_ids": [
+        "REQ-AGENT-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-AGENT-001",
+      "requirement_ids": [
+        "REQ-AGENT-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-UI-001",
+      "requirement_ids": [
+        "REQ-UI-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-UI-001",
+      "requirement_ids": [
+        "REQ-UI-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-OBS-001",
+      "requirement_ids": [
+        "REQ-OBS-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-OBS-001",
+      "requirement_ids": [
+        "REQ-OBS-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-OPS-001",
+      "requirement_ids": [
+        "REQ-OPS-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-OPS-001",
+      "requirement_ids": [
+        "REQ-OPS-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "A-EVID-001",
+      "requirement_ids": [
+        "REQ-EVID-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "N-EVID-001",
+      "requirement_ids": [
+        "REQ-EVID-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-01",
+      "requirement_ids": [
+        "REQ-ING-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-02",
+      "requirement_ids": [
+        "REQ-ING-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-03",
+      "requirement_ids": [
+        "REQ-DATA-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-04",
+      "requirement_ids": [
+        "REQ-ETL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-05",
+      "requirement_ids": [
+        "REQ-ETL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-06",
+      "requirement_ids": [
+        "REQ-POL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-07",
+      "requirement_ids": [
+        "REQ-POL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-08",
+      "requirement_ids": [
+        "REQ-POL-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-09",
+      "requirement_ids": [
+        "REQ-POL-001",
+        "REQ-OPS-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-10",
+      "requirement_ids": [
+        "REQ-AUTH-001",
+        "REQ-API-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-11",
+      "requirement_ids": [
+        "REQ-GOV-001",
+        "REQ-ONT-001"
+      ],
+      "status": "NOT_RUN"
+    },
+    {
+      "acceptance_id": "FI-12",
+      "requirement_ids": [
+        "REQ-OBS-001"
+      ],
+      "status": "NOT_RUN"
+    }
+  ]
+}

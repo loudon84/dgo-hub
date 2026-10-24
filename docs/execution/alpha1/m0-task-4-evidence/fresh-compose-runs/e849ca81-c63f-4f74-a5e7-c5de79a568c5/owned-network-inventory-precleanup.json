@@ -1,0 +1,238 @@
+[
+  {
+    "id": "f67076b74e98df1d0f6b7e0a130acd84239f5148dfd91e352ae3f091a24546a7",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_admin_publish",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "802e0585745c62350ea2aff8f00ce1e6e1d3e81737b607c173e6120cd7def958",
+      "com.docker.compose.network": "admin_publish",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "79adad820cc37236fd9f1f2f42bd4118cecd204265a9bdd04abd9703495a61ac",
+        "endpoint_id": "98959c3fd565be7afa647e565e206aa286b6336d0fc3b80097ef828f072689e1",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-hasura-1",
+        "ipv4": "192.168.80.2/20"
+      }
+    ]
+  },
+  {
+    "id": "3a49bb323740842ad007f018689266f1e4d0bc47bbc66662c09eb6ce76f91041",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_control_data",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "3f5db4168c3cb334290a238c7e374e991ecff2a5fea394fd10b42ab58307e0da",
+      "com.docker.compose.network": "control_data",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "1003d0d901dd710d91b1b261533a5e7923a9c91533f65046bac7bd0e85a94642",
+        "endpoint_id": "f23a7a4da1080cf43fe279bc9bb523c6a4421ba3e0c71c57f621c12cdbf7602d",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1",
+        "ipv4": "192.168.48.2/20"
+      },
+      {
+        "id": "a40f9ab040193d5dd3041186246800453b6847586055b25f4c53ebd28f6bfef1",
+        "endpoint_id": "f14657e30bdd122d5a096bf557b0c7d55956c25cbfb9f0aa49b979e22ef99c39",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1",
+        "ipv4": "192.168.48.4/20"
+      },
+      {
+        "id": "b5f243a1c202117ff990551b8d80390893f942abfaffa467579c36b48e84e013",
+        "endpoint_id": "3e7d43d05b0e747b90f51c7dfc46c964409bcd3813f962cc959fc4ec8dfbf6fb",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp-1",
+        "ipv4": "192.168.48.3/20"
+      }
+    ]
+  },
+  {
+    "id": "935cfb2f361b91d40b7b19ade84fcc9c470a2076979a16991da0bb30b56af541",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_hasura_business",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "8431a605a6a1c78cb99a157ee16e6304e8494b17795c3f122e9f0a29ff5262b9",
+      "com.docker.compose.network": "hasura_business",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "79adad820cc37236fd9f1f2f42bd4118cecd204265a9bdd04abd9703495a61ac",
+        "endpoint_id": "2dd6eba3e4bda41bd1d5282e030ba06cc8b276f9b87feef4a0f8ad3c07089154",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-hasura-1",
+        "ipv4": "192.168.96.2/20"
+      },
+      {
+        "id": "b5f243a1c202117ff990551b8d80390893f942abfaffa467579c36b48e84e013",
+        "endpoint_id": "eb2cd07f2a1abb4d627e85f325dff5ca3e3f6eaae0bbbdb663e529e20ef33d09",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp-1",
+        "ipv4": "192.168.96.3/20"
+      }
+    ]
+  },
+  {
+    "id": "fb88f2430e4dc6c6d4c2c24acbcf89c9df9bcac3948c628d74fc65dab0b3c602",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_hasura_data",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "6af7a81e17230222b59220ef592417c27509f34e7435892dab5e85d066200675",
+      "com.docker.compose.network": "hasura_data",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "1003d0d901dd710d91b1b261533a5e7923a9c91533f65046bac7bd0e85a94642",
+        "endpoint_id": "eb82fcf4d3808fa2cbc02bacb7745ecf6fc6cae79bae3e97041fc8895b8b0897",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-db-1",
+        "ipv4": "192.168.144.2/20"
+      },
+      {
+        "id": "79adad820cc37236fd9f1f2f42bd4118cecd204265a9bdd04abd9703495a61ac",
+        "endpoint_id": "369ec8ace9f6f96dec6377f43dd1b1e3ae57e33e9200197ca0c053a3f415d3f7",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-hasura-1",
+        "ipv4": "192.168.144.3/20"
+      }
+    ]
+  },
+  {
+    "id": "2d258bf06351bffaf2a172d05442bf0ebc427e9be642c98ff6e2f0ca30055140",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_management_back",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "3f01d24178e3fb9fd573b7a4e8cfd560115308d71010d36f5991fe36a9094dac",
+      "com.docker.compose.network": "management_back",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "983bab244b4deba4830d1a6567ba1e9b9ca39608d5df03d6d983a74e963d29d1",
+        "endpoint_id": "4d0c60c42e9cab3e0d326113d93ceb472e63c61ff919e084dc94bc7724761758",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1",
+        "ipv4": "192.168.32.3/20"
+      },
+      {
+        "id": "a40f9ab040193d5dd3041186246800453b6847586055b25f4c53ebd28f6bfef1",
+        "endpoint_id": "3e5b84a683805293cd0b41c3bc4d94bdabb8d42fb491e4382d83990270d021d1",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-api-1",
+        "ipv4": "192.168.32.2/20"
+      }
+    ]
+  },
+  {
+    "id": "1d44d15f65777d5ae74b7f0156bf53dfb4a925669ee54f8dc7285b085ba022df",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_management_ingress",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "2dcf8e2e6a70cd6d128a0d2dbe97decec05e4a9e9d7c6c008b14934a127e0db4",
+      "com.docker.compose.network": "management_ingress",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "983bab244b4deba4830d1a6567ba1e9b9ca39608d5df03d6d983a74e963d29d1",
+        "endpoint_id": "8fe9727497c6370e82ebbece51ae2879f1571ded9e11d95760119c3e7974d000",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1",
+        "ipv4": "192.168.176.2/20"
+      }
+    ]
+  },
+  {
+    "id": "a4f36c116d9f717c843da2e2029fe8da3e27daf6feeb224d5adc0d9b250275e0",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_management_loopback_edge",
+    "driver": "bridge",
+    "internal": false,
+    "labels": {
+      "com.docker.compose.config-hash": "cd42bd491f6c94a6ce46704cb317096ec757acec24b91baa1bd4a184337502fe",
+      "com.docker.compose.network": "management_loopback_edge",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "983bab244b4deba4830d1a6567ba1e9b9ca39608d5df03d6d983a74e963d29d1",
+        "endpoint_id": "ec46fe3ea4bf2123aba1d87371aad80048a8078f97dad7e38614da976a1f6924",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-management-proxy-1",
+        "ipv4": "192.168.160.2/20"
+      }
+    ]
+  },
+  {
+    "id": "1f9cab489328b2230649db1e374c7baf17c41eedd65f08122ec7a0b6ab5267db",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_sales_back",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "f36f87cecf00f718b3080e7b7ef0b8c9650264af4cf81cdef3042c2d12aded27",
+      "com.docker.compose.network": "sales_back",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "1f2e1aa25a682b0c04d385c3ef24d91109d46d16aac7061d41f119b4e23a3235",
+        "endpoint_id": "93da86e155ec4d5c46daeaae9fb35f805784f5abceb77f1e50b7ae7f06c33da5",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-proxy-1",
+        "ipv4": "192.168.192.3/20"
+      },
+      {
+        "id": "b5f243a1c202117ff990551b8d80390893f942abfaffa467579c36b48e84e013",
+        "endpoint_id": "951ca272000530ab9f142caa8b67894a941c108dc8e2c0f58fa964d2e4466aea",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-mcp-1",
+        "ipv4": "192.168.192.2/20"
+      }
+    ]
+  },
+  {
+    "id": "66366dc35108ee3833ce0a17e76ede13211f46720efd54434a1c1b56daca4d2f",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_sales_ingress",
+    "driver": "bridge",
+    "internal": true,
+    "labels": {
+      "com.docker.compose.config-hash": "dc26572c5ad0f00dd41f9eb76cee168fb9f6092548faaf673cc03bc442159b54",
+      "com.docker.compose.network": "sales_ingress",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "1f2e1aa25a682b0c04d385c3ef24d91109d46d16aac7061d41f119b4e23a3235",
+        "endpoint_id": "8334c8af23a75966dbd5ffb40cbfdf8eedb547a0b3fadc7398b01ebc5e52550b",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-proxy-1",
+        "ipv4": "192.168.128.2/20"
+      }
+    ]
+  },
+  {
+    "id": "0b2158771c76c27d040b4641203b8b5b2da63893d993c46d1b4f1709ad3a1bbc",
+    "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5_sales_loopback_edge",
+    "driver": "bridge",
+    "internal": false,
+    "labels": {
+      "com.docker.compose.config-hash": "21be2d51671bc6f8264cc92a5fbfdbcf83b6738df4ed4be4ea3aaf7a859ced35",
+      "com.docker.compose.network": "sales_loopback_edge",
+      "com.docker.compose.project": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5",
+      "com.docker.compose.version": "5.5.1"
+    },
+    "containers": [
+      {
+        "id": "1f2e1aa25a682b0c04d385c3ef24d91109d46d16aac7061d41f119b4e23a3235",
+        "endpoint_id": "a9c51b4fbb3dd2323ac1d7c9ca791e8c3ca85d7079008d63a90758823cad62d6",
+        "name": "alpha1-m0-e849ca81c63f4f74a5e7c5de79a568c5-sales-proxy-1",
+        "ipv4": "192.168.112.2/20"
+      }
+    ]
+  }
+]

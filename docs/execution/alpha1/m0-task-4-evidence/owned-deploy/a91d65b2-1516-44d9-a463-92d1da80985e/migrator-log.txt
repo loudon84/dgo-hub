@@ -1,0 +1,1 @@
+{"status":"PASS","applied":["001_init","002_identity_auth","003_mcp_audit_boundary","004_alpha1_runtime_security"],"skipped":[]}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "alpha1.v1",
+  "run_id": "final-w0-20261024-01a166bd",
+  "kind": "local_check",
+  "git_sha": "9724f627daceb6315bb05446667eed56c66fd987",
+  "captured_at": "2026-10-24T02:05:10.474Z",
+  "image_digests": {}
+}
