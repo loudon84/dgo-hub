@@ -1,0 +1,13 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-runs.test.ts --testTimeout=180000
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+   Start at  02:11:17
+   Duration  37.60s (transform 293ms, setup 0ms, import 510ms, tests 36.91s, environment 0ms)
+

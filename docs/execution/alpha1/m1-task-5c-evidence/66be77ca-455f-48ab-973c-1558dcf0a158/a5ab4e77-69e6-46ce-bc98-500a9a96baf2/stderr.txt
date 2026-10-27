@@ -1,0 +1,27 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts [ acceptance-tests/snapshot-runs.test.ts ]
+Error: Transform failed with 1 error:
+
+[PARSE_ERROR] Identifier `rangesAfter` has already been declared
+      ╭─[ acceptance-tests/snapshot-runs.test.ts:986:15 ]
+      │
+  986 │         const rangesAfter=await fixture.pool.query(`SELECT entity,source_pk,attempt_id::text,outcome_id::text,encode(aggregate_digest,'hex') AS aggregate_digest
+      │               ─────┬─────  
+      │                    ╰─────── `rangesAfter` has already been declared here
+      │ 
+ 1001 │         const rangesAfter=await fixture.pool.query(`SELECT entity,source_pk FROM control.etl_snapshot_apply_range WHERE run_id=$1 ORDER BY entity,source_pk`,[crashRun.run_id]);
+      │               ─────┬─────  
+      │                    ╰─────── It can not be redeclared here
+──────╯
+
+  Plugin: vite:oxc
+  File: E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-runs.test.ts
+ ❯ transformWithOxc node_modules/vite/dist/node/chunks/node.js:7618:19
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:7690:26
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:51
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

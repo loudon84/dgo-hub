@@ -3,7 +3,7 @@
   "product_parent": "f43c672e8421b490984867ff3557b406374c0e40",
   "branch": "feat/alpha1-implementation",
   "captured_test_head": "f43c672e8421b490984867ff3557b406374c0e40",
-  "capture_note": "Gates ran against dirty working-tree source with before/after captures. Those raw/LF hashes and git blob IDs match the committed product blobs listed here; current HEAD is the product commit.",
+  "capture_note": "Gates ran against dirty working-tree source at captured_test_head. Six of seven source captures match the product commit byte-for-byte. The captured snapshot-continuation-child.mjs was 1804 bytes, raw/LF SHA-256 6a82b1091509bd19017f63911523af8a6b4ee073c5b8c9aba45de87d199dca0b, blob d7815bf553b4427a86270435ffe4fa386b624fff; the committed file is 1803 bytes, SHA-256 3cf0063eb6016fb8c0a08a6c3f295d97bc817b45b82dbecb9efa46a639ce9ce3, blob 84f0b638a8d1c3f71145d793c11c7ea462866d75. The only difference is one terminal blank line. Source captures and capture-index retain historical values; the child source row below records the final committed file and commit blob, not a byte-identical historical capture.",
   "sources": [
     {
       "path": "integration-service/etl-worker/snapshot-apply-worker.ts",

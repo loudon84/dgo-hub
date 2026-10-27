@@ -1,0 +1,2 @@
+{"event":"spawned","phase":"before","pid":12500,"run_id":"60d7409d-28a3-43da-a3a5-14810d4dcc32"}
+{"event":"killed","phase":"before","pid":12500,"signal":"SIGKILL","run_id":"60d7409d-28a3-43da-a3a5-14810d4dcc32"}

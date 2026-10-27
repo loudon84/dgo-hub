@@ -1,0 +1,75 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '124ddf13-418a-4361-a88b-88017e31e579',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'd57a03f8-1c55-4c2b-ae65-d914d1420b18',
+  error_code: 'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:145:13'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '47e2b330-2572-4a86-bf31-b2e90beb7692',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at Object.afterAggregateCommit (E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-runs.test.ts:531:63)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected { status: 'FAILED', seals: 1, …(7) } to match object { status: 'FAILED', seals: +0, …(7) }
+
+- Expected
++ Received
+
+  {
+-   "checkpoints": 0,
++   "checkpoints": 2,
+    "customer_name": "Customer",
+-   "observations": 0,
++   "observations": 1,
+    "outbox_count": 7,
+-   "outcomes": 0,
+-   "ranges": 0,
+-   "seals": 0,
++   "outcomes": 3,
++   "ranges": 3,
++   "seals": 1,
+    "source_version": "6",
+    "status": "FAILED",
+  }
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:609:37
+    607|         (SELECT count(*)::int FROM control.canonical_apply_outbox WHER…
+    608|         FROM control.etl_run r WHERE r.run_id=$1`,[nullRoleRun.run_id]…
+    609|       expect(afterNullRole.rows[0]).toMatchObject({status:'FAILED',sea…
+       |                                     ^
+    610|         customer_name:nullRoleBefore.rows[0].customer_name,source_vers…
+    611|         outbox_count:nullRoleBefore.rows[0].outbox_count});
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

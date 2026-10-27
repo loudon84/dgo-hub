@@ -1,0 +1,38 @@
+{
+  "label": "before",
+  "head": "a5d6ea0ec3578526c25d16c5ff5ae6b9d2fd8bca",
+  "files": [
+    {
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "bytes": 14625,
+      "raw_sha256": "775caafe5b50e488bca8806d49be94b8246dc348c60e898082bb6b2314f18ef4",
+      "lf_sha256": "775caafe5b50e488bca8806d49be94b8246dc348c60e898082bb6b2314f18ef4",
+      "working_blob": "4c4fbcae660ce48aa2ba7101c1a70bc1dae11923",
+      "head_blob": "4c4fbcae660ce48aa2ba7101c1a70bc1dae11923"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "bytes": 92994,
+      "raw_sha256": "e24678f8f600bf13581b4cdf5b831050dd3e96ce72d49f4ca7bf4404f593411d",
+      "lf_sha256": "e24678f8f600bf13581b4cdf5b831050dd3e96ce72d49f4ca7bf4404f593411d",
+      "working_blob": "9d7d74df39062e41bc27b3ea761589c02a3ae157",
+      "head_blob": "9d7d74df39062e41bc27b3ea761589c02a3ae157"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 135762,
+      "raw_sha256": "4f4ad8eaafd19e467f0654cd81df30b73fbe4582d3f7da4a06fbcf87bdff082f",
+      "lf_sha256": "4f4ad8eaafd19e467f0654cd81df30b73fbe4582d3f7da4a06fbcf87bdff082f",
+      "working_blob": "389156af8790dea60fad3999b9959de5e4777010",
+      "head_blob": "616aa5c041b15b4b3386330e7a0a9642802187ad"
+    },
+    {
+      "path": "integration-service/acceptance-tests/fixtures/snapshot-continuation-child.mjs",
+      "bytes": 1803,
+      "raw_sha256": "3cf0063eb6016fb8c0a08a6c3f295d97bc817b45b82dbecb9efa46a639ce9ce3",
+      "lf_sha256": "3cf0063eb6016fb8c0a08a6c3f295d97bc817b45b82dbecb9efa46a639ce9ce3",
+      "working_blob": "84f0b638a8d1c3f71145d793c11c7ea462866d75",
+      "head_blob": "84f0b638a8d1c3f71145d793c11c7ea462866d75"
+    }
+  ]
+}

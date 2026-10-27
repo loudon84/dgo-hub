@@ -1,0 +1,35 @@
+{
+  "capture": "source-before",
+  "captured_utc": "2026-10-27T18:12:17.6664076Z",
+  "items": [
+    {
+      "git_blob": "acc7cbc1215f638eab3ba560cc2ba9c4dbc08013",
+      "bytes": 143338,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "sha256_lf": "3c623b2cad87786a11e6137b212dfcb94e0e02a74188560a8e15a1d1009ea263",
+      "sha256_raw": "3c623b2cad87786a11e6137b212dfcb94e0e02a74188560a8e15a1d1009ea263"
+    },
+    {
+      "git_blob": "2140b785aa7cc5e72331c6bb014ae6f3f356ce64",
+      "bytes": 14981,
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "sha256_lf": "cf70bd646f312004cb468d33c56e4107cb7d893d9edb2dc6d7f3a0287c9f2072",
+      "sha256_raw": "cf70bd646f312004cb468d33c56e4107cb7d893d9edb2dc6d7f3a0287c9f2072"
+    },
+    {
+      "git_blob": "c8cf39c94d7df1908fdce63c6fff7139aa27b88c",
+      "bytes": 93010,
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "sha256_lf": "1e63bb7211116f07615d281cf2b306851a86d3a291a3b8329fca3f7b80aff777",
+      "sha256_raw": "1e63bb7211116f07615d281cf2b306851a86d3a291a3b8329fca3f7b80aff777"
+    },
+    {
+      "git_blob": "84f0b638a8d1c3f71145d793c11c7ea462866d75",
+      "bytes": 1803,
+      "path": "integration-service/acceptance-tests/fixtures/snapshot-continuation-child.mjs",
+      "sha256_lf": "3cf0063eb6016fb8c0a08a6c3f295d97bc817b45b82dbecb9efa46a639ce9ce3",
+      "sha256_raw": "3cf0063eb6016fb8c0a08a6c3f295d97bc817b45b82dbecb9efa46a639ce9ce3"
+    }
+  ],
+  "head": "a5d6ea0ec3578526c25d16c5ff5ae6b9d2fd8bca"
+}
