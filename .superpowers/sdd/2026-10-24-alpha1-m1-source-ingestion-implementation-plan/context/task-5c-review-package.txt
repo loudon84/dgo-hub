@@ -1,0 +1,2255 @@
+d264b8f Document M1-5C evidence handoff
+122d7b3 Document M1-5C implementation evidence
+b32b746 Implement M1 snapshot apply continuation
+ .../acceptance-tests/snapshot-runs.test.ts         | 362 +++++++++++--
+ .../acceptance-tests/snapshot-validation.test.ts   |  98 ++++
+ .../acceptance-tests/source-registry.test.ts       |  44 ++
+ .../etl-worker/postgres-snapshot-connector.ts      |   3 +-
+ .../etl-worker/snapshot-apply-worker.ts            | 197 ++++++++
+ .../etl-worker/snapshot-canonical.ts               | 109 ++++
+ .../etl-worker/snapshot-continuation-store.ts      | 209 ++++++++
+ .../etl-worker/snapshot-validation.ts              |  78 +++
+ integration-service/etl-worker/worker.ts           |   2 +
+ .../migrations/009_snapshot_runs_and_recovery.sql  | 562 ++++++++++++++++++++-
+ integration-service/source-registry/routes.ts      |   8 +-
+ integration-service/source-registry/service.ts     |  33 +-
+ 12 files changed, 1658 insertions(+), 47 deletions(-)
+diff --git a/integration-service/acceptance-tests/snapshot-runs.test.ts b/integration-service/acceptance-tests/snapshot-runs.test.ts
+index c77ad03..f06e146 100644
+--- a/integration-service/acceptance-tests/snapshot-runs.test.ts
++++ b/integration-service/acceptance-tests/snapshot-runs.test.ts
+@@ -1,13 +1,13 @@
+ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+ import { createHash, randomUUID } from 'node:crypto';
+-import { mkdir } from 'node:fs/promises';
++import { copyFile, mkdir, readdir } from 'node:fs/promises';
+ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { createAuthService } from '../auth/service.js';
+ import { createCredential } from '../auth/credentials.js';
+ import { createSourceRegistryService, type SourceRegistryService } from '../source-registry/service.js';
+ import { runMigrations } from '../migrations/runner.js';
+ import { buildApp } from '../app.js';
+ import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
+ import { createLocalLabPostgresSourceConnectionFactory, SnapshotSourceError, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
+ import { runDurableWorkerLoop } from '../etl-worker/worker.js';
+@@ -70,20 +70,96 @@ beforeEach(async () => {
+     { entity: 'customer', source_field: 'status', target_field: 'status', transform: 'identity' },
+   ]);
+   const tested = await service.test(owner, 'pg-main', '1');
+   const approved = await service.approve(owner, 'pg-main', '1', tested.test_report_id, tested.data_contract_ref);
+   await service.activate(owner, 'pg-main', '1', approved.approval_id);
+ });
+ 
+ afterAll(async () => { if (fixture) await fixture.close(); });
+ 
+ describe('durable snapshot run admission', () => {
++  it('upgrades populated 001-008 registry facts through 009 and preserves every prior checksum', async () => {
++    if(!evidenceRoot) throw new Error('M0_RUN_EVIDENCE_ROOT_REQUIRED');
++    const upgradeFixture=await startOwnedPostgres({evidenceFile:join(evidenceRoot,'populated-008-upgrade.jsonl'),evidenceRoot,
++      taskLabel:'m1task5',imageReference:postgresImage});
++    const upgradeDirectory=join(evidenceRoot,`migrations-008-${randomUUID()}`);
++    await mkdir(upgradeDirectory,{recursive:false});
++    try {
++      const migrationNames=(await readdir(migrationsDirectory)).filter(name=>/^00[1-8]_.*\.sql$/.test(name));
++      expect(migrationNames).toHaveLength(8);
++      for(const name of migrationNames) await copyFile(join(migrationsDirectory,name),join(upgradeDirectory,name));
++      const through008=await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'});
++      expect(through008.applied).toHaveLength(8);
++      const upgradeAuth=createAuthService({pool:upgradeFixture.pool});
++      await upgradeAuth.repository.provisionTenant({tenantId:owner.tenantId,businessTimezone:'UTC'});
++      await upgradeAuth.repository.provisionSubject({tenantId:owner.tenantId,userId:owner.userId,managementScopes:owner.managementScopes});
++      await upgradeAuth.repository.bindIdentity({issuer:owner.issuer,subject:owner.subject,tenantId:owner.tenantId,userId:owner.userId});
++      await upgradeAuth.repository.provisionSourceCredential({sourceId:'pg-populated-008',tenantId:owner.tenantId,token:createCredential().secret,
++        secretRef:'vault:/snapshot/source',allowedEntities:['customer'],revision:'1'});
++      const config={name:'Populated 008 source',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
++        endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer'],delete_contract:'hard_delete'};
++      const mappings=[
++        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
++        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
++        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
++        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
++      ];
++      const identityMappings=[{kind:'user',external_id:'owner-ext',target_id:owner.userId},
++        {kind:'department',external_id:'dept-ext',target_id:'sales-east'}];
++      const configDigest=createHash('sha256').update(JSON.stringify(config)).digest();
++      const mappingDigest=createHash('sha256').update(JSON.stringify(mappings)).digest();
++      const identityDigest=createHash('sha256').update(JSON.stringify(identityMappings)).digest();
++      const profileDigest=createHash('sha256').update('accepted-profile-at-008').digest();
++      await upgradeFixture.pool.query(`INSERT INTO control.source_registry(tenant_key,source_id,lifecycle,data_owner_user_id)
++        VALUES($1,'pg-populated-008','ACTIVE',$2)`,[owner.tenantId,owner.userId]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
++        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,configDigest,JSON.stringify(config),owner.userId]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
++        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,mappingDigest,JSON.stringify(mappings),owner.userId]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
++        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,identityDigest,JSON.stringify(identityMappings),owner.userId]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
++        VALUES($1,'pg-populated-008','customer','postgresql','FULL_SNAPSHOT','SNAPSHOT_OBSERVATION',1,'active')`,[owner.tenantId]);
++      const report=await upgradeFixture.pool.query(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,
++        identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
++        endpoint_profile_digest,data_contract_ref,report,status,created_by)
++        VALUES($1,'pg-populated-008',1,1,1,$2,$3,$4,1,1,$5,'contract:populated-008','{"checks":["READ_ONLY","MAPPING_VALID"]}',
++          'PASS',$6) RETURNING id`,[owner.tenantId,configDigest,mappingDigest,identityDigest,profileDigest,owner.userId]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,
++        mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,
++        credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
++        VALUES($1,'pg-populated-008',$2,1,1,1,1,$3,$4,$5,1,1,$6,'contract:populated-008',$7)`,
++        [owner.tenantId,owner.userId,configDigest,mappingDigest,identityDigest,profileDigest,report.rows[0].id]);
++      await upgradeFixture.pool.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,new_state,owner_revision,details)
++        VALUES($1,'pg-populated-008',$2,'APPROVED','ACTIVE',1,'{"source":"migration-upgrade-fixture"}')`,[owner.tenantId,owner.userId]);
++      const before=await upgradeFixture.pool.query(`SELECT version,name,checksum FROM control.schema_migration WHERE version<=8 ORDER BY version`);
++      const populated=await upgradeFixture.pool.query(`SELECT
++        (SELECT count(*)::int FROM control.source_registry WHERE source_id='pg-populated-008') AS registry,
++        (SELECT count(*)::int FROM control.source_credential WHERE source_id='pg-populated-008') AS credentials,
++        (SELECT count(*)::int FROM control.source_config_revision WHERE source_id='pg-populated-008') AS configs,
++        (SELECT count(*)::int FROM control.source_mapping_revision WHERE source_id='pg-populated-008') AS mappings,
++        (SELECT count(*)::int FROM control.source_identity_mapping_revision WHERE source_id='pg-populated-008') AS identity_maps,
++        (SELECT count(*)::int FROM control.source_test_report WHERE source_id='pg-populated-008') AS reports,
++        (SELECT count(*)::int FROM control.source_owner_approval WHERE source_id='pg-populated-008') AS approvals`);
++      expect(populated.rows[0]).toEqual({registry:1,credentials:1,configs:1,mappings:1,identity_maps:1,reports:1,approvals:1});
++      await copyFile(join(migrationsDirectory,'009_snapshot_runs_and_recovery.sql'),join(upgradeDirectory,'009_snapshot_runs_and_recovery.sql'));
++      expect(await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'}))
++        .toMatchObject({applied:['009_snapshot_runs_and_recovery']});
++      expect(await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'}))
++        .toMatchObject({applied:[],skipped:expect.arrayContaining(['009_snapshot_runs_and_recovery'])});
++      const after=await upgradeFixture.pool.query(`SELECT version,name,checksum FROM control.schema_migration WHERE version<=8 ORDER BY version`);
++      expect(after.rows).toEqual(before.rows);
++      const populatedAfter=await upgradeFixture.pool.query(`SELECT count(*)::int AS count FROM control.source_owner_approval WHERE source_id='pg-populated-008'`);
++      expect(populatedAfter.rows[0].count).toBe(1);
++    } finally { await upgradeFixture.close(); }
++  },60_000);
++
+   it('applies and repeats migration 009, with API and worker limited to their exact run rights', async () => {
+     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
+     expect(initialMigrations.applied).toContain('009_snapshot_runs_and_recovery');
+     expect(first.applied).toEqual([]);
+     expect(await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' }))
+       .toMatchObject({ applied: [], skipped: expect.arrayContaining(['009_snapshot_runs_and_recovery']) });
+     const grants = await fixture.pool.query(`SELECT has_column_privilege('hub_api','control.etl_run','run_id','SELECT') AS api_read,
+       has_column_privilege('hub_worker','control.etl_run','request_digest','UPDATE') AS worker_proof_update,
+       has_column_privilege('hub_api','control.etl_snapshot_schedule','interval_seconds','INSERT') AS api_schedule_insert,
+       has_column_privilege('hub_api','control.etl_snapshot_schedule','interval_seconds','UPDATE') AS api_schedule_interval_update,
+@@ -131,127 +207,139 @@ describe('durable snapshot run admission', () => {
+       row_count:1,page_count:1,source_snapshot_identity:'a'.repeat(64),attempt_id:attempt.attempt_id,operation_id:attempt.operation_id,
+       profile_digest:proof.endpoint_profile_digest,mapping_digest:proof.mapping_digest,config_digest:proof.config_digest,
+       identity_mapping_digest:proof.identity_mapping_digest };
+     await expect(store.complete(owner.tenantId,'pg-main',run.run_id,attempt.attempt_id,activeClaim.claim_token,
+       manifest,snapshotManifestDigest(manifest))).resolves.toBe(1);
+     const state = await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest_digest,
+       (SELECT count(*)::int FROM control.etl_snapshot_stage_record s WHERE s.run_id=r.run_id) AS records
+       FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+       WHERE r.run_id=$1`,[run.run_id]);
+     expect(state.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'1',state:'EXTRACTED',records:1});
++    const continuation= (await import('../etl-worker/snapshot-continuation-store.js')).createSnapshotContinuationStore(roleScopedPool('hub_worker'));
++    const staleClaim=await continuation.claim(owner.tenantId,'pg-main');
++    expect(staleClaim).toBeTruthy();
++    await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET claim_token=$2 WHERE run_id=$1`,[run.run_id,randomUUID()]);
++    await expect(continuation.begin(staleClaim!)).resolves.toBe(0);
++    const startsAfterStale=await fixture.pool.query(`SELECT c_start_count FROM control.etl_snapshot_continuation WHERE run_id=$1`,[run.run_id]);
++    expect(startsAfterStale.rows[0].c_start_count).toBe(0);
++    await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL WHERE run_id=$1`,[run.run_id]);
++    const fencedClaim=await continuation.claim(owner.tenantId,'pg-main');
++    expect(fencedClaim).toBeTruthy();
++    await fixture.pool.query(`INSERT INTO control.source_security_barrier
++      (tenant_key,source_id,barrier_type,reason_code,created_by) VALUES($1,'pg-main','SOURCE_SCOPE_SECURITY_REMOVAL','TEST_C_FENCE','snapshot_owner')`,
++      [owner.tenantId]);
++    await expect(continuation.loadProof(fencedClaim!)).rejects.toThrow('SNAPSHOT_C_PROOF_INVALID');
++    const barrierEffects=await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations,
++      (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes`,[run.run_id]);
++    expect(barrierEffects.rows[0]).toEqual({observations:0,outcomes:0});
+   });
+ 
+   it('restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan', async () => {
+     const sourceEvidence = join(fileURLToPath(new URL('../../docs/execution/alpha1/m1-task-5b-source-lifecycle.jsonl', import.meta.url)));
+     const sourceFixture = await startOwnedPostgres({ evidenceFile:sourceEvidence,evidenceRoot,taskLabel:'m1task5',imageReference:postgresImage });
+     const suffix = randomUUID().replaceAll('-','').slice(0,14);
+     const sourceSchema = `m1_e2e_${suffix}`;
+     const sourceOwner = `m1_e2eo_${suffix}`;
+     const sourceReader = `m1_e2er_${suffix}`;
+     const { default: pg } = await import('pg');
+     const ownerPool = new pg.Pool({host:'127.0.0.1',port:sourceFixture.hostPort,database:'postgres',user:sourceOwner,max:1});
+     try {
+       await sourceFixture.pool.query(`CREATE ROLE ${sourceOwner} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+       await sourceFixture.pool.query(`CREATE ROLE ${sourceReader} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`);
+       await sourceFixture.pool.query(`CREATE SCHEMA ${sourceSchema} AUTHORIZATION ${sourceOwner}`);
+       const ownerClient=await sourceFixture.pool.connect();
+       try {
+         await ownerClient.query(`SET ROLE ${sourceOwner}`);
+         await ownerClient.query(`CREATE TABLE ${sourceSchema}.customers(customer_id text PRIMARY KEY,customer_name text NOT NULL,owner_id text NOT NULL,
+-          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL)`);
++          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL,source_version text NOT NULL DEFAULT '1',deleted_at timestamptz)`);
+         await ownerClient.query(`CREATE TABLE ${sourceSchema}.orders(order_id bigint PRIMARY KEY,customer_id text NOT NULL,order_no text NOT NULL,
+-          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(30,12) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
++          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(20,2) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
+         await ownerClient.query(`CREATE TABLE ${sourceSchema}.order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL REFERENCES ${sourceSchema}.orders(order_id),
+-          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(30,12) NOT NULL,unit_price numeric(30,12) NOT NULL,line_amount numeric(30,12) NOT NULL)`);
++          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(20,6) NOT NULL,unit_price numeric(20,6) NOT NULL,line_amount numeric(20,2) NOT NULL)`);
+         await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-1','Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:00.123456+00')`);
+         await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-2','Second Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:01.123456+00')`);
+         await ownerClient.query(`INSERT INTO ${sourceSchema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
+-          123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
+-        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456789012,
+-          123456789012.123456789012,138636548569.222222221445)`);
+-        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-2',9007199254740993123,'SKU-2','Second Line',2.123456789012,
+-          223456789012.123456789012,238636548569.222222221445)`);
++          123456789012345678.12,'USD','2026-10-25 10:01:03.123456+00')`);
++        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456,
++          123456789012.123456,138636548569.22)`);
++        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-2',9007199254740993123,'SKU-2','Second Line',2.123456,
++          223456789012.123456,238636548569.22)`);
+       } finally { await ownerClient.query('RESET ROLE').catch(()=>undefined); ownerClient.release(); }
+       await sourceFixture.pool.query(`GRANT USAGE ON SCHEMA ${sourceSchema} TO ${sourceReader}`);
+       await sourceFixture.pool.query(`GRANT SELECT ON ${sourceSchema}.customers,${sourceSchema}.orders,${sourceSchema}.order_lines TO ${sourceReader}`);
+       await ownerPool.query('SELECT 1');
+       e2eEndpointProfile={revision:'owned-source-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:sourceFixture.hostPort,
+         allow_loopback_plaintext:true,database:'postgres',user:sourceReader,schema:sourceSchema,entities:{
+-          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'},
++          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'},
+           order:{table:'orders',source_pk:'order_id',updated_at_field:'updated_at',lines:{table:'order_lines',order_fk:'order_id'}},
+         }};
+       await auth.repository.provisionSourceCredential({sourceId:'pg-e2e',tenantId:owner.tenantId,token:createCredential().secret,
+         secretRef:'vault:/snapshot/source',allowedEntities:['customer','order'],revision:'1'});
+-      const allowedEntities=['customer','order'] as const;
++      await auth.repository.updateSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'sales-east',businessRole:'sales',
++        managementScopes:owner.managementScopes});
++      const allowedEntities=['customer'] as const;
+       await service.create(owner,{source_id:'pg-e2e',data_owner_user_id:owner.userId,config:{name:'Owned order snapshot',connector:'postgresql',
+         mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
+         allowed_entities:allowedEntities,delete_contract:'hard_delete'}});
+       await service.writeMappings(owner,'pg-e2e','1',[
+         {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+         {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+         {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+         {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+-        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+-        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+-        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
+-        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+-        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+-        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
+-        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
+-        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
+-        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
+-        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
+-        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
+-        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
++      ]);
++      await service.writeIdentityMappings(owner,'pg-e2e',[
++        {kind:'user',external_id:'owner-ext',target_id:owner.userId},
++        {kind:'department',external_id:'dept-ext',target_id:'sales-east'},
+       ]);
+       const tested=await service.test(owner,'pg-e2e','1');
+       expect(tested.status).toBe('PASS');
+       const approved=await service.approve(owner,'pg-e2e','1',tested.test_report_id,tested.data_contract_ref);
+       await service.activate(owner,'pg-e2e','1',approved.approval_id);
+       const { createSnapshotRun }=await import('../etl-worker/snapshot-runs.js');
+       const { createSnapshotStageStore,snapshotManifestDigest }=await import('../etl-worker/snapshot-stage-store.js');
+       const store=createSnapshotStageStore(roleScopedPool('hub_worker'));
+       const invalidRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','manifest-negative-cases');
+       const invalidClaim=await store.claim(owner.tenantId,'pg-e2e',60);
+       expect(invalidClaim).toBeTruthy();
+       const invalidAttempt=await store.beginAttempt(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidClaim!.claim_token,60);
+       const frozen=await store.loadFrozenProof(owner.tenantId,'pg-e2e',invalidRun.run_id);
+-      const emptyCounts=[{relation:'customer',row_count:0,page_count:0,page_digests:[]},
+-        {relation:'order',row_count:0,page_count:0,page_digests:[]},{relation:'order_line',row_count:0,page_count:0,page_digests:[]}];
+-      const validShape={state:'EXTRACTED',relations:['customer','order','order_line'],relation_counts:emptyCounts,row_count:0,page_count:0,
++      const emptyCounts=[{relation:'customer',row_count:0,page_count:0,page_digests:[]}];
++      const validShape={state:'EXTRACTED',relations:['customer'],relation_counts:emptyCounts,row_count:0,page_count:0,
+         source_snapshot_identity:'a'.repeat(64),attempt_id:invalidAttempt.attempt_id,operation_id:invalidAttempt.operation_id,
+         profile_digest:frozen.endpoint_profile_digest,mapping_digest:frozen.mapping_digest,config_digest:frozen.config_digest,
+         identity_mapping_digest:frozen.identity_mapping_digest};
+       const {profile_digest:_profile,mapping_digest:_mapping,...missingProof}=validShape;
+       const invalidManifests=[
+         missingProof,
+-        {...validShape,relation_counts:[emptyCounts[0],emptyCounts[0],emptyCounts[0]]},
+-        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],row_count:null},emptyCounts[2]]},
+-        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],page_digests:['f'.repeat(64)]},emptyCounts[2]]},
++        {...validShape,relation_counts:[{...emptyCounts[0],relation:'order'}]},
++        {...validShape,relation_counts:[{...emptyCounts[0],row_count:null}]},
++        {...validShape,relation_counts:[{...emptyCounts[0],page_digests:['f'.repeat(64)]}]},
+       ];
+       for (const malformed of invalidManifests) {
+         await expect(store.complete(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
+           malformed,snapshotManifestDigest(malformed))).rejects.toMatchObject({code:'22023'});
+       }
+       const unpublished=await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.etl_snapshot_manifest WHERE run_id=$1) AS manifests,
+         (SELECT status FROM control.etl_run_attempt WHERE attempt_id=$2) AS attempt_status`,[invalidRun.run_id,invalidAttempt.attempt_id]);
+       expect(unpublished.rows[0]).toEqual({manifests:0,attempt_status:'RUNNING'});
+       await expect(store.fail(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
+         'SNAPSHOT_PROFILE_INVALID',false)).resolves.toBe('FAILED');
+       const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','owned-e2e-run');
+-      const realFactory=createLocalLabPostgresSourceConnectionFactory();
++      const rawFactory=createLocalLabPostgresSourceConnectionFactory();
++      let sourceConnectCalls=0;
++      const realFactory:PostgresSourceConnectionFactory={connect:async input=>{sourceConnectCalls++;return rawFactory.connect(input);}};
+       let loseSourceOnce=true;
+       let ownedReaderPid:number|undefined;
+       const interruptedFactory: PostgresSourceConnectionFactory={connect:async input=>{
+         const connection=await realFactory.connect(input);
+         return {query:async(sql:string)=>{
+-          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_order')) {
++          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_customer')) {
+             loseSourceOnce=false;
+             if (!ownedReaderPid) throw new Error('owned source reader PID was not captured');
+             const terminated=await sourceFixture.pool.query(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
+               WHERE pid=$1 AND usename=$2 AND datname='postgres' AND client_addr IS NOT NULL`,[ownedReaderPid,sourceReader]);
+             if (terminated.rows[0]?.terminated !== true) throw new Error('owned source reader backend identity changed before termination');
+           }
+           if (!ownedReaderPid) {
+             const identity=await connection.query('SELECT pg_backend_pid() AS pid');
+             ownedReaderPid=Number(identity.rows[0]?.pid);
+             if (!Number.isSafeInteger(ownedReaderPid) || ownedReaderPid < 1) throw new Error('invalid owned source reader PID');
+@@ -264,49 +352,243 @@ describe('durable snapshot run admission', () => {
+       }};
+       const workerDependencies={secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-password'},
+         egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
+       const strictWorkerTick=(dependencies:typeof workerDependencies & {sourceConnectionFactory:PostgresSourceConnectionFactory}) =>
+         runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},dependencies);
+       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBeUndefined();
+       const incomplete=await fixture.pool.query(`SELECT r.status,a.ordinal,a.status AS attempt_status,a.error_code,
+         count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
+         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
+         WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
+-      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:2}]);
++      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:0}]);
+       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+       await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
+       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+-      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
++      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,r.completeness_summary,m.state,m.manifest->'relation_counts' AS counts,
+         array_agg(DISTINCT s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+         JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
+-        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,m.state,m.manifest`,[run.run_id]);
+-      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'5',state:'EXTRACTED',relations:['customer','order','order_line']});
+-      expect(staged.rows[0].counts).toEqual([
++        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,r.completeness_summary,m.state,m.manifest`,[run.run_id]);
++      expect(staged.rows[0]).toMatchObject({status:'COMPLETE',extracted_count:'2',state:'EXTRACTED',relations:['customer']});
++      expect(staged.rows[0].counts).toEqual([expect.objectContaining({relation:'customer',row_count:2,page_count:2})]);
++      const candidates=await service.sourceCustomerCandidates(owner,'pg-e2e');
++      expect(candidates.items.map(item=>item.source_pk)).toEqual(['C-1','C-2']);
++      const c1=candidates.items.find(item=>item.source_pk==='C-1');
++      expect(c1).toBeTruthy();
++      const combinedConfig={name:'Owned order snapshot',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
++        endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer','order'],delete_contract:'hard_delete'};
++      const updated=await service.update(owner,'pg-e2e',{expected_revision:'1',config:combinedConfig});
++      await service.writeMappings(owner,'pg-e2e',updated.revision,[
++        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
++        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
++        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
++        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
++        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
++        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
++        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
++        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
++        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
++        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
++        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
++        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
++        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
++        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
++        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
++        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
++      ]);
++      const testedCombined=await service.test(owner,'pg-e2e',updated.revision);
++      const approvedCombined=await service.approve(owner,'pg-e2e',updated.revision,testedCombined.test_report_id,testedCombined.data_contract_ref);
++      await service.activate(owner,'pg-e2e',updated.revision,approvedCombined.approval_id);
++      const missingMapRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-unmapped-combined-run');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const rejectedCombined=await fixture.pool.query(`SELECT status,completeness_summary FROM control.etl_run WHERE run_id=$1`,[missingMapRun.run_id]);
++      expect(rejectedCombined.rows[0]).toMatchObject({status:'FAILED',completeness_summary:{status:'FAILED',error_code:'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID'}});
++      const rejectedEffects=await fixture.pool.query(`SELECT
++        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations,
++        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes,
++        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=$1) AS ranges`,[missingMapRun.run_id]);
++      expect(rejectedEffects.rows[0]).toEqual({observations:0,outcomes:0,ranges:0});
++      await service.updateIdentityMapping(owner,Buffer.from('pg-e2e\0customer\0C-1','utf8').toString('base64url'),'1',c1!.target_id,
++        'confirm exact source customer before order bootstrap');
++      const revalidatedCombined=await service.test(owner,'pg-e2e',updated.revision);
++      const reapprovedCombined=await service.approve(owner,'pg-e2e',updated.revision,revalidatedCombined.test_report_id,revalidatedCombined.data_contract_ref);
++      await service.activate(owner,'pg-e2e',updated.revision,reapprovedCombined.approval_id);
++      const combinedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-combined-e2e-run');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const combined=await fixture.pool.query(`SELECT r.status,r.extracted_count,r.completeness_summary,m.manifest->'relation_counts' AS counts,
++        array_agg(DISTINCT s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
++        JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
++        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,r.completeness_summary,m.manifest`,[combinedRun.run_id]);
++      expect(combined.rows[0]).toMatchObject({status:'COMPLETE',extracted_count:'5',relations:['customer','order','order_line']});
++      expect(combined.rows[0].counts).toEqual([
+         expect.objectContaining({relation:'customer',row_count:2,page_count:2}),
+         expect.objectContaining({relation:'order',row_count:1,page_count:1}),
+         expect.objectContaining({relation:'order_line',row_count:2,page_count:2}),
+       ]);
+-      for (const relation of staged.rows[0].counts as Array<{page_count:number;page_digests:string[]}>)
++      for (const relation of combined.rows[0].counts as Array<{page_count:number;page_digests:string[]}>)
+         expect(relation.page_digests).toHaveLength(relation.page_count);
+       const attempts=await fixture.pool.query(`SELECT a.ordinal,a.status,count(s.source_pk)::int AS staged FROM control.etl_run_attempt a
+         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id) WHERE a.run_id=$1
+-        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[run.run_id]);
+-      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:2},{ordinal:2,status:'COMPLETE',staged:5}]);
++        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[combinedRun.run_id]);
++      expect(attempts.rows).toEqual([{ordinal:1,status:'COMPLETE',staged:5}]);
++      const firstObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
++        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,combinedRun.run_id]);
++      const allocationsBeforeReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_observation_allocation
++        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
++      const outboxBeforeReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.canonical_apply_outbox
++        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
++      const unchangedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-unchanged-replay');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const unchangedObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
++        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,unchangedRun.run_id]);
++      const allocationsAfterReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_observation_allocation
++        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
++      const outboxAfterReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.canonical_apply_outbox
++        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
++      expect(unchangedObservation.rows).toEqual(firstObservation.rows);
++      expect(allocationsAfterReplay.rows).toEqual(allocationsBeforeReplay.rows);
++      expect(outboxAfterReplay.rows).toEqual(outboxBeforeReplay.rows);
++      const sourceWriter=await sourceFixture.pool.connect();
++      try {
++        await sourceWriter.query(`SET ROLE ${sourceOwner}`);
++        await sourceWriter.query(`UPDATE ${sourceSchema}.customers SET customer_name='Changed customer',
++          updated_at='2026-10-25 10:10:00.123456+00' WHERE customer_id='C-1'`);
++      } finally { await sourceWriter.query('RESET ROLE').catch(()=>undefined); sourceWriter.release(); }
++      const changedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-changed-snapshot');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const changedObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
++        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,changedRun.run_id]);
++      expect(BigInt(changedObservation.rows[0].sequence_value)).toBeGreaterThan(BigInt(firstObservation.rows[0].sequence_value));
++      const {runSnapshotContinuationWorkerOnce}=await import('../etl-worker/snapshot-apply-worker.js');
++      const runWithDestinationCrash=async(mode:'before'|'after',key:string)=>{
++        const writer=await sourceFixture.pool.connect();
++        try {
++          await writer.query(`SET ROLE ${sourceOwner}`);
++          await writer.query(`UPDATE ${sourceSchema}.customers SET customer_name=$1,updated_at=$2 WHERE customer_id='C-1'`,
++            [`Crash ${mode} ${key}`,`2026-10-25 10:20:0${mode==='before'?'1':'2'}.123456+00`]);
++        } finally { await writer.query('RESET ROLE').catch(()=>undefined); writer.release(); }
++        const crashRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,key);
++        let faultHit=false;
++        const basePool=roleScopedPool('hub_worker');
++        const faultPool=new Proxy(basePool,{get(target,property){
++          if(property==='connect') return async()=>{
++            const client=await fixture.pool.connect(); if(client.listenerCount('error')===0) client.on('error',()=>undefined);
++            let armed=false; let backendPid:number|undefined;
++            const original=client.query.bind(client);
++            const query=(async(sql:unknown,...args:unknown[])=>{
++              if(typeof sql==='string'&&sql.trim().toUpperCase()==='COMMIT'&&armed) {
++                armed=false; faultHit=true;
++                if(mode==='before') {
++                  if(!backendPid) throw new Error('destination backend PID missing before commit fault');
++                  const killed=await fixture.pool.query<{terminated:boolean}>(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
++                    WHERE pid=$1 AND usename='postgres' AND datname='postgres' AND client_addr IS NOT NULL`,[backendPid]);
++                  if(killed.rows[0]?.terminated!==true) throw new Error('owned destination backend identity changed before termination');
++                  return await original(sql as never,...args as never[]);
++                }
++                await original(sql as never,...args as never[]);
++                if(!backendPid) throw new Error('destination backend PID missing after commit fault');
++                const killed=await fixture.pool.query<{terminated:boolean}>(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
++                  WHERE pid=$1 AND usename='postgres' AND datname='postgres' AND client_addr IS NOT NULL`,[backendPid]);
++                if(killed.rows[0]?.terminated!==true) throw new Error('owned destination backend identity changed after termination');
++                // Surface the driver's real transport failure after the backend is killed.
++                // Do not synthesize a SQLSTATE: recovery must classify the actual pg error.
++                return await original('SELECT 1' as never);
++              }
++              const result=await original(sql as never,...args as never[]);
++              if(typeof sql==='string'&&/^BEGIN(?:\s|$)/i.test(sql.trim())) await original('SET LOCAL ROLE hub_worker');
++              if(typeof sql==='string'&&sql.includes('control.record_etl_snapshot_aggregate')&&Array.isArray(args[0])&&String((args[0] as unknown[])[8])==='C-1') {
++                armed=true;
++                const identity=await original('SELECT pg_backend_pid() AS pid');
++                backendPid=Number(identity.rows[0]?.pid);
++              }
++              return result;
++            }) as typeof client.query;
++            return {query,release:client.release.bind(client)};
++          };
++          const value=Reflect.get(target,property,target);
++          return typeof value==='function'?value.bind(target):value;
++        }}) as typeof fixture.pool;
++        await expect(runDurableWorkerLoop(faultPool,{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},
++          {...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++        expect(faultHit).toBe(true);
++        const beforeRestart=await fixture.pool.query(`SELECT
++          (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes,
++          (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=$1) AS ranges,
++          (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations`,[crashRun.run_id]);
++        expect(beforeRestart.rows[0]).toMatchObject(mode==='before'?{outcomes:0,ranges:0,observations:1}:{outcomes:1,ranges:1,observations:1});
++        const sourceCallsBeforeRestart=sourceConnectCalls;
++        await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET next_retry_at=clock_timestamp() WHERE run_id=$1`,[crashRun.run_id]);
++        const retryState=await fixture.pool.query(`SELECT r.status,s.active_run_id,c.c_start_count,c.next_retry_at<=clock_timestamp() AS due,
++          c.claim_token,c.lease_until FROM control.etl_run r JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
++          JOIN control.etl_snapshot_continuation c USING(tenant_key,source_id,run_id) WHERE r.run_id=$1`,[crashRun.run_id]);
++        expect(retryState.rows[0]).toMatchObject({status:'APPLYING',active_run_id:crashRun.run_id,c_start_count:1});
++        if(retryState.rows[0].claim_token!==null) {
++          await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second' WHERE run_id=$1`,
++            [crashRun.run_id]);
++          await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(0);
++        }
++        await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET next_retry_at=clock_timestamp() WHERE run_id=$1`,[crashRun.run_id]);
++        await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(1);
++        expect(sourceConnectCalls).toBe(sourceCallsBeforeRestart);
++        const recovered=await fixture.pool.query(`SELECT r.status,
++          (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome o WHERE o.run_id=r.run_id) AS outcomes,
++          (SELECT count(*)::int FROM control.etl_snapshot_apply_range a WHERE a.run_id=r.run_id) AS ranges,
++          (SELECT count(*)::int FROM control.etl_snapshot_observation x WHERE x.run_id=r.run_id) AS observations
++          FROM control.etl_run r WHERE r.run_id=$1`,[crashRun.run_id]);
++        expect(recovered.rows[0]).toEqual({status:'COMPLETE',outcomes:3,ranges:3,observations:1});
++      };
++      await runWithDestinationCrash('before','owned-crash-before-commit');
++      await runWithDestinationCrash('after','owned-crash-after-commit');
++      await auth.repository.provisionSourceCredential({sourceId:'pg-version',tenantId:owner.tenantId,token:createCredential().secret,
++        secretRef:'vault:/snapshot/source',allowedEntities:['customer'],revision:'1'});
++      await service.create(owner,{source_id:'pg-version',data_owner_user_id:owner.userId,config:{name:'Owned source version snapshot',connector:'postgresql',
++        mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
++        allowed_entities:['customer'],delete_contract:'tombstone'}});
++      await service.writeMappings(owner,'pg-version','1',[
++        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
++        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
++        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
++        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
++      ]);
++      await service.writeIdentityMappings(owner,'pg-version',[
++        {kind:'user',external_id:'owner-ext',target_id:owner.userId},{kind:'department',external_id:'dept-ext',target_id:'sales-east'},
++      ]);
++      const versionTest=await service.test(owner,'pg-version','1');
++      const versionApproval=await service.approve(owner,'pg-version','1',versionTest.test_report_id,versionTest.data_contract_ref);
++      await service.activate(owner,'pg-version','1',versionApproval.approval_id);
++      const versionRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-version','1','owned-source-version-no-observation');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const versionState=await fixture.pool.query(`SELECT r.status,
++        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observations,
++        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id) AS outcomes,
++        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges
++        FROM control.etl_run r WHERE r.run_id=$1`,[versionRun.run_id]);
++      expect(versionState.rows[0]).toEqual({status:'COMPLETE',observations:0,outcomes:2,ranges:2});
++      await ownerPool.query(`UPDATE ${sourceSchema}.customers SET deleted_at='2026-10-25 11:00:00+00',source_version='2',
++        updated_at='2026-10-25 11:00:00+00' WHERE customer_id='C-2'`);
++      const tombstoneRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-version','1','owned-source-version-tombstone');
++      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
++      const deletedReceipt=await fixture.pool.query(`SELECT deleted,source_version::text AS source_version FROM control.source_version_receipt
++        WHERE tenant_key=$1 AND source_id='pg-version' AND entity='customer' AND source_pk='C-2'`,[owner.tenantId]);
++      const tombstoneState=await fixture.pool.query(`SELECT status,
++        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations FROM control.etl_run WHERE run_id=$1`,
++        [tombstoneRun.run_id]);
++      expect(deletedReceipt.rows[0]).toEqual({deleted:true,source_version:'2'});
++      expect(tombstoneState.rows[0]).toEqual({status:'COMPLETE',observations:0});
+     } finally {
+       await ownerPool.end();
+       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
+       await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceReader}`);
+       await sourceFixture.pool.query(`DROP ROLE IF EXISTS ${sourceOwner}`);
+       await sourceFixture.close();
+       e2eEndpointProfile=undefined;
+     }
+-  });
++  },30_000);
+ 
+   it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
+     const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+     const { createSnapshotStageStore } = await import('../etl-worker/snapshot-stage-store.js');
+     const run = await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','retry-fence');
+     const store = createSnapshotStageStore(roleScopedPool('hub_worker'));
+     const firstClaim = await store.claim(owner.tenantId,'pg-main',60);
+     expect(firstClaim).toBeTruthy();
+     const firstAttempt = await store.beginAttempt(owner.tenantId,'pg-main',run.run_id,firstClaim!.claim_token,60);
+     await expect(store.fail(owner.tenantId,'pg-main',run.run_id,firstAttempt.attempt_id,firstClaim!.claim_token,
+diff --git a/integration-service/acceptance-tests/snapshot-validation.test.ts b/integration-service/acceptance-tests/snapshot-validation.test.ts
+new file mode 100644
+index 0000000..6478f5f
+--- /dev/null
++++ b/integration-service/acceptance-tests/snapshot-validation.test.ts
+@@ -0,0 +1,98 @@
++import { describe, expect, it } from 'vitest';
++import { computeSemanticSnapshotDigest, type SemanticSnapshotFact } from '../etl-worker/snapshot-validation.js';
++import { toCanonicalSnapshotCustomer, toCanonicalSnapshotOrder, type SnapshotCanonicalProof } from '../etl-worker/snapshot-canonical.js';
++
++const customer: SemanticSnapshotFact = {
++  entity: 'customer', relation: 'customer', parent_source_pk: '', source_pk: 'C001',
++  source_version: '9',
++  facts: { customer_name: 'Acme', owner_user_id: 'owner-1', dept_id: 'dept-1', status: 'ACTIVE',
++    source_updated_at: '2026-01-02T03:04:05Z', deleted_at: null },
++};
++
++const order: SemanticSnapshotFact = {
++  entity: 'order', relation: 'order', parent_source_pk: '', source_pk: 'O001',
++  source_version: '10',
++  facts: { customer_id: 'C001', order_no: 'N001', status: 'CONFIRMED', order_at: '2026-01-01T00:00:00Z',
++    amount: '12.5', currency: 'CNY', source_updated_at: '2026-01-02T03:04:05Z',
++    deleted_at: null,
++    lines: [
++      { source_line_id: 'L002', product_code: 'P2', product_name: 'Second', quantity: '1', unit_price: '2', line_amount: '2' },
++      { source_line_id: 'L001', product_code: 'P1', product_name: 'First', quantity: '1', unit_price: '10.5', line_amount: '10.5' },
++    ] },
++};
++
++async function* pages(values: readonly SemanticSnapshotFact[], pageSize: number): AsyncIterable<readonly SemanticSnapshotFact[]> {
++  for (let offset = 0; offset < values.length; offset += pageSize) yield values.slice(offset, offset + pageSize);
++}
++
++const proof: SnapshotCanonicalProof = {
++  version_domain: 'SOURCE_VERSION', delete_contract: 'tombstone',
++  customer_source_id: 'customer-source',
++};
++
++describe('C whole-snapshot semantic digest', () => {
++  it('is independent of stage page boundaries and normalizes canonical business facts', async () => {
++    const onePage = await computeSemanticSnapshotDigest(pages([customer, order], 20));
++    const manyPages = await computeSemanticSnapshotDigest(pages([customer, order], 1));
++
++    expect(onePage).toBe(manyPages);
++  });
++
++  it('binds an explicit source tombstone and its source timestamp', async () => {
++    const deleted: SemanticSnapshotFact = {
++      ...customer, source_version: '11', facts: { deleted_at: '2026-02-03T04:05:06Z', source_updated_at: '2026-02-03T04:05:06Z' },
++    };
++    const originalDigest = await computeSemanticSnapshotDigest(pages([customer], 1));
++    const tombstoneDigest = await computeSemanticSnapshotDigest(pages([deleted], 1));
++
++    expect(tombstoneDigest).not.toBe(originalDigest);
++  });
++
++  it('rejects duplicate full source keys while allowing the same line key under different orders', async () => {
++    const firstLine: SemanticSnapshotFact = { entity: 'order', relation: 'order_line', parent_source_pk: 'O001', source_pk: 'L1', facts: { line_amount: '1.00' } };
++    const secondOrderLine: SemanticSnapshotFact = { ...firstLine, parent_source_pk: 'O002' };
++
++    await expect(computeSemanticSnapshotDigest(pages([firstLine, secondOrderLine], 1))).resolves.toMatch(/^[0-9a-f]{64}$/);
++    await expect(computeSemanticSnapshotDigest(pages([firstLine, firstLine], 1))).rejects.toThrow('SNAPSHOT_DUPLICATE_KEY');
++  });
++
++  it('preserves exact 20-digit source versions without numeric conversion', async () => {
++    const largest: SemanticSnapshotFact = { ...customer, source_version: '99999999999999999999' };
++    await expect(computeSemanticSnapshotDigest(pages([largest], 1))).resolves.toMatch(/^[0-9a-f]{64}$/);
++  });
++
++  it('rejects invalid exact decimal facts before a digest can seal', async () => {
++    const invalid: SemanticSnapshotFact = { ...customer, facts: { amount: '01.000' } };
++    await expect(computeSemanticSnapshotDigest(pages([invalid], 1))).rejects.toThrow('CANONICAL_DECIMAL_INVALID');
++  });
++
++  it('rejects a source version that cannot be represented by the exact version contract', async () => {
++    const invalid: SemanticSnapshotFact = { ...customer, source_version: '0009' };
++    await expect(computeSemanticSnapshotDigest(pages([invalid], 1))).rejects.toThrow('SNAPSHOT_SOURCE_VERSION_INVALID');
++  });
++
++  it('maps an explicit boolean customer tombstone to its approved source update timestamp', () => {
++    const deleted = toCanonicalSnapshotCustomer({ ...customer, facts: { ...customer.facts, deleted_at: 'true' } }, proof);
++    expect(deleted).toEqual({ source_pk: 'C001', source_version: '9', deleted_at: '2026-01-02T03:04:05Z' });
++  });
++
++  it('uses the actual timestamp when the source supplies a timestamp tombstone', () => {
++    const deleted = toCanonicalSnapshotCustomer({ ...customer, facts: { ...customer.facts, deleted_at: '2026-02-03T04:05:06Z' } }, proof);
++    expect(deleted).toEqual({ source_pk: 'C001', source_version: '9', deleted_at: '2026-02-03T04:05:06Z' });
++  });
++
++  it('builds a complete canonical order from one header and all exact decimal lines', () => {
++    const header: SemanticSnapshotFact = { ...order, facts: { ...order.facts, customer_id: 'C001' } };
++    const lineRows: SemanticSnapshotFact[] = [
++      { entity: 'order', relation: 'order_line', parent_source_pk: 'O001', source_pk: 'L002', facts: {
++        'lines.source_line_id': 'L002', 'lines.product_code': 'P2', 'lines.product_name': 'Second', 'lines.quantity': '1',
++        'lines.unit_price': '2', 'lines.line_amount': '2' } },
++      { entity: 'order', relation: 'order_line', parent_source_pk: 'O001', source_pk: 'L001', facts: {
++        'lines.source_line_id': 'L001', 'lines.product_code': 'P1', 'lines.product_name': 'First', 'lines.quantity': '1',
++        'lines.unit_price': '10.5', 'lines.line_amount': '10.5' } },
++    ];
++    const value = toCanonicalSnapshotOrder(header, lineRows, proof);
++    expect(value).toMatchObject({ source_pk: 'O001', customer_external_id: 'C001', amount: '12.50', source_version: '10' });
++    expect(value).toMatchObject({ lines: [{ source_line_id: 'L001' }, { source_line_id: 'L002' }] });
++  });
++});
+diff --git a/integration-service/acceptance-tests/source-registry.test.ts b/integration-service/acceptance-tests/source-registry.test.ts
+index 092e776..05d847a 100644
+--- a/integration-service/acceptance-tests/source-registry.test.ts
++++ b/integration-service/acceptance-tests/source-registry.test.ts
+@@ -660,20 +660,64 @@ describe('M1 source admission authorization', () => {
+       const oversized=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',
+         headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:oversizedBody});
+       expect(oversized.statusCode).toBe(413);
+       expect(oversized.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
+       const fetched=await app.inject({method:'GET',url:'/hub/v1/admin/sources/crm-new',headers:{authorization:'Bearer owner-token'}});
+       expect(fetched.statusCode).toBe(200);
+       expect(fetched.body).not.toContain('vault:/crm/credential-v1');
+     } finally { await app.close(); }
+   });
+ 
++  it('discovers source-qualified customer identities for the owner and removes them after API-014 confirmation', async () => {
++    const owner=await prepareOwner();
++    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'dept-sales',businessRole:'sales',
++      managementScopes:['source:read','source:write','source:approve','mapping:write']});
++    await auth.repository.provisionSourceCredential({sourceId:'crm-discovery',tenantId:owner.tenantId,token:createCredential().secret,
++      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'0'});
++    const {service}=managerService(roleScopedPool());
++    await service.create(owner,{source_id:'crm-discovery',data_owner_user_id:owner.userId,config:{name:'CRM discovery',connector:'rest',
++      mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',
++      allowed_entities:['customer'],delete_contract:'tombstone'}});
++    const targetIds=['8a2efdd5-3d59-4f5f-97f9-298a68006011','8a2efdd5-3d59-4f5f-97f9-298a68006012'];
++    await fixture.pool.query(`INSERT INTO hub.canonical_customer
++      (tenant_id,id,customer_name,owner_user_id,dept_id,status,source_updated_at,source_version,version_domain,channel_epoch,hub_revision)
++      VALUES($1,$2,'Private name one',$3,'dept-sales','ACTIVE','2026-01-01T00:00:00Z',1,'SOURCE_VERSION',1,1),
++        ($1,$4,'Private name two',$3,'dept-sales','ACTIVE','2026-01-01T00:00:00Z',1,'SOURCE_VERSION',1,1)`,
++      [owner.tenantId,targetIds[0],owner.userId,targetIds[1]]);
++    await fixture.pool.query(`INSERT INTO control.canonical_source_identity
++      (tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
++      VALUES($1,'crm-discovery','customer','C-1',$2,$2),($1,'crm-discovery','customer','C-2',$3,$3)`,
++      [owner.tenantId,targetIds[0],targetIds[1]]);
++    const app=await buildApp({logger:false,sourceRegistry:{authenticator:async token=>token==='owner-token'?owner
++      :token==='foreign-owner'?{...owner,userId:'different-owner'}:Promise.reject(new Error('invalid')),authService:auth,sourceService:service}});
++    try {
++      const headers={authorization:'Bearer owner-token'};
++      const first=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer&limit=1',headers});
++      expect(first.statusCode).toBe(200);
++      expect(first.json().data).toMatchObject({source_id:'crm-discovery',items:[{source_pk:'C-1',target_id:targetIds[0]}],next_cursor:expect.any(String)});
++      expect(first.body).not.toContain('Private name');
++      const next=await app.inject({method:'GET',url:`/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer&limit=1&cursor=${encodeURIComponent(first.json().data.next_cursor)}`,headers});
++      expect(next.statusCode).toBe(200);
++      expect(next.json().data).toMatchObject({items:[{source_pk:'C-2',target_id:targetIds[1]}],next_cursor:null});
++      const foreign=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',
++        headers:{authorization:'Bearer foreign-owner'}});
++      expect(foreign.statusCode).toBe(403);
++      const opaqueId=Buffer.from('crm-discovery\0customer\0C-1','utf8').toString('base64url');
++      const confirmed=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${opaqueId}`,headers,
++        payload:{expected_revision:'0',target_id:targetIds[0],reason:'confirm exact source customer'}});
++      expect(confirmed.statusCode).toBe(200);
++      const after=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',headers});
++      expect(after.statusCode).toBe(200);
++      expect(after.json().data.items).toEqual([{source_pk:'C-2',target_id:targetIds[1]}]);
++    } finally { await app.close(); }
++  });
++
+   it('performs a bounded authenticated REST capability probe against an owned loopback fixture', async () => {
+     let seenAuthorization = '';
+     const server = createServer((request, response) => {
+       seenAuthorization = String(request.headers.authorization ?? '');
+       response.writeHead(200, { 'content-type': 'application/json' });
+       response.end(JSON.stringify({
+         protocol: 'hub.source-capability.v1', schema_version: 'customer-v1', source_identity:'fixture-crm',version_domain:'SOURCE_VERSION',
+         entities: { customer: { fields: ['customer_id','customer_name','owner_user_id','dept_id','status','source_version','deleted_at'],field_types:{source_version:'integer',deleted_at:'timestamp'}, version_field: 'source_version',
+           delete_field:'deleted_at', delete_contract: 'tombstone' } },
+       }));
+diff --git a/integration-service/etl-worker/postgres-snapshot-connector.ts b/integration-service/etl-worker/postgres-snapshot-connector.ts
+index d771f37..043b6ee 100644
+--- a/integration-service/etl-worker/postgres-snapshot-connector.ts
++++ b/integration-service/etl-worker/postgres-snapshot-connector.ts
+@@ -56,20 +56,21 @@ function quoteIdentifier(value: string): string {
+   return `"${value.replaceAll('"', '""')}"`;
+ }
+ function qualified(schema: string, table: string): string { return `${quoteIdentifier(schema)}.${quoteIdentifier(table)}`; }
+ function sha256(value: string): string { return createHash('sha256').update(value, 'utf8').digest('hex'); }
+ function canonical(value: unknown): string {
+   if (value === null || typeof value !== 'object') return JSON.stringify(value);
+   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+   const record = value as Record<string, unknown>;
+   return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${canonical(record[key])}`).join(',')}}`;
+ }
++export function snapshotRowsPageDigest(rows: readonly SnapshotStageRow[]): string { return sha256(canonical(rows)); }
+ function mappedValue(raw: unknown, mapping: FieldMapping): string | null {
+   if (raw === null || raw === undefined) return null;
+   const text = String(raw);
+   switch (mapping.transform) {
+     case 'trim': return text.trim();
+     case 'decimal-string': if (!DECIMAL.test(text)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID'); return text;
+     case 'source-id': if (!text || text.length > 256 || /[\u0000-\u001f\u007f]/.test(text)) throw new SnapshotSourceError('SNAPSHOT_SOURCE_CONTRACT_INVALID'); return text;
+     case 'identity': return text;
+   }
+ }
+@@ -217,21 +218,21 @@ export async function extractPostgresSnapshot(input: Readonly<{
+       while (true) {
+         if (input.signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
+         // FETCH grammar accepts only a literal; pageSize is validated and capped above.
+         const result = await connection.query(`FETCH FORWARD ${input.pageSize} FROM ${cursor}`);
+         if (!result.rows.length) break;
+         pageNo += 1;
+         const records = pageRows(result.rows, input.profile, input.config, input.mappings, relation);
+         const key = (row: SnapshotStageRow) => relation === 'order_line'
+           ? `${row.parent_source_pk.length}:${row.parent_source_pk}${row.source_pk.length}:${row.source_pk}` : row.source_pk;
+         const page: SnapshotPage = Object.freeze({ entity, relation, page_no: pageNo, rows: Object.freeze(records),
+-          first_key: key(records[0]), last_key: key(records.at(-1)!), page_digest: sha256(canonical(records)) });
++          first_key: key(records[0]), last_key: key(records.at(-1)!), page_digest: snapshotRowsPageDigest(records) });
+         try { await input.onPage(page); }
+         catch (error) { sinkFailure = true; throw error; }
+         counts[relation] += records.length;
+         pageCount += 1;
+       }
+       await connection.query(`CLOSE ${cursor}`);
+     }
+     await connection.query('COMMIT');
+     inTransaction = false;
+     return Object.freeze({ snapshot_identity: sha256(snapshotText), page_count: pageCount,
+diff --git a/integration-service/etl-worker/snapshot-apply-worker.ts b/integration-service/etl-worker/snapshot-apply-worker.ts
+new file mode 100644
+index 0000000..8494e6d
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-apply-worker.ts
+@@ -0,0 +1,197 @@
++import { createHash } from 'node:crypto';
++import type { Pool, PoolClient } from 'pg';
++import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
++import { sourceContentDigest } from '../normalization/canonical.js';
++import { createSnapshotContinuationStore, type SnapshotCProof, type SnapshotContinuationClaim } from './snapshot-continuation-store.js';
++import { computeSemanticSnapshotDigest, type SemanticSnapshotFact } from './snapshot-validation.js';
++import { toCanonicalSnapshotCustomer, toCanonicalSnapshotOrder } from './snapshot-canonical.js';
++
++function stable(value:unknown):string {
++  if(value===null||typeof value!=='object') return JSON.stringify(value);
++  if(Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
++  const object=value as Record<string,unknown>;
++  return `{${Object.keys(object).sort().map(key=>`${JSON.stringify(key)}:${stable(object[key])}`).join(',')}}`;
++}
++function sha(value:unknown):string { return createHash('sha256').update(stable(value),'utf8').digest('hex'); }
++function hex(value:string):Buffer { if(!/^[a-f0-9]{64}$/.test(value)) throw new Error('SNAPSHOT_DIGEST_INVALID'); return Buffer.from(value,'hex'); }
++function asFact(row:Record<string,any>):SemanticSnapshotFact {
++  return {entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,source_pk:row.source_pk,
++    source_version:row.source_version,facts:row.facts};
++}
++function canonicalProof(proof:SnapshotCProof) {
++  return {version_domain:(proof.config as any).version_domain,delete_contract:proof.delete_contract,
++    customer_source_id:((proof.config as any).endpoint_profile?.entities?.order?.customer_source_id)} as const;
++}
++function scopeDigest(proof:SnapshotCProof):string {
++  return sha({tenant:proof.tenant_key,source:proof.source_id,config_revision:proof.config_revision,config_digest:proof.config_digest,
++    mapping_revision:proof.mapping_revision,mapping_digest:proof.mapping_digest,identity_revision:proof.identity_mapping_revision,
++    identity_digest:proof.identity_mapping_digest,profile_digest:proof.endpoint_profile_digest,channels:proof.entity_channel_proof,
++    entities:[...proof.expected_entities].sort(),version_domain:(proof.config as any).version_domain,
++    delete_contract:proof.delete_contract,data_contract_ref:proof.data_contract_ref});
++}
++function applyContext(proof:SnapshotCProof,entity:'customer'|'order'):ApplyContext {
++  const channel=proof.entity_channel_proof[entity];
++  if(!channel) throw new Error('SNAPSHOT_C_PROOF_INVALID');
++  return {tenantId:proof.tenant_key,sourceId:proof.source_id,credentialId:proof.credential_id,
++    sourceEpochAtAdmission:String(proof.admission_source_epoch),credentialRevisionAtAdmission:String(proof.credential_revision),
++    credentialGenerationAtAdmission:String(proof.credential_generation),entity,channelId:channel.channel_id,channelEpoch:String(channel.channel_epoch),
++    versionDomain:channel.version_domain,ownerApprovalId:proof.approval_id,ownerUserId:proof.owner_user_id,ownerRevision:String(proof.owner_revision),
++    configRevision:String(proof.config_revision),configDigest:proof.config_digest,mappingRevision:String(proof.mapping_revision),mappingDigest:proof.mapping_digest,
++    identityMappingRevision:String(proof.identity_mapping_revision),identityMappingDigest:proof.identity_mapping_digest,
++    endpointProfileDigest:proof.endpoint_profile_digest,testReportId:proof.test_report_id,
++    securityBarrierFenceAtAdmission:String(proof.security_barrier_fence)};
++}
++function outcome(result:ApplyResult):Readonly<{status:'APPLIED'|'DUPLICATE'|'IGNORED_STALE'|'QUARANTINED'|'CHANNEL_EPOCH_RETIRED'|'FAILED';error:string|null}> {
++  if(result.status==='QUARANTINED') return {status:'QUARANTINED',error:result.code};
++  if(result.status==='CHANNEL_EPOCH_RETIRED') return {status:'CHANNEL_EPOCH_RETIRED',error:'CHANNEL_EPOCH_RETIRED'};
++  return {status:result.status,error:null};
++}
++async function transaction<T>(pool:Pool,fn:(client:PoolClient)=>Promise<T>):Promise<T> {
++  const client=await pool.connect();
++  try { await client.query('BEGIN'); await client.query('SELECT control.lock_security_barrier_fence()');
++    const result=await fn(client); await client.query('COMMIT'); return result;
++  } catch(error) { await client.query('ROLLBACK').catch(()=>undefined); throw error; }
++  finally { client.release(); }
++}
++
++async function *proofFacts(store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,
++  proof:SnapshotCProof):AsyncGenerator<readonly SemanticSnapshotFact[]> {
++  const cp=canonicalProof(proof);
++  if(proof.expected_entities.includes('customer')) {
++    for await(const page of store.semanticFacts(claim,'customer')) {
++      yield Object.freeze(page.map(row=>toCanonicalFact(row,normalizeSnapshotTimestamps(toCanonicalSnapshotCustomer(
++        {...row,facts:normalizeSnapshotTimestamps(row.facts)},cp)))));
++    }
++  }
++  if(proof.expected_entities.includes('order')) {
++    for await(const page of store.semanticFacts(claim,'order')) {
++      const normalized=[] as SemanticSnapshotFact[];
++      for(const row of page) {
++        const lines=(await store.orderLines(claim,row.source_pk)).map(line=>toCanonicalFact(asFact(line),normalizeSnapshotTimestamps(asFact(line).facts)));
++        normalized.push(toCanonicalFact(row,normalizeSnapshotTimestamps(toCanonicalSnapshotOrder(
++          {...row,facts:normalizeSnapshotTimestamps(row.facts)},lines,cp))));
++      }
++      yield Object.freeze(normalized);
++    }
++  }
++}
++
++function toCanonicalFact(row:SemanticSnapshotFact,value:unknown):SemanticSnapshotFact {
++  return {...row,facts:value as Record<string,string|null>};
++}
++
++function normalizeSnapshotTimestamps<T>(value:T):T {
++  if(Array.isArray(value)) return value.map(normalizeSnapshotTimestamps) as T;
++  if(!value||typeof value!=='object') return value;
++  const object=value as Record<string,unknown>;
++  const normalized:Record<string,unknown>={};
++  for(const [key,item] of Object.entries(object)) {
++    if(['source_updated_at','order_at','deleted_at'].includes(key)&&typeof item==='string') {
++      const match=/^(.*?)(?:\.(\d{1,6}))?(Z|([+-])(\d{2})(?::?(\d{2}))?)$/.exec(item);
++      if(!match) throw new Error('SNAPSHOT_TIMESTAMP_INVALID');
++      const offset=match[3]==='Z'?'Z':`${match[4]}${match[5]}:${match[6]??'00'}`;
++      const timestamp=match[1].replace(' ','T');
++      const epoch=Date.parse(`${timestamp}${offset}`);
++      if(!Number.isFinite(epoch)) throw new Error('SNAPSHOT_TIMESTAMP_INVALID');
++      const fraction=(match[2]??'').padEnd(6,'0').replace(/0+$/,'');
++      normalized[key]=`${new Date(epoch).toISOString().replace(/\.\d{3}Z$/,'')}${fraction?`.${fraction}`:''}Z`;
++    } else normalized[key]=normalizeSnapshotTimestamps(item);
++  }
++  return normalized as T;
++}
++
++async function validateAndSeal(store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,proof:SnapshotCProof) {
++  let rows=0,pages=0;
++  for await(const page of store.stagePages(claim,proof)) { rows+=page.rows.length; pages++; }
++  const referenceError=await store.validateOrderReferences(claim,proof);
++  if(referenceError) throw new Error(referenceError.startsWith('SNAPSHOT_')?referenceError:`SNAPSHOT_${referenceError}`);
++  const semantic=await computeSemanticSnapshotDigest(proofFacts(store,claim,proof));
++  const scope=scopeDigest(proof);
++  const ok=await store.seal(claim,proof,scope,semantic,{rows,pages,relations:proof.manifest.relations});
++  if(!ok) throw new Error('SNAPSHOT_VALIDATION_SEAL_REJECTED');
++  return {semantic,scope};
++}
++
++async function applyOne(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,
++  proof:SnapshotCProof,entity:'customer'|'order',row:SemanticSnapshotFact,observation?:string,scope?:string):Promise<boolean> {
++  const cp=canonicalProof(proof);
++  const canonicalRow={...row,facts:normalizeSnapshotTimestamps(row.facts)};
++  const canonical=entity==='customer'?toCanonicalSnapshotCustomer(canonicalRow,cp,observation):
++    toCanonicalSnapshotOrder(canonicalRow,await store.orderLines(claim,row.source_pk).then(lines=>lines.map(line=>{
++      const fact=asFact(line); return {...fact,facts:normalizeSnapshotTimestamps(fact.facts)};
++    })),cp,observation);
++  const aggregate=sourceContentDigest(canonical);
++  const proofScope=scope ?? scopeDigest(proof);
++  const previous=await store.existingRange(claim,entity,row.source_pk);
++  if(previous) {
++    if(previous.aggregate_digest!==aggregate||previous.proof_scope_digest!==proofScope) throw new Error('SNAPSHOT_RECOVERY_DRIFT');
++    return false;
++  }
++  const ctx=applyContext(proof,entity);
++  const recorded=await transaction(pool,async client=>{
++    const applied=entity==='customer'
++      ? await applyCustomer(client,ctx,canonical as Parameters<typeof applyCustomer>[2])
++      : await applyOrderAggregate(client,ctx,canonical as Parameters<typeof applyOrderAggregate>[2]);
++    const result=outcome(applied);
++    const saved=await store.recordAggregate(client,claim,{entity,source_pk:row.source_pk,
++      aggregate_digest:aggregate,proof_scope_digest:proofScope,status:result.status,error_code:result.error});
++    return saved;
++  });
++  if(!recorded) throw new Error('SNAPSHOT_OUTCOME_COMMIT_REJECTED');
++  return true;
++}
++
++function retryableContinuationFailure(error:unknown):boolean {
++  if(!error||typeof error!=='object') return false;
++  const pgError=error as {code?:unknown;message?:unknown};
++  if(typeof pgError.code==='string'&&(/^(08|40|55|57)/.test(pgError.code)||pgError.code==='53300')) return true;
++  return error instanceof Error&&pgError.code===undefined&&(
++    pgError.message==='Connection terminated unexpectedly'||
++    pgError.message==='Client has encountered a connection error and is not queryable'||
++    pgError.message==='Connection terminated'
++  );
++}
++
++async function processClaim(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim):Promise<void> {
++  const start=await store.begin(claim);
++  if(!Number.isInteger(start)||start<1||start>4) throw new Error('SNAPSHOT_C_START_LEASE_LOST');
++  const proof=await store.loadProof(claim);
++  const {semantic,scope}=await validateAndSeal(store,claim,proof);
++  const observation=(proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'
++    ? await store.observation(claim,semantic,scope) : undefined;
++  if((proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'&&!observation) throw new Error('SNAPSHOT_OBSERVATION_ALLOCATION_FAILED');
++  let done=0;
++  for(const entity of proof.expected_entities) {
++    for await(const page of store.semanticFacts(claim,entity)) {
++      for(const row of page) { if(await applyOne(pool,store,claim,proof,entity,row,observation,scope)) done++; }
++    }
++  }
++  if(!await store.finish(claim)) throw new Error('SNAPSHOT_FINISH_REJECTED');
++  void done;
++}
++
++export async function runSnapshotContinuationWorkerOnce(pool:Pool,limit=20):Promise<number> {
++  const store=createSnapshotContinuationStore(pool);
++  const sources=await pool.query<{tenant_key:string;source_id:string}>(`SELECT tenant_key,source_id FROM control.etl_run
++    WHERE status IN ('VALIDATING','READY','APPLYING') ORDER BY created_at,run_id LIMIT $1`,[limit]);
++  let claimed=0;
++  for(const source of sources.rows) {
++    const claim=await store.claim(source.tenant_key,source.source_id);
++    if(!claim) continue;
++    claimed++;
++    try { await processClaim(pool,store,claim); }
++    catch(error) {
++      const code=error instanceof Error&&/^SNAPSHOT_[A-Z0-9_:-]{1,90}$/.test(error.message)?error.message:'SNAPSHOT_C_PROCESSING_FAILED';
++      const pgError=typeof error==='object'&&error!==null?error as {code?:unknown;constraint?:unknown;column?:unknown}:undefined;
++      const retryable=retryableContinuationFailure(error);
++      console.warn('snapshot continuation failed',{tenant_key:claim.tenant_key,source_id:claim.source_id,run_id:claim.run_id,
++        error_code:code,sqlstate:typeof pgError?.code==='string'?pgError.code:undefined,
++        constraint:typeof pgError?.constraint==='string'?pgError.constraint:undefined,
++        column:typeof pgError?.column==='string'?pgError.column:undefined,
++        failure_name:error instanceof Error?error.name:typeof error,
++        failure_site:error instanceof Error?error.stack?.split('\n')[1]?.trim():undefined});
++      await store.fail(claim,code,retryable).catch(()=>undefined);
++    }
++  }
++  return claimed;
++}
+diff --git a/integration-service/etl-worker/snapshot-canonical.ts b/integration-service/etl-worker/snapshot-canonical.ts
+new file mode 100644
+index 0000000..9d61faf
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-canonical.ts
+@@ -0,0 +1,109 @@
++import { canonicalDeleteSchema, canonicalCustomerSchema, canonicalOrderDeleteSchema, canonicalOrderSchema,
++  type CanonicalCustomer, type CanonicalDelete, type CanonicalOrder } from '../normalization/models.js';
++import { canonicalVersion } from '../normalization/canonical.js';
++import type { SemanticSnapshotFact } from './snapshot-validation.js';
++
++export type SnapshotCanonicalProof = Readonly<{
++  version_domain: 'SOURCE_VERSION' | 'SNAPSHOT_OBSERVATION';
++  delete_contract: 'tombstone' | 'hard_delete';
++  customer_source_id?: string;
++}>;
++
++function facts(row: SemanticSnapshotFact): Record<string, unknown> {
++  return row.facts as Record<string, unknown>;
++}
++
++function requiredText(value: unknown, code = 'SNAPSHOT_FACTS_INVALID'): string {
++  if (typeof value !== 'string' || value.length < 1) throw new Error(code);
++  return value;
++}
++
++function sourceVersion(row: SemanticSnapshotFact, proof: SnapshotCanonicalProof, observation?: string): string {
++  const value = proof.version_domain === 'SOURCE_VERSION' ? row.source_version : (observation ?? '0');
++  if (typeof value !== 'string') throw new Error('SNAPSHOT_SOURCE_VERSION_INVALID');
++  try { return canonicalVersion(value); }
++  catch { throw new Error('SNAPSHOT_SOURCE_VERSION_INVALID'); }
++}
++
++function sourceDeletion(row: SemanticSnapshotFact, proof: SnapshotCanonicalProof): string | null {
++  if (proof.delete_contract !== 'tombstone') return null;
++  const value = facts(row).deleted_at;
++  if (value === null || value === undefined || value === '' || value === 'false') return null;
++  if (value === 'true') return requiredText(facts(row).source_updated_at, 'SNAPSHOT_DELETE_TIMESTAMP_INVALID');
++  if (typeof value !== 'string') throw new Error('SNAPSHOT_DELETE_TIMESTAMP_INVALID');
++  return value;
++}
++
++function parse<T>(schema: { parse(value: unknown): T }, value: unknown): T {
++  try { return schema.parse(value); }
++  catch { throw new Error('SNAPSHOT_FACTS_INVALID'); }
++}
++
++export function toCanonicalSnapshotCustomer(
++  row: SemanticSnapshotFact,
++  proof: SnapshotCanonicalProof,
++  observation?: string,
++): CanonicalCustomer | CanonicalDelete {
++  if (row.entity !== 'customer' || row.relation !== 'customer' || row.parent_source_pk !== '') throw new Error('SNAPSHOT_FACTS_INVALID');
++  const version = sourceVersion(row, proof, observation);
++  const deletedAt = sourceDeletion(row, proof);
++  if (deletedAt !== null) return parse(canonicalDeleteSchema, { source_pk: row.source_pk, source_version: version, deleted_at: deletedAt });
++  const value = facts(row);
++  return parse(canonicalCustomerSchema, {
++    source_pk: row.source_pk,
++    customer_name: value.customer_name,
++    owner_external_id: value.owner_user_id,
++    dept_external_id: value.dept_id,
++    status: value.status,
++    ...(value.phone === null || value.phone === undefined ? {} : { phone: value.phone }),
++    source_updated_at: value.source_updated_at,
++    source_version: version,
++    deleted_at: null,
++  });
++}
++
++function compareUtf8(left: string, right: string): number {
++  return Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8'));
++}
++
++export function toCanonicalSnapshotOrder(
++  row: SemanticSnapshotFact,
++  lineRows: readonly SemanticSnapshotFact[],
++  proof: SnapshotCanonicalProof,
++  observation?: string,
++): CanonicalOrder | CanonicalDelete {
++  if (row.entity !== 'order' || row.relation !== 'order' || row.parent_source_pk !== '' || lineRows.length > 200) {
++    throw new Error('SNAPSHOT_FACTS_INVALID');
++  }
++  const version = sourceVersion(row, proof, observation);
++  const deletedAt = sourceDeletion(row, proof);
++  if (deletedAt !== null) return parse(canonicalOrderDeleteSchema, { source_pk: row.source_pk, source_version: version, deleted_at: deletedAt });
++  const value = facts(row);
++  const seen = new Set<string>();
++  const lines = lineRows.map(line => {
++    if (line.entity !== 'order' || line.relation !== 'order_line' || line.parent_source_pk !== row.source_pk || seen.has(line.source_pk)) {
++      throw new Error('SNAPSHOT_ORDER_LINES_INVALID');
++    }
++    seen.add(line.source_pk);
++    const item = facts(line);
++    if (item['lines.source_line_id'] !== line.source_pk) throw new Error('SNAPSHOT_ORDER_LINES_INVALID');
++    return {
++      source_line_id: item['lines.source_line_id'], product_code: item['lines.product_code'],
++      product_name: item['lines.product_name'], quantity: item['lines.quantity'], unit_price: item['lines.unit_price'],
++      line_amount: item['lines.line_amount'],
++    };
++  }).sort((left, right) => compareUtf8(String(left.source_line_id), String(right.source_line_id)));
++  return parse(canonicalOrderSchema, {
++    source_pk: row.source_pk,
++    customer_external_id: value.customer_id,
++    order_no: value.order_no,
++    status: value.status,
++    order_at: value.order_at,
++    amount: value.amount,
++    currency: value.currency,
++    source_updated_at: value.source_updated_at,
++    source_version: version,
++    deleted_at: null,
++    lines,
++  }) as CanonicalOrder;
++}
+diff --git a/integration-service/etl-worker/snapshot-continuation-store.ts b/integration-service/etl-worker/snapshot-continuation-store.ts
+new file mode 100644
+index 0000000..cec7bce
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-continuation-store.ts
+@@ -0,0 +1,209 @@
++import { createHash } from 'node:crypto';
++import type { Pool, PoolClient, QueryResultRow } from 'pg';
++import type { SnapshotRunProof } from './snapshot-contract.js';
++import type { SnapshotPage, SnapshotRelation, SnapshotStageRow } from './postgres-snapshot-connector.js';
++import { snapshotRowsPageDigest } from './postgres-snapshot-connector.js';
++import { expectedSnapshotRelations, snapshotManifestDigest } from './snapshot-stage-store.js';
++import type { SemanticSnapshotFact } from './snapshot-validation.js';
++
++export type SnapshotContinuationClaim = Readonly<{ tenant_key:string;source_id:string;run_id:string;attempt_id:string;claim_token:string;status:string;c_start_count:number }>;
++export type SnapshotCProof = SnapshotRunProof & Readonly<{
++  status: string;
++  credential_revision: string;
++  config: Record<string, unknown>;
++  mappings: readonly Record<string, unknown>[];
++  identity_mappings: readonly { kind: string; external_id: string; target_id: string | null }[];
++  manifest: Record<string, unknown>;
++  manifest_digest: string;
++}>;
++
++type PageReceipt = Readonly<{ entity: 'customer'|'order'; relation: SnapshotRelation; page_no: number; row_count: number;
++  first_key: string; last_key: string; page_digest: Buffer }>;
++type StagePage = Readonly<{ receipt: PageReceipt; rows: readonly SnapshotStageRow[] }>;
++
++function stable(value: unknown): string {
++  if (value === null || typeof value !== 'object') return JSON.stringify(value);
++  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
++  const record = value as Record<string,unknown>;
++  return `{${Object.keys(record).sort().map(key=>`${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
++}
++function digest(value: unknown): string { return createHash('sha256').update(stable(value),'utf8').digest('hex'); }
++function hex(value: Buffer | string): string { return Buffer.isBuffer(value) ? value.toString('hex') : value; }
++function keyOf(row: Pick<SnapshotStageRow,'relation'|'parent_source_pk'|'source_pk'>): string {
++  return row.relation==='order_line' ? `${row.parent_source_pk.length}:${row.parent_source_pk}${row.source_pk.length}:${row.source_pk}` : row.source_pk;
++}
++
++async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<T>): Promise<T> {
++  const client=await pool.connect();
++  try {
++    await client.query('BEGIN');
++    await client.query('SELECT control.lock_security_barrier_fence()');
++    const result=await work(client);
++    await client.query('COMMIT');
++    return result;
++  } catch(error) { await client.query('ROLLBACK').catch(()=>undefined); throw error; }
++  finally { client.release(); }
++}
++
++export function createSnapshotContinuationStore(pool: Pool) {
++  const call = <T extends QueryResultRow>(sql:string,values:unknown[]) => transaction(pool,async client=>client.query<T>(sql,values));
++  return Object.freeze({
++    async claim(tenant:string,source:string,leaseSeconds=60):Promise<SnapshotContinuationClaim|undefined> {
++      const result=await call<SnapshotContinuationClaim>('SELECT * FROM control.claim_etl_snapshot_continuation($1,$2,$3)',[tenant,source,leaseSeconds]);
++      return result.rows[0];
++    },
++    async begin(claim:SnapshotContinuationClaim):Promise<number> {
++      const result=await call<{begin_etl_snapshot_c_start:number}>('SELECT control.begin_etl_snapshot_c_start($1,$2,$3,$4,$5)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
++      return Number(result.rows[0]?.begin_etl_snapshot_c_start ?? 0);
++    },
++    async heartbeat(claim:SnapshotContinuationClaim,leaseSeconds=60):Promise<boolean> {
++      const result=await call<{heartbeat_etl_snapshot_continuation:boolean}>(
++        'SELECT control.heartbeat_etl_snapshot_continuation($1,$2,$3,$4,$5,$6)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,leaseSeconds]);
++      return result.rows[0]?.heartbeat_etl_snapshot_continuation===true;
++    },
++    async fail(claim:SnapshotContinuationClaim,errorCode:string,retryable:boolean):Promise<string> {
++      const result=await call<{fail_etl_snapshot_continuation:string}>(
++        'SELECT control.fail_etl_snapshot_continuation($1,$2,$3,$4,$5,$6,$7)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,errorCode,retryable]);
++      return result.rows[0]?.fail_etl_snapshot_continuation ?? 'STALE';
++    },
++    async loadProof(claim:SnapshotContinuationClaim):Promise<SnapshotCProof> {
++      return transaction(pool,async client=>{
++        const result=await client.query<{proof:Record<string,any>}>(
++          'SELECT control.read_etl_snapshot_c_proof($1,$2,$3,$4,$5) AS proof',
++          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
++        const proof=result.rows[0]?.proof;
++        if(!proof || proof.status!==claim.status) throw new Error('SNAPSHOT_C_PROOF_INVALID');
++        const {manifest, digest:manifestDigest}=proof.manifest ?? {};
++        if(!manifest || snapshotManifestDigest(manifest)!==manifestDigest || manifest.attempt_id!==claim.attempt_id || manifest.state!=='EXTRACTED')
++          throw new Error('SNAPSHOT_MANIFEST_INVALID');
++        if(digest(proof.config)!==proof.config_digest || digest(proof.mappings)!==proof.mapping_digest ||
++            digest(proof.identity_mappings)!==proof.identity_mapping_digest || digest(proof.config.endpoint_profile)!==proof.endpoint_profile_digest ||
++            stable([...proof.expected_entities].sort())!==stable([...(proof.config.allowed_entities as string[])].sort()))
++          throw new Error('SNAPSHOT_C_PROOF_INVALID');
++        return Object.freeze({ ...proof, manifest, manifest_digest:manifestDigest }) as SnapshotCProof;
++      });
++    },
++    async *stagePages(claim:SnapshotContinuationClaim,proof:SnapshotCProof):AsyncGenerator<StagePage> {
++      const relations=expectedSnapshotRelations(proof.expected_entities as readonly ('customer'|'order')[]);
++      const manifestRelations=proof.manifest.relation_counts as Array<{relation:SnapshotRelation;row_count:number;page_count:number;page_digests:string[]}>;
++      if(!Array.isArray(manifestRelations) || stable(proof.manifest.relations)!==stable(relations)) throw new Error('SNAPSHOT_MANIFEST_INVALID');
++      let totalRows=0,totalPages=0;
++      for(const relation of relations) {
++        const expected=manifestRelations.find(value=>value.relation===relation);
++        if(!expected || !Number.isSafeInteger(expected.row_count) || !Number.isSafeInteger(expected.page_count) ||
++          !Array.isArray(expected.page_digests) || expected.page_digests.length!==expected.page_count) throw new Error('SNAPSHOT_MANIFEST_INVALID');
++        let after=0,seenPages=0,seenRows=0;
++        while(true) {
++          const meta=await call<PageReceipt>(`SELECT * FROM control.list_etl_snapshot_c_pages($1,$2,$3,$4,$5,$6,$7,$8)`,
++            [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,relation,after,100]);
++          if(!meta.rows.length) break;
++          for(const receipt of meta.rows) {
++            if(receipt.page_no!==after+1 || receipt.row_count<1 || hex(receipt.page_digest)!==expected.page_digests[receipt.page_no-1])
++              throw new Error('SNAPSHOT_PAGE_RECEIPT_INVALID');
++            const contents=await call<{row_count:number;page_digest:Buffer;record:Record<string,any>}> (
++              'SELECT * FROM control.read_etl_snapshot_stage_page($1,$2,$3,$4,$5,$6,$7,$8)',
++              [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,receipt.entity,relation,receipt.page_no]);
++            if(contents.rows.length!==receipt.row_count || contents.rows.some(row=>row.row_count!==receipt.row_count || !row.page_digest.equals(receipt.page_digest)))
++              throw new Error('SNAPSHOT_PAGE_COVERAGE_INVALID');
++            const rows=contents.rows.map(({record})=>({entity:record.entity,relation:record.relation,parent_source_pk:record.parent_source_pk,
++              source_pk:record.source_pk,source_version:record.source_version,facts:record.facts} as SnapshotStageRow));
++            if(rows.some(row=>row.entity!==receipt.entity || row.relation!==relation || keyOf(row)==='')) throw new Error('SNAPSHOT_STAGE_RECORD_INVALID');
++            if(keyOf(rows[0]!)!==receipt.first_key || keyOf(rows.at(-1)!)!==receipt.last_key ||
++                snapshotRowsPageDigest(rows)!==hex(receipt.page_digest)) throw new Error('SNAPSHOT_PAGE_DIGEST_INVALID');
++            seenPages++;seenRows+=rows.length;after=receipt.page_no;totalPages++;totalRows+=rows.length;
++            yield Object.freeze({receipt,rows:Object.freeze(rows)});
++          }
++        }
++        if(seenPages!==expected.page_count || seenRows!==expected.row_count) throw new Error('SNAPSHOT_RELATION_COVERAGE_INVALID');
++      }
++      if(totalRows!==proof.manifest.row_count || totalPages!==proof.manifest.page_count) throw new Error('SNAPSHOT_MANIFEST_COVERAGE_INVALID');
++    },
++    async validateOrderReferences(claim:SnapshotContinuationClaim,proof:SnapshotCProof):Promise<string|undefined> {
++      const profile=proof.config.endpoint_profile as Record<string,any>;
++      const configured=profile.entities?.order?.customer_source_id;
++      const customerSource=typeof configured==='string' && configured.length ? configured : proof.source_id;
++      const result=await call<{valid:boolean;error_code:string|null}>(
++        'SELECT * FROM control.validate_etl_snapshot_order_references($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,customerSource,
++          proof.expected_entities.includes('customer'),JSON.stringify(proof.identity_mappings)]);
++      return result.rows[0]?.valid ? undefined : (result.rows[0]?.error_code ?? 'SNAPSHOT_REFERENCE_INVALID');
++    },
++    async orderLines(claim:SnapshotContinuationClaim,orderSourcePk:string):Promise<readonly SnapshotStageRow[]> {
++      const result=await call<Record<string,any>>('SELECT * FROM control.read_etl_snapshot_order_lines($1,$2,$3,$4,$5,$6)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,orderSourcePk]);
++      if(result.rows.length>200) throw new Error('SNAPSHOT_ORDER_LINES_INVALID');
++      return Object.freeze(result.rows.map(row=>({entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,
++        source_pk:row.source_pk,source_version:row.source_version,facts:row.facts} as SnapshotStageRow)));
++    },
++    async *semanticFacts(claim:SnapshotContinuationClaim,entity:'customer'|'order'):
++      AsyncGenerator<readonly SemanticSnapshotFact[]> {
++      let parent='',source='';
++      for (;;) {
++        const result=await call<Record<string,any>>(
++          'SELECT * FROM control.read_etl_snapshot_semantic_chunk($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
++          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,entity,parent,source,500]);
++        if (!result.rows.length) break;
++        const chunk=result.rows.map(row=>({entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,
++          source_pk:row.source_pk,source_version:row.source_version,facts:row.facts} as SemanticSnapshotFact));
++        parent=chunk.at(-1)!.parent_source_pk;
++        source=chunk.at(-1)!.source_pk;
++        yield Object.freeze(chunk);
++      }
++    },
++    async *semanticLines(claim:SnapshotContinuationClaim):AsyncGenerator<readonly SemanticSnapshotFact[]> {
++      let parent='',source='';
++      for (;;) {
++        const result=await call<Record<string,any>>(
++          'SELECT * FROM control.read_etl_snapshot_semantic_chunk($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
++          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,'order','order_line',parent,source,500]);
++        if (!result.rows.length) break;
++        const chunk=result.rows.map(row=>({entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,
++          source_pk:row.source_pk,source_version:row.source_version,facts:row.facts} as SemanticSnapshotFact));
++        parent=chunk.at(-1)!.parent_source_pk;
++        source=chunk.at(-1)!.source_pk;
++        yield Object.freeze(chunk);
++      }
++    },
++    async existingRange(claim:SnapshotContinuationClaim,entity:'customer'|'order',sourcePk:string):Promise<
++      Readonly<{aggregate_digest:string;proof_scope_digest:string;status:string;error_code:string|null}>|undefined> {
++      const result=await call<{aggregate_digest:Buffer;proof_scope_digest:Buffer;status:string;error_code:string|null}>(
++        'SELECT * FROM control.get_etl_snapshot_apply_range($1,$2,$3,$4,$5,$6,$7)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,sourcePk]);
++      const row=result.rows[0];
++      return row ? Object.freeze({...row,aggregate_digest:hex(row.aggregate_digest),proof_scope_digest:hex(row.proof_scope_digest)}) : undefined;
++    },
++    async seal(claim:SnapshotContinuationClaim,proof:SnapshotCProof,proofScopeDigest:string,semanticDigest:string,coverage:Record<string,unknown>):Promise<boolean> {
++      const result=await call<{seal_etl_snapshot_validation:boolean}>(
++        'SELECT control.seal_etl_snapshot_validation($1,$2,$3,$4,$5,$6::bytea,$7::bytea,$8::bytea,$9::jsonb)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,Buffer.from(proof.manifest_digest,'hex'),
++          Buffer.from(proofScopeDigest,'hex'),Buffer.from(semanticDigest,'hex'),JSON.stringify(coverage)]);
++      return result.rows[0]?.seal_etl_snapshot_validation===true;
++    },
++    async observation(claim:SnapshotContinuationClaim,semanticDigest:string,scopeDigest:string):Promise<string|undefined> {
++      const result=await call<{persist_etl_snapshot_observation:string}>(
++        'SELECT control.persist_etl_snapshot_observation($1,$2,$3,$4,$5,$6::bytea,$7::bytea)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,Buffer.from(semanticDigest,'hex'),Buffer.from(scopeDigest,'hex')]);
++      return result.rows[0]?.persist_etl_snapshot_observation ?? undefined;
++    },
++    async recordAggregate(client:PoolClient,claim:SnapshotContinuationClaim,input:Readonly<{entity:'customer'|'order';source_pk:string;
++      aggregate_digest:string;proof_scope_digest:string;status:'APPLIED'|'DUPLICATE'|'IGNORED_STALE'|'QUARANTINED'|'CHANNEL_EPOCH_RETIRED'|'FAILED';
++      error_code:string|null}>):Promise<boolean> {
++      const result=await client.query<{record_etl_snapshot_aggregate:boolean}>(
++        'SELECT control.record_etl_snapshot_aggregate($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::bytea,$11::bytea,$12,$13)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,input.entity,input.entity,'',input.source_pk,
++          Buffer.from(input.aggregate_digest,'hex'),Buffer.from(input.proof_scope_digest,'hex'),input.status,input.error_code]);
++      return result.rows[0]?.record_etl_snapshot_aggregate===true;
++    },
++    async finish(claim:SnapshotContinuationClaim):Promise<boolean> {
++      const result=await call<{finish_etl_snapshot_run:boolean}>(
++        'SELECT control.finish_etl_snapshot_run($1,$2,$3,$4,$5)',
++        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
++      return result.rows[0]?.finish_etl_snapshot_run===true;
++    },
++  });
++}
++
++export type { SemanticSnapshotFact };
+diff --git a/integration-service/etl-worker/snapshot-validation.ts b/integration-service/etl-worker/snapshot-validation.ts
+new file mode 100644
+index 0000000..ab1c246
+--- /dev/null
++++ b/integration-service/etl-worker/snapshot-validation.ts
+@@ -0,0 +1,78 @@
++import { createHash } from 'node:crypto';
++import { canonicalVersion, sourceContentDigest } from '../normalization/canonical.js';
++
++export type SemanticSnapshotFact = Readonly<{
++  entity: 'customer' | 'order';
++  relation: 'customer' | 'order' | 'order_line';
++  parent_source_pk: string;
++  source_pk: string;
++  source_version?: string | null;
++  facts: Readonly<Record<string, unknown>>;
++}>;
++
++const RELATION_ORDER: Readonly<Record<SemanticSnapshotFact['relation'], number>> = Object.freeze({ customer: 0, order: 1, order_line: 2 });
++
++function compareUtf8(left: string, right: string): number {
++  return Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8'));
++}
++
++function compareFullKey(left: SemanticSnapshotFact, right: SemanticSnapshotFact): number {
++  return RELATION_ORDER[left.relation] - RELATION_ORDER[right.relation] ||
++    compareUtf8(left.parent_source_pk, right.parent_source_pk) || compareUtf8(left.source_pk, right.source_pk);
++}
++
++function putField(hash: ReturnType<typeof createHash>, value: string): void {
++  const bytes = Buffer.from(value, 'utf8');
++  const length = Buffer.allocUnsafe(4);
++  length.writeUInt32BE(bytes.length);
++  hash.update(length).update(bytes);
++}
++
++/**
++ * Hashes already normalized business facts in indexed full-key order. The caller streams
++ * bounded durable pages in customer, order, then order-line order; this function retains
++ * only the previous key and digest state, never the snapshot rows.
++ */
++export async function computeSemanticSnapshotDigest(
++  pages: AsyncIterable<readonly SemanticSnapshotFact[]>,
++): Promise<string> {
++  const hash = createHash('sha256');
++  hash.update('dgo.snapshot.semantic.v1\0', 'utf8');
++  let previous: SemanticSnapshotFact | undefined;
++  for await (const page of pages) {
++    if (!Array.isArray(page) || page.length > 1000) throw new Error('SNAPSHOT_PAGE_INVALID');
++    for (const row of page) {
++      if (!row || !['customer', 'order'].includes(row.entity) ||
++          (row.relation === 'customer' && (row.entity !== 'customer' || row.parent_source_pk !== '')) ||
++          (row.relation === 'order' && (row.entity !== 'order' || row.parent_source_pk !== '')) ||
++          (row.relation === 'order_line' && (row.entity !== 'order' || !row.parent_source_pk)) ||
++          !['customer', 'order', 'order_line'].includes(row.relation) ||
++          typeof row.source_pk !== 'string' || row.source_pk.length < 1 || typeof row.parent_source_pk !== 'string' ||
++          !row.facts || typeof row.facts !== 'object' || Array.isArray(row.facts)) {
++        throw new Error('SNAPSHOT_STAGE_RECORD_INVALID');
++      }
++      if (row.source_version !== undefined && row.source_version !== null) {
++        try { canonicalVersion(row.source_version); }
++        catch { throw new Error('SNAPSHOT_SOURCE_VERSION_INVALID'); }
++      }
++      if (previous) {
++        const order = compareFullKey(previous, row);
++        if (order === 0) throw new Error('SNAPSHOT_DUPLICATE_KEY');
++        if (order > 0) throw new Error('SNAPSHOT_STAGE_ORDER_INVALID');
++      }
++      // Canonical source normalization validates exact decimals and sorts line facts by
++      // UTF-8 source_line_id. Its processing/version fields are deliberately excluded.
++      const businessFacts = row.relation === 'order_line'
++        ? Object.fromEntries(Object.entries(row.facts).map(([key, value]) => [key.startsWith('lines.') ? key.slice(6) : key, value]))
++        : row.facts;
++      const businessDigest = sourceContentDigest(businessFacts);
++      putField(hash, row.entity);
++      putField(hash, row.relation);
++      putField(hash, row.parent_source_pk);
++      putField(hash, row.source_pk);
++      putField(hash, businessDigest);
++      previous = row;
++    }
++  }
++  return hash.digest('hex');
++}
+diff --git a/integration-service/etl-worker/worker.ts b/integration-service/etl-worker/worker.ts
+index 7f85e67..936d68b 100644
+--- a/integration-service/etl-worker/worker.ts
++++ b/integration-service/etl-worker/worker.ts
+@@ -1,19 +1,20 @@
+ import { pathToFileURL } from 'node:url';
+ import { resolve } from 'node:path';
+ import { randomUUID } from 'node:crypto';
+ import type { Pool, PoolClient } from 'pg';
+ import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from '../contracts/runtime-config.js';
+ import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-contract.js';
+ import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
+ import { durableRetryDelayMs } from './retry.js';
+ import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
++import { runSnapshotContinuationWorkerOnce } from './snapshot-apply-worker.js';
+ 
+ type Source = { name: string; url: string; table: string; kind: 'customer' | 'order' };
+ type LegacyDependencies = {
+   pool: import('pg').Pool;
+   ingest: typeof import('../normalization/store.js').ingest;
+   fetchOpenMetadataTable: typeof import('../ontology-binding/binding.js').fetchOpenMetadataTable;
+   nextRetryDelay: typeof import('./retry.js').nextRetryDelay;
+ };
+ 
+ type DurableJob = {
+@@ -375,20 +376,21 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
+ }
+ 
+ export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.ProcessEnv = process.env,
+   snapshotDependencies?: SnapshotWorkerDependencies): Promise<void> {
+   const once=environment.HUB_STRICT_INGESTION_WORKER_ONCE==='true';
+   const interval=Number(environment.HUB_STRICT_INGESTION_WORKER_INTERVAL_MS ?? 1000);
+   if (!Number.isInteger(interval) || interval<100 || interval>60_000) throw new Error('WORKER_OPTIONS_INVALID');
+   do {
+     await runDurableWorkerOnce(pool);
+     if (snapshotDependencies) await runSnapshotWorkerOnce(pool, snapshotDependencies);
++    await runSnapshotContinuationWorkerOnce(pool);
+     if (once) return;
+     await new Promise(resolve => setTimeout(resolve,interval));
+   } while (true);
+ }
+ 
+ export function resolveWorkerSources(environment: NodeJS.ProcessEnv, runtime: HubRuntimeConfiguration): readonly Source[] {
+   if (runtime.environmentKind !== 'local_lab' || !runtime.legacyLabEnabled) return [];
+   return ([
+     { name: 'crm', url: environment.CRM_DB_URL ?? '', table: 'crm_customers', kind: 'customer' },
+     { name: 'orders', url: environment.ORDER_DB_URL ?? '', table: 'erp_orders', kind: 'order' },
+diff --git a/integration-service/migrations/009_snapshot_runs_and_recovery.sql b/integration-service/migrations/009_snapshot_runs_and_recovery.sql
+index cbd723a..7b02fd7 100644
+--- a/integration-service/migrations/009_snapshot_runs_and_recovery.sql
++++ b/integration-service/migrations/009_snapshot_runs_and_recovery.sql
+@@ -80,34 +80,37 @@ CREATE TABLE control.etl_run_attempt (
+   operation_id uuid NOT NULL DEFAULT gen_random_uuid(),
+   status text NOT NULL DEFAULT 'QUEUED' CHECK (status IN ('QUEUED','RUNNING','INCOMPLETE','FAILED','COMPLETE')),
+   source_snapshot_identity text,
+   started_at timestamptz,
+   ended_at timestamptz,
+   error_code text CHECK (error_code IS NULL OR error_code ~ '^[A-Z0-9_:-]{1,96}$'),
+   UNIQUE (run_id,ordinal),
+   UNIQUE (operation_id),
+   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+ );
++CREATE UNIQUE INDEX etl_run_attempt_scope_idx ON control.etl_run_attempt(tenant_key,source_id,run_id,attempt_id);
+ 
+ CREATE TABLE control.etl_snapshot_schedule (
+   tenant_key text NOT NULL,
+   source_id text NOT NULL,
+   enabled boolean NOT NULL DEFAULT true,
+   interval_seconds integer NOT NULL DEFAULT 300 CHECK (interval_seconds=300),
+   next_due_at timestamptz NOT NULL,
+   schedule_revision bigint NOT NULL CHECK (schedule_revision > 0),
+   active_run_id uuid,
+   last_run_id uuid,
++  last_successful_run_id uuid,
+   updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+   PRIMARY KEY (tenant_key,source_id),
+   FOREIGN KEY (tenant_key,source_id) REFERENCES control.source_registry(tenant_key,source_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+   FOREIGN KEY (tenant_key,source_id,active_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (tenant_key,source_id,last_successful_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+   FOREIGN KEY (tenant_key,source_id,last_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+ );
+ CREATE INDEX etl_snapshot_schedule_due_idx ON control.etl_snapshot_schedule(next_due_at,tenant_key,source_id) WHERE enabled;
+ 
+ CREATE FUNCTION control.guard_etl_run_update() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog,control
+ AS $body$
+ BEGIN
+   IF (NEW.run_id,NEW.tenant_key,NEW.source_id,NEW.run_mode,NEW.request_kind,NEW.request_route,NEW.idempotency_key,NEW.request_digest,
+       NEW.credential_id,NEW.credential_revision,NEW.credential_generation,NEW.source_epoch,NEW.admission_source_epoch,
+@@ -207,47 +210,158 @@ CREATE TABLE control.etl_snapshot_stage_page (
+ );
+ CREATE TABLE control.etl_snapshot_stage_record (
+   tenant_key text NOT NULL,
+   source_id text NOT NULL,
+   run_id uuid NOT NULL,
+   attempt_id uuid NOT NULL,
+   entity text NOT NULL CHECK (entity IN ('customer','order')),
+   relation text NOT NULL CHECK (relation IN ('customer','order','order_line')),
+   parent_source_pk text NOT NULL DEFAULT '',
+   source_pk text NOT NULL CHECK (length(source_pk)>0),
++  page_no integer NOT NULL CHECK (page_no>0),
++  row_ordinal integer NOT NULL CHECK (row_ordinal>0),
+   source_version text,
+   facts jsonb NOT NULL CHECK (jsonb_typeof(facts)='object'),
+   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+   PRIMARY KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
+   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+   FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,page_no)
++    REFERENCES control.etl_snapshot_stage_page(tenant_key,source_id,run_id,attempt_id,entity,relation,page_no) ON UPDATE RESTRICT ON DELETE RESTRICT,
+   CHECK ((relation='customer' AND entity='customer' AND parent_source_pk='') OR
+     (relation='order' AND entity='order' AND parent_source_pk='') OR
+     (relation='order_line' AND entity='order' AND parent_source_pk<>''))
+ );
+-CREATE INDEX etl_snapshot_stage_record_lookup_idx ON control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation);
++CREATE UNIQUE INDEX etl_snapshot_stage_record_page_ordinal_idx ON control.etl_snapshot_stage_record
++  (tenant_key,source_id,run_id,attempt_id,entity,relation,page_no,row_ordinal);
++CREATE INDEX etl_snapshot_stage_record_lookup_idx ON control.etl_snapshot_stage_record
++  (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk);
++CREATE INDEX etl_snapshot_stage_record_semantic_idx ON control.etl_snapshot_stage_record
++  (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk COLLATE "C",source_pk COLLATE "C");
+ CREATE TABLE control.etl_snapshot_manifest (
+   tenant_key text NOT NULL,
+   source_id text NOT NULL,
+   run_id uuid NOT NULL,
+   attempt_id uuid NOT NULL,
+   state text NOT NULL CHECK (state='EXTRACTED'),
+   manifest jsonb NOT NULL CHECK (jsonb_typeof(manifest)='object'),
+   manifest_digest bytea NOT NULL CHECK (octet_length(manifest_digest)=32),
+   source_snapshot_identity text NOT NULL CHECK (manifest->>'source_snapshot_identity'=source_snapshot_identity),
+   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+   PRIMARY KEY (tenant_key,source_id,run_id,attempt_id),
+   UNIQUE (attempt_id),
+   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+   FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+ );
+ 
++-- C continuation state is separate from B extraction attempts and 008 item leases.
++CREATE TABLE control.etl_snapshot_continuation (
++  tenant_key text NOT NULL,
++  source_id text NOT NULL,
++  run_id uuid NOT NULL,
++  attempt_id uuid NOT NULL,
++  claim_token uuid,
++  lease_until timestamptz,
++  c_start_count integer NOT NULL DEFAULT 0 CHECK (c_start_count BETWEEN 0 AND 4),
++  next_retry_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  last_error_code text,
++  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY (tenant_key,source_id,run_id),
++  FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY (tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_run_attempt(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  CHECK ((claim_token IS NULL)=(lease_until IS NULL))
++);
++CREATE INDEX etl_snapshot_continuation_due_idx ON control.etl_snapshot_continuation(next_retry_at,tenant_key,source_id,run_id);
++
++CREATE TABLE control.etl_snapshot_validation (
++  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
++  manifest_digest bytea NOT NULL CHECK(octet_length(manifest_digest)=32),
++  proof_scope_digest bytea NOT NULL CHECK(octet_length(proof_scope_digest)=32),
++  semantic_digest bytea NOT NULL CHECK(octet_length(semantic_digest)=32),
++  coverage jsonb NOT NULL CHECK(jsonb_typeof(coverage)='object'),
++  validated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY(tenant_key,source_id,run_id,attempt_id),
++  FOREIGN KEY(tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_manifest(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++
++CREATE TABLE control.etl_snapshot_observation_sequence (
++  tenant_key text NOT NULL, source_id text NOT NULL,
++  next_value numeric(20,0) NOT NULL DEFAULT 1 CHECK(next_value BETWEEN 1 AND 99999999999999999999),
++  PRIMARY KEY(tenant_key,source_id)
++);
++CREATE TABLE control.etl_snapshot_observation_allocation (
++  tenant_key text NOT NULL, source_id text NOT NULL, sequence_value numeric(20,0) NOT NULL,
++  semantic_digest bytea NOT NULL CHECK(octet_length(semantic_digest)=32),
++  reuse_scope_digest bytea NOT NULL CHECK(octet_length(reuse_scope_digest)=32),
++  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY(tenant_key,source_id,sequence_value),
++  FOREIGN KEY(tenant_key,source_id) REFERENCES control.source_registry(tenant_key,source_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++CREATE INDEX etl_snapshot_observation_reuse_idx ON control.etl_snapshot_observation_allocation
++  (tenant_key,source_id,reuse_scope_digest,semantic_digest,sequence_value);
++CREATE TABLE control.etl_snapshot_observation (
++  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
++  sequence_value numeric(20,0) NOT NULL, created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY(tenant_key,source_id,run_id),
++  UNIQUE(tenant_key,source_id,run_id,sequence_value),
++  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY(tenant_key,source_id,sequence_value) REFERENCES control.etl_snapshot_observation_allocation(tenant_key,source_id,sequence_value) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++
++CREATE TABLE control.etl_snapshot_apply_outcome (
++  outcome_id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
++  entity text NOT NULL CHECK(entity IN ('customer','order')), relation text NOT NULL CHECK(relation IN ('customer','order')),
++  parent_source_pk text NOT NULL DEFAULT '', source_pk text NOT NULL, aggregate_digest bytea NOT NULL CHECK(octet_length(aggregate_digest)=32),
++  status text NOT NULL CHECK(status IN ('APPLIED','DUPLICATE','IGNORED_STALE','QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED')),
++  error_code text, created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  UNIQUE(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
++  UNIQUE(outcome_id,tenant_key,source_id,run_id,attempt_id),
++  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
++    REFERENCES control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++CREATE TABLE control.etl_snapshot_apply_range (
++  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
++  entity text NOT NULL, relation text NOT NULL, parent_source_pk text NOT NULL DEFAULT '', source_pk text NOT NULL,
++  aggregate_digest bytea NOT NULL CHECK(octet_length(aggregate_digest)=32), proof_scope_digest bytea NOT NULL CHECK(octet_length(proof_scope_digest)=32),
++  outcome_id uuid NOT NULL, committed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
++  PRIMARY KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
++  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
++    REFERENCES control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
++  FOREIGN KEY(outcome_id,tenant_key,source_id,run_id,attempt_id)
++    REFERENCES control.etl_snapshot_apply_outcome(outcome_id,tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++CREATE TABLE control.etl_snapshot_checkpoint (
++  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, entity text NOT NULL CHECK(entity IN ('customer','order')),
++  last_relation text, last_parent_source_pk text NOT NULL DEFAULT '', last_source_pk text, completed_count bigint NOT NULL DEFAULT 0 CHECK(completed_count>=0),
++  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(tenant_key,source_id,run_id,entity),
++  FOREIGN KEY(tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
++);
++
++CREATE FUNCTION control.reject_etl_snapshot_c_mutation() RETURNS trigger
++LANGUAGE plpgsql SET search_path=pg_catalog,control
++AS $body$
++BEGIN RAISE EXCEPTION 'snapshot C proof is immutable' USING ERRCODE='55000'; END;
++$body$;
++CREATE TRIGGER etl_snapshot_validation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_validation
++  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
++CREATE TRIGGER etl_snapshot_observation_allocation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_observation_allocation
++  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
++CREATE TRIGGER etl_snapshot_observation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_observation
++  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
++CREATE TRIGGER etl_snapshot_apply_outcome_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_apply_outcome
++  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
++CREATE TRIGGER etl_snapshot_apply_range_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_apply_range
++  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
++
+ CREATE FUNCTION control.reject_snapshot_stage_mutation() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog,control
+ AS $body$
+ BEGIN
+   RAISE EXCEPTION 'snapshot stage is immutable' USING ERRCODE='55000';
+ END;
+ $body$;
+ CREATE TRIGGER etl_snapshot_page_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_stage_page
+ FOR EACH ROW EXECUTE FUNCTION control.reject_snapshot_stage_mutation();
+ CREATE TRIGGER etl_snapshot_record_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_stage_record
+@@ -404,25 +518,26 @@ BEGIN
+   IF p_attempt_id IS NULL OR p_page_no<1 OR octet_length(p_digest)<>32 OR jsonb_typeof(p_rows)<>'array' OR
+      (p_relation='customer' AND p_entity<>'customer') OR (p_relation IN ('order','order_line') AND p_entity<>'order') OR
+      p_relation NOT IN ('customer','order','order_line') THEN RAISE EXCEPTION 'snapshot page invalid' USING ERRCODE='22023'; END IF;
+   IF NOT EXISTS (SELECT 1 FROM control.etl_run_attempt WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND status='RUNNING'
+       AND claim_token=p_claim_token AND lease_expires_at>clock_timestamp()) THEN RAISE EXCEPTION 'snapshot attempt lost' USING ERRCODE='40001'; END IF;
+   SELECT COALESCE(MAX(page_no),0) INTO last_page FROM control.etl_snapshot_stage_page
+     WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND entity=p_entity AND relation=p_relation;
+   IF p_page_no<>last_page+1 THEN RAISE EXCEPTION 'snapshot page sequence invalid' USING ERRCODE='22023'; END IF;
+   n:=jsonb_array_length(p_rows);
+   IF n<1 THEN RAISE EXCEPTION 'snapshot page empty' USING ERRCODE='22023'; END IF;
+-  INSERT INTO control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,source_version,facts)
+-  SELECT p_tenant_key,p_source_id,p_run_id,p_attempt_id,x.entity,x.relation,COALESCE(x.parent_source_pk,''),x.source_pk,x.source_version,x.facts
+-    FROM jsonb_to_recordset(p_rows) AS x(entity text,relation text,parent_source_pk text,source_pk text,source_version text,facts jsonb);
+   INSERT INTO control.etl_snapshot_stage_page(tenant_key,source_id,run_id,attempt_id,entity,relation,page_no,row_count,first_key,last_key,page_digest)
+     VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_page_no,n,p_first_key,p_last_key,p_digest);
++  INSERT INTO control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,page_no,row_ordinal,source_version,facts)
++  SELECT p_tenant_key,p_source_id,p_run_id,p_attempt_id,r.entity,r.relation,COALESCE(r.parent_source_pk,''),r.source_pk,p_page_no,x.ordinality::integer,r.source_version,r.facts
++    FROM jsonb_array_elements(p_rows) WITH ORDINALITY AS x(value,ordinality)
++    CROSS JOIN LATERAL jsonb_to_record(x.value) AS r(entity text,relation text,parent_source_pk text,source_pk text,source_version text,facts jsonb);
+   RETURN n;
+ END;
+ $body$;
+ 
+ CREATE FUNCTION control.fail_etl_snapshot_attempt(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+   p_error_code text,p_retryable boolean) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+ AS $body$
+ DECLARE run_row control.etl_run%ROWTYPE; attempt_row control.etl_run_attempt%ROWTYPE; retry_seconds integer[]:=ARRAY[5,30,120]; retry boolean;
+ BEGIN
+   PERFORM control.lock_security_barrier_fence();
+@@ -534,10 +649,449 @@ REVOKE ALL ON FUNCTION control.assert_etl_snapshot_claim(text,text,uuid,uuid),
+   control.heartbeat_etl_snapshot_run(text,text,uuid,uuid,uuid,integer),
+   control.write_etl_snapshot_page(text,text,uuid,uuid,uuid,text,text,integer,text,text,bytea,jsonb),
+   control.fail_etl_snapshot_attempt(text,text,uuid,uuid,uuid,text,boolean),
+   control.complete_etl_snapshot_manifest(text,text,uuid,uuid,uuid,jsonb,bytea) FROM PUBLIC;
+ GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_run(text,text,integer),
+   control.begin_etl_snapshot_attempt(text,text,uuid,uuid,integer),
+   control.heartbeat_etl_snapshot_run(text,text,uuid,uuid,uuid,integer),
+   control.write_etl_snapshot_page(text,text,uuid,uuid,uuid,text,text,integer,text,text,bytea,jsonb),
+   control.fail_etl_snapshot_attempt(text,text,uuid,uuid,uuid,text,boolean),
+   control.complete_etl_snapshot_manifest(text,text,uuid,uuid,uuid,jsonb,bytea) TO hub_worker;
++
++CREATE FUNCTION control.claim_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_lease_seconds integer)
++RETURNS TABLE(tenant_key text,source_id text,run_id uuid,attempt_id uuid,claim_token uuid,status text,c_start_count integer)
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE r control.etl_run%ROWTYPE; c control.etl_snapshot_continuation%ROWTYPE; a uuid; token uuid;
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  IF p_lease_seconds<10 OR p_lease_seconds>900 THEN RAISE EXCEPTION 'snapshot C lease invalid' USING ERRCODE='22023'; END IF;
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  SELECT er.* INTO r FROM control.etl_run er JOIN control.etl_snapshot_schedule s
++    ON (s.tenant_key,s.source_id,s.active_run_id)=(er.tenant_key,er.source_id,er.run_id)
++    WHERE er.tenant_key=p_tenant_key AND er.source_id=p_source_id AND er.status IN ('VALIDATING','APPLYING') FOR UPDATE OF er,s;
++  IF NOT FOUND THEN RETURN; END IF;
++  SELECT m.attempt_id INTO a FROM control.etl_snapshot_manifest m WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id
++    AND m.run_id=r.run_id AND m.state='EXTRACTED' ORDER BY m.created_at DESC LIMIT 1;
++  IF a IS NULL THEN RETURN; END IF;
++  INSERT INTO control.etl_snapshot_continuation(tenant_key,source_id,run_id,attempt_id)
++    VALUES(p_tenant_key,p_source_id,r.run_id,a) ON CONFLICT ON CONSTRAINT etl_snapshot_continuation_pkey DO NOTHING;
++  SELECT * INTO c FROM control.etl_snapshot_continuation x WHERE x.tenant_key=p_tenant_key AND x.source_id=p_source_id AND x.run_id=r.run_id FOR UPDATE;
++  IF c.attempt_id<>a THEN RAISE EXCEPTION 'snapshot C attempt changed' USING ERRCODE='55000'; END IF;
++  IF c.lease_until IS NOT NULL AND c.lease_until<=clock_timestamp() AND c.c_start_count>0 THEN
++    IF c.c_start_count>=4 THEN
++      UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
++        completeness_summary=jsonb_build_object('status','FAILED','error_code','RETRY_BUDGET_EXHAUSTED') WHERE er.run_id=r.run_id;
++      UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
++        WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
++      UPDATE control.etl_snapshot_continuation AS cc SET claim_token=NULL,lease_until=NULL,last_error_code='WORKER_LEASE_EXPIRED',updated_at=clock_timestamp()
++        WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
++      RETURN;
++    END IF;
++    UPDATE control.etl_snapshot_continuation AS cc SET claim_token=NULL,lease_until=NULL,last_error_code='WORKER_LEASE_EXPIRED',
++      next_retry_at=clock_timestamp()+make_interval(secs=>(ARRAY[5,30,120])[LEAST(c.c_start_count,3)]),updated_at=clock_timestamp()
++      WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
++    RETURN;
++  END IF;
++  IF c.lease_until>clock_timestamp() OR c.next_retry_at>clock_timestamp() THEN RETURN; END IF;
++  IF c.c_start_count>=4 THEN
++    UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
++      completeness_summary=jsonb_build_object('status','FAILED','error_code','RETRY_BUDGET_EXHAUSTED') WHERE er.run_id=r.run_id;
++    UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
++      WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
++    RETURN;
++  END IF;
++  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key AND b.effective_fence>r.security_barrier_fence
++    AND (b.source_id IS NULL OR b.source_id=p_source_id)
++    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN
++    UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
++      completeness_summary=jsonb_build_object('status','FAILED','error_code','SECURITY_BARRIER_ACTIVE') WHERE er.run_id=r.run_id;
++    UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
++      WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
++    RETURN;
++  END IF;
++  token:=gen_random_uuid();
++  UPDATE control.etl_snapshot_continuation AS cc SET claim_token=token,lease_until=clock_timestamp()+make_interval(secs=>p_lease_seconds),updated_at=clock_timestamp()
++    WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
++  RETURN QUERY SELECT p_tenant_key,p_source_id,r.run_id,a,token,r.status,c.c_start_count;
++END;
++$body$;
++
++CREATE FUNCTION control.assert_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
++RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE r control.etl_run%ROWTYPE;
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  SELECT er.* INTO r FROM control.etl_run er JOIN control.etl_snapshot_continuation c
++    ON (c.tenant_key,c.source_id,c.run_id)=(er.tenant_key,er.source_id,er.run_id)
++    WHERE er.tenant_key=p_tenant_key AND er.source_id=p_source_id AND er.run_id=p_run_id AND er.status IN ('VALIDATING','APPLYING')
++      AND c.attempt_id=p_attempt_id AND c.claim_token=p_claim_token AND c.lease_until>clock_timestamp() FOR UPDATE OF er,c;
++  IF NOT FOUND THEN RETURN false; END IF;
++  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key AND b.effective_fence>r.security_barrier_fence
++    AND (b.source_id IS NULL OR b.source_id=p_source_id) AND (b.credential_id IS NULL OR b.credential_id=r.credential_id)
++    AND (b.entity IS NULL OR b.entity=ANY(r.expected_entities))
++    AND (b.channel_id IS NULL OR EXISTS(SELECT 1 FROM jsonb_each(r.entity_channel_proof) e
++      WHERE (e.value->>'channel_id')::uuid=b.channel_id))
++    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN RETURN false; END IF;
++  RETURN true;
++END;
++$body$;
++
++CREATE FUNCTION control.begin_etl_snapshot_c_start(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
++RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE c control.etl_snapshot_continuation%ROWTYPE;
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  SELECT * INTO c FROM control.etl_snapshot_continuation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
++    AND attempt_id=p_attempt_id AND claim_token=p_claim_token AND lease_until>clock_timestamp() AND next_retry_at<=clock_timestamp() FOR UPDATE;
++  IF NOT FOUND THEN RETURN NULL; END IF;
++  IF c.c_start_count>=4 THEN RETURN NULL; END IF;
++  UPDATE control.etl_snapshot_continuation SET c_start_count=c_start_count+1,updated_at=clock_timestamp()
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
++  RETURN c.c_start_count+1;
++END;
++$body$;
++
++CREATE FUNCTION control.heartbeat_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
++  p_claim_token uuid,p_lease_seconds integer) RETURNS boolean
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF p_lease_seconds<10 OR p_lease_seconds>900 THEN RETURN false; END IF;
++  PERFORM control.lock_security_barrier_fence();
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()+make_interval(secs=>p_lease_seconds),updated_at=clock_timestamp()
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id
++      AND claim_token=p_claim_token AND lease_until>clock_timestamp();
++  RETURN FOUND;
++END;
++$body$;
++
++CREATE FUNCTION control.fail_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
++  p_claim_token uuid,p_error_code text,p_retryable boolean) RETURNS text
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE c control.etl_snapshot_continuation%ROWTYPE; delay_seconds integer[]:=ARRAY[5,30,120];
++BEGIN
++  PERFORM control.lock_security_barrier_fence();
++  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
++  SELECT * INTO c FROM control.etl_snapshot_continuation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
++    AND attempt_id=p_attempt_id AND claim_token=p_claim_token FOR UPDATE;
++  IF NOT FOUND THEN RETURN 'STALE'; END IF;
++  UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,last_error_code=left(p_error_code,96),
++    next_retry_at=CASE WHEN p_retryable AND c.c_start_count<4 THEN clock_timestamp()+make_interval(secs=>delay_seconds[LEAST(c.c_start_count,3)]) ELSE clock_timestamp() END,
++    updated_at=clock_timestamp() WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
++  IF NOT p_retryable OR c.c_start_count>=4 THEN
++    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(quarantined_count,1),
++      completeness_summary=jsonb_build_object('status','FAILED','error_code',left(p_error_code,96)) WHERE run_id=p_run_id;
++    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,updated_at=clock_timestamp()
++      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
++    RETURN 'FAILED';
++  END IF;
++  RETURN 'RETRY_PENDING';
++END;
++$body$;
++
++CREATE FUNCTION control.read_etl_snapshot_stage_page(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_entity text,p_relation text,p_page_no integer)
++RETURNS TABLE(row_count integer,page_digest bytea,record jsonb)
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
++  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_manifest m WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id AND m.run_id=p_run_id
++      AND m.attempt_id=p_attempt_id AND m.state='EXTRACTED') THEN RETURN; END IF;
++  RETURN QUERY SELECT p.row_count,p.page_digest,to_jsonb(r) FROM control.etl_snapshot_stage_page p
++    JOIN control.etl_snapshot_stage_record r ON (r.tenant_key,r.source_id,r.run_id,r.attempt_id,r.entity,r.relation,r.page_no)=
++      (p.tenant_key,p.source_id,p.run_id,p.attempt_id,p.entity,p.relation,p.page_no)
++    WHERE p.tenant_key=p_tenant_key AND p.source_id=p_source_id AND p.run_id=p_run_id AND p.attempt_id=p_attempt_id
++      AND p.entity=p_entity AND p.relation=p_relation AND p.page_no=p_page_no ORDER BY r.row_ordinal;
++END;
++$body$;
++
++CREATE FUNCTION control.read_etl_snapshot_c_proof(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
++RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE result jsonb;
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
++  SELECT jsonb_build_object(
++    'tenant_key',r.tenant_key,'source_id',r.source_id,'run_id',r.run_id,'status',r.status,'expected_entities',r.expected_entities,
++    'credential_id',r.credential_id,'credential_revision',r.credential_revision,'credential_generation',r.credential_generation,
++    'admission_source_epoch',r.admission_source_epoch,'entity_channel_proof',r.entity_channel_proof,
++    'config_revision',r.config_revision,'config_digest',encode(r.config_digest,'hex'),'config',c.config,
++    'mapping_revision',r.mapping_revision,'mapping_digest',encode(r.mapping_digest,'hex'),'mappings',m.mappings,
++    'identity_mapping_revision',r.identity_mapping_revision,'identity_mapping_digest',encode(r.identity_mapping_digest,'hex'),'identity_mappings',i.mappings,
++    'endpoint_profile_digest',encode(r.endpoint_profile_digest,'hex'),'test_report_id',r.test_report_id,'approval_id',r.approval_id,
++    'data_contract_ref',r.data_contract_ref,'delete_contract',r.delete_contract,'security_barrier_fence',r.security_barrier_fence,
++    'owner_user_id',r.owner_user_id,'owner_revision',r.owner_revision,'manifest',jsonb_build_object('manifest',sm.manifest,'digest',encode(sm.manifest_digest,'hex')))
++  INTO result FROM control.etl_run r JOIN control.source_config_revision c
++      ON (c.tenant_key,c.source_id,c.revision,c.config_digest)=(r.tenant_key,r.source_id,r.config_revision,r.config_digest)
++    JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision,m.mapping_digest)=(r.tenant_key,r.source_id,r.mapping_revision,r.mapping_digest)
++    JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision,i.mapping_digest)=(r.tenant_key,r.source_id,r.identity_mapping_revision,r.identity_mapping_digest)
++    JOIN control.source_owner_approval a ON (a.id,a.tenant_key,a.source_id,a.owner_user_id,a.owner_revision,a.config_revision,a.mapping_revision,
++      a.identity_mapping_revision,a.test_report_id)=(r.approval_id,r.tenant_key,r.source_id,r.owner_user_id,r.owner_revision,r.config_revision,
++      r.mapping_revision,r.identity_mapping_revision,r.test_report_id)
++    JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id,t.config_revision,t.mapping_revision,t.identity_mapping_revision)=
++      (r.test_report_id,r.tenant_key,r.source_id,r.config_revision,r.mapping_revision,r.identity_mapping_revision) AND t.status='PASS'
++    JOIN control.etl_snapshot_manifest sm ON (sm.tenant_key,sm.source_id,sm.run_id,sm.attempt_id)=
++      (r.tenant_key,r.source_id,r.run_id,p_attempt_id) AND sm.state='EXTRACTED'
++    WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id;
++  RETURN result;
++END;
++$body$;
++
++CREATE FUNCTION control.list_etl_snapshot_c_pages(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_relation text,p_after_page integer,p_limit integer)
++RETURNS TABLE(entity text,relation text,page_no integer,row_count integer,first_key text,last_key text,page_digest bytea)
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
++  IF p_relation NOT IN ('customer','order','order_line') OR p_after_page<0 OR p_limit<1 OR p_limit>1000 THEN RETURN; END IF;
++  RETURN QUERY SELECT p.entity,p.relation,p.page_no,p.row_count,p.first_key,p.last_key,p.page_digest
++    FROM control.etl_snapshot_manifest m JOIN control.etl_snapshot_stage_page p
++      ON (p.tenant_key,p.source_id,p.run_id,p.attempt_id)=(m.tenant_key,m.source_id,m.run_id,m.attempt_id)
++    WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id AND m.run_id=p_run_id AND m.attempt_id=p_attempt_id AND m.state='EXTRACTED'
++      AND p.relation=p_relation AND p.page_no>p_after_page ORDER BY p.page_no LIMIT p_limit;
++END;
++$body$;
++
++CREATE FUNCTION control.validate_etl_snapshot_order_references(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
++  p_claim_token uuid,p_customer_source_id text,p_customer_included boolean,p_identity_mappings jsonb)
++RETURNS TABLE(valid boolean,error_code text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN
++    RETURN QUERY SELECT false,'SNAPSHOT_CLAIM_LOST'; RETURN;
++  END IF;
++  IF jsonb_typeof(p_identity_mappings)<>'array' THEN RETURN QUERY SELECT false,'SNAPSHOT_PROOF_INVALID'; RETURN; END IF;
++  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record l LEFT JOIN control.etl_snapshot_stage_record h
++    ON (h.tenant_key,h.source_id,h.run_id,h.attempt_id,h.entity,h.relation,h.parent_source_pk,h.source_pk)=
++       (l.tenant_key,l.source_id,l.run_id,l.attempt_id,'order','order','',l.parent_source_pk)
++    WHERE l.tenant_key=p_tenant_key AND l.source_id=p_source_id AND l.run_id=p_run_id AND l.attempt_id=p_attempt_id AND l.relation='order_line'
++      AND h.source_pk IS NULL) THEN RETURN QUERY SELECT false,'SNAPSHOT_ORPHAN_LINE'; RETURN; END IF;
++  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record h WHERE h.tenant_key=p_tenant_key AND h.source_id=p_source_id
++      AND h.run_id=p_run_id AND h.attempt_id=p_attempt_id AND h.relation='order'
++      AND (SELECT count(*) FROM control.etl_snapshot_stage_record l WHERE l.tenant_key=h.tenant_key AND l.source_id=h.source_id
++        AND l.run_id=h.run_id AND l.attempt_id=h.attempt_id AND l.entity='order' AND l.relation='order_line'
++        AND l.parent_source_pk=h.source_pk)>200) THEN RETURN QUERY SELECT false,'SNAPSHOT_ORDER_LINES_INVALID'; RETURN; END IF;
++  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record o
++    LEFT JOIN LATERAL (SELECT x->>'target_id' AS target_id FROM jsonb_array_elements(p_identity_mappings) x
++      WHERE x->>'kind'='customer' AND x->>'external_id'=o.facts->>'customer_id' LIMIT 2) im ON true
++    LEFT JOIN control.canonical_source_identity si ON si.tenant_key=p_tenant_key AND si.source_id=p_customer_source_id
++      AND si.entity='customer' AND si.source_pk=o.facts->>'customer_id'
++    LEFT JOIN hub.canonical_customer cc ON cc.tenant_id=p_tenant_key AND cc.id=si.customer_id AND cc.deleted_at IS NULL
++    WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.run_id=p_run_id AND o.attempt_id=p_attempt_id
++      AND o.entity='order' AND o.relation='order' AND
++      (o.facts->>'customer_id' IS NULL OR im.target_id IS NULL OR im.target_id<>cc.id::text OR cc.id IS NULL OR
++        (p_customer_included AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record c
++          WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id AND c.attempt_id=p_attempt_id
++            AND c.entity='customer' AND c.relation='customer' AND c.source_pk=o.facts->>'customer_id'
++            AND COALESCE(c.facts->>'deleted_at','false') IN ('false','')))))
++    THEN RETURN QUERY SELECT false,'IDENTITY_MAPPING_TARGET_INVALID'; RETURN; END IF;
++  RETURN QUERY SELECT true,NULL::text;
++END;
++$body$;
++
++CREATE FUNCTION control.read_etl_snapshot_order_lines(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,p_parent_source_pk text)
++RETURNS SETOF control.etl_snapshot_stage_record LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
++  RETURN QUERY SELECT r.* FROM control.etl_snapshot_stage_record r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
++    AND r.run_id=p_run_id AND r.attempt_id=p_attempt_id AND r.entity='order' AND r.relation='order_line'
++    AND r.parent_source_pk=p_parent_source_pk ORDER BY r.source_pk COLLATE "C" LIMIT 201;
++END;
++$body$;
++
++CREATE FUNCTION control.read_etl_snapshot_semantic_chunk(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_entity text,p_relation text,p_after_parent text,p_after_source text,p_limit integer)
++RETURNS SETOF control.etl_snapshot_stage_record LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
++  IF p_limit<1 OR p_limit>1000 THEN RETURN; END IF;
++  RETURN QUERY SELECT r.* FROM control.etl_snapshot_stage_record r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
++    AND r.run_id=p_run_id AND r.attempt_id=p_attempt_id AND r.entity=p_entity AND r.relation=p_relation
++    AND (r.parent_source_pk COLLATE "C",r.source_pk COLLATE "C")>(p_after_parent COLLATE "C",p_after_source COLLATE "C")
++    ORDER BY r.parent_source_pk COLLATE "C",r.source_pk COLLATE "C" LIMIT p_limit;
++END;
++$body$;
++
++CREATE FUNCTION control.get_etl_snapshot_apply_range(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_entity text,p_source_pk text)
++RETURNS TABLE(aggregate_digest bytea,proof_scope_digest bytea,status text,error_code text)
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
++  RETURN QUERY SELECT a.aggregate_digest,a.proof_scope_digest,o.status,o.error_code FROM control.etl_snapshot_apply_range a
++    JOIN control.etl_snapshot_apply_outcome o ON o.outcome_id=a.outcome_id
++    WHERE a.tenant_key=p_tenant_key AND a.source_id=p_source_id AND a.run_id=p_run_id AND a.attempt_id=p_attempt_id
++      AND a.entity=p_entity AND a.relation=p_entity AND a.parent_source_pk='' AND a.source_pk=p_source_pk;
++END;
++$body$;
++
++CREATE FUNCTION control.seal_etl_snapshot_validation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_manifest_digest bytea,p_proof_scope_digest bytea,p_semantic_digest bytea,p_coverage jsonb) RETURNS boolean
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE r control.etl_run%ROWTYPE; m control.etl_snapshot_manifest%ROWTYPE;
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
++  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
++  SELECT * INTO m FROM control.etl_snapshot_manifest WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id;
++  IF m.state<>'EXTRACTED' OR m.manifest_digest<>p_manifest_digest OR octet_length(p_proof_scope_digest)<>32 OR
++     octet_length(p_semantic_digest)<>32 OR jsonb_typeof(p_coverage)<>'object' THEN RETURN false; END IF;
++  INSERT INTO control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id,manifest_digest,proof_scope_digest,semantic_digest,coverage)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_manifest_digest,p_proof_scope_digest,p_semantic_digest,p_coverage)
++    ON CONFLICT(tenant_key,source_id,run_id,attempt_id) DO NOTHING;
++  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
++      AND attempt_id=p_attempt_id AND manifest_digest=p_manifest_digest AND proof_scope_digest=p_proof_scope_digest AND semantic_digest=p_semantic_digest) THEN RETURN false; END IF;
++  UPDATE control.etl_run SET status='APPLYING',completeness_summary=jsonb_build_object('status','VALIDATED','semantic_digest',encode(p_semantic_digest,'hex'))
++    WHERE run_id=p_run_id AND status='VALIDATING';
++  RETURN true;
++END;
++$body$;
++
++CREATE FUNCTION control.persist_etl_snapshot_observation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_semantic_digest bytea,p_reuse_scope_digest bytea) RETURNS text
++LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE existing numeric(20,0); chosen numeric(20,0); next numeric(20,0);
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
++  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id AND v.run_id=p_run_id
++      AND v.attempt_id=p_attempt_id AND v.semantic_digest=p_semantic_digest AND v.proof_scope_digest=p_reuse_scope_digest) THEN RETURN NULL; END IF;
++  SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
++  IF chosen IS NOT NULL THEN RETURN chosen::text; END IF;
++  SELECT o.sequence_value INTO existing FROM control.etl_snapshot_observation_allocation o
++    JOIN control.etl_snapshot_observation b ON (b.tenant_key,b.source_id,b.sequence_value)=(o.tenant_key,o.source_id,o.sequence_value)
++    JOIN control.etl_run prior ON (prior.tenant_key,prior.source_id,prior.run_id)=(b.tenant_key,b.source_id,b.run_id)
++    WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.semantic_digest=p_semantic_digest
++      AND o.reuse_scope_digest=p_reuse_scope_digest AND prior.status='COMPLETE' ORDER BY o.sequence_value LIMIT 1;
++  IF existing IS NOT NULL THEN chosen:=existing;
++  ELSE
++    INSERT INTO control.etl_snapshot_observation_sequence(tenant_key,source_id) VALUES(p_tenant_key,p_source_id) ON CONFLICT DO NOTHING;
++    SELECT next_value INTO next FROM control.etl_snapshot_observation_sequence WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
++    IF next>99999999999999999999 THEN RAISE EXCEPTION 'observation sequence exhausted' USING ERRCODE='22003'; END IF;
++    chosen:=next;
++    INSERT INTO control.etl_snapshot_observation_allocation(tenant_key,source_id,sequence_value,semantic_digest,reuse_scope_digest)
++      VALUES(p_tenant_key,p_source_id,chosen,p_semantic_digest,p_reuse_scope_digest);
++    UPDATE control.etl_snapshot_observation_sequence SET next_value=chosen+1 WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
++  END IF;
++  INSERT INTO control.etl_snapshot_observation(tenant_key,source_id,run_id,attempt_id,sequence_value)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,chosen) ON CONFLICT(tenant_key,source_id,run_id) DO NOTHING;
++  RETURN chosen::text;
++END;
++$body$;
++
++CREATE FUNCTION control.record_etl_snapshot_aggregate(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
++  p_entity text,p_relation text,p_parent_source_pk text,p_source_pk text,p_aggregate_digest bytea,p_proof_scope_digest bytea,p_status text,p_error_code text)
++RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE prior control.etl_snapshot_checkpoint%ROWTYPE; outcome uuid;
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
++  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id AND v.run_id=p_run_id
++    AND v.attempt_id=p_attempt_id AND v.proof_scope_digest=p_proof_scope_digest) THEN RETURN false; END IF;
++  IF p_status NOT IN ('APPLIED','DUPLICATE','IGNORED_STALE','QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED') OR octet_length(p_aggregate_digest)<>32 THEN RETURN false; END IF;
++  SELECT * INTO prior FROM control.etl_snapshot_checkpoint WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND entity=p_entity FOR UPDATE;
++  IF prior.completed_count>0 AND prior.last_source_pk COLLATE "C">=p_source_pk COLLATE "C" THEN RETURN false; END IF;
++  INSERT INTO control.etl_snapshot_apply_outcome(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,status,error_code)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,p_aggregate_digest,p_status,p_error_code)
++    RETURNING outcome_id INTO outcome;
++  INSERT INTO control.etl_snapshot_apply_range(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest,outcome_id)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,p_aggregate_digest,p_proof_scope_digest,outcome);
++  INSERT INTO control.etl_snapshot_checkpoint(tenant_key,source_id,run_id,entity,last_relation,last_parent_source_pk,last_source_pk,completed_count)
++    VALUES(p_tenant_key,p_source_id,p_run_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,1)
++    ON CONFLICT(tenant_key,source_id,run_id,entity) DO UPDATE SET last_relation=EXCLUDED.last_relation,last_parent_source_pk=EXCLUDED.last_parent_source_pk,
++      last_source_pk=EXCLUDED.last_source_pk,completed_count=control.etl_snapshot_checkpoint.completed_count+1,updated_at=clock_timestamp();
++  UPDATE control.etl_run SET applied_count=applied_count+CASE WHEN p_status='APPLIED' THEN 1 ELSE 0 END,
++    quarantined_count=quarantined_count+CASE WHEN p_status IN ('QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED') THEN 1 ELSE 0 END
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
++  RETURN true;
++END;
++$body$;
++
++CREATE FUNCTION control.finish_etl_snapshot_run(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
++RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
++AS $body$
++DECLARE expected bigint; done bigint; bad bigint; applied bigint;
++BEGIN
++  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
++  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id) THEN RETURN false; END IF;
++  SELECT count(*) INTO expected FROM control.etl_snapshot_stage_record WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation IN ('customer','order');
++  SELECT count(*),count(*) FILTER(WHERE status IN ('QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED')),
++    count(*) FILTER(WHERE status='APPLIED') INTO done,bad,applied FROM control.etl_snapshot_apply_outcome
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id;
++  IF done<>expected THEN RETURN false; END IF;
++  IF bad=0 THEN
++    UPDATE control.etl_run SET status='COMPLETE',completed_at=clock_timestamp(),applied_count=applied,
++      completeness_summary=jsonb_build_object('status','COMPLETE','outcome_count',done) WHERE run_id=p_run_id AND status='APPLYING';
++    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,last_successful_run_id=p_run_id,
++      next_due_at=clock_timestamp()+make_interval(secs=>interval_seconds),updated_at=clock_timestamp()
++      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
++  ELSE
++    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(quarantined_count,bad),
++      completeness_summary=jsonb_build_object('status','FAILED','outcome_count',done,'failed_count',bad) WHERE run_id=p_run_id AND status='APPLYING';
++    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,updated_at=clock_timestamp()
++      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
++  END IF;
++  UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,updated_at=clock_timestamp()
++    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND claim_token=p_claim_token;
++  RETURN true;
++END;
++$body$;
++
++REVOKE ALL ON control.etl_snapshot_continuation,control.etl_snapshot_validation,control.etl_snapshot_observation_sequence,
++  control.etl_snapshot_observation_allocation,control.etl_snapshot_observation,control.etl_snapshot_apply_outcome,
++  control.etl_snapshot_apply_range,control.etl_snapshot_checkpoint FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
++REVOKE ALL ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
++  control.assert_etl_snapshot_continuation(text,text,uuid,uuid,uuid),control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),
++  control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),
++  control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
++  control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
++  control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
++  control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
++  control.read_etl_snapshot_semantic_chunk(text,text,uuid,uuid,uuid,text,text,text,text,integer),
++  control.seal_etl_snapshot_validation(text,text,uuid,uuid,uuid,bytea,bytea,bytea,jsonb),
++  control.persist_etl_snapshot_observation(text,text,uuid,uuid,uuid,bytea,bytea),
++  control.record_etl_snapshot_aggregate(text,text,uuid,uuid,uuid,text,text,text,text,bytea,bytea,text,text),
++  control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) FROM PUBLIC;
++GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
++  control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),
++  control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
++  control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
++  control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
++  control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
++  control.read_etl_snapshot_semantic_chunk(text,text,uuid,uuid,uuid,text,text,text,text,integer),
++  control.seal_etl_snapshot_validation(text,text,uuid,uuid,uuid,bytea,bytea,bytea,jsonb),
++  control.persist_etl_snapshot_observation(text,text,uuid,uuid,uuid,bytea,bytea),
++  control.record_etl_snapshot_aggregate(text,text,uuid,uuid,uuid,text,text,text,text,bytea,bytea,text,text),
++  control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) TO hub_worker;
++GRANT SELECT (tenant_key,source_id,run_id,attempt_id,claim_token,lease_until,c_start_count,next_retry_at,last_error_code)
++  ON control.etl_snapshot_continuation TO hub_worker;
++GRANT SELECT (tenant_key,source_id,run_id,attempt_id,manifest_digest,proof_scope_digest,semantic_digest,coverage,validated_at)
++  ON control.etl_snapshot_validation TO hub_worker;
++GRANT SELECT (tenant_key,source_id,run_id,sequence_value) ON control.etl_snapshot_observation TO hub_worker;
++GRANT SELECT (tenant_key,source_id,run_id,entity,last_relation,last_parent_source_pk,last_source_pk,completed_count)
++  ON control.etl_snapshot_checkpoint TO hub_worker;
++
++CREATE INDEX canonical_source_identity_customer_discovery_idx
++  ON control.canonical_source_identity(tenant_key,source_id,source_pk COLLATE "C") WHERE entity='customer';
++CREATE VIEW api.source_customer_identity_candidates AS
++  SELECT si.tenant_key,si.source_id,si.source_pk,ci.id::text AS target_id
++  FROM control.canonical_source_identity si
++  JOIN control.source_registry sr ON (sr.tenant_key,sr.source_id)=(si.tenant_key,si.source_id)
++  JOIN control.source_identity_mapping_revision im ON (im.tenant_key,im.source_id,im.revision)=
++    (sr.tenant_key,sr.source_id,sr.identity_mapping_revision)
++  JOIN api.canonical_customer_identity ci ON ci.tenant_id=si.tenant_key AND ci.id::text=si.canonical_object_id::text
++  WHERE si.entity='customer' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(im.mappings) m
++    WHERE m->>'kind'='customer' AND m->>'external_id'=si.source_pk AND m->>'target_id'=ci.id::text);
++REVOKE ALL ON api.source_customer_identity_candidates FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
++GRANT SELECT (tenant_key,source_id,source_pk,target_id) ON api.source_customer_identity_candidates TO hub_api;
+diff --git a/integration-service/source-registry/routes.ts b/integration-service/source-registry/routes.ts
+index d1b3686..603feaa 100644
+--- a/integration-service/source-registry/routes.ts
++++ b/integration-service/source-registry/routes.ts
+@@ -147,23 +147,29 @@ export async function registerSourceRegistryRoutes(app: FastifyInstance, options
+     admin.post<{ Params: { id: string } }>('/hub/v1/admin/sources/:id/mappings/validate', async (request, reply) => {
+       try {
+         const principal = await currentUser(request, options.authenticator);
+         const value = body(request, ['revision', 'sample_ref']);
+         if(value.sample_ref!==undefined) return reply.code(422).send({request_id:request.id,
+           error:{code:'AUTH_INPUT_INVALID',message:'AUTH_INPUT_INVALID',retryable:false,details:{}}});
+         return reply.send(envelope(request, await options.sourceService.validateMappings(principal, request.params.id, value.revision)));
+       } catch (error) { return failure(request, reply, error); }
+     });
+ 
+-    admin.get<{ Querystring: { source_id?: string; kind?: string; external_id?: string } }>('/hub/v1/admin/identity-mappings', async (request, reply) => {
++    admin.get<{ Querystring: { source_id?: string; kind?: string; external_id?: string; mode?: string; limit?: string; cursor?: string } }>('/hub/v1/admin/identity-mappings', async (request, reply) => {
+       try {
+         const principal = await currentUser(request, options.authenticator);
++        if(request.query.mode!==undefined) {
++          if(request.query.mode!=='source_customers'||!request.query.source_id||request.query.kind!=='customer'||request.query.external_id!==undefined)
++            throw new AuthError('AUTH_INPUT_INVALID');
++          return reply.send(envelope(request,await options.sourceService.sourceCustomerCandidates(principal,request.query.source_id,
++            request.query.limit,request.query.cursor)));
++        }
+         return reply.send(envelope(request, await options.sourceService.identityMappings(principal,request.query.source_id,
+           request.query.kind,request.query.external_id)));
+       } catch (error) { return failure(request, reply, error); }
+     });
+ 
+     admin.put<{ Params: { id: string } }>('/hub/v1/admin/identity-mappings/:id', async (request, reply) => {
+       try {
+         const principal = await currentUser(request, options.authenticator);
+         const value = body(request, ['expected_revision', 'target_id', 'reason']);
+         if (typeof value.expected_revision !== 'string' || typeof value.target_id !== 'string' || typeof value.reason !== 'string') {
+diff --git a/integration-service/source-registry/service.ts b/integration-service/source-registry/service.ts
+index 8ef56f2..b682173 100644
+--- a/integration-service/source-registry/service.ts
++++ b/integration-service/source-registry/service.ts
+@@ -70,20 +70,30 @@ function fail(code: ConstructorParameters<typeof AuthError>[0]): never { throw n
+ function requireScope(principal: UserPrincipal, scope: UserPrincipal['managementScopes'][number]): void {
+   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDEN');
+ }
+ function stable(value: unknown): string {
+   if (value === null || typeof value !== 'object') return JSON.stringify(value);
+   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+   const record = value as Record<string, unknown>;
+   return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
+ }
+ function digest(value: unknown): Buffer { return createHash('sha256').update(stable(value), 'utf8').digest(); }
++function encodeSourceCustomerCursor(sourceId:string,sourcePk:string):string { return Buffer.from(`${sourceId}\0${sourcePk}`,'utf8').toString('base64url'); }
++function decodeSourceCustomerCursor(sourceId:string,cursor:unknown):string|undefined {
++  if(cursor===undefined) return undefined;
++  if(typeof cursor!=='string'||cursor.length>1024||!/^[A-Za-z0-9_-]+$/.test(cursor)) fail('AUTH_INPUT_INVALID');
++  const decoded=Buffer.from(cursor,'base64url').toString('utf8');
++  if(Buffer.from(decoded,'utf8').toString('base64url')!==cursor) fail('AUTH_INPUT_INVALID');
++  const split=decoded.indexOf('\0');
++  if(split<1||decoded.slice(0,split)!==sourceId||split===decoded.length-1) fail('AUTH_INPUT_INVALID');
++  return decoded.slice(split+1);
++}
+ function decimal(value: unknown): string {
+   const text = String(value);
+   if (!/^(?:0|[1-9][0-9]*)$/.test(text)) fail('AUTH_UNAVAILABLE');
+   return text;
+ }
+ function parseConfig(input: unknown, stored = false): SourceConfig {
+   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('AUTH_INPUT_INVALID');
+   const value = input as Record<string, unknown>;
+   const allowed = ['name','connector','mode','version_domain','endpoint_allowlist_ref','secret_ref','allowed_entities','delete_contract'];
+   if (Object.keys(value).some(key => !allowed.includes(key) && !(stored && key === 'endpoint_profile')) || typeof value.name !== 'string' || value.name.trim().length < 1 || value.name.length > 128 ||
+@@ -644,20 +654,40 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
+       `SELECT r.source_id,r.identity_mapping_revision AS revision,i.mappings,r.data_owner_user_id
+        FROM control.source_registry r JOIN control.source_identity_mapping_revision i
+        ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
+        WHERE r.tenant_key=$1 AND ($2::text IS NULL OR r.source_id=$2) AND r.data_owner_user_id=$3 ORDER BY r.source_id`,
+       [principal.tenantId,sourceId ?? null,principal.userId]);
+     return result.rows.map(row => ({ source_id:row.source_id,revision:(BigInt(decimal(row.revision))-1n).toString(),identity_mappings:row.mappings.map(mapping => ({
+       ...mapping,id:Buffer.from(`${row.source_id}\0${mapping.kind}\0${mapping.external_id}`,'utf8').toString('base64url'),
+     })) }));
+   }
+ 
++  async function sourceCustomerCandidates(principal:UserPrincipal,sourceId:string,limitInput:unknown=20,cursorInput?:unknown) {
++    requireScope(principal,'source:approve');
++    if(typeof sourceId!=='string'||!SOURCE_ID.test(sourceId)) fail('AUTH_INPUT_INVALID');
++    const limit=typeof limitInput==='number'?limitInput:typeof limitInput==='string'&&/^(?:[1-9][0-9]{0,2})$/.test(limitInput)?Number(limitInput):NaN;
++    if(!Number.isInteger(limit)||limit<1||limit>100) fail('AUTH_INPUT_INVALID');
++    const after=decodeSourceCustomerCursor(sourceId,cursorInput);
++    return transaction(pool,async client=>{
++      const source=await sourceRow(client,principal.tenantId,sourceId,true);
++      if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
++      await currentOwner(client,principal.tenantId,principal.userId);
++      const result=await client.query<{source_pk:string;target_id:string}>(`SELECT source_pk,target_id
++        FROM api.source_customer_identity_candidates WHERE tenant_key=$1 AND source_id=$2
++          AND ($3::text IS NULL OR source_pk COLLATE "C">$3 COLLATE "C")
++        ORDER BY source_pk COLLATE "C" LIMIT $4`,[principal.tenantId,sourceId,after??null,limit+1]);
++      const hasMore=result.rows.length>limit,rows=result.rows.slice(0,limit);
++      return Object.freeze({source_id:sourceId,items:Object.freeze(rows.map(row=>Object.freeze({source_pk:row.source_pk,target_id:row.target_id}))),
++        next_cursor:hasMore&&rows.length?encodeSourceCustomerCursor(sourceId,rows.at(-1)!.source_pk):null});
++    });
++  }
++
+   async function currentOwnerForRead(principal:UserPrincipal) {
+     const result=await pool.query('SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key) WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled',[principal.tenantId,principal.userId]);
+     if(!result.rowCount) fail('AUTH_FORBIDDEN');
+   }
+ 
+   async function updateIdentityMapping(principal: UserPrincipal, opaqueId: string, expected: string, targetId: string, reason: string) {
+     requireScope(principal,'source:approve');
+     if (!/^(?:0|[1-9][0-9]*)$/.test(expected) || typeof targetId!=='string' || targetId.length<1 || targetId.length>128 || /[\u0000-\u001f\u007f]/.test(targetId) ||
+         typeof reason !== 'string' || reason.trim().length < 1 || reason.length > 256) fail('AUTH_INPUT_INVALID');
+     return transaction(pool, async client => {
+@@ -695,18 +725,19 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
+         WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,mappingSourceId,revision]);
+       await auth.repository.advanceSourceEpoch(mappingSourceId,principal.tenantId,client);
+       await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,details)
+         VALUES($1,$2,$3,'IDENTITY_MAPPING_CONFIRMED',jsonb_build_object('reason',$4::text,'revision',$5::text))`,[principal.tenantId,mappingSourceId,principal.userId,reason.trim(),revision]);
+       await client.query('SELECT control.remap_canonical_identity($1,$2,$3,$4,$5,$6,$7,$8)',
+         [principal.tenantId,mappingSourceId,kind,externalId,targetId,revision,principal.userId,reason.trim()]);
+       return { source_id:mappingSourceId,revision:expected==='0'?'1':(BigInt(expected)+1n).toString(),identity_mappings:revised };
+     });
+   }
+ 
+-  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,test,approve,activate,pause,identityMappings,updateIdentityMapping });
++  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,test,approve,activate,pause,
++    identityMappings,sourceCustomerCandidates,updateIdentityMapping });
+ }
+ 
+ export type SourceRegistryService = ReturnType<typeof createSourceRegistryService>;
+ 
+ export const failClosedSecretResolver: SecretResolver = Object.freeze({ isConfiguredReference: () => false, resolve: async () => fail('SOURCE_PROBE_UNAVAILABLE') });
+ export const failClosedEndpointAllowlist: EndpointAllowlist = Object.freeze({ resolve: async () => fail('SOURCE_PROBE_UNAVAILABLE') });
+ export const failClosedCapabilityProbe: CapabilityProbe = Object.freeze({ run: async () => fail('SOURCE_PROBE_UNAVAILABLE') });
