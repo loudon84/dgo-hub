@@ -143,3 +143,7 @@ M1-3 R1–R5 repairs passed independent scoped review at source ccab1a0; the ori
 ## M1-5B checkpoint — 2026-10-27
 
 B extraction/staging source findings R1–R5 and repair regression N1 are closed by independent GPT-6.1 Sol scoped review. Latest product source is 8e6f1cfc; evidence/report commit f855a587. Fix1:28 focused tests/typecheck/build; Fix2:one focused regression/typecheck/build. B is complete locally, while M1-5 remains IN_PROGRESS. C/D/E, the integrated gate and whole-phase review remain required. 009 stays unreleased phase-owned; S1 durable page membership is assigned to C. Formal/site acceptance stays NOT_RUN. See docs/execution/alpha1/reviews/m1-task-5b-rereview-2.md.
+
+## M1-5C checkpoint — 2026-10-28
+
+C local implementation and source-finding review are complete. Latest product e46a938e, report/evidence96afe89a, independent GPT-6.1 Sol scoped Spec Pass / Quality Approved at docs/execution/alpha1/reviews/m1-task-5c-rereview-2.md. Latest repair gate: snapshot-runs24/24, typecheck/build0. R1–R10/F1 and required changed-data worker-process crash acceptance G1 are closed; E1 historical byte-binding qualification is recorded. Whole M1-5 remains IN_PROGRESS: D/E and integrated gate/whole-phase review remain; 009 stays phase-owned/unreleased and 001–008 unchanged. Formal48/site acceptance remains NOT_RUN. Next work is D deletion reconciliation after refreshing its provisional brief to the accepted C interfaces.

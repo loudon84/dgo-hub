@@ -54,7 +54,7 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
 | M1-3 strict REST / durable intake jobs | R1–R5 repaired; scoped Sol re-review PASS/Approved; post-fix focused 33/33 and typecheck/build exit 0; earlier assurance gaps retained |
 | M1-4 reliable worker / retry | Implemented; R1–R3 closed by scoped Sol PASS/Approved at 7ea2e94; post-fix focused 5 tests + typecheck/build passed; assurance limits retained |
-| M1-5 PostgreSQL snapshot / recovery | In progress; A approved; B source findings closed by Sol after fixes e7856336 and 8e6f1cfc; C/D/E and whole-phase verification pending |
+| M1-5 PostgreSQL snapshot / recovery | In progress; A/B/C approved locally; C source e46a938e passed scoped Sol review; D/E and whole-phase verification pending |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
 | M1-7 OpenMetadata UI / FI / Oracle | Not started |
 
@@ -93,3 +93,14 @@ Snapshot extraction/staging source is committed at 0e7d4bf2, followed by strict 
 Original R1–R5 are closed by Fix1 source e7856336; the new source-local schedule isolation defect N1 is closed by Fix2 source 8e6f1cfc. GPT-6.1 Sol [scoped re-review](reviews/m1-task-5b-rereview-2.md) records Spec Pass / Quality Approve with no new material breakage. Fix1 passed 28 focused tests plus typecheck/build; Fix2 passed its RED/GREEN regression (1 passed, 22 skipped on GREEN) plus typecheck/build. These are distinct gates, not a new full-suite run. Root verified both 51-artifact packages without hash/size mismatches; all five created repair fixtures have removal/absence records. The initial Docker outage created no container ID and remains recorded separately.
 
 B ends at EXTRACTED/VALIDATING. C-owned page membership, semantic validation/application, deletion reconciliation, manual recovery/cutover, integrated M1-5 tests and whole-phase review remain pending. Migration 009 remains unreleased and phase-owned; 001–008 remain unchanged. Production DNS/TLS/egress and site integration are unverified; all 48 formal cases remain NOT_RUN. [Implementation and repair history](m1-task-5b-report.md).
+
+
+## M1-5C local implementation and repair review closed — 2026-10-28
+
+C implements complete-stage integrity/semantic validation, snapshot observation allocation and safe reuse, atomic customer/order aggregate application, continuation leases/retry, and checkpoint recovery. API-013 provides exact-Owner source-key discovery; API-014 remains the sole mapping confirmation. First load follows customer-only apply, Owner mapping confirmation, then approved combined customer/order snapshot.
+
+Initial source b32b7469 passed historical 65 C/B/API tests and 11 connector tests. Independent review identified R1–R10; repairs 2ad5d36f and e46a938e close those and new F1. GPT-6.1 Sol [final scoped review](reviews/m1-task-5c-rereview-2.md) records Spec Pass / Quality Approved. Latest repair gate passed 24/24 snapshot-run tests, typecheck and build; earlier counts remain distinct source gates. Actual owned Node processes were killed before and after COMMIT with changed business data; recovery verifies canonical state, source receipt, append-only outbox, outcome, exact range and checkpoint together, preserving observation and avoiding source reconnection. [Implementation and repair history](m1-task-5c-report.md).
+
+Root verified 107 Fix2 artifacts and the corrected 200-artifact Fix1 package without hash/size mismatches. Reviewer verified all 24 latest captured source records against product blobs/raw bytes. Earlier child trailing-blank-line capture discrepancy is explicitly qualified, with original hashes preserved. Migrations 001–008 are unchanged; 009 remains unreleased and owned by the full M1-5 phase.
+
+D absence reconciliation/Owner approval, E manual recovery/cutover, integrated M1-5 verification and whole-phase review remain pending. Full DB permission-matrix assurance remains limited. Real upstream/Hermes/site integration and formal 48-case acceptance remain NOT_RUN; C approval is local engineering completion.
