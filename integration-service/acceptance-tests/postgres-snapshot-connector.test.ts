@@ -23,6 +23,7 @@ class ScriptedSource implements SnapshotConnection {
     if (sql.startsWith('FETCH')) return { rows: this.cursorRows.splice(0, Number(/^FETCH FORWARD (\d+)/.exec(sql)?.[1] ?? '0')) };
     return { rows: [] };
   }
+  async cancel(): Promise<void> { this.statements.push('CANCEL_CONNECTION'); }
   async close(): Promise<void> { this.statements.push('CLOSE_CONNECTION'); }
 }
 

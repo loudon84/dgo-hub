@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
-import { createLocalLabPostgresSourceConnectionFactory, extractPostgresSnapshot } from '../etl-worker/postgres-snapshot-connector.js';
+import { createLocalLabPostgresSourceConnectionFactory, extractPostgresSnapshot, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
 import { createBoundedCapabilityProbe, type EndpointProfile } from '../source-registry/capability-probe.js';
 import type { FieldMapping, SourceConfig } from '../source-registry/service.js';
 
@@ -51,16 +51,25 @@ beforeAll(async () => {
     await ownerClient.query(`SET ROLE ${owner}`);
     await ownerClient.query(`CREATE TABLE ${schema}.customers(customer_id text PRIMARY KEY, customer_name text NOT NULL, updated_at timestamptz NOT NULL)`);
     await ownerClient.query(`CREATE TABLE ${schema}.orders(order_id bigint PRIMARY KEY, customer_id text NOT NULL, order_no text NOT NULL, status text NOT NULL,
-      order_at timestamptz NOT NULL, amount numeric(30,12) NOT NULL, currency text NOT NULL, updated_at timestamptz NOT NULL)`);
+      order_at timestamptz NOT NULL, amount numeric(30,12) NOT NULL, currency text NOT NULL, updated_at timestamptz NOT NULL,
+      source_version bigint NOT NULL DEFAULT 1)`);
     await ownerClient.query(`CREATE TABLE ${schema}.order_lines(line_id text PRIMARY KEY, order_id bigint NOT NULL REFERENCES ${schema}.orders(order_id),
       product_code text NOT NULL, product_name text NOT NULL, quantity numeric(30,12) NOT NULL, unit_price numeric(30,12) NOT NULL,
       line_amount numeric(30,12) NOT NULL)`);
     await ownerClient.query(`CREATE TABLE ${schema}.restricted_data(id integer, secret text)`);
     await ownerClient.query(`INSERT INTO ${schema}.customers VALUES('C-1','Original','2026-10-25 10:00:00.123456+00')`);
     await ownerClient.query(`INSERT INTO ${schema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
-      123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
+      123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00',1)`);
     await ownerClient.query(`INSERT INTO ${schema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Before',1.123456789012,
       123456789012.123456789012,138636548569.222222221445)`);
+    await ownerClient.query(`CREATE FUNCTION ${schema}.bump_header_version() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN NEW.source_version:=OLD.source_version+1; RETURN NEW; END $$`);
+    await ownerClient.query(`CREATE TRIGGER bump_header_version BEFORE UPDATE OF customer_id,order_no,status,order_at,amount,currency,updated_at
+      ON ${schema}.orders FOR EACH ROW EXECUTE FUNCTION ${schema}.bump_header_version()`);
+    await ownerClient.query(`CREATE FUNCTION ${schema}.bump_line_parent_version() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN UPDATE ${schema}.orders SET source_version=source_version+1 WHERE order_id=NEW.order_id; RETURN NEW; END $$`);
+    await ownerClient.query(`CREATE TRIGGER bump_line_parent_version AFTER UPDATE OF order_id,product_code,product_name,quantity,unit_price,line_amount
+      ON ${schema}.order_lines FOR EACH ROW EXECUTE FUNCTION ${schema}.bump_line_parent_version()`);
   } finally { await ownerClient.query('RESET ROLE').catch(() => undefined); ownerClient.release(); }
   await fixture.pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${reader}`);
   await fixture.pool.query(`GRANT SELECT ON ${schema}.customers,${schema}.orders,${schema}.order_lines TO ${reader}`);
@@ -71,7 +80,8 @@ beforeAll(async () => {
   profile = { revision: 'owned-pg-v1', connector: 'postgresql', protocol: 'postgres:', host: '127.0.0.1', port: fixture.hostPort,
     allow_loopback_plaintext: true, database: 'postgres', user: reader, schema, entities: {
       customer: { table: 'customers', source_pk: 'customer_id', updated_at_field: 'updated_at' },
-      order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', lines: { table: 'order_lines', order_fk: 'order_id' } },
+      order: { table: 'orders', source_pk: 'order_id', updated_at_field: 'updated_at', version_field:'source_version',
+        aggregate_version_covers_lines:true, customer_source_id:'crm-main', lines: { table: 'order_lines', order_fk: 'order_id' } },
     } };
 }, 90_000);
 
@@ -120,5 +130,53 @@ describe('owned PostgreSQL source fixture', () => {
     await expect(rolePool.query(`SELECT secret FROM ${schema}.restricted_data`)).rejects.toMatchObject({ code: '42501' });
     await expect(rolePool.query(`SELECT secret FROM ${privateSchema}.hidden_data`)).rejects.toMatchObject({ code: '42501' });
     await rolePool.end();
+  });
+
+  it('proves SOURCE_VERSION advances for both order header and order line changes in the owned aggregate fixture', async () => {
+    const initial=await ownerPool.query<{source_version:string}>(`SELECT source_version::text FROM ${schema}.orders WHERE order_id=9007199254740993123`);
+    const initialVersion=BigInt(initial.rows[0].source_version);
+    await ownerPool.query(`UPDATE ${schema}.orders SET order_no='O-HEADER-CHANGED' WHERE order_id=9007199254740993123`);
+    const afterHeader=await ownerPool.query<{source_version:string}>(`SELECT source_version::text FROM ${schema}.orders WHERE order_id=9007199254740993123`);
+    const headerVersion=BigInt(afterHeader.rows[0].source_version);
+    expect(headerVersion).toBeGreaterThan(initialVersion);
+    await ownerPool.query(`UPDATE ${schema}.order_lines SET product_name='Line-CHANGED' WHERE line_id='L-1'`);
+    const afterLine=await ownerPool.query<{source_version:string}>(`SELECT source_version::text FROM ${schema}.orders WHERE order_id=9007199254740993123`);
+    const lineVersion=BigInt(afterLine.rows[0].source_version);
+    expect(lineVersion).toBeGreaterThan(headerVersion);
+    const sourceVersionConfig:SourceConfig={...config,version_domain:'SOURCE_VERSION',allowed_entities:['order']};
+    const observed:Array<{relation:string;source_version:string|null}>=[];
+    await extractPostgresSnapshot({factory:createLocalLabPostgresSourceConnectionFactory(),
+      policy:{environmentKind:'local_lab',policyId:'owned-aggregate-version'},profile,config:sourceVersionConfig,password:'fixture',mappings,pageSize:1,
+      onPage:async page=>{observed.push(...page.rows.map(row=>({relation:row.relation,source_version:row.source_version})));} });
+    expect(observed).toContainEqual({relation:'order',source_version:lineVersion.toString()});
+  });
+
+  it('cancels an outstanding source FETCH on abort and closes the session without resolving it manually', async () => {
+    const controller=new AbortController();
+    let markFetchStarted!:()=>void;
+    const fetchStarted=new Promise<void>(resolve=>{markFetchStarted=resolve;});
+    let rejectFetch:(error:Error)=>void=()=>undefined;
+    let cancelCalls=0;
+    let closeCalls=0;
+    const factory:PostgresSourceConnectionFactory={connect:async()=>({
+      query:async(sql:string)=>{
+        if(sql.startsWith('FETCH')) {
+          markFetchStarted();
+          return new Promise<never>((_resolve,reject)=>{rejectFetch=reject;});
+        }
+        if(sql.includes('pg_current_snapshot')) return {rows:[{snapshot_text:'1:1:'}]};
+        return {rows:[]};
+      },
+      cancel:async()=>{cancelCalls+=1;rejectFetch(new Error('fixture query cancelled'));},
+      close:async()=>{closeCalls+=1;},
+    })};
+    const scan=extractPostgresSnapshot({factory,policy:{environmentKind:'local_lab',policyId:'abort-fixture'},profile,config,password:'fixture',mappings,
+      pageSize:1,signal:controller.signal,onPage:async()=>{throw new Error('no page should be staged');}});
+    await fetchStarted;
+    controller.abort();
+    const outcome=await Promise.race([scan.then(()=> 'resolved',error=>error),new Promise(resolve=>setTimeout(()=>resolve('timed-out'),3_000))]);
+    expect(outcome).toMatchObject({code:'SNAPSHOT_CANCELLED'});
+    expect(cancelCalls).toBe(1);
+    expect(closeCalls).toBe(1);
   });
 });

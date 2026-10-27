@@ -9,7 +9,7 @@ import { createSourceRegistryService, type SourceRegistryService } from '../sour
 import { runMigrations } from '../migrations/runner.js';
 import { buildApp } from '../app.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
-import { createLocalLabPostgresSourceConnectionFactory, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
+import { createLocalLabPostgresSourceConnectionFactory, SnapshotSourceError, type PostgresSourceConnectionFactory } from '../etl-worker/postgres-snapshot-connector.js';
 import { runDurableWorkerLoop } from '../etl-worker/worker.js';
 import type { EndpointProfile } from '../source-registry/capability-probe.js';
 
@@ -163,10 +163,13 @@ describe('durable snapshot run admission', () => {
         await ownerClient.query(`CREATE TABLE ${sourceSchema}.order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL REFERENCES ${sourceSchema}.orders(order_id),
           product_code text NOT NULL,product_name text NOT NULL,quantity numeric(30,12) NOT NULL,unit_price numeric(30,12) NOT NULL,line_amount numeric(30,12) NOT NULL)`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-1','Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:00.123456+00')`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-2','Second Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:01.123456+00')`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
           123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456789012,
           123456789012.123456789012,138636548569.222222221445)`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-2',9007199254740993123,'SKU-2','Second Line',2.123456789012,
+          223456789012.123456789012,238636548569.222222221445)`);
       } finally { await ownerClient.query('RESET ROLE').catch(()=>undefined); ownerClient.release(); }
       await sourceFixture.pool.query(`GRANT USAGE ON SCHEMA ${sourceSchema} TO ${sourceReader}`);
       await sourceFixture.pool.query(`GRANT SELECT ON ${sourceSchema}.customers,${sourceSchema}.orders,${sourceSchema}.order_lines TO ${sourceReader}`);
@@ -205,6 +208,35 @@ describe('durable snapshot run admission', () => {
       const approved=await service.approve(owner,'pg-e2e','1',tested.test_report_id,tested.data_contract_ref);
       await service.activate(owner,'pg-e2e','1',approved.approval_id);
       const { createSnapshotRun }=await import('../etl-worker/snapshot-runs.js');
+      const { createSnapshotStageStore,snapshotManifestDigest }=await import('../etl-worker/snapshot-stage-store.js');
+      const store=createSnapshotStageStore(roleScopedPool('hub_worker'));
+      const invalidRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','manifest-negative-cases');
+      const invalidClaim=await store.claim(owner.tenantId,'pg-e2e',60);
+      expect(invalidClaim).toBeTruthy();
+      const invalidAttempt=await store.beginAttempt(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidClaim!.claim_token,60);
+      const frozen=await store.loadFrozenProof(owner.tenantId,'pg-e2e',invalidRun.run_id);
+      const emptyCounts=[{relation:'customer',row_count:0,page_count:0,page_digests:[]},
+        {relation:'order',row_count:0,page_count:0,page_digests:[]},{relation:'order_line',row_count:0,page_count:0,page_digests:[]}];
+      const validShape={state:'EXTRACTED',relations:['customer','order','order_line'],relation_counts:emptyCounts,row_count:0,page_count:0,
+        source_snapshot_identity:'a'.repeat(64),attempt_id:invalidAttempt.attempt_id,operation_id:invalidAttempt.operation_id,
+        profile_digest:frozen.endpoint_profile_digest,mapping_digest:frozen.mapping_digest,config_digest:frozen.config_digest,
+        identity_mapping_digest:frozen.identity_mapping_digest};
+      const {profile_digest:_profile,mapping_digest:_mapping,...missingProof}=validShape;
+      const invalidManifests=[
+        missingProof,
+        {...validShape,relation_counts:[emptyCounts[0],emptyCounts[0],emptyCounts[0]]},
+        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],row_count:null},emptyCounts[2]]},
+        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],page_digests:['f'.repeat(64)]},emptyCounts[2]]},
+      ];
+      for (const malformed of invalidManifests) {
+        await expect(store.complete(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
+          malformed,snapshotManifestDigest(malformed))).rejects.toMatchObject({code:'22023'});
+      }
+      const unpublished=await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.etl_snapshot_manifest WHERE run_id=$1) AS manifests,
+        (SELECT status FROM control.etl_run_attempt WHERE attempt_id=$2) AS attempt_status`,[invalidRun.run_id,invalidAttempt.attempt_id]);
+      expect(unpublished.rows[0]).toEqual({manifests:0,attempt_status:'RUNNING'});
+      await expect(store.fail(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
+        'SNAPSHOT_PROFILE_INVALID',false)).resolves.toBe('FAILED');
       const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','owned-e2e-run');
       const realFactory=createLocalLabPostgresSourceConnectionFactory();
       let loseSourceOnce=true;
@@ -228,7 +260,7 @@ describe('durable snapshot run admission', () => {
             if (owned.rowCount !== 1) throw new Error('source backend is not the owned read-only fixture reader');
           }
           return connection.query(sql);
-        },close:async()=>connection.close()};
+        },cancel:async()=>connection.cancel(),close:async()=>connection.close()};
       }};
       const workerDependencies={secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-password'},
         egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
@@ -239,20 +271,26 @@ describe('durable snapshot run admission', () => {
         count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
         WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
-      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:1}]);
+      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:2}]);
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
-        array_agg(s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+        array_agg(DISTINCT s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
         JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
         WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,m.state,m.manifest`,[run.run_id]);
-      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'3',state:'EXTRACTED',relations:['customer','order','order_line']});
-      expect(staged.rows[0].counts).toMatchObject([{relation:'customer',row_count:1},{relation:'order',row_count:1},{relation:'order_line',row_count:1}]);
+      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'5',state:'EXTRACTED',relations:['customer','order','order_line']});
+      expect(staged.rows[0].counts).toEqual([
+        expect.objectContaining({relation:'customer',row_count:2,page_count:2}),
+        expect.objectContaining({relation:'order',row_count:1,page_count:1}),
+        expect.objectContaining({relation:'order_line',row_count:2,page_count:2}),
+      ]);
+      for (const relation of staged.rows[0].counts as Array<{page_count:number;page_digests:string[]}>)
+        expect(relation.page_digests).toHaveLength(relation.page_count);
       const attempts=await fixture.pool.query(`SELECT a.ordinal,a.status,count(s.source_pk)::int AS staged FROM control.etl_run_attempt a
         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id) WHERE a.run_id=$1
         GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[run.run_id]);
-      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:1},{ordinal:2,status:'COMPLETE',staged:3}]);
+      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:2},{ordinal:2,status:'COMPLETE',staged:5}]);
     } finally {
       await ownerPool.end();
       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
@@ -415,6 +453,29 @@ describe('durable snapshot run admission', () => {
     expect(first.run_id).toBeTruthy();
     const count = await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
     expect(count.rows[0].count).toBe(1);
+  });
+
+  it('admits and scans a due schedule from the strict worker loop without a manual run', async () => {
+    e2eEndpointProfile = { revision:'due-pg-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+      allow_loopback_plaintext:true,database:'postgres',user:'source_reader',schema:'public',
+      entities:{customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'}} };
+    await fixture.pool.query(`UPDATE control.etl_snapshot_schedule SET next_due_at=clock_timestamp()-interval '1 second'
+      WHERE tenant_key=$1 AND source_id='pg-main'`,[owner.tenantId]);
+    let connectCalls=0;
+    const sourceConnectionFactory:PostgresSourceConnectionFactory={connect:async()=>{
+      connectCalls+=1;
+      throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE');
+    }};
+    try {
+      await runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'}, {
+        secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-secret'},sourceConnectionFactory,
+        egressPolicy:{environmentKind:'local_lab',policyId:'owned-due-loopback'},pageSize:10,leaseSeconds:60 });
+      const runs=await fixture.pool.query(`SELECT r.request_kind,r.status,a.ordinal,a.status AS attempt_status
+        FROM control.etl_run r LEFT JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
+        WHERE r.tenant_key=$1 AND r.source_id='pg-main'`,[owner.tenantId]);
+      expect(connectCalls).toBe(1);
+      expect(runs.rows).toEqual([{request_kind:'SCHEDULED',status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE'}]);
+    } finally { e2eEndpointProfile=undefined; }
   });
 
   it('serializes simultaneous manual and due admissions to one active durable run', async () => {

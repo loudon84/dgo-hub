@@ -28,6 +28,7 @@ export type SnapshotPage = Readonly<{
 }>;
 export type SnapshotConnection = Readonly<{
   query(sql: string): Promise<{ rows: Record<string, unknown>[] }>;
+  cancel(): Promise<void>;
   close(): Promise<void>;
 }>;
 export type SourceEgressPolicy = Readonly<{
@@ -35,7 +36,7 @@ export type SourceEgressPolicy = Readonly<{
   policyId: string;
 }>;
 export type PostgresSourceConnectionFactory = Readonly<{
-  connect(input: Readonly<{ profile: EndpointProfile; password: string; policy: SourceEgressPolicy }>): Promise<SnapshotConnection>;
+  connect(input: Readonly<{ profile: EndpointProfile; password: string; policy: SourceEgressPolicy; signal?:AbortSignal }>): Promise<SnapshotConnection>;
 }>;
 export type SnapshotScanResult = Readonly<{
   snapshot_identity: string;
@@ -192,9 +193,12 @@ export async function extractPostgresSnapshot(input: Readonly<{
   let connection: SnapshotConnection | undefined;
   let inTransaction = false;
   let sinkFailure = false;
+  const cancelOutstanding=()=>{ if(connection) void connection.cancel().catch(()=>undefined); };
   try {
     if (input.signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
-    connection = await input.factory.connect({ profile: input.profile, password: input.password, policy: input.policy });
+    connection = await input.factory.connect({ profile: input.profile, password: input.password, policy: input.policy,signal:input.signal });
+    if (input.signal?.aborted) { await connection.cancel().catch(()=>undefined); throw new SnapshotSourceError('SNAPSHOT_CANCELLED'); }
+    input.signal?.addEventListener('abort',cancelOutstanding,{once:true});
     await connection.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     inTransaction = true;
     await connection.query("SET LOCAL TIME ZONE 'UTC'");
@@ -233,7 +237,9 @@ export async function extractPostgresSnapshot(input: Readonly<{
     return Object.freeze({ snapshot_identity: sha256(snapshotText), page_count: pageCount,
       row_count: Object.values(counts).reduce((total, count) => total + count, 0), relation_counts: Object.freeze(counts) });
   } catch (error) {
-    if (inTransaction && connection) await connection.query('ROLLBACK').catch(() => undefined);
+    if (input.signal?.aborted) error=new SnapshotSourceError('SNAPSHOT_CANCELLED');
+    if (inTransaction && connection) await Promise.race([connection.query('ROLLBACK').then(()=>undefined,()=>undefined),
+      new Promise<void>(resolve=>setTimeout(resolve,1_000))]);
     if (sinkFailure || error instanceof SnapshotSourceError) throw error;
     if (typeof error === 'object' && error !== null && 'code' in error) {
       const code = String(error.code);
@@ -242,7 +248,8 @@ export async function extractPostgresSnapshot(input: Readonly<{
     }
     throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE');
   } finally {
-    if (connection) await connection.close().catch(() => undefined);
+    input.signal?.removeEventListener('abort',cancelOutstanding);
+    if (connection) await Promise.race([connection.close().catch(()=>undefined),new Promise<void>(resolve=>setTimeout(resolve,1_000))]);
   }
 }
 
@@ -252,20 +259,26 @@ export const failClosedPostgresSourceConnectionFactory: PostgresSourceConnection
 
 export function createLocalLabPostgresSourceConnectionFactory(): PostgresSourceConnectionFactory {
   return Object.freeze({
-    async connect({ profile, password, policy }) {
+    async connect({ profile, password, policy,signal }) {
       if (policy.environmentKind !== 'local_lab' || !['127.0.0.1', '::1'].includes(profile.host.toLowerCase().replace(/^\[|\]$/g,'')) ||
           profile.allow_loopback_plaintext !== true || profile.connector !== 'postgresql' || !profile.database || !profile.user)
         throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
       const client = new Client({ host: profile.host, port: profile.port, database: profile.database, user: profile.user,
         password, ssl: false, connectionTimeoutMillis: 3_000, query_timeout: 10_000, statement_timeout: 10_000,
         application_name: 'hub_snapshot_extractor' });
+      const abortConnect=()=>client.connection.stream.destroy(new Error('snapshot source connect cancelled'));
+      if (signal?.aborted) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
+      signal?.addEventListener('abort',abortConnect,{once:true});
       try { await client.connect(); }
-      catch { await client.end().catch(() => undefined); throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE'); }
+      catch { await client.end().catch(() => undefined); throw signal?.aborted
+        ? new SnapshotSourceError('SNAPSHOT_CANCELLED') : new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE'); }
+      finally { signal?.removeEventListener('abort',abortConnect); }
       // A backend can disappear while the sink is staging a page; pg emits that socket error
       // independently of a pending query. Pending queries still reject and drive rollback.
       client.on('error', () => undefined);
       return Object.freeze({
         query: async (sql: string) => client.query(sql),
+        cancel: async () => { if (!client.connection.stream.destroyed) client.connection.stream.destroy(new Error('snapshot source query cancelled')); },
         close: async () => client.end(),
       });
     },

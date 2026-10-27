@@ -455,18 +455,30 @@ AS $body$
 DECLARE run_row control.etl_run%ROWTYPE; relation_row record; expected_relations text[]; total_rows bigint; manifest_rows bigint;
 BEGIN
   run_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_run_id,p_claim_token);
-  IF octet_length(p_digest)<>32 OR jsonb_typeof(p_manifest)<>'object' OR
-     p_manifest->>'profile_digest'<>encode(run_row.endpoint_profile_digest,'hex') OR
-     p_manifest->>'mapping_digest'<>encode(run_row.mapping_digest,'hex') OR
+  IF p_digest IS NULL OR octet_length(p_digest)<>32 OR jsonb_typeof(p_manifest) IS DISTINCT FROM 'object' OR
+     p_manifest->>'profile_digest' IS DISTINCT FROM encode(run_row.endpoint_profile_digest,'hex') OR
+     p_manifest->>'mapping_digest' IS DISTINCT FROM encode(run_row.mapping_digest,'hex') OR
+     p_manifest->>'config_digest' IS DISTINCT FROM encode(run_row.config_digest,'hex') OR
+     p_manifest->>'identity_mapping_digest' IS DISTINCT FROM encode(run_row.identity_mapping_digest,'hex') OR
+     p_manifest->>'attempt_id' IS DISTINCT FROM p_attempt_id::text OR
+     jsonb_typeof(p_manifest->'config_digest') IS DISTINCT FROM 'string' OR
+     jsonb_typeof(p_manifest->'identity_mapping_digest') IS DISTINCT FROM 'string' OR
+     jsonb_typeof(p_manifest->'relations') IS DISTINCT FROM 'array' OR
+     jsonb_typeof(p_manifest->'relation_counts') IS DISTINCT FROM 'array' OR
+     jsonb_typeof(p_manifest->'source_snapshot_identity') IS DISTINCT FROM 'string' OR
+     p_manifest->>'source_snapshot_identity' !~ '^[0-9a-f]{64}$' OR
      NOT EXISTS (SELECT 1 FROM control.etl_run_attempt WHERE attempt_id=p_attempt_id AND run_id=p_run_id AND status='RUNNING'
+       AND operation_id::text IS NOT DISTINCT FROM p_manifest->>'operation_id'
        AND claim_token=p_claim_token AND lease_expires_at>clock_timestamp()) THEN RAISE EXCEPTION 'snapshot manifest proof invalid' USING ERRCODE='22023'; END IF;
   expected_relations:=ARRAY[]::text[];
   IF 'customer'=ANY(run_row.expected_entities) THEN expected_relations:=array_append(expected_relations,'customer'); END IF;
   IF 'order'=ANY(run_row.expected_entities) THEN expected_relations:=array_append(expected_relations,'order'); expected_relations:=array_append(expected_relations,'order_line'); END IF;
   IF (SELECT array_agg(value ORDER BY value) FROM jsonb_array_elements_text(p_manifest->'relations') AS rel(value)) IS DISTINCT FROM
      (SELECT array_agg(value ORDER BY value) FROM unnest(expected_relations) AS rel(value)) THEN RAISE EXCEPTION 'snapshot relation coverage invalid' USING ERRCODE='22023'; END IF;
-  FOR relation_row IN SELECT * FROM jsonb_to_recordset(p_manifest->'relation_counts') AS r(relation text,row_count bigint,page_count integer) LOOP
-    IF relation_row.relation <> ALL(expected_relations) OR relation_row.row_count<0 OR relation_row.page_count<0 THEN
+  FOR relation_row IN SELECT * FROM jsonb_to_recordset(p_manifest->'relation_counts') AS r(relation text,row_count bigint,page_count integer,page_digests jsonb) LOOP
+    IF relation_row.relation IS NULL OR relation_row.relation <> ALL(expected_relations) OR
+       relation_row.row_count IS NULL OR relation_row.row_count<0 OR relation_row.page_count IS NULL OR relation_row.page_count<0 OR
+       jsonb_typeof(relation_row.page_digests) IS DISTINCT FROM 'array' THEN
       RAISE EXCEPTION 'snapshot relation count invalid' USING ERRCODE='22023';
     END IF;
     IF (SELECT COALESCE(sum(row_count),0) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id
@@ -475,9 +487,16 @@ BEGIN
         AND attempt_id=p_attempt_id AND relation=relation_row.relation)<>relation_row.page_count OR
        (relation_row.page_count>0 AND (SELECT (min(page_no),max(page_no)) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key
         AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation=relation_row.relation)
-        IS DISTINCT FROM (1,relation_row.page_count)) THEN RAISE EXCEPTION 'snapshot page receipt mismatch' USING ERRCODE='22023'; END IF;
+        IS DISTINCT FROM (1,relation_row.page_count)) OR relation_row.page_digests IS DISTINCT FROM
+        (SELECT COALESCE(jsonb_agg(encode(page_digest,'hex') ORDER BY page_no),'[]'::jsonb) FROM control.etl_snapshot_stage_page
+          WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation=relation_row.relation)
+       THEN RAISE EXCEPTION 'snapshot page receipt mismatch' USING ERRCODE='22023'; END IF;
   END LOOP;
-  IF jsonb_array_length(p_manifest->'relation_counts')<>cardinality(expected_relations) THEN RAISE EXCEPTION 'snapshot relation count set invalid' USING ERRCODE='22023'; END IF;
+  IF jsonb_array_length(p_manifest->'relation_counts')<>cardinality(expected_relations) OR
+     (SELECT count(DISTINCT value) FROM jsonb_array_elements(p_manifest->'relation_counts') AS item(value))<>cardinality(expected_relations) OR
+     (SELECT array_agg(relation ORDER BY relation) FROM jsonb_to_recordset(p_manifest->'relation_counts') AS r(relation text))
+       IS DISTINCT FROM (SELECT array_agg(value ORDER BY value) FROM unnest(expected_relations) AS rel(value))
+     THEN RAISE EXCEPTION 'snapshot relation count set invalid' USING ERRCODE='22023'; END IF;
   IF EXISTS (SELECT 1 FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
       AND attempt_id=p_attempt_id AND relation<>ALL(expected_relations)) THEN RAISE EXCEPTION 'snapshot unexpected relation' USING ERRCODE='22023'; END IF;
   IF 'order'=ANY(run_row.expected_entities) AND EXISTS (SELECT 1 FROM control.etl_snapshot_stage_record line
@@ -494,6 +513,11 @@ BEGIN
     AND run_id=p_run_id AND attempt_id=p_attempt_id;
   manifest_rows:=NULLIF(p_manifest->>'row_count','')::bigint;
   IF manifest_rows IS DISTINCT FROM total_rows THEN RAISE EXCEPTION 'snapshot manifest row count mismatch' USING ERRCODE='22023'; END IF;
+  IF NULLIF(p_manifest->>'page_count','')::bigint IS DISTINCT FROM
+     (SELECT count(*) FROM control.etl_snapshot_stage_page WHERE tenant_key=p_tenant_key AND source_id=p_source_id
+       AND run_id=p_run_id AND attempt_id=p_attempt_id) THEN
+    RAISE EXCEPTION 'snapshot manifest page count mismatch' USING ERRCODE='22023';
+  END IF;
   INSERT INTO control.etl_snapshot_manifest(tenant_key,source_id,run_id,attempt_id,state,manifest,manifest_digest,source_snapshot_identity)
     VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,'EXTRACTED',p_manifest,p_digest,p_manifest->>'source_snapshot_identity');
   UPDATE control.etl_run_attempt SET status='COMPLETE',ended_at=clock_timestamp(),claim_token=NULL,lease_expires_at=NULL,

@@ -6,6 +6,13 @@ import {
   type SnapshotPage, type SourceEgressPolicy, SnapshotSourceError,
 } from './postgres-snapshot-connector.js';
 import { createSnapshotStageStore, expectedSnapshotRelations, snapshotManifestDigest } from './snapshot-stage-store.js';
+import { admitDueSnapshotRun } from './snapshot-runs.js';
+
+type SnapshotPageReceipt = Readonly<Pick<SnapshotPage,'entity'|'relation'|'page_no'|'first_key'|'last_key'|'page_digest'> & { row_count:number }>;
+export function snapshotPageReceiptMetadata(page:SnapshotPage):SnapshotPageReceipt {
+  return Object.freeze({entity:page.entity,relation:page.relation,page_no:page.page_no,first_key:page.first_key,last_key:page.last_key,
+    page_digest:page.page_digest,row_count:page.rows.length});
+}
 
 export type SnapshotWorkerDependencies = Readonly<{
   secretResolver: SecretResolver;
@@ -37,6 +44,14 @@ async function availableSources(pool: Pool, limit: number): Promise<Array<{ tena
   });
 }
 
+async function dueSchedules(pool:Pool,limit:number):Promise<Array<{tenant_key:string;source_id:string}>> {
+  return transaction(pool,async client=>{
+    const result=await client.query<{tenant_key:string;source_id:string}>(`SELECT tenant_key,source_id FROM control.etl_snapshot_schedule
+      WHERE enabled AND next_due_at<=clock_timestamp() AND active_run_id IS NULL ORDER BY next_due_at,tenant_key,source_id LIMIT $1`,[limit]);
+    return result.rows;
+  });
+}
+
 function errorCode(error: unknown): string {
   if (error instanceof SnapshotSourceError) return error.code;
   if (error instanceof Error && /^SNAPSHOT_[A-Z0-9_:-]{1,90}$/.test(error.message)) return error.message;
@@ -54,6 +69,8 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
   if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(leaseSeconds) || leaseSeconds < 10 || leaseSeconds > 900)
     throw new Error('SNAPSHOT_WORKER_OPTIONS_INVALID');
   const store = createSnapshotStageStore(pool);
+  for (const schedule of await dueSchedules(pool,limit))
+    await admitDueSnapshotRun(pool,schedule.tenant_key,schedule.source_id);
   const candidates = await availableSources(pool, limit);
   let claimed = 0;
   for (const source of candidates) {
@@ -73,7 +90,7 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
       validateEndpointProfile(proof.config, profile, { environmentKind: dependencies.egressPolicy.environmentKind });
       const password = await dependencies.secretResolver.resolve(proof.config.secret_ref);
       if (typeof password !== 'string' || password.length < 1) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
-      const pages: Array<Pick<SnapshotPage, 'entity' | 'relation' | 'page_no' | 'first_key' | 'last_key' | 'page_digest' | 'rows'>> = [];
+      const pages: SnapshotPageReceipt[] = [];
       const stopHeartbeat = () => { stopped = true; if (heartbeat) clearInterval(heartbeat); };
       heartbeat = setInterval(() => {
         if (stopped) return;
@@ -87,7 +104,7 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
         onPage: async page => {
           if (leaseLost) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
           await store.writePage(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token, page);
-          pages.push(page);
+          pages.push(snapshotPageReceiptMetadata(page));
         } });
       stopHeartbeat();
       if (leaseLost) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
