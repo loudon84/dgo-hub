@@ -577,6 +577,150 @@ describe('durable snapshot run admission', () => {
       expect(longProofPause).toBe(true);
       expect(heartbeatCalls).toBeGreaterThan(0);
       expect(longRunState.rows[0]).toEqual({status:'COMPLETE',starts:1});
+      const nullRoleWriter=await sourceFixture.pool.connect();
+      try {
+        await nullRoleWriter.query(`SET ROLE ${sourceOwner}`);
+        await nullRoleWriter.query(`UPDATE ${sourceSchema}.customers SET customer_name='R4 NULL role must not commit',
+          updated_at='2026-10-25 10:30:02.123456+00' WHERE customer_id='C-1'`);
+        await nullRoleWriter.query(`UPDATE ${sourceSchema}.customers SET updated_at='2026-10-25 10:30:03.123456+00' WHERE customer_id='C-2'`);
+      } finally { await nullRoleWriter.query('RESET ROLE').catch(()=>undefined); nullRoleWriter.release(); }
+      await fixture.pool.query(`UPDATE control.auth_subject SET business_role=NULL WHERE tenant_key=$1 AND user_id=$2`,
+        [owner.tenantId,owner.userId]);
+      const nullRoleBefore=await fixture.pool.query(`SELECT cc.customer_name,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg-e2e'
+          AND entity='customer' AND source_pk='C-1') AS source_version,
+        (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE source_id='pg-e2e') AS outbox_count
+        FROM control.canonical_source_identity i JOIN hub.canonical_customer cc ON cc.id=i.customer_id
+        WHERE i.tenant_key=$1 AND i.source_id='pg-e2e' AND i.entity='customer' AND i.source_pk='C-1'`,[owner.tenantId]);
+      const nullRoleRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'late-customer-null-sales-role');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const afterNullRole=await fixture.pool.query(`SELECT r.status,
+        (SELECT count(*)::int FROM control.etl_snapshot_validation WHERE run_id=r.run_id) AS seals,
+        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observations,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id) AS outcomes,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges,
+        (SELECT count(*)::int FROM control.etl_snapshot_checkpoint WHERE run_id=r.run_id) AS checkpoints,
+        (SELECT cc.customer_name FROM control.canonical_source_identity i JOIN hub.canonical_customer cc ON cc.id=i.customer_id
+          WHERE i.tenant_key=r.tenant_key AND i.source_id=r.source_id AND i.entity='customer' AND i.source_pk='C-1') AS customer_name,
+        (SELECT source_version::text FROM control.source_version_receipt WHERE tenant_key=r.tenant_key AND source_id=r.source_id
+          AND entity='customer' AND source_pk='C-1') AS source_version,
+        (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE source_id=r.source_id) AS outbox_count
+        FROM control.etl_run r WHERE r.run_id=$1`,[nullRoleRun.run_id]);
+      expect(afterNullRole.rows[0]).toMatchObject({status:'FAILED',seals:0,observations:0,outcomes:0,ranges:0,checkpoints:0,
+        customer_name:nullRoleBefore.rows[0].customer_name,source_version:nullRoleBefore.rows[0].source_version,
+        outbox_count:nullRoleBefore.rows[0].outbox_count});
+      await fixture.pool.query(`UPDATE control.auth_subject SET business_role='sales' WHERE tenant_key=$1 AND user_id=$2`,
+        [owner.tenantId,owner.userId]);
+      const restoreNullRoleSource=await sourceFixture.pool.connect();
+      try {
+        await restoreNullRoleSource.query(`SET ROLE ${sourceOwner}`);
+        await restoreNullRoleSource.query(`UPDATE ${sourceSchema}.customers SET customer_name='Customer',updated_at='2026-10-25 10:00:00.123456+00'
+          WHERE customer_id='C-1'`);
+        await restoreNullRoleSource.query(`UPDATE ${sourceSchema}.customers SET updated_at='2026-10-25 10:00:01.123456+00'
+          WHERE customer_id='C-2'`);
+      } finally { await restoreNullRoleSource.query('RESET ROLE').catch(()=>undefined); restoreNullRoleSource.release(); }
+      const heartbeatFaultWriter=await sourceFixture.pool.connect();
+      try {
+        await heartbeatFaultWriter.query(`SET ROLE ${sourceOwner}`);
+        await heartbeatFaultWriter.query(`UPDATE ${sourceSchema}.customers SET customer_name='Heartbeat retry fact',
+          updated_at='2026-10-25 10:35:00.123456+00' WHERE customer_id='C-1'`);
+      } finally { await heartbeatFaultWriter.query('RESET ROLE').catch(()=>undefined); heartbeatFaultWriter.release(); }
+      const heartbeatRetryRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'heartbeat-transient-retry');
+      await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThanOrEqual(1);
+      let killedHeartbeat=false,heartbeatFailures=0,heartbeatSqlState:unknown,heartbeatFailureMessage:unknown;
+      const heartbeatFaultPool=new Proxy(roleScopedPool('hub_worker'),{get(target,property){
+        if(property==='connect') return async()=>{
+          const client=await fixture.pool.connect();if(client.listenerCount('error')===0) client.on('error',()=>undefined);
+          const original=client.query.bind(client);
+          const query=(async(sql:unknown,...args:unknown[])=>{
+            if(typeof sql==='string'&&sql.includes('control.heartbeat_etl_snapshot_continuation')) {
+              heartbeatFailures++;
+              const values=Array.isArray(args[0])?args[0] as unknown[]:[];
+              const runId=String(values[2]);
+              const committed=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_apply_range
+                WHERE run_id=$1 AND entity='customer' AND source_pk='C-1'`,[runId]);
+              if(!killedHeartbeat&&committed.rows[0].count>0) {
+                const identity=await original('SELECT pg_backend_pid() AS pid');
+                const terminated=await fixture.pool.query<{terminated:boolean}>(`SELECT pg_terminate_backend($1) AS terminated`,
+                  [Number(identity.rows[0].pid)]);
+                if(terminated.rows[0]?.terminated!==true) throw new Error('owned heartbeat backend was not terminated');
+                killedHeartbeat=true;
+              }
+            }
+            try {
+              const result=await original(sql as never,...args as never[]);
+              if(typeof sql==='string'&&/^BEGIN(?:\s|$)/i.test(sql.trim())) await original('SET LOCAL ROLE hub_worker');
+              return result;
+            } catch(error) {
+              if(killedHeartbeat) {
+                heartbeatSqlState=(error as {code?:unknown}).code;
+                heartbeatFailureMessage=(error as {message?:unknown}).message;
+              }
+              throw error;
+            }
+          }) as typeof client.query;
+          return {query,release:client.release.bind(client)};
+        };
+        const value=Reflect.get(target,property,target);return typeof value==='function'?value.bind(target):value;
+      }}) as typeof fixture.pool;
+      const outboxBeforeHeartbeatRetry=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.canonical_apply_outbox
+        WHERE source_id='pg-e2e' AND entity='customer'`);
+      let heartbeatWaited=false;
+      await expect(runShortLeaseContinuation(heartbeatFaultPool,20,10,{afterAggregateCommit:async item=>{
+        if(!heartbeatWaited&&item.entity==='customer'&&item.source_pk==='C-1') {
+          heartbeatWaited=true;
+          await new Promise(resolve=>setTimeout(resolve,5_000));
+          expect(killedHeartbeat).toBe(true);
+        }
+      }})).resolves.toBe(1);
+      const heartbeatRetryPending=await fixture.pool.query(`SELECT r.status,s.active_run_id,c.c_start_count,c.claim_token,
+        c.next_retry_at>clock_timestamp() AS retry_scheduled,
+        EXTRACT(EPOCH FROM (c.next_retry_at-clock_timestamp()))::numeric AS retry_seconds,
+        (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observation,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges
+        FROM control.etl_run r JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+        JOIN control.etl_snapshot_continuation c USING(tenant_key,source_id,run_id) WHERE r.run_id=$1`,[heartbeatRetryRun.run_id]);
+      expect(heartbeatWaited).toBe(true);
+      expect(heartbeatFailures).toBeGreaterThan(0);
+      expect(String(heartbeatSqlState)).toMatch(/^(08|40|55|57)|^undefined$/);
+      expect(['Connection terminated unexpectedly','Client has encountered a connection error and is not queryable','Connection terminated'])
+        .toContain(heartbeatFailureMessage);
+      expect(heartbeatRetryPending.rows[0]).toMatchObject({status:'APPLYING',active_run_id:heartbeatRetryRun.run_id,
+        c_start_count:1,claim_token:null,retry_scheduled:true,ranges:1});
+      expect(Number(heartbeatRetryPending.rows[0].retry_seconds)).toBeGreaterThan(0);
+      expect(Number(heartbeatRetryPending.rows[0].retry_seconds)).toBeLessThanOrEqual(5);
+      const heartbeatRetryObservation=heartbeatRetryPending.rows[0].observation;
+      const heartbeatPartialRange=await fixture.pool.query(`SELECT a.attempt_id::text,a.outcome_id::text,encode(a.aggregate_digest,'hex') AS digest,
+        o.status AS outcome_status,(SELECT id::text FROM control.canonical_apply_outbox WHERE source_id='pg-e2e' AND entity='customer'
+          AND canonical_object_id=i.canonical_object_id ORDER BY id DESC LIMIT 1) AS outbox_id
+        FROM control.etl_snapshot_apply_range a JOIN control.etl_snapshot_apply_outcome o USING(outcome_id)
+        JOIN control.canonical_source_identity i ON i.tenant_key=a.tenant_key AND i.source_id=a.source_id
+          AND i.entity=a.entity AND i.source_pk=a.source_pk
+        WHERE a.run_id=$1 AND a.entity='customer' AND a.source_pk='C-1'`,[heartbeatRetryRun.run_id]);
+      expect(heartbeatPartialRange.rows[0]).toMatchObject({outcome_status:'APPLIED'});
+      const sourceCallsBeforeHeartbeatRetry=sourceConnectCalls;
+      await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET next_retry_at=clock_timestamp() WHERE run_id=$1`,
+        [heartbeatRetryRun.run_id]);
+      await expect(runShortLeaseContinuation(roleScopedPool('hub_worker'))).resolves.toBe(1);
+      expect(sourceConnectCalls).toBe(sourceCallsBeforeHeartbeatRetry);
+      const heartbeatRetryComplete=await fixture.pool.query(`SELECT r.status,c.c_start_count,
+        (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observation,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges,
+        (SELECT attempt_id::text FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id AND entity='customer' AND source_pk='C-1') AS range_attempt,
+        (SELECT outcome_id::text FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id AND entity='customer' AND source_pk='C-1') AS range_outcome,
+        (SELECT encode(aggregate_digest,'hex') FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id AND entity='customer' AND source_pk='C-1') AS range_digest,
+        (SELECT id::text FROM control.canonical_apply_outbox WHERE source_id=r.source_id AND entity='customer' AND canonical_object_id=
+          (SELECT customer_id FROM control.canonical_source_identity WHERE tenant_key=r.tenant_key AND source_id=r.source_id AND entity='customer' AND source_pk='C-1')
+          ORDER BY id DESC LIMIT 1) AS outbox_id,
+        (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE source_id='pg-e2e' AND entity='customer') AS outbox_count
+        FROM control.etl_run r JOIN control.etl_snapshot_continuation c USING(tenant_key,source_id,run_id) WHERE r.run_id=$1`,
+        [heartbeatRetryRun.run_id]);
+      expect(heartbeatRetryComplete.rows[0]).toMatchObject({status:'COMPLETE',c_start_count:2,
+        observation:heartbeatRetryObservation,ranges:3,outbox_count:outboxBeforeHeartbeatRetry.rows[0].count+1});
+      expect(heartbeatRetryComplete.rows[0].range_attempt).toBe(heartbeatPartialRange.rows[0].attempt_id);
+      expect(heartbeatRetryComplete.rows[0].range_outcome).toBe(heartbeatPartialRange.rows[0].outcome_id);
+      expect(heartbeatRetryComplete.rows[0].range_digest).toBe(heartbeatPartialRange.rows[0].digest);
+      expect(heartbeatRetryComplete.rows[0].outbox_id).toBe(heartbeatPartialRange.rows[0].outbox_id);
       const expiredFailRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'expired-token-failure-fence');
       await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThanOrEqual(1);
       const {createSnapshotContinuationStore}=await import('../etl-worker/snapshot-continuation-store.js');
@@ -755,10 +899,50 @@ describe('durable snapshot run admission', () => {
       await runWithDestinationCrash('after','owned-crash-after-commit');
       const processCrashRun=async(phase:'before'|'after')=>{
         if(!evidenceRoot) throw new Error('M0_RUN_EVIDENCE_ROOT_REQUIRED');
+        const changedName=`Node crash ${phase} ${randomUUID()}`;
+        const sourceTime=phase==='before'?'2026-10-25 10:40:01.123456+00':'2026-10-25 10:40:02.123456+00';
+        const writer=await sourceFixture.pool.connect();
+        try {
+          await writer.query(`SET ROLE ${sourceOwner}`);
+          await writer.query(`UPDATE ${sourceSchema}.customers SET customer_name=$1,updated_at=$2 WHERE customer_id='C-1'`,
+            [changedName,sourceTime]);
+        } finally { await writer.query('RESET ROLE').catch(()=>undefined); writer.release(); }
         const crashRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,`owned-node-crash-${phase}`);
         await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThanOrEqual(1);
+        const crashAttempt=await fixture.pool.query<{attempt_id:string}>(`SELECT attempt_id::text FROM control.etl_snapshot_manifest WHERE run_id=$1`,
+          [crashRun.run_id]);
+        const crashAttemptId=crashAttempt.rows[0].attempt_id;
         const child=fork('acceptance-tests/fixtures/snapshot-continuation-child.mjs',[],{cwd:process.cwd(),stdio:['ignore','pipe','pipe','ipc'],env:{
           SNAPSHOT_C_TEST_PG_PORT:String(fixture.hostPort),SNAPSHOT_C_TEST_PHASE:phase,SNAPSHOT_C_TEST_RUN_ID:crashRun.run_id}});
+        const canonicalIdentity=await fixture.pool.query(`SELECT customer_id::text FROM control.canonical_source_identity
+          WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId]);
+        const objectId=canonicalIdentity.rows[0].customer_id;
+        const captureCrashBusinessState=async()=>fixture.pool.query(`SELECT
+          cc.customer_name,to_char(cc.source_updated_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS canonical_source_time,
+          receipt.source_version::text,encode(receipt.source_content_digest,'hex') AS source_digest,
+          (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE source_id='pg-e2e' AND entity='customer'
+            AND canonical_object_id=$2::uuid) AS outbox_count,
+          (SELECT id::text FROM control.canonical_apply_outbox WHERE source_id='pg-e2e' AND entity='customer'
+            AND canonical_object_id=$2::uuid ORDER BY id DESC LIMIT 1) AS outbox_id,
+          (SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id::text,'digest',encode(source_content_digest,'hex'),
+              'revision',hub_revision::text) ORDER BY id),'[]'::jsonb)
+             FROM control.canonical_apply_outbox WHERE source_id='pg-e2e' AND entity='customer'
+              AND canonical_object_id=$2::uuid) AS outbox_rows,
+          (SELECT encode(source_content_digest,'hex') FROM control.canonical_apply_outbox WHERE source_id='pg-e2e'
+            AND entity='customer' AND canonical_object_id=$2::uuid ORDER BY id DESC LIMIT 1) AS outbox_digest,
+          (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS outcomes,
+          (SELECT status FROM control.etl_snapshot_apply_outcome WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS outcome_status,
+          (SELECT attempt_id::text FROM control.etl_snapshot_apply_outcome WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS outcome_attempt_id,
+          (SELECT outcome_id::text FROM control.etl_snapshot_apply_outcome WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS outcome_id,
+          (SELECT attempt_id::text FROM control.etl_snapshot_apply_range WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS range_attempt_id,
+          (SELECT outcome_id::text FROM control.etl_snapshot_apply_range WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS range_outcome_id,
+          (SELECT encode(aggregate_digest,'hex') FROM control.etl_snapshot_apply_range WHERE run_id=$3 AND entity='customer' AND source_pk='C-1') AS range_digest,
+          (SELECT last_source_pk FROM control.etl_snapshot_checkpoint WHERE run_id=$3 AND entity='customer') AS checkpoint_source_pk,
+          (SELECT completed_count::int FROM control.etl_snapshot_checkpoint WHERE run_id=$3 AND entity='customer') AS checkpoint_count
+          FROM hub.canonical_customer cc JOIN control.source_version_receipt receipt ON receipt.canonical_object_id=cc.id
+          WHERE cc.tenant_id=$1 AND cc.id=$2::uuid AND receipt.source_id='pg-e2e' AND receipt.entity='customer' AND receipt.source_pk='C-1'`,
+          [owner.tenantId,objectId,crashRun.run_id]);
+        const preCrashBusinessState=await captureCrashBusinessState();
         const lifecycle=join(evidenceRoot,'node-child-lifecycle.jsonl');
         await appendFile(lifecycle,JSON.stringify({event:'spawned',phase,pid:child.pid,run_id:crashRun.run_id})+'\n','utf8');
         const boundary=await new Promise<{type:string;run_id:string}>((resolve,reject)=>{
@@ -771,13 +955,37 @@ describe('durable snapshot run admission', () => {
         const exit=await new Promise<{code:number|null;signal:NodeJS.Signals|null}>(resolve=>child.once('exit',(code,signal)=>resolve({code,signal})));
         await appendFile(lifecycle,JSON.stringify({event:'killed',phase,pid:child.pid,signal:exit.signal,run_id:crashRun.run_id})+'\n','utf8');
         expect(exit.signal).toBe('SIGKILL');
+        const stateAtCrash=await captureCrashBusinessState();
         const beforeRestart=await fixture.pool.query(`SELECT
           (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes,
           (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=$1) AS ranges,
           (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=$1) AS observation`,[crashRun.run_id]);
         expect(beforeRestart.rows[0]).toMatchObject(phase==='before'?{outcomes:0,ranges:0}:{outcomes:1,ranges:1});
+        if(phase==='before') {
+          expect(stateAtCrash.rows[0]).toEqual(preCrashBusinessState.rows[0]);
+          expect(stateAtCrash.rows[0]).toMatchObject({outcomes:0,outcome_status:null,range_digest:null,checkpoint_source_pk:null});
+        } else {
+          expect(stateAtCrash.rows[0].customer_name).toBe(changedName);
+          expect(stateAtCrash.rows[0].canonical_source_time).toBe(sourceTime.replace(' ','T').replace('+00','Z'));
+          expect(stateAtCrash.rows[0].source_version).toBe(beforeRestart.rows[0].observation);
+          expect(stateAtCrash.rows[0]).toMatchObject({outcomes:1,outcome_status:'APPLIED',outcome_attempt_id:crashAttemptId,
+            range_attempt_id:crashAttemptId,checkpoint_source_pk:'C-1',checkpoint_count:1});
+          expect(stateAtCrash.rows[0].outcome_id).toBe(stateAtCrash.rows[0].range_outcome_id);
+          expect(stateAtCrash.rows[0].source_digest).toBe(stateAtCrash.rows[0].range_digest);
+          expect(stateAtCrash.rows[0].source_digest).toBe(stateAtCrash.rows[0].outbox_digest);
+          expect(stateAtCrash.rows[0].outbox_count).toBe(preCrashBusinessState.rows[0].outbox_count+1);
+          const beforeRows=preCrashBusinessState.rows[0].outbox_rows as {id:string;digest:string;revision:string}[];
+          const committedRows=stateAtCrash.rows[0].outbox_rows as {id:string;digest:string;revision:string}[];
+          expect(committedRows).toHaveLength(beforeRows.length+1);
+          expect(committedRows.slice(0,-1)).toEqual(beforeRows);
+          expect(committedRows.at(-1)).toMatchObject({digest:stateAtCrash.rows[0].source_digest});
+          expect(BigInt(committedRows.at(-1)!.id)).toBeGreaterThan(BigInt(beforeRows.at(-1)!.id));
+        }
         const observation=beforeRestart.rows[0].observation;
-        const rangesBefore=await fixture.pool.query(`SELECT entity,source_pk FROM control.etl_snapshot_apply_range WHERE run_id=$1 ORDER BY entity,source_pk`,[crashRun.run_id]);
+        const rangesBefore=await fixture.pool.query(`SELECT entity,source_pk,attempt_id::text,outcome_id::text,encode(aggregate_digest,'hex') AS aggregate_digest
+          FROM control.etl_snapshot_apply_range WHERE run_id=$1 ORDER BY entity,source_pk`,[crashRun.run_id]);
+        const frozenAttempt=await fixture.pool.query(`SELECT m.attempt_id::text,m.manifest_digest FROM control.etl_snapshot_manifest m
+          WHERE m.run_id=$1`,[crashRun.run_id]);
         const sourceCallsBeforeRestart=sourceConnectCalls;
         await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',next_retry_at=clock_timestamp() WHERE run_id=$1`,[crashRun.run_id]);
         await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(0);
@@ -790,8 +998,41 @@ describe('durable snapshot run admission', () => {
           (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observation
           FROM control.etl_run r WHERE r.run_id=$1`,[crashRun.run_id]);
         expect(afterRestart.rows[0]).toEqual({status:'COMPLETE',outcomes:3,ranges:3,observation});
-        const rangesAfter=await fixture.pool.query(`SELECT entity,source_pk FROM control.etl_snapshot_apply_range WHERE run_id=$1 ORDER BY entity,source_pk`,[crashRun.run_id]);
-        expect(rangesAfter.rows).toEqual(expect.arrayContaining(rangesBefore.rows));
+        const recoveredBusinessState=await captureCrashBusinessState();
+        expect(recoveredBusinessState.rows[0].customer_name).toBe(changedName);
+        expect(recoveredBusinessState.rows[0].canonical_source_time).toBe(sourceTime.replace(' ','T').replace('+00','Z'));
+        expect(recoveredBusinessState.rows[0].source_version).toBe(observation);
+        expect(recoveredBusinessState.rows[0].outcomes).toBe(1);
+        expect(recoveredBusinessState.rows[0].outcome_status).toBe('APPLIED');
+        expect(recoveredBusinessState.rows[0]).toMatchObject({checkpoint_source_pk:'C-2',checkpoint_count:2});
+        expect(recoveredBusinessState.rows[0].outcome_attempt_id).toBe(crashAttemptId);
+        expect(recoveredBusinessState.rows[0].range_attempt_id).toBe(crashAttemptId);
+        expect(recoveredBusinessState.rows[0].outcome_id).toBe(recoveredBusinessState.rows[0].range_outcome_id);
+        expect(recoveredBusinessState.rows[0].source_digest).toBe(recoveredBusinessState.rows[0].range_digest);
+        expect(recoveredBusinessState.rows[0].source_digest).toBe(recoveredBusinessState.rows[0].outbox_digest);
+        expect(recoveredBusinessState.rows[0].outbox_count).toBe(preCrashBusinessState.rows[0].outbox_count+1);
+        const rangesAfter=await fixture.pool.query(`SELECT entity,source_pk,attempt_id::text,outcome_id::text,encode(aggregate_digest,'hex') AS aggregate_digest
+          FROM control.etl_snapshot_apply_range WHERE run_id=$1 ORDER BY entity,source_pk`,[crashRun.run_id]);
+        const appliedCustomerRange=rangesAfter.rows.find((row:{entity:string;source_pk:string})=>row.entity==='customer'&&row.source_pk==='C-1');
+        expect(recoveredBusinessState.rows[0].range_digest).toBe(appliedCustomerRange?.aggregate_digest);
+        const frozenAttemptAfter=await fixture.pool.query(`SELECT m.attempt_id::text,m.manifest_digest FROM control.etl_snapshot_manifest m
+          WHERE m.run_id=$1`,[crashRun.run_id]);
+        expect(frozenAttemptAfter.rows).toEqual(frozenAttempt.rows);
+        if(phase==='after') {
+          const committedCustomerRange=rangesBefore.rows.find((row:{entity:string;source_pk:string})=>row.entity==='customer'&&row.source_pk==='C-1');
+          expect(rangesAfter.rows.filter((row:{entity:string;source_pk:string})=>row.entity==='customer'&&row.source_pk==='C-1'))
+            .toEqual([committedCustomerRange]);
+          expect(recoveredBusinessState.rows[0].outbox_rows).toEqual(stateAtCrash.rows[0].outbox_rows);
+          expect(recoveredBusinessState.rows[0].outcome_id).toBe(stateAtCrash.rows[0].outcome_id);
+          expect(recoveredBusinessState.rows[0].range_outcome_id).toBe(stateAtCrash.rows[0].range_outcome_id);
+        } else {
+          const beforeRows=preCrashBusinessState.rows[0].outbox_rows as {id:string;digest:string;revision:string}[];
+          const recoveredRows=recoveredBusinessState.rows[0].outbox_rows as {id:string;digest:string;revision:string}[];
+          expect(recoveredRows).toHaveLength(beforeRows.length+1);
+          expect(recoveredRows.slice(0,-1)).toEqual(beforeRows);
+          expect(recoveredRows.at(-1)).toMatchObject({digest:recoveredBusinessState.rows[0].source_digest});
+          expect(BigInt(recoveredRows.at(-1)!.id)).toBeGreaterThan(BigInt(beforeRows.at(-1)!.id));
+        }
         await appendFile(lifecycle,JSON.stringify({event:'recovered',phase,pid:child.pid,signal:exit.signal,run_id:crashRun.run_id,
           observation,range_count:rangesAfter.rowCount})+'\n','utf8');
       };

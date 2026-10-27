@@ -962,7 +962,7 @@ BEGIN
       RETURN QUERY SELECT false,'SNAPSHOT_CUSTOMER_IDENTITY_INVALID'; RETURN;
     END IF;
     SELECT * INTO owner_state FROM control.lock_canonical_owner(p_tenant_key,owner_target);
-    IF NOT FOUND OR NOT COALESCE(owner_state.enabled,false) OR owner_state.business_role<>'sales' OR
+    IF NOT FOUND OR NOT COALESCE(owner_state.enabled,false) OR owner_state.business_role IS DISTINCT FROM 'sales' OR
         owner_state.department_id IS NULL OR owner_state.department_id<>department_target THEN
       RETURN QUERY SELECT false,'SNAPSHOT_CUSTOMER_IDENTITY_INVALID'; RETURN;
     END IF;

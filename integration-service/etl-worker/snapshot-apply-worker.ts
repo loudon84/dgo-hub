@@ -169,16 +169,27 @@ function retryableContinuationFailure(error:unknown):boolean {
 
 async function processClaim(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,
   leaseSeconds:number,hooks:SnapshotContinuationHooks):Promise<void> {
-  let leaseLost=false,heartbeatRunning=false;
+  let leaseLost=false,heartbeatFailure:unknown,heartbeatInFlight:Promise<boolean>|undefined;
+  const renew=async()=>{
+    if(heartbeatFailure!==undefined) throw heartbeatFailure;
+    if(leaseLost) return false;
+    if(!heartbeatInFlight) {
+      heartbeatInFlight=store.heartbeat(claim,leaseSeconds).then(alive=>{
+        if(!alive) leaseLost=true;
+        return alive;
+      }).catch(error=>{
+        heartbeatFailure=error;
+        throw error;
+      }).finally(()=>{ heartbeatInFlight=undefined; });
+    }
+    return heartbeatInFlight;
+  };
   const heartbeat=async()=>{
-    if(heartbeatRunning||leaseLost) return;
-    heartbeatRunning=true;
-    try { if(!await store.heartbeat(claim,leaseSeconds)) leaseLost=true; }
-    catch { leaseLost=true; }
-    finally { heartbeatRunning=false; }
+    await renew().catch(()=>undefined);
   };
   const assertLease=async()=>{
-    if(leaseLost||!await store.heartbeat(claim,leaseSeconds)) {
+    if(heartbeatFailure!==undefined) throw heartbeatFailure;
+    if(leaseLost||!await renew()) {
       leaseLost=true;
       throw new Error('SNAPSHOT_C_START_LEASE_LOST');
     }
