@@ -1,0 +1,51 @@
+[
+  {
+    "path": "integration-service/etl-worker/postgres-snapshot-connector.ts",
+    "raw_sha256": "5646c645f39b680d51ef123c9399ab01267f3169382e9272e66ca09222335ca7",
+    "bytes": 16720,
+    "lf_sha256": "5646c645f39b680d51ef123c9399ab01267f3169382e9272e66ca09222335ca7",
+    "git_blob": "d771f3772a4fca835914d1d9b9a2d4251bbaac27"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-worker.ts",
+    "raw_sha256": "b7ac0050f942491451d2741cc3ae165023f7d2eb105bc51b4fc7c8ac18da256e",
+    "bytes": 7724,
+    "lf_sha256": "b7ac0050f942491451d2741cc3ae165023f7d2eb105bc51b4fc7c8ac18da256e",
+    "git_blob": "c4821693ef93265edf56976bad215ff378c0dad9"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "raw_sha256": "7b1e880db2a287527a36f010d9469eec93f209bde2258dec07a3de799c2dd700",
+    "bytes": 30106,
+    "lf_sha256": "7b1e880db2a287527a36f010d9469eec93f209bde2258dec07a3de799c2dd700",
+    "git_blob": "7f85e67852bcd543b0f346da882f21fe6dc1ff54"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "raw_sha256": "d721202fda002ebb1eccd2ce7159503efca43047f57d7d20ce0007fa8c8b4e93",
+    "bytes": 42429,
+    "lf_sha256": "d721202fda002ebb1eccd2ce7159503efca43047f57d7d20ce0007fa8c8b4e93",
+    "git_blob": "cbd723aba9fdf135f2da0e1dcabe716feaabf887"
+  },
+  {
+    "path": "integration-service/acceptance-tests/postgres-snapshot-source.test.ts",
+    "raw_sha256": "31819e77ac1456a3ecdc138e5353efc7d0d950578f4031af6b1401fbb8dfdf04",
+    "bytes": 14163,
+    "lf_sha256": "31819e77ac1456a3ecdc138e5353efc7d0d950578f4031af6b1401fbb8dfdf04",
+    "git_blob": "12db562b7f0ee5335a4ba918c8fb8eac5f1634b1"
+  },
+  {
+    "path": "integration-service/acceptance-tests/postgres-snapshot-connector.test.ts",
+    "raw_sha256": "5c324263c9325b3dd73a5ea57002a3f8facde774669ce1352603f50be6626480",
+    "bytes": 5071,
+    "lf_sha256": "5c324263c9325b3dd73a5ea57002a3f8facde774669ce1352603f50be6626480",
+    "git_blob": "c517b56ec46416b9b49293059c27fc32afaaa81a"
+  },
+  {
+    "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+    "raw_sha256": "d3beaa539dbf242b7ccd7599c805abe306e1d82750de97a93d5b5e3a5be12e78",
+    "bytes": 64217,
+    "lf_sha256": "d3beaa539dbf242b7ccd7599c805abe306e1d82750de97a93d5b5e3a5be12e78",
+    "git_blob": "ce9ec5fb557485f181cfc4486e69725b210d9a36"
+  }
+]

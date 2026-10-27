@@ -1,0 +1,15 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-runs.test.ts acceptance-tests/postgres-snapshot-source.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/postgres-snapshot-source.test.ts (3 tests | 3 skipped) 302ms
+ ❯ acceptance-tests/snapshot-runs.test.ts (22 tests | 22 skipped) 168ms
+
+ Test Files  2 failed (2)
+      Tests  25 skipped (25)
+   Start at  12:12:15
+   Duration  866ms (transform 246ms, setup 0ms, import 650ms, tests 470ms, environment 0ms)
+

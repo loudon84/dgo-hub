@@ -1,0 +1,44 @@
+[
+  {
+    "path": "integration-service/etl-worker/postgres-snapshot-connector.ts",
+    "raw_sha256": "5646c645f39b680d51ef123c9399ab01267f3169382e9272e66ca09222335ca7",
+    "bytes": 16720,
+    "lf_sha256": "5646c645f39b680d51ef123c9399ab01267f3169382e9272e66ca09222335ca7",
+    "git_blob": "d771f3772a4fca835914d1d9b9a2d4251bbaac27"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-worker.ts",
+    "raw_sha256": "b7ac0050f942491451d2741cc3ae165023f7d2eb105bc51b4fc7c8ac18da256e",
+    "bytes": 7724,
+    "lf_sha256": "b7ac0050f942491451d2741cc3ae165023f7d2eb105bc51b4fc7c8ac18da256e",
+    "git_blob": "c4821693ef93265edf56976bad215ff378c0dad9"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "raw_sha256": "7b1e880db2a287527a36f010d9469eec93f209bde2258dec07a3de799c2dd700",
+    "bytes": 30106,
+    "lf_sha256": "7b1e880db2a287527a36f010d9469eec93f209bde2258dec07a3de799c2dd700",
+    "git_blob": "7f85e67852bcd543b0f346da882f21fe6dc1ff54"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "raw_sha256": "1334eaf5f1cd9aafe11c5fe7a72abe2dd03ac04c8bc861644bd5cf353856c304",
+    "bytes": 41534,
+    "lf_sha256": "1334eaf5f1cd9aafe11c5fe7a72abe2dd03ac04c8bc861644bd5cf353856c304",
+    "git_blob": "0e197c1be291e21824d6fcc7311c6154207b2f1e"
+  },
+  {
+    "path": "integration-service/acceptance-tests/postgres-snapshot-source.test.ts",
+    "raw_sha256": "8b27edf8ad2277b484cb444ac3a95ce9f52a08ebfb072420b5a95625031965a6",
+    "bytes": 14160,
+    "lf_sha256": "8b27edf8ad2277b484cb444ac3a95ce9f52a08ebfb072420b5a95625031965a6",
+    "git_blob": "7fa5e9f673399829f875d7e53d90394de4f7b5c4"
+  },
+  {
+    "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+    "raw_sha256": "d3beaa539dbf242b7ccd7599c805abe306e1d82750de97a93d5b5e3a5be12e78",
+    "bytes": 64217,
+    "lf_sha256": "d3beaa539dbf242b7ccd7599c805abe306e1d82750de97a93d5b5e3a5be12e78",
+    "git_blob": "ce9ec5fb557485f181cfc4486e69725b210d9a36"
+  }
+]

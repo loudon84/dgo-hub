@@ -1,0 +1,43 @@
+{
+  "tested_head": "b7b85419c8c2be1595b8832408014540efbcf314",
+  "product_commit": "e7856336e3788ccb13a084ebcbd13cbb72f9bf6a",
+  "base_migrations_001_008_unchanged": true,
+  "bindings": [
+    {
+      "path": "integration-service/acceptance-tests/postgres-snapshot-connector.test.ts",
+      "test_gate_git_blob": "c517b56ec46416b9b49293059c27fc32afaaa81a",
+      "commit_git_blob": "c517b56ec46416b9b49293059c27fc32afaaa81a",
+      "matches": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/postgres-snapshot-source.test.ts",
+      "test_gate_git_blob": "12db562b7f0ee5335a4ba918c8fb8eac5f1634b1",
+      "commit_git_blob": "12db562b7f0ee5335a4ba918c8fb8eac5f1634b1",
+      "matches": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "test_gate_git_blob": "ce9ec5fb557485f181cfc4486e69725b210d9a36",
+      "commit_git_blob": "ce9ec5fb557485f181cfc4486e69725b210d9a36",
+      "matches": true
+    },
+    {
+      "path": "integration-service/etl-worker/postgres-snapshot-connector.ts",
+      "test_gate_git_blob": "d771f3772a4fca835914d1d9b9a2d4251bbaac27",
+      "commit_git_blob": "d771f3772a4fca835914d1d9b9a2d4251bbaac27",
+      "matches": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-worker.ts",
+      "test_gate_git_blob": "c4821693ef93265edf56976bad215ff378c0dad9",
+      "commit_git_blob": "c4821693ef93265edf56976bad215ff378c0dad9",
+      "matches": true
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "test_gate_git_blob": "cbd723aba9fdf135f2da0e1dcabe716feaabf887",
+      "commit_git_blob": "cbd723aba9fdf135f2da0e1dcabe716feaabf887",
+      "matches": true
+    }
+  ]
+}

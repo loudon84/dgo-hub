@@ -1,0 +1,31 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/postgres-snapshot-source.test.ts [ acceptance-tests/postgres-snapshot-source.test.ts ]
+OwnedPostgresError: OWNED_POSTGRES_COMMAND_FAILED at container_start: startup_failed
+ ❯ docker acceptance-tests/helpers/postgres.ts:50:11
+     48|   } catch (error) {
+     49|     const stderr = typeof error === 'object' && error !== null && 'std…
+     50|     throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stag…
+       |           ^
+     51|   }
+     52| }
+ ❯ startOwnedPostgres acceptance-tests/helpers/postgres.ts:102:7
+ ❯ acceptance-tests/postgres-snapshot-source.test.ts:38:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts [ acceptance-tests/snapshot-runs.test.ts ]
+OwnedPostgresError: OWNED_POSTGRES_COMMAND_FAILED at container_start: startup_failed
+ ❯ docker acceptance-tests/helpers/postgres.ts:50:11
+     48|   } catch (error) {
+     49|     const stderr = typeof error === 'object' && error !== null && 'std…
+     50|     throw new OwnedPostgresError('OWNED_POSTGRES_COMMAND_FAILED', stag…
+       |           ^
+     51|   }
+     52| }
+ ❯ startOwnedPostgres acceptance-tests/helpers/postgres.ts:102:7
+ ❯ acceptance-tests/snapshot-runs.test.ts:45:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
