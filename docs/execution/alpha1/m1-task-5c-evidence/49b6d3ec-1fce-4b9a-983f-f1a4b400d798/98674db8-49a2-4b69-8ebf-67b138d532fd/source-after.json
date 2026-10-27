@@ -1,0 +1,38 @@
+{
+  "actual_head": "f43c672e8421b490984867ff3557b406374c0e40",
+  "captured_at": "2026-10-27T17:10:39.4641793Z",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "size": 98635,
+      "raw_sha256": "c3d59fe5a4c274a626487b741c19ed32563f5c6cce57bcdd456c05eb911cbdf8",
+      "lf_sha256": "c3d59fe5a4c274a626487b741c19ed32563f5c6cce57bcdd456c05eb911cbdf8",
+      "head_blob": "f06e1462b5474b9754ce18686613271c96e2846f",
+      "working_blob": "90acfc5e911d4fd3836eb7f9cc17a85b4d525bc1"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "size": 12495,
+      "raw_sha256": "b13d4b3fb365e71ffb1cd3331fc518bbde0f7c330272823bbb9d330f7f5572cc",
+      "lf_sha256": "b13d4b3fb365e71ffb1cd3331fc518bbde0f7c330272823bbb9d330f7f5572cc",
+      "head_blob": "8494e6dec7375ece411022a8b7341fa540155002",
+      "working_blob": "70066e02aba393739e4639d7c78f5eb299514cfb"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-continuation-store.ts",
+      "size": 15825,
+      "raw_sha256": "680944c7a61a0f889f4ad3e6d7f993639e65a1bb3ab40465b7fda508ebd420fd",
+      "lf_sha256": "680944c7a61a0f889f4ad3e6d7f993639e65a1bb3ab40465b7fda508ebd420fd",
+      "head_blob": "cec7bcec91575e3ef188a0be0d2f1e4b4fa45f0b",
+      "working_blob": "8c107e3ae748bdf73d0005742a5fc1b00a833d71"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "size": 87945,
+      "raw_sha256": "7ee5314875125bb2351a6591205f62a7d3cdecab87572d57078453c01663249d",
+      "lf_sha256": "7ee5314875125bb2351a6591205f62a7d3cdecab87572d57078453c01663249d",
+      "head_blob": "7b02fd7a607670526503a479a223891d083ff291",
+      "working_blob": "8e289d3478b9dcf7dd49fd1e112e6ae01b72c1a2"
+    }
+  ]
+}

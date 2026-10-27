@@ -1,0 +1,1 @@
+vitest run acceptance-tests/snapshot-runs.test.ts -t "restarts after terminating its owned PostgreSQL reader" --testTimeout=120000

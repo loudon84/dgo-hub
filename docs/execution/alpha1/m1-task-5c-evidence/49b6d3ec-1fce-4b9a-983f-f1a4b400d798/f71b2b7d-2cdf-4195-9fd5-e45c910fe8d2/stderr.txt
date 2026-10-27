@@ -1,0 +1,28 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'cc7dfe45-236e-4c1d-864b-4af812fd2956',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:107:28)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected 2 to be greater than 3
+ ❯ acceptance-tests/snapshot-runs.test.ts:475:59
+    473|         FROM control.etl_run r WHERE r.run_id=$1`,[replayARun.run_id]);
+    474|       expect(replayAState.rows[0].status).toBe('COMPLETE');
+    475|       expect(BigInt(replayAState.rows[0].sequence_value)).toBeGreaterT…
+       |                                                           ^
+    476|       expect(replayAState.rows[0].customer_name).toBe('Customer');
+    477|       const { createSnapshotRun: createStaleRangeRun } = await import(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,1 @@
+vitest run acceptance-tests/source-registry.test.ts -t "discovers source-qualified customer identities" --testTimeout=60000

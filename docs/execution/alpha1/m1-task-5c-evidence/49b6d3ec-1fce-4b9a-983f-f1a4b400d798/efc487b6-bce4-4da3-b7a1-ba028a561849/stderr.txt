@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > discovers source-qualified customer identities for the owner and removes them after API-014 confirmation
+AssertionError: expected 401 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 401
+
+ ❯ acceptance-tests/source-registry.test.ts:719:39
+    717|       await fixture.pool.query(`UPDATE control.identity_binding SET en…
+    718|       const staleBinding=await app.inject({method:'GET',url:'/hub/v1/a…
+    719|       expect(staleBinding.statusCode).toBe(403);
+       |                                       ^
+    720|     } finally { await app.close(); }
+    721|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

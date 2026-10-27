@@ -1,0 +1,11 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/source-registry.test.ts (32 tests | 1 failed | 31 skipped) 3080ms
+     × discovers source-qualified customer identities for the owner and removes them after API-014 confirmation 529ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 skipped (32)
+   Start at  01:24:13
+   Duration  3.60s (transform 223ms, setup 0ms, import 328ms, tests 3.08s, environment 0ms)
+

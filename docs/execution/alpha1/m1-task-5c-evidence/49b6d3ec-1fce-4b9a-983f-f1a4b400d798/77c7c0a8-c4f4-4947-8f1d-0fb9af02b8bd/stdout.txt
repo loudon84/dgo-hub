@@ -1,0 +1,11 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/snapshot-runs.test.ts (24 tests | 1 failed | 23 skipped) 21352ms
+     × restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan 18829ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 skipped (24)
+   Start at  01:26:47
+   Duration  22.03s (transform 230ms, setup 0ms, import 501ms, tests 21.35s, environment 0ms)
+

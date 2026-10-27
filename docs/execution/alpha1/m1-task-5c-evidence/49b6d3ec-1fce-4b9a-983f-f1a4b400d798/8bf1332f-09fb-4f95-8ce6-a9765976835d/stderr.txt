@@ -1,0 +1,48 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '9926bd97-ccff-488f-8b1b-6719f7a24e00',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:113:28)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected { status: 'FAILED', …(6) } to match object { status: 'FAILED', …(6) }
+
+- Expected
++ Received
+
+  {
+-   "checkpoints": 0,
+-   "customer_name": "Customer",
+-   "observations": 0,
+-   "outbox_count": 5,
+-   "outcomes": 0,
+-   "ranges": 0,
++   "checkpoints": 2,
++   "customer_name": "R4 must not commit",
++   "observations": 1,
++   "outbox_count": 6,
++   "outcomes": 3,
++   "ranges": 3,
+    "status": "FAILED",
+  }
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:545:41
+    543|         (SELECT count(*)::int FROM control.canonical_apply_outbox WHER…
+    544|         FROM control.etl_run r WHERE r.run_id=$1`,[invalidOwnerRun.run…
+    545|       expect(afterInvalidOwner.rows[0]).toMatchObject({status:'FAILED'…
+       |                                         ^
+    546|         customer_name:beforeInvalidOwner.rows[0].customer_name,outbox_…
+    547|       const restoreIdentityFacts=await sourceFixture.pool.connect();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

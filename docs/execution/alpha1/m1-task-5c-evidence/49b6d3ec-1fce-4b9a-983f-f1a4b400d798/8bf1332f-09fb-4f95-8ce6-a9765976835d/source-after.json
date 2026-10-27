@@ -1,0 +1,46 @@
+{
+  "actual_head": "f43c672e8421b490984867ff3557b406374c0e40",
+  "captured_at": "2026-10-27T17:17:16.0233676Z",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "size": 107304,
+      "raw_sha256": "d1c9fd91da064e9aa30c5ec2f4c1b44bf5f2ee6ecca08fb7870db3c26d7befea",
+      "lf_sha256": "d1c9fd91da064e9aa30c5ec2f4c1b44bf5f2ee6ecca08fb7870db3c26d7befea",
+      "head_blob": "f06e1462b5474b9754ce18686613271c96e2846f",
+      "working_blob": "285135afa928c2ff2e49d5494b5452f57976daf4"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "size": 14177,
+      "raw_sha256": "48c131f29fdea69d43135f1e3fe09c4d8aa353ba72534d55954e5ac121ce5883",
+      "lf_sha256": "48c131f29fdea69d43135f1e3fe09c4d8aa353ba72534d55954e5ac121ce5883",
+      "head_blob": "8494e6dec7375ece411022a8b7341fa540155002",
+      "working_blob": "0298b3334c6ed213a6ba67174f050bff7aab01bd"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-continuation-store.ts",
+      "size": 15825,
+      "raw_sha256": "680944c7a61a0f889f4ad3e6d7f993639e65a1bb3ab40465b7fda508ebd420fd",
+      "lf_sha256": "680944c7a61a0f889f4ad3e6d7f993639e65a1bb3ab40465b7fda508ebd420fd",
+      "head_blob": "cec7bcec91575e3ef188a0be0d2f1e4b4fa45f0b",
+      "working_blob": "8c107e3ae748bdf73d0005742a5fc1b00a833d71"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-worker.ts",
+      "size": 8194,
+      "raw_sha256": "d97eb76f394eedbe83238f70718e8fc466501134a7009b94b854eccd5a198e7c",
+      "lf_sha256": "d97eb76f394eedbe83238f70718e8fc466501134a7009b94b854eccd5a198e7c",
+      "head_blob": "b171bbfd1d68d841479dadda5c499fa327af2ff1",
+      "working_blob": "b171bbfd1d68d841479dadda5c499fa327af2ff1"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "size": 88168,
+      "raw_sha256": "7979a783c34c8a9a67b251df795b389f5da968d86a50e5038f9e1cf5a51c0c25",
+      "lf_sha256": "7979a783c34c8a9a67b251df795b389f5da968d86a50e5038f9e1cf5a51c0c25",
+      "head_blob": "7b02fd7a607670526503a479a223891d083ff291",
+      "working_blob": "5ac511bb348623660a601677013bfedef1b7c624"
+    }
+  ]
+}

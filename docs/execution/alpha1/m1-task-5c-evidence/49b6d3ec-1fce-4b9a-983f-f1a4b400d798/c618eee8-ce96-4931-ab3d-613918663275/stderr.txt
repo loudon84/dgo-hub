@@ -1,0 +1,43 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'fd42e859-cc8c-472b-9576-9a5609dccb10',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '6e2d7531-604d-44e6-b990-f87bd4e322f4',
+  error_code: 'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:145:13'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AuthError: SOURCE_CONFLICT
+ ❯ fail source-registry/service.ts:69:80
+     67| const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
+     68|
+     69| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     70| function requireScope(principal: UserPrincipal, scope: UserPrincipal['…
+     71|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ Object.test source-registry/service.ts:456:81
+ ❯ acceptance-tests/snapshot-runs.test.ts:477:28
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

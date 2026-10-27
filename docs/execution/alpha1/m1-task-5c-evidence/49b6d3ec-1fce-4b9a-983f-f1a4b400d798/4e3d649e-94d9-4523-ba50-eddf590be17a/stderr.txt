@@ -1,0 +1,28 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '44394ec1-c6c2-4ccb-a6ad-e653c6786634',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+ReferenceError: Cannot access 'runSnapshotWorkerOnce' before initialization
+ ❯ acceptance-tests/snapshot-runs.test.ts:445:20
+    443|       expect(attempts.rows).toEqual([{ordinal:1,status:'COMPLETE',stag…
+    444|       const tupleRaceRun=await createSnapshotRun(roleScopedPool('hub_a…
+    445|       await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),…
+       |                    ^
+    446|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+    447|         (tenant_key,source_id,credential_id,entity,channel_id,barrier_…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,29 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'f3ddb744-81fa-4f65-b631-9de68809b478',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+error: insert or update on table "source_security_barrier" violates foreign key constraint "source_security_barrier_channel_id_fkey"
+ ❯ node_modules/pg-pool/index.js:45:11
+ ❯ acceptance-tests/snapshot-runs.test.ts:447:7
+    445|       const {runSnapshotWorkerOnce:runSnapshotWorkerOnceForTuple}=awai…
+    446|       await expect(runSnapshotWorkerOnceForTuple(roleScopedPool('hub_w…
+    447|       await fixture.pool.query(`INSERT INTO control.source_security_ba…
+       |       ^
+    448|         (tenant_key,source_id,credential_id,entity,channel_id,barrier_…
+    449|         VALUES($1,'pg-e2e',$2,'order',$3,'SOURCE_SCOPE_SECURITY_REMOVA…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

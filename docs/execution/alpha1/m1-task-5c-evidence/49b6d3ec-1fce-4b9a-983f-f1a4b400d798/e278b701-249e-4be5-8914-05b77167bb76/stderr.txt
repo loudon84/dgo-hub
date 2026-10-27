@@ -1,0 +1,107 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '394fd59f-ef1e-474b-abd2-becaa3a46ff9',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:113:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '60107043-29f8-4b01-84e4-9cba490ccc84',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c21ccb4f-1f5c-480e-a638-886fa5b93cc0',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '42501',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'cfbecee3-eaa7-4e30-9243-8cff26928cb3',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '82d18cee-2a77-42e4-a69b-bfc589260c9e',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-version',
+  run_id: '939ce9ca-0234-4958-988c-3e8f69988d1a',
+  error_code: 'SNAPSHOT_TIMESTAMP_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at normalizeSnapshotTimestamps (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:97:24)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected { status: 'FAILED', …(3) } to deeply equal { status: 'COMPLETE', …(3) }
+
+- Expected
++ Received
+
+  {
+    "observations": 0,
+-   "outcomes": 2,
+-   "ranges": 2,
+-   "status": "COMPLETE",
++   "outcomes": 0,
++   "ranges": 0,
++   "status": "FAILED",
+  }
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:709:36
+    707|         (SELECT count(*)::int FROM control.etl_snapshot_apply_range WH…
+    708|         FROM control.etl_run r WHERE r.run_id=$1`,[versionRun.run_id]);
+    709|       expect(versionState.rows[0]).toEqual({status:'COMPLETE',observat…
+       |                                    ^
+    710|       await ownerPool.query(`UPDATE ${sourceSchema}.customers SET bool…
+    711|         updated_at='2026-10-25 11:00:00.654321+00' WHERE customer_id='…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

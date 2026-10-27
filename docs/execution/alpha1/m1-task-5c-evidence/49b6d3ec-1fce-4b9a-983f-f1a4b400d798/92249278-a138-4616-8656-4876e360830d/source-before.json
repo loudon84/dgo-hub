@@ -1,0 +1,46 @@
+{
+  "label": "source-before",
+  "head": "f43c672e8421b490984867ff3557b406374c0e40",
+  "files": [
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "bytes": 0,
+      "raw_sha256": null,
+      "lf_sha256": null,
+      "working_blob": null,
+      "git_blob": "b682173ba22053433ccbf4d6979877e9579b424a"
+    },
+    {
+      "path": "integration-service/acceptance-tests/source-registry.test.ts",
+      "bytes": 0,
+      "raw_sha256": null,
+      "lf_sha256": null,
+      "working_blob": null,
+      "git_blob": "05d847afc5702bfc23fdabdb1791d1d9bd14076f"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-continuation-store.ts",
+      "bytes": 0,
+      "raw_sha256": null,
+      "lf_sha256": null,
+      "working_blob": null,
+      "git_blob": "cec7bcec91575e3ef188a0be0d2f1e4b4fa45f0b"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "bytes": 0,
+      "raw_sha256": null,
+      "lf_sha256": null,
+      "working_blob": null,
+      "git_blob": "8494e6dec7375ece411022a8b7341fa540155002"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "bytes": 0,
+      "raw_sha256": null,
+      "lf_sha256": null,
+      "working_blob": null,
+      "git_blob": "7b02fd7a607670526503a479a223891d083ff291"
+    }
+  ]
+}

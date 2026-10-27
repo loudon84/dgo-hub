@@ -1,0 +1,25 @@
+npm warn "discovers source-qualified customer identities" is being parsed as a normal command line argument.
+npm warn Unknown cli config "--t". This will stop working in the next major version of npm.
+npm warn Unknown cli config "--testTimeout". This will stop working in the next major version of npm.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/source-registry.test.ts > M1 source admission authorization > discovers source-qualified customer identities for the owner and removes them after API-014 confirmation
+AssertionError: expected 401 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 401
+
+ ❯ acceptance-tests/source-registry.test.ts:703:34
+    701|       const foreign=await app.inject({method:'GET',url:'/hub/v1/admin/…
+    702|         headers:{authorization:'Bearer foreign-owner'}});
+    703|       expect(foreign.statusCode).toBe(403);
+       |                                  ^
+    704|       const opaqueId=Buffer.from('crm-discovery\0customer\0C-1','utf8'…
+    705|       const confirmed=await app.inject({method:'PUT',url:`/hub/v1/admi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
