@@ -54,7 +54,7 @@ M1-2 independent [initial review](reviews/m1-task-2-review.md) returned Spec FAI
 | M1-2 canonical model / caller-transaction apply / ownership effects | Independent Spec PASS / Quality Approved; all I1–I16 closed |
 | M1-3 strict REST / durable intake jobs | R1–R5 repaired; scoped Sol re-review PASS/Approved; post-fix focused 33/33 and typecheck/build exit 0; earlier assurance gaps retained |
 | M1-4 reliable worker / retry | Implemented; R1–R3 closed by scoped Sol PASS/Approved at 7ea2e94; post-fix focused 5 tests + typecheck/build passed; assurance limits retained |
-| M1-5 PostgreSQL snapshot / recovery | In progress; slice A source findings closed by Sol at 025bf0f; slice B extraction/staging implementation active at 8283a39; apply/recovery/deletion/cutover pending |
+| M1-5 PostgreSQL snapshot / recovery | In progress; A approved; B source findings closed by Sol after fixes e7856336 and 8e6f1cfc; C/D/E and whole-phase verification pending |
 | M1-6 SQL Server adapter | Not started; real integration conditional |
 | M1-7 OpenMetadata UI / FI / Oracle | Not started |
 
@@ -86,3 +86,10 @@ Migration 008 is frozen at SHA-256 4fcd01d104945a16102034b906d8df5423bbc325f08b6
 ## M1-5B independent review active — 2026-10-25
 
 Snapshot extraction/staging source is committed at 0e7d4bf2, followed by strict worker acceptance-test refinement 7e2cc26e; reports and explicit evidence package are committed at 8d9f1dca. Retained checks show 93 focused tests, 30 REST regressions, typecheck/build exit 0 on the earlier source, followed by strict-loop restart case and 21 snapshot-run tests on the acceptance-only follow-up. Root checked all 134 manifest entries with zero hash/size mismatches. Independent GPT-6.1 Sol Spec/Quality review is active; B approval is pending. C/D/E and whole-phase verification remain. Formal 48-case site acceptance remains NOT_RUN.
+
+
+## M1-5B local repair review closed — 2026-10-27
+
+Original R1–R5 are closed by Fix1 source e7856336; the new source-local schedule isolation defect N1 is closed by Fix2 source 8e6f1cfc. GPT-6.1 Sol [scoped re-review](reviews/m1-task-5b-rereview-2.md) records Spec Pass / Quality Approve with no new material breakage. Fix1 passed 28 focused tests plus typecheck/build; Fix2 passed its RED/GREEN regression (1 passed, 22 skipped on GREEN) plus typecheck/build. These are distinct gates, not a new full-suite run. Root verified both 51-artifact packages without hash/size mismatches; all five created repair fixtures have removal/absence records. The initial Docker outage created no container ID and remains recorded separately.
+
+B ends at EXTRACTED/VALIDATING. C-owned page membership, semantic validation/application, deletion reconciliation, manual recovery/cutover, integrated M1-5 tests and whole-phase review remain pending. Migration 009 remains unreleased and phase-owned; 001–008 remain unchanged. Production DNS/TLS/egress and site integration are unverified; all 48 formal cases remain NOT_RUN. [Implementation and repair history](m1-task-5b-report.md).

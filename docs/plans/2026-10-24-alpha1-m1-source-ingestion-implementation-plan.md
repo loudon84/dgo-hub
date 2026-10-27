@@ -139,3 +139,7 @@ M1-3 R1–R5 repairs passed independent scoped review at source ccab1a0; the ori
 - Manual quarantine retry/reconfirmation belongs to M1-5 API-023/024. M1-4 isolates dependencies/security failures and preserves original facts; it does not retry under latest mappings or add management routes.
 - The shared backend worker processes authorized durable jobs across tenants; it has no implicit tenant RLS. Verify explicit tenant/source/job predicates and frozen context with actual runtime roles, including wrong-context/cross-tenant-reference negatives. Do not claim a tenant-specific worker role exists.
 - Local implementation does not open strict sales query gates or activate legacy pull paths. Formal 48 acceptance rows remain NOT_RUN.
+
+## M1-5B checkpoint — 2026-10-27
+
+B extraction/staging source findings R1–R5 and repair regression N1 are closed by independent GPT-6.1 Sol scoped review. Latest product source is 8e6f1cfc; evidence/report commit f855a587. Fix1:28 focused tests/typecheck/build; Fix2:one focused regression/typecheck/build. B is complete locally, while M1-5 remains IN_PROGRESS. C/D/E, the integrated gate and whole-phase review remain required. 009 stays unreleased phase-owned; S1 durable page membership is assigned to C. Formal/site acceptance stays NOT_RUN. See docs/execution/alpha1/reviews/m1-task-5b-rereview-2.md.
