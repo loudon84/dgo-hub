@@ -1,0 +1,1 @@
+npm exec -- vitest run acceptance-tests/snapshot-validation.test.ts acceptance-tests/snapshot-runs.test.ts acceptance-tests/source-registry.test.ts

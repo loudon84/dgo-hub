@@ -1,0 +1,33 @@
+{
+  "head": "9e12d44be952cebae4b6286ea92cf1b1b29497ae",
+  "files": [
+    {
+      "path": "etl-worker/postgres-snapshot-connector.ts",
+      "raw_sha256": "a0cfdd463e6cfb4b3147c004008753c9e49a5b325ff735c8aae91bd1373a51e8",
+      "lf_sha256": "a0cfdd463e6cfb4b3147c004008753c9e49a5b325ff735c8aae91bd1373a51e8",
+      "size": 16843,
+      "git_blob": "043b6eef3e301858f194ba7c6de59dfb29127beb"
+    },
+    {
+      "path": "acceptance-tests/postgres-snapshot-source.test.ts",
+      "raw_sha256": "31819e77ac1456a3ecdc138e5353efc7d0d950578f4031af6b1401fbb8dfdf04",
+      "lf_sha256": "31819e77ac1456a3ecdc138e5353efc7d0d950578f4031af6b1401fbb8dfdf04",
+      "size": 14163,
+      "git_blob": "12db562b7f0ee5335a4ba918c8fb8eac5f1634b1"
+    },
+    {
+      "path": "acceptance-tests/postgres-snapshot-connector.test.ts",
+      "raw_sha256": "5c324263c9325b3dd73a5ea57002a3f8facde774669ce1352603f50be6626480",
+      "lf_sha256": "5c324263c9325b3dd73a5ea57002a3f8facde774669ce1352603f50be6626480",
+      "size": 5071,
+      "git_blob": "c517b56ec46416b9b49293059c27fc32afaaa81a"
+    },
+    {
+      "path": "acceptance-tests/postgres-snapshot-contract.test.ts",
+      "raw_sha256": "68dd9c9f9e68c37366d7c4c6587c6c72cc212d787961eff3e8d8533149d9c3cb",
+      "lf_sha256": "68dd9c9f9e68c37366d7c4c6587c6c72cc212d787961eff3e8d8533149d9c3cb",
+      "size": 4100,
+      "git_blob": "b78ea9576e593a34c3b9861265237d0477db555e"
+    }
+  ]
+}

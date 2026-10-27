@@ -1,0 +1,89 @@
+{
+  "head": "9e12d44be952cebae4b6286ea92cf1b1b29497ae",
+  "files": [
+    {
+      "path": "etl-worker/snapshot-apply-worker.ts",
+      "raw_sha256": "353d0be748f49b967c73eea9b7159f97c5ac876dc86eb0677b9305f073dd1350",
+      "lf_sha256": "353d0be748f49b967c73eea9b7159f97c5ac876dc86eb0677b9305f073dd1350",
+      "size": 12402,
+      "git_blob": "8494e6dec7375ece411022a8b7341fa540155002"
+    },
+    {
+      "path": "etl-worker/snapshot-canonical.ts",
+      "raw_sha256": "9fad1270a6e18654dec273671029ad98b4d9a81ed5bc127d86d4c6ad1bdfada8",
+      "lf_sha256": "9fad1270a6e18654dec273671029ad98b4d9a81ed5bc127d86d4c6ad1bdfada8",
+      "size": 4944,
+      "git_blob": "9d61fafd637fcd96a6e6d09cf3a8166af75bad0d"
+    },
+    {
+      "path": "etl-worker/snapshot-continuation-store.ts",
+      "raw_sha256": "64ded1303b5fec248424fc19062a2b392ea6979bfe88e0c4efbb53d1d5c53ff9",
+      "lf_sha256": "64ded1303b5fec248424fc19062a2b392ea6979bfe88e0c4efbb53d1d5c53ff9",
+      "size": 15403,
+      "git_blob": "cec7bcec91575e3ef188a0be0d2f1e4b4fa45f0b"
+    },
+    {
+      "path": "etl-worker/snapshot-validation.ts",
+      "raw_sha256": "944a7f35f53bfd150df8ff0db0235f51befc8bbb5a0f64f5dfdb78d1bdc5b940",
+      "lf_sha256": "944a7f35f53bfd150df8ff0db0235f51befc8bbb5a0f64f5dfdb78d1bdc5b940",
+      "size": 3730,
+      "git_blob": "ab1c246fc5035012ad7fa8be08238c72b0b74295"
+    },
+    {
+      "path": "etl-worker/postgres-snapshot-connector.ts",
+      "raw_sha256": "a0cfdd463e6cfb4b3147c004008753c9e49a5b325ff735c8aae91bd1373a51e8",
+      "lf_sha256": "a0cfdd463e6cfb4b3147c004008753c9e49a5b325ff735c8aae91bd1373a51e8",
+      "size": 16843,
+      "git_blob": "043b6eef3e301858f194ba7c6de59dfb29127beb"
+    },
+    {
+      "path": "etl-worker/worker.ts",
+      "raw_sha256": "8d746e8fa55b980559222cab35240bd1d04a041717b7f4689c8ddb7f45bd192b",
+      "lf_sha256": "8d746e8fa55b980559222cab35240bd1d04a041717b7f4689c8ddb7f45bd192b",
+      "size": 30237,
+      "git_blob": "936d68ba5980330dbb565f8e9f5f8b7612a336d1"
+    },
+    {
+      "path": "source-registry/routes.ts",
+      "raw_sha256": "63e5176eed23ff86318e5918315376cca086a2d891e3ed27b20401ae640ff9be",
+      "lf_sha256": "63e5176eed23ff86318e5918315376cca086a2d891e3ed27b20401ae640ff9be",
+      "size": 10680,
+      "git_blob": "603feaab519af4c568ef4177a9dcd4816578b2fe"
+    },
+    {
+      "path": "source-registry/service.ts",
+      "raw_sha256": "633924cb99be0c53d8181edb42dbaa3bc6ffe93b4ff06620283b2379ac278218",
+      "lf_sha256": "633924cb99be0c53d8181edb42dbaa3bc6ffe93b4ff06620283b2379ac278218",
+      "size": 55443,
+      "git_blob": "b682173ba22053433ccbf4d6979877e9579b424a"
+    },
+    {
+      "path": "migrations/009_snapshot_runs_and_recovery.sql",
+      "raw_sha256": "691a1c94602c822f85e76a906cc98154c372fe1b890ac5b2c777f1ad7316e2ef",
+      "lf_sha256": "691a1c94602c822f85e76a906cc98154c372fe1b890ac5b2c777f1ad7316e2ef",
+      "size": 87436,
+      "git_blob": "7b02fd7a607670526503a479a223891d083ff291"
+    },
+    {
+      "path": "acceptance-tests/snapshot-runs.test.ts",
+      "raw_sha256": "b9f0857e3c4c351641c7b370e56dd5deba76863a734769aa26d48b1c732cbb71",
+      "lf_sha256": "b9f0857e3c4c351641c7b370e56dd5deba76863a734769aa26d48b1c732cbb71",
+      "size": 94740,
+      "git_blob": "f06e1462b5474b9754ce18686613271c96e2846f"
+    },
+    {
+      "path": "acceptance-tests/snapshot-validation.test.ts",
+      "raw_sha256": "54562b48e70e6466394be1cf3904c67b02a9d910a463d3501feb89ad459f7435",
+      "lf_sha256": "54562b48e70e6466394be1cf3904c67b02a9d910a463d3501feb89ad459f7435",
+      "size": 5883,
+      "git_blob": "6478f5f43fb3677c6a327085b6d4c8987364952d"
+    },
+    {
+      "path": "acceptance-tests/source-registry.test.ts",
+      "raw_sha256": "0d4acc792c9459481bef740d971b379b708cb15116870cd06043c75364d2f070",
+      "lf_sha256": "0ad12ad0ff1179c68d988de3782495d91e2d5bb99fb3a1c2353e8204d13a2175",
+      "size": 77939,
+      "git_blob": "05d847afc5702bfc23fdabdb1791d1d9bd14076f"
+    }
+  ]
+}
