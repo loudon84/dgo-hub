@@ -131,6 +131,14 @@ export function createSnapshotContinuationStore(pool: Pool) {
           proof.expected_entities.includes('customer'),JSON.stringify(proof.identity_mappings)]);
       return result.rows[0]?.valid ? undefined : (result.rows[0]?.error_code ?? 'SNAPSHOT_REFERENCE_INVALID');
     },
+    async validateCustomerReferences(claim:SnapshotContinuationClaim,proof:SnapshotCProof):Promise<string|undefined> {
+      if(!proof.expected_entities.includes('customer')) return undefined;
+      const result=await call<{valid:boolean;error_code:string|null}>(
+        'SELECT * FROM control.validate_etl_snapshot_customer_references($1,$2,$3,$4,$5,$6,$7::jsonb)',
+        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,proof.identity_mapping_revision,
+          JSON.stringify(proof.identity_mappings)]);
+      return result.rows[0]?.valid ? undefined : (result.rows[0]?.error_code ?? 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID');
+    },
     async orderLines(claim:SnapshotContinuationClaim,orderSourcePk:string):Promise<readonly SnapshotStageRow[]> {
       const result=await call<Record<string,any>>('SELECT * FROM control.read_etl_snapshot_order_lines($1,$2,$3,$4,$5,$6)',
         [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,orderSourcePk]);
@@ -144,7 +152,7 @@ export function createSnapshotContinuationStore(pool: Pool) {
       for (;;) {
         const result=await call<Record<string,any>>(
           'SELECT * FROM control.read_etl_snapshot_semantic_chunk($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,entity,parent,source,500]);
+          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,entity,parent,source,1]);
         if (!result.rows.length) break;
         const chunk=result.rows.map(row=>({entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,
           source_pk:row.source_pk,source_version:row.source_version,facts:row.facts} as SemanticSnapshotFact));
@@ -158,7 +166,7 @@ export function createSnapshotContinuationStore(pool: Pool) {
       for (;;) {
         const result=await call<Record<string,any>>(
           'SELECT * FROM control.read_etl_snapshot_semantic_chunk($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,'order','order_line',parent,source,500]);
+          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,'order','order_line',parent,source,1]);
         if (!result.rows.length) break;
         const chunk=result.rows.map(row=>({entity:row.entity,relation:row.relation,parent_source_pk:row.parent_source_pk,
           source_pk:row.source_pk,source_version:row.source_version,facts:row.facts} as SemanticSnapshotFact));
@@ -196,6 +204,23 @@ export function createSnapshotContinuationStore(pool: Pool) {
         [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,input.entity,input.entity,'',input.source_pk,
           Buffer.from(input.aggregate_digest,'hex'),Buffer.from(input.proof_scope_digest,'hex'),input.status,input.error_code]);
       return result.rows[0]?.record_etl_snapshot_aggregate===true;
+    },
+    async assertApplyClaim(client:PoolClient,claim:SnapshotContinuationClaim):Promise<boolean> {
+      const result=await client.query<{assert_etl_snapshot_apply_claim:boolean}>(
+        'SELECT control.assert_etl_snapshot_apply_claim($1,$2,$3,$4,$5)',
+        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
+      return result.rows[0]?.assert_etl_snapshot_apply_claim===true;
+    },
+    async lockOrderCustomerReference(client:PoolClient,claim:SnapshotContinuationClaim,proof:SnapshotCProof,row:SemanticSnapshotFact):Promise<boolean> {
+      const profile=proof.config.endpoint_profile as Record<string,any>;
+      const configured=profile.entities?.order?.customer_source_id;
+      const customerSource=typeof configured==='string'&&configured.length?configured:proof.source_id;
+      const customerPk=row.facts?.customer_id;
+      if(typeof customerPk!=='string'||!customerPk) return false;
+      const result=await client.query<{lock_etl_snapshot_order_customer_reference:boolean}>(
+        'SELECT control.lock_etl_snapshot_order_customer_reference($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',
+        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,customerSource,customerPk,JSON.stringify(proof.identity_mappings)]);
+      return result.rows[0]?.lock_etl_snapshot_order_customer_reference===true;
     },
     async finish(claim:SnapshotContinuationClaim):Promise<boolean> {
       const result=await call<{finish_etl_snapshot_run:boolean}>(

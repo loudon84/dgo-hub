@@ -43,7 +43,7 @@ export type CapabilityProbe = Readonly<{
 }>;
 export type SourceRegistryDependencies = Readonly<{
   pool: Pool;
-  auth: Pick<AuthService, 'repository'>;
+  auth: Pick<AuthService, 'repository' | 'assertCurrentPrincipal'>;
   secretResolver: SecretResolver;
   endpointAllowlist: EndpointAllowlist;
   capabilityProbe: CapabilityProbe;
@@ -671,6 +671,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       const source=await sourceRow(client,principal.tenantId,sourceId,true);
       if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
       await currentOwner(client,principal.tenantId,principal.userId);
+      await auth.assertCurrentPrincipal(principal,'source:approve',client);
       const result=await client.query<{source_pk:string;target_id:string}>(`SELECT source_pk,target_id
         FROM api.source_customer_identity_candidates WHERE tenant_key=$1 AND source_id=$2
           AND ($3::text IS NULL OR source_pk COLLATE "C">$3 COLLATE "C")

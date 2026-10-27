@@ -46,6 +46,12 @@ function outcome(result:ApplyResult):Readonly<{status:'APPLIED'|'DUPLICATE'|'IGN
   if(result.status==='CHANNEL_EPOCH_RETIRED') return {status:'CHANNEL_EPOCH_RETIRED',error:'CHANNEL_EPOCH_RETIRED'};
   return {status:result.status,error:null};
 }
+export type SnapshotContinuationHooks = Readonly<{
+  afterProofLoaded?: (claim:SnapshotContinuationClaim)=>Promise<void>;
+  afterValidationSeal?: (claim:SnapshotContinuationClaim)=>Promise<void>;
+  beforeAggregateCommit?: (item:Readonly<{run_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
+  afterAggregateCommit?: (item:Readonly<{run_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
+}>;
 async function transaction<T>(pool:Pool,fn:(client:PoolClient)=>Promise<T>):Promise<T> {
   const client=await pool.connect();
   try { await client.query('BEGIN'); await client.query('SELECT control.lock_security_barrier_fence()');
@@ -86,7 +92,9 @@ function normalizeSnapshotTimestamps<T>(value:T):T {
   const object=value as Record<string,unknown>;
   const normalized:Record<string,unknown>={};
   for(const [key,item] of Object.entries(object)) {
-    if(['source_updated_at','order_at','deleted_at'].includes(key)&&typeof item==='string') {
+    if(key==='deleted_at'&&(item==='true'||item==='false')) {
+      normalized[key]=item;
+    } else if(['source_updated_at','order_at','deleted_at'].includes(key)&&typeof item==='string') {
       const match=/^(.*?)(?:\.(\d{1,6}))?(Z|([+-])(\d{2})(?::?(\d{2}))?)$/.exec(item);
       if(!match) throw new Error('SNAPSHOT_TIMESTAMP_INVALID');
       const offset=match[3]==='Z'?'Z':`${match[4]}${match[5]}:${match[6]??'00'}`;
@@ -105,6 +113,8 @@ async function validateAndSeal(store:ReturnType<typeof createSnapshotContinuatio
   for await(const page of store.stagePages(claim,proof)) { rows+=page.rows.length; pages++; }
   const referenceError=await store.validateOrderReferences(claim,proof);
   if(referenceError) throw new Error(referenceError.startsWith('SNAPSHOT_')?referenceError:`SNAPSHOT_${referenceError}`);
+  const customerError=await store.validateCustomerReferences(claim,proof);
+  if(customerError) throw new Error(customerError.startsWith('SNAPSHOT_')?customerError:`SNAPSHOT_${customerError}`);
   const semantic=await computeSemanticSnapshotDigest(proofFacts(store,claim,proof));
   const scope=scopeDigest(proof);
   const ok=await store.seal(claim,proof,scope,semantic,{rows,pages,relations:proof.manifest.relations});
@@ -113,7 +123,8 @@ async function validateAndSeal(store:ReturnType<typeof createSnapshotContinuatio
 }
 
 async function applyOne(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,
-  proof:SnapshotCProof,entity:'customer'|'order',row:SemanticSnapshotFact,observation?:string,scope?:string):Promise<boolean> {
+  proof:SnapshotCProof,entity:'customer'|'order',row:SemanticSnapshotFact,observation?:string,scope?:string,
+  hooks:SnapshotContinuationHooks={}):Promise<boolean> {
   const cp=canonicalProof(proof);
   const canonicalRow={...row,facts:normalizeSnapshotTimestamps(row.facts)};
   const canonical=entity==='customer'?toCanonicalSnapshotCustomer(canonicalRow,cp,observation):
@@ -129,15 +140,19 @@ async function applyOne(pool:Pool,store:ReturnType<typeof createSnapshotContinua
   }
   const ctx=applyContext(proof,entity);
   const recorded=await transaction(pool,async client=>{
+    if(!await store.assertApplyClaim(client,claim)) throw new Error('SNAPSHOT_C_CLAIM_LOST');
+    if(entity==='order'&&!await store.lockOrderCustomerReference(client,claim,proof,row))
+      throw new Error('SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED');
     const applied=entity==='customer'
       ? await applyCustomer(client,ctx,canonical as Parameters<typeof applyCustomer>[2])
       : await applyOrderAggregate(client,ctx,canonical as Parameters<typeof applyOrderAggregate>[2]);
     const result=outcome(applied);
     const saved=await store.recordAggregate(client,claim,{entity,source_pk:row.source_pk,
       aggregate_digest:aggregate,proof_scope_digest:proofScope,status:result.status,error_code:result.error});
+    if(!saved) throw new Error('SNAPSHOT_OUTCOME_COMMIT_REJECTED');
+    await hooks.beforeAggregateCommit?.({run_id:claim.run_id,entity,source_pk:row.source_pk});
     return saved;
   });
-  if(!recorded) throw new Error('SNAPSHOT_OUTCOME_COMMIT_REJECTED');
   return true;
 }
 
@@ -152,34 +167,63 @@ function retryableContinuationFailure(error:unknown):boolean {
   );
 }
 
-async function processClaim(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim):Promise<void> {
-  const start=await store.begin(claim);
-  if(!Number.isInteger(start)||start<1||start>4) throw new Error('SNAPSHOT_C_START_LEASE_LOST');
-  const proof=await store.loadProof(claim);
-  const {semantic,scope}=await validateAndSeal(store,claim,proof);
-  const observation=(proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'
-    ? await store.observation(claim,semantic,scope) : undefined;
-  if((proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'&&!observation) throw new Error('SNAPSHOT_OBSERVATION_ALLOCATION_FAILED');
-  let done=0;
-  for(const entity of proof.expected_entities) {
-    for await(const page of store.semanticFacts(claim,entity)) {
-      for(const row of page) { if(await applyOne(pool,store,claim,proof,entity,row,observation,scope)) done++; }
+async function processClaim(pool:Pool,store:ReturnType<typeof createSnapshotContinuationStore>,claim:SnapshotContinuationClaim,
+  leaseSeconds:number,hooks:SnapshotContinuationHooks):Promise<void> {
+  let leaseLost=false,heartbeatRunning=false;
+  const heartbeat=async()=>{
+    if(heartbeatRunning||leaseLost) return;
+    heartbeatRunning=true;
+    try { if(!await store.heartbeat(claim,leaseSeconds)) leaseLost=true; }
+    catch { leaseLost=true; }
+    finally { heartbeatRunning=false; }
+  };
+  const assertLease=async()=>{
+    if(leaseLost||!await store.heartbeat(claim,leaseSeconds)) {
+      leaseLost=true;
+      throw new Error('SNAPSHOT_C_START_LEASE_LOST');
     }
+  };
+  const timer=setInterval(()=>{ void heartbeat(); },Math.max(1000,Math.floor(leaseSeconds*1000/3)));
+  timer.unref?.();
+  try {
+    await assertLease();
+    const start=await store.begin(claim);
+    if(!Number.isInteger(start)||start<1||start>4) throw new Error('SNAPSHOT_C_START_LEASE_LOST');
+    const proof=await store.loadProof(claim);
+    await hooks.afterProofLoaded?.(claim);
+    const {semantic,scope}=await validateAndSeal(store,claim,proof);
+    await hooks.afterValidationSeal?.(claim);
+    await assertLease();
+    const observation=(proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'
+      ? await store.observation(claim,semantic,scope) : undefined;
+    if((proof.config as any).version_domain==='SNAPSHOT_OBSERVATION'&&!observation) throw new Error('SNAPSHOT_OBSERVATION_ALLOCATION_FAILED');
+    for(const entity of proof.expected_entities) {
+      for await(const page of store.semanticFacts(claim,entity)) {
+        for(const row of page) {
+          await assertLease();
+          if(await applyOne(pool,store,claim,proof,entity,row,observation,scope,hooks)) {
+            await hooks.afterAggregateCommit?.({run_id:claim.run_id,entity,source_pk:row.source_pk});
+          }
+        }
+      }
+    }
+    await assertLease();
+    if(!await store.finish(claim)) throw new Error('SNAPSHOT_FINISH_REJECTED');
+  } finally {
+    clearInterval(timer);
   }
-  if(!await store.finish(claim)) throw new Error('SNAPSHOT_FINISH_REJECTED');
-  void done;
 }
 
-export async function runSnapshotContinuationWorkerOnce(pool:Pool,limit=20):Promise<number> {
+export async function runSnapshotContinuationWorkerOnce(pool:Pool,limit=20,leaseSeconds=60,hooks:SnapshotContinuationHooks={}):Promise<number> {
   const store=createSnapshotContinuationStore(pool);
   const sources=await pool.query<{tenant_key:string;source_id:string}>(`SELECT tenant_key,source_id FROM control.etl_run
     WHERE status IN ('VALIDATING','READY','APPLYING') ORDER BY created_at,run_id LIMIT $1`,[limit]);
   let claimed=0;
   for(const source of sources.rows) {
-    const claim=await store.claim(source.tenant_key,source.source_id);
+    const claim=await store.claim(source.tenant_key,source.source_id,leaseSeconds);
     if(!claim) continue;
     claimed++;
-    try { await processClaim(pool,store,claim); }
+    try { await processClaim(pool,store,claim,leaseSeconds,hooks); }
     catch(error) {
       const code=error instanceof Error&&/^SNAPSHOT_[A-Z0-9_:-]{1,90}$/.test(error.message)?error.message:'SNAPSHOT_C_PROCESSING_FAILED';
       const pgError=typeof error==='object'&&error!==null?error as {code?:unknown;constraint?:unknown;column?:unknown}:undefined;

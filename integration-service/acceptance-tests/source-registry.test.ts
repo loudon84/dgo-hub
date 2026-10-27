@@ -708,6 +708,15 @@ describe('M1 source admission authorization', () => {
       const after=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',headers});
       expect(after.statusCode).toBe(200);
       expect(after.json().data.items).toEqual([{source_pk:'C-2',target_id:targetIds[1]}]);
+      await fixture.pool.query(`UPDATE control.auth_subject SET management_scopes=array_remove(management_scopes,'source:approve')
+        WHERE tenant_key=$1 AND user_id=$2`,[owner.tenantId,owner.userId]);
+      const staleScope=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',headers});
+      expect(staleScope.statusCode).toBe(403);
+      await fixture.pool.query(`UPDATE control.auth_subject SET management_scopes=$3::text[] WHERE tenant_key=$1 AND user_id=$2`,
+        [owner.tenantId,owner.userId,owner.managementScopes]);
+      await fixture.pool.query(`UPDATE control.identity_binding SET enabled=false WHERE tenant_key=$1 AND user_id=$2`,[owner.tenantId,owner.userId]);
+      const staleBinding=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',headers});
+      expect(staleBinding.statusCode).toBe(401);
     } finally { await app.close(); }
   });
 

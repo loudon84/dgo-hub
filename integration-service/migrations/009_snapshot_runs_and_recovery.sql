@@ -702,6 +702,10 @@ BEGIN
   END IF;
   IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key AND b.effective_fence>r.security_barrier_fence
     AND (b.source_id IS NULL OR b.source_id=p_source_id)
+    AND (b.credential_id IS NULL OR b.credential_id=r.credential_id)
+    AND (b.entity IS NULL OR b.entity=ANY(r.expected_entities))
+    AND (b.channel_id IS NULL OR EXISTS(SELECT 1 FROM jsonb_each(r.entity_channel_proof) e
+      WHERE (e.value->>'channel_id')::uuid=b.channel_id))
     AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN
     UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
       completeness_summary=jsonb_build_object('status','FAILED','error_code','SECURITY_BARRIER_ACTIVE') WHERE er.run_id=r.run_id;
@@ -735,6 +739,35 @@ BEGIN
       WHERE (e.value->>'channel_id')::uuid=b.channel_id))
     AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN RETURN false; END IF;
   RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.assert_etl_snapshot_apply_claim(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  RETURN control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token);
+END;
+$body$;
+
+CREATE FUNCTION control.lock_etl_snapshot_order_customer_reference(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_customer_source_id text,p_customer_source_pk text,p_identity_mappings jsonb)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
+AS $body$
+DECLARE mapped_target text; tuple_target uuid; live_target uuid;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  IF jsonb_typeof(p_identity_mappings)<>'array' OR p_customer_source_pk IS NULL OR p_customer_source_pk='' THEN RETURN false; END IF;
+  SELECT x->>'target_id' INTO mapped_target FROM jsonb_array_elements(p_identity_mappings) x
+    WHERE x->>'kind'='customer' AND x->>'external_id'=p_customer_source_pk LIMIT 1;
+  IF mapped_target IS NULL THEN RETURN false; END IF;
+  SELECT customer_id INTO tuple_target FROM control.canonical_source_identity
+    WHERE tenant_key=p_tenant_key AND source_id=p_customer_source_id AND entity='customer' AND source_pk=p_customer_source_pk
+    FOR SHARE;
+  IF NOT FOUND OR tuple_target::text<>mapped_target THEN RETURN false; END IF;
+  SELECT id INTO live_target FROM hub.canonical_customer
+    WHERE tenant_id=p_tenant_key AND id=tuple_target AND deleted_at IS NULL FOR SHARE;
+  RETURN FOUND AND live_target=tuple_target;
 END;
 $body$;
 
@@ -779,7 +812,7 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
   SELECT * INTO c FROM control.etl_snapshot_continuation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
-    AND attempt_id=p_attempt_id AND claim_token=p_claim_token FOR UPDATE;
+    AND attempt_id=p_attempt_id AND claim_token=p_claim_token AND lease_until>clock_timestamp() FOR UPDATE;
   IF NOT FOUND THEN RETURN 'STALE'; END IF;
   UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,last_error_code=left(p_error_code,96),
     next_retry_at=CASE WHEN p_retryable AND c.c_start_count<4 THEN clock_timestamp()+make_interval(secs=>delay_seconds[LEAST(c.c_start_count,3)]) ELSE clock_timestamp() END,
@@ -888,11 +921,52 @@ BEGIN
     WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.run_id=p_run_id AND o.attempt_id=p_attempt_id
       AND o.entity='order' AND o.relation='order' AND
       (o.facts->>'customer_id' IS NULL OR im.target_id IS NULL OR im.target_id<>cc.id::text OR cc.id IS NULL OR
-        (p_customer_included AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record c
+        (p_customer_included AND p_customer_source_id=p_source_id AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record c
           WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id AND c.attempt_id=p_attempt_id
             AND c.entity='customer' AND c.relation='customer' AND c.source_pk=o.facts->>'customer_id'
             AND COALESCE(c.facts->>'deleted_at','false') IN ('false','')))))
     THEN RETURN QUERY SELECT false,'IDENTITY_MAPPING_TARGET_INVALID'; RETURN; END IF;
+  RETURN QUERY SELECT true,NULL::text;
+END;
+$body$;
+
+CREATE FUNCTION control.validate_etl_snapshot_customer_references(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_identity_mapping_revision bigint,p_identity_mappings jsonb)
+RETURNS TABLE(valid boolean,error_code text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE customer_row record; owner_external text; department_external text; owner_target text; department_target text;
+  owner_state record; tombstone text;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN
+    RETURN QUERY SELECT false,'SNAPSHOT_CLAIM_LOST'; RETURN;
+  END IF;
+  IF p_identity_mapping_revision<1 OR jsonb_typeof(p_identity_mappings)<>'array' THEN
+    RETURN QUERY SELECT false,'SNAPSHOT_C_PROOF_INVALID'; RETURN;
+  END IF;
+  FOR customer_row IN SELECT source_pk,facts FROM control.etl_snapshot_stage_record
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id
+      AND entity='customer' AND relation='customer' ORDER BY source_pk COLLATE "C"
+  LOOP
+    tombstone:=customer_row.facts->>'deleted_at';
+    IF tombstone IS NOT NULL AND tombstone NOT IN ('','false') THEN CONTINUE; END IF;
+    owner_external:=customer_row.facts->>'owner_user_id';
+    department_external:=customer_row.facts->>'dept_id';
+    SELECT x->>'target_id' INTO owner_target FROM jsonb_array_elements(p_identity_mappings) x
+      WHERE x->>'kind'='user' AND x->>'external_id'=owner_external LIMIT 1;
+    SELECT x->>'target_id' INTO department_target FROM jsonb_array_elements(p_identity_mappings) x
+      WHERE x->>'kind'='department' AND x->>'external_id'=department_external LIMIT 1;
+    IF owner_external IS NULL OR department_external IS NULL OR owner_target IS NULL OR department_target IS NULL OR
+      EXISTS(SELECT 1 FROM control.source_identity_remap_fence f WHERE f.tenant_key=p_tenant_key AND f.source_id=p_source_id
+        AND ((f.kind='user' AND f.external_id=owner_external) OR (f.kind='department' AND f.external_id=department_external))
+        AND f.identity_mapping_revision>p_identity_mapping_revision) THEN
+      RETURN QUERY SELECT false,'SNAPSHOT_CUSTOMER_IDENTITY_INVALID'; RETURN;
+    END IF;
+    SELECT * INTO owner_state FROM control.lock_canonical_owner(p_tenant_key,owner_target);
+    IF NOT FOUND OR NOT COALESCE(owner_state.enabled,false) OR owner_state.business_role<>'sales' OR
+        owner_state.department_id IS NULL OR owner_state.department_id<>department_target THEN
+      RETURN QUERY SELECT false,'SNAPSHOT_CUSTOMER_IDENTITY_INVALID'; RETURN;
+    END IF;
+  END LOOP;
   RETURN QUERY SELECT true,NULL::text;
 END;
 $body$;
@@ -969,11 +1043,14 @@ BEGIN
       AND v.attempt_id=p_attempt_id AND v.semantic_digest=p_semantic_digest AND v.proof_scope_digest=p_reuse_scope_digest) THEN RETURN NULL; END IF;
   SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
   IF chosen IS NOT NULL THEN RETURN chosen::text; END IF;
-  SELECT o.sequence_value INTO existing FROM control.etl_snapshot_observation_allocation o
-    JOIN control.etl_snapshot_observation b ON (b.tenant_key,b.source_id,b.sequence_value)=(o.tenant_key,o.source_id,o.sequence_value)
-    JOIN control.etl_run prior ON (prior.tenant_key,prior.source_id,prior.run_id)=(b.tenant_key,b.source_id,b.run_id)
-    WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.semantic_digest=p_semantic_digest
-      AND o.reuse_scope_digest=p_reuse_scope_digest AND prior.status='COMPLETE' ORDER BY o.sequence_value LIMIT 1;
+  SELECT a.sequence_value INTO existing FROM control.etl_snapshot_observation_sequence s
+    JOIN control.etl_snapshot_observation_allocation a ON (a.tenant_key,a.source_id,a.sequence_value)=(s.tenant_key,s.source_id,s.next_value-1)
+    WHERE s.tenant_key=p_tenant_key AND s.source_id=p_source_id AND a.semantic_digest=p_semantic_digest
+      AND a.reuse_scope_digest=p_reuse_scope_digest
+      AND EXISTS(SELECT 1 FROM control.etl_snapshot_observation b JOIN control.etl_run prior
+        ON (prior.tenant_key,prior.source_id,prior.run_id)=(b.tenant_key,b.source_id,b.run_id)
+        WHERE (b.tenant_key,b.source_id,b.sequence_value)=(a.tenant_key,a.source_id,a.sequence_value) AND prior.status='COMPLETE')
+    ORDER BY a.sequence_value DESC LIMIT 1;
   IF existing IS NOT NULL THEN chosen:=existing;
   ELSE
     INSERT INTO control.etl_snapshot_observation_sequence(tenant_key,source_id) VALUES(p_tenant_key,p_source_id) ON CONFLICT DO NOTHING;
@@ -1053,10 +1130,13 @@ REVOKE ALL ON control.etl_snapshot_continuation,control.etl_snapshot_validation,
   control.etl_snapshot_apply_range,control.etl_snapshot_checkpoint FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
 REVOKE ALL ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
   control.assert_etl_snapshot_continuation(text,text,uuid,uuid,uuid),control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),
+  control.assert_etl_snapshot_apply_claim(text,text,uuid,uuid,uuid),
+  control.lock_etl_snapshot_order_customer_reference(text,text,uuid,uuid,uuid,text,text,jsonb),
   control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),
   control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
   control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
   control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
+  control.validate_etl_snapshot_customer_references(text,text,uuid,uuid,uuid,bigint,jsonb),
   control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
   control.read_etl_snapshot_semantic_chunk(text,text,uuid,uuid,uuid,text,text,text,text,integer),
   control.seal_etl_snapshot_validation(text,text,uuid,uuid,uuid,bytea,bytea,bytea,jsonb),
@@ -1064,8 +1144,12 @@ REVOKE ALL ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer
   control.record_etl_snapshot_aggregate(text,text,uuid,uuid,uuid,text,text,text,text,bytea,bytea,text,text),
   control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
-  control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),
-  control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
+  control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),control.assert_etl_snapshot_apply_claim(text,text,uuid,uuid,uuid),
+  control.lock_etl_snapshot_order_customer_reference(text,text,uuid,uuid,uuid,text,text,jsonb),
+  control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),
+  control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),
+  control.validate_etl_snapshot_customer_references(text,text,uuid,uuid,uuid,bigint,jsonb),
+  control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
   control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
   control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
   control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
