@@ -154,9 +154,15 @@ export async function registerSourceRegistryRoutes(app: FastifyInstance, options
       } catch (error) { return failure(request, reply, error); }
     });
 
-    admin.get<{ Querystring: { source_id?: string; kind?: string; external_id?: string } }>('/hub/v1/admin/identity-mappings', async (request, reply) => {
+    admin.get<{ Querystring: { source_id?: string; kind?: string; external_id?: string; mode?: string; limit?: string; cursor?: string } }>('/hub/v1/admin/identity-mappings', async (request, reply) => {
       try {
         const principal = await currentUser(request, options.authenticator);
+        if(request.query.mode!==undefined) {
+          if(request.query.mode!=='source_customers'||!request.query.source_id||request.query.kind!=='customer'||request.query.external_id!==undefined)
+            throw new AuthError('AUTH_INPUT_INVALID');
+          return reply.send(envelope(request,await options.sourceService.sourceCustomerCandidates(principal,request.query.source_id,
+            request.query.limit,request.query.cursor)));
+        }
         return reply.send(envelope(request, await options.sourceService.identityMappings(principal,request.query.source_id,
           request.query.kind,request.query.external_id)));
       } catch (error) { return failure(request, reply, error); }

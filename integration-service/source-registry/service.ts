@@ -77,6 +77,16 @@ function stable(value: unknown): string {
   return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stable(record[key])}`).join(',')}}`;
 }
 function digest(value: unknown): Buffer { return createHash('sha256').update(stable(value), 'utf8').digest(); }
+function encodeSourceCustomerCursor(sourceId:string,sourcePk:string):string { return Buffer.from(`${sourceId}\0${sourcePk}`,'utf8').toString('base64url'); }
+function decodeSourceCustomerCursor(sourceId:string,cursor:unknown):string|undefined {
+  if(cursor===undefined) return undefined;
+  if(typeof cursor!=='string'||cursor.length>1024||!/^[A-Za-z0-9_-]+$/.test(cursor)) fail('AUTH_INPUT_INVALID');
+  const decoded=Buffer.from(cursor,'base64url').toString('utf8');
+  if(Buffer.from(decoded,'utf8').toString('base64url')!==cursor) fail('AUTH_INPUT_INVALID');
+  const split=decoded.indexOf('\0');
+  if(split<1||decoded.slice(0,split)!==sourceId||split===decoded.length-1) fail('AUTH_INPUT_INVALID');
+  return decoded.slice(split+1);
+}
 function decimal(value: unknown): string {
   const text = String(value);
   if (!/^(?:0|[1-9][0-9]*)$/.test(text)) fail('AUTH_UNAVAILABLE');
@@ -651,6 +661,26 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     })) }));
   }
 
+  async function sourceCustomerCandidates(principal:UserPrincipal,sourceId:string,limitInput:unknown=20,cursorInput?:unknown) {
+    requireScope(principal,'source:approve');
+    if(typeof sourceId!=='string'||!SOURCE_ID.test(sourceId)) fail('AUTH_INPUT_INVALID');
+    const limit=typeof limitInput==='number'?limitInput:typeof limitInput==='string'&&/^(?:[1-9][0-9]{0,2})$/.test(limitInput)?Number(limitInput):NaN;
+    if(!Number.isInteger(limit)||limit<1||limit>100) fail('AUTH_INPUT_INVALID');
+    const after=decodeSourceCustomerCursor(sourceId,cursorInput);
+    return transaction(pool,async client=>{
+      const source=await sourceRow(client,principal.tenantId,sourceId,true);
+      if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
+      await currentOwner(client,principal.tenantId,principal.userId);
+      const result=await client.query<{source_pk:string;target_id:string}>(`SELECT source_pk,target_id
+        FROM api.source_customer_identity_candidates WHERE tenant_key=$1 AND source_id=$2
+          AND ($3::text IS NULL OR source_pk COLLATE "C">$3 COLLATE "C")
+        ORDER BY source_pk COLLATE "C" LIMIT $4`,[principal.tenantId,sourceId,after??null,limit+1]);
+      const hasMore=result.rows.length>limit,rows=result.rows.slice(0,limit);
+      return Object.freeze({source_id:sourceId,items:Object.freeze(rows.map(row=>Object.freeze({source_pk:row.source_pk,target_id:row.target_id}))),
+        next_cursor:hasMore&&rows.length?encodeSourceCustomerCursor(sourceId,rows.at(-1)!.source_pk):null});
+    });
+  }
+
   async function currentOwnerForRead(principal:UserPrincipal) {
     const result=await pool.query('SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key) WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled',[principal.tenantId,principal.userId]);
     if(!result.rowCount) fail('AUTH_FORBIDDEN');
@@ -702,7 +732,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,test,approve,activate,pause,identityMappings,updateIdentityMapping });
+  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,test,approve,activate,pause,
+    identityMappings,sourceCustomerCandidates,updateIdentityMapping });
 }
 
 export type SourceRegistryService = ReturnType<typeof createSourceRegistryService>;

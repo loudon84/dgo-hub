@@ -7,6 +7,7 @@ import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-con
 import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
 import { durableRetryDelayMs } from './retry.js';
 import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
+import { runSnapshotContinuationWorkerOnce } from './snapshot-apply-worker.js';
 
 type Source = { name: string; url: string; table: string; kind: 'customer' | 'order' };
 type LegacyDependencies = {
@@ -382,6 +383,7 @@ export async function runDurableWorkerLoop(pool: Pool, environment: NodeJS.Proce
   do {
     await runDurableWorkerOnce(pool);
     if (snapshotDependencies) await runSnapshotWorkerOnce(pool, snapshotDependencies);
+    await runSnapshotContinuationWorkerOnce(pool);
     if (once) return;
     await new Promise(resolve => setTimeout(resolve,interval));
   } while (true);

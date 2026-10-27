@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAuthService } from '../auth/service.js';
@@ -77,6 +77,82 @@ beforeEach(async () => {
 afterAll(async () => { if (fixture) await fixture.close(); });
 
 describe('durable snapshot run admission', () => {
+  it('upgrades populated 001-008 registry facts through 009 and preserves every prior checksum', async () => {
+    if(!evidenceRoot) throw new Error('M0_RUN_EVIDENCE_ROOT_REQUIRED');
+    const upgradeFixture=await startOwnedPostgres({evidenceFile:join(evidenceRoot,'populated-008-upgrade.jsonl'),evidenceRoot,
+      taskLabel:'m1task5',imageReference:postgresImage});
+    const upgradeDirectory=join(evidenceRoot,`migrations-008-${randomUUID()}`);
+    await mkdir(upgradeDirectory,{recursive:false});
+    try {
+      const migrationNames=(await readdir(migrationsDirectory)).filter(name=>/^00[1-8]_.*\.sql$/.test(name));
+      expect(migrationNames).toHaveLength(8);
+      for(const name of migrationNames) await copyFile(join(migrationsDirectory,name),join(upgradeDirectory,name));
+      const through008=await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'});
+      expect(through008.applied).toHaveLength(8);
+      const upgradeAuth=createAuthService({pool:upgradeFixture.pool});
+      await upgradeAuth.repository.provisionTenant({tenantId:owner.tenantId,businessTimezone:'UTC'});
+      await upgradeAuth.repository.provisionSubject({tenantId:owner.tenantId,userId:owner.userId,managementScopes:owner.managementScopes});
+      await upgradeAuth.repository.bindIdentity({issuer:owner.issuer,subject:owner.subject,tenantId:owner.tenantId,userId:owner.userId});
+      await upgradeAuth.repository.provisionSourceCredential({sourceId:'pg-populated-008',tenantId:owner.tenantId,token:createCredential().secret,
+        secretRef:'vault:/snapshot/source',allowedEntities:['customer'],revision:'1'});
+      const config={name:'Populated 008 source',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
+        endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer'],delete_contract:'hard_delete'};
+      const mappings=[
+        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+      ];
+      const identityMappings=[{kind:'user',external_id:'owner-ext',target_id:owner.userId},
+        {kind:'department',external_id:'dept-ext',target_id:'sales-east'}];
+      const configDigest=createHash('sha256').update(JSON.stringify(config)).digest();
+      const mappingDigest=createHash('sha256').update(JSON.stringify(mappings)).digest();
+      const identityDigest=createHash('sha256').update(JSON.stringify(identityMappings)).digest();
+      const profileDigest=createHash('sha256').update('accepted-profile-at-008').digest();
+      await upgradeFixture.pool.query(`INSERT INTO control.source_registry(tenant_key,source_id,lifecycle,data_owner_user_id)
+        VALUES($1,'pg-populated-008','ACTIVE',$2)`,[owner.tenantId,owner.userId]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
+        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,configDigest,JSON.stringify(config),owner.userId]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,mappingDigest,JSON.stringify(mappings),owner.userId]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_identity_mapping_revision(tenant_key,source_id,revision,mapping_digest,mappings,created_by)
+        VALUES($1,'pg-populated-008',1,$2,$3,$4)`,[owner.tenantId,identityDigest,JSON.stringify(identityMappings),owner.userId]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_channel(tenant_key,source_id,entity,connector,mode,version_domain,channel_epoch,state)
+        VALUES($1,'pg-populated-008','customer','postgresql','FULL_SNAPSHOT','SNAPSHOT_OBSERVATION',1,'active')`,[owner.tenantId]);
+      const report=await upgradeFixture.pool.query(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,
+        identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
+        endpoint_profile_digest,data_contract_ref,report,status,created_by)
+        VALUES($1,'pg-populated-008',1,1,1,$2,$3,$4,1,1,$5,'contract:populated-008','{"checks":["READ_ONLY","MAPPING_VALID"]}',
+          'PASS',$6) RETURNING id`,[owner.tenantId,configDigest,mappingDigest,identityDigest,profileDigest,owner.userId]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,
+        mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,
+        credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
+        VALUES($1,'pg-populated-008',$2,1,1,1,1,$3,$4,$5,1,1,$6,'contract:populated-008',$7)`,
+        [owner.tenantId,owner.userId,configDigest,mappingDigest,identityDigest,profileDigest,report.rows[0].id]);
+      await upgradeFixture.pool.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,new_state,owner_revision,details)
+        VALUES($1,'pg-populated-008',$2,'APPROVED','ACTIVE',1,'{"source":"migration-upgrade-fixture"}')`,[owner.tenantId,owner.userId]);
+      const before=await upgradeFixture.pool.query(`SELECT version,name,checksum FROM control.schema_migration WHERE version<=8 ORDER BY version`);
+      const populated=await upgradeFixture.pool.query(`SELECT
+        (SELECT count(*)::int FROM control.source_registry WHERE source_id='pg-populated-008') AS registry,
+        (SELECT count(*)::int FROM control.source_credential WHERE source_id='pg-populated-008') AS credentials,
+        (SELECT count(*)::int FROM control.source_config_revision WHERE source_id='pg-populated-008') AS configs,
+        (SELECT count(*)::int FROM control.source_mapping_revision WHERE source_id='pg-populated-008') AS mappings,
+        (SELECT count(*)::int FROM control.source_identity_mapping_revision WHERE source_id='pg-populated-008') AS identity_maps,
+        (SELECT count(*)::int FROM control.source_test_report WHERE source_id='pg-populated-008') AS reports,
+        (SELECT count(*)::int FROM control.source_owner_approval WHERE source_id='pg-populated-008') AS approvals`);
+      expect(populated.rows[0]).toEqual({registry:1,credentials:1,configs:1,mappings:1,identity_maps:1,reports:1,approvals:1});
+      await copyFile(join(migrationsDirectory,'009_snapshot_runs_and_recovery.sql'),join(upgradeDirectory,'009_snapshot_runs_and_recovery.sql'));
+      expect(await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'}))
+        .toMatchObject({applied:['009_snapshot_runs_and_recovery']});
+      expect(await runMigrations(upgradeFixture.pool,{directory:upgradeDirectory,environmentKind:'local_lab'}))
+        .toMatchObject({applied:[],skipped:expect.arrayContaining(['009_snapshot_runs_and_recovery'])});
+      const after=await upgradeFixture.pool.query(`SELECT version,name,checksum FROM control.schema_migration WHERE version<=8 ORDER BY version`);
+      expect(after.rows).toEqual(before.rows);
+      const populatedAfter=await upgradeFixture.pool.query(`SELECT count(*)::int AS count FROM control.source_owner_approval WHERE source_id='pg-populated-008'`);
+      expect(populatedAfter.rows[0].count).toBe(1);
+    } finally { await upgradeFixture.close(); }
+  },60_000);
+
   it('applies and repeats migration 009, with API and worker limited to their exact run rights', async () => {
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
     expect(initialMigrations.applied).toContain('009_snapshot_runs_and_recovery');
@@ -138,6 +214,23 @@ describe('durable snapshot run admission', () => {
       FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
       WHERE r.run_id=$1`,[run.run_id]);
     expect(state.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'1',state:'EXTRACTED',records:1});
+    const continuation= (await import('../etl-worker/snapshot-continuation-store.js')).createSnapshotContinuationStore(roleScopedPool('hub_worker'));
+    const staleClaim=await continuation.claim(owner.tenantId,'pg-main');
+    expect(staleClaim).toBeTruthy();
+    await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET claim_token=$2 WHERE run_id=$1`,[run.run_id,randomUUID()]);
+    await expect(continuation.begin(staleClaim!)).resolves.toBe(0);
+    const startsAfterStale=await fixture.pool.query(`SELECT c_start_count FROM control.etl_snapshot_continuation WHERE run_id=$1`,[run.run_id]);
+    expect(startsAfterStale.rows[0].c_start_count).toBe(0);
+    await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL WHERE run_id=$1`,[run.run_id]);
+    const fencedClaim=await continuation.claim(owner.tenantId,'pg-main');
+    expect(fencedClaim).toBeTruthy();
+    await fixture.pool.query(`INSERT INTO control.source_security_barrier
+      (tenant_key,source_id,barrier_type,reason_code,created_by) VALUES($1,'pg-main','SOURCE_SCOPE_SECURITY_REMOVAL','TEST_C_FENCE','snapshot_owner')`,
+      [owner.tenantId]);
+    await expect(continuation.loadProof(fencedClaim!)).rejects.toThrow('SNAPSHOT_C_PROOF_INVALID');
+    const barrierEffects=await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations,
+      (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes`,[run.run_id]);
+    expect(barrierEffects.rows[0]).toEqual({observations:0,outcomes:0});
   });
 
   it('restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan', async () => {
@@ -157,31 +250,33 @@ describe('durable snapshot run admission', () => {
       try {
         await ownerClient.query(`SET ROLE ${sourceOwner}`);
         await ownerClient.query(`CREATE TABLE ${sourceSchema}.customers(customer_id text PRIMARY KEY,customer_name text NOT NULL,owner_id text NOT NULL,
-          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL)`);
+          department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL,source_version text NOT NULL DEFAULT '1',deleted_at timestamptz)`);
         await ownerClient.query(`CREATE TABLE ${sourceSchema}.orders(order_id bigint PRIMARY KEY,customer_id text NOT NULL,order_no text NOT NULL,
-          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(30,12) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
+          status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(20,2) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
         await ownerClient.query(`CREATE TABLE ${sourceSchema}.order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL REFERENCES ${sourceSchema}.orders(order_id),
-          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(30,12) NOT NULL,unit_price numeric(30,12) NOT NULL,line_amount numeric(30,12) NOT NULL)`);
+          product_code text NOT NULL,product_name text NOT NULL,quantity numeric(20,6) NOT NULL,unit_price numeric(20,6) NOT NULL,line_amount numeric(20,2) NOT NULL)`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-1','Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:00.123456+00')`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.customers VALUES('C-2','Second Customer','owner-ext','dept-ext','ACTIVE','2026-10-25 10:00:01.123456+00')`);
         await ownerClient.query(`INSERT INTO ${sourceSchema}.orders VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',
-          123456789012345678.123456789012,'USD','2026-10-25 10:01:03.123456+00')`);
-        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456789012,
-          123456789012.123456789012,138636548569.222222221445)`);
-        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-2',9007199254740993123,'SKU-2','Second Line',2.123456789012,
-          223456789012.123456789012,238636548569.222222221445)`);
+          123456789012345678.12,'USD','2026-10-25 10:01:03.123456+00')`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456,
+          123456789012.123456,138636548569.22)`);
+        await ownerClient.query(`INSERT INTO ${sourceSchema}.order_lines VALUES('L-2',9007199254740993123,'SKU-2','Second Line',2.123456,
+          223456789012.123456,238636548569.22)`);
       } finally { await ownerClient.query('RESET ROLE').catch(()=>undefined); ownerClient.release(); }
       await sourceFixture.pool.query(`GRANT USAGE ON SCHEMA ${sourceSchema} TO ${sourceReader}`);
       await sourceFixture.pool.query(`GRANT SELECT ON ${sourceSchema}.customers,${sourceSchema}.orders,${sourceSchema}.order_lines TO ${sourceReader}`);
       await ownerPool.query('SELECT 1');
       e2eEndpointProfile={revision:'owned-source-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:sourceFixture.hostPort,
         allow_loopback_plaintext:true,database:'postgres',user:sourceReader,schema:sourceSchema,entities:{
-          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'},
+          customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at',version_field:'source_version',delete_field:'deleted_at'},
           order:{table:'orders',source_pk:'order_id',updated_at_field:'updated_at',lines:{table:'order_lines',order_fk:'order_id'}},
         }};
       await auth.repository.provisionSourceCredential({sourceId:'pg-e2e',tenantId:owner.tenantId,token:createCredential().secret,
         secretRef:'vault:/snapshot/source',allowedEntities:['customer','order'],revision:'1'});
-      const allowedEntities=['customer','order'] as const;
+      await auth.repository.updateSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'sales-east',businessRole:'sales',
+        managementScopes:owner.managementScopes});
+      const allowedEntities=['customer'] as const;
       await service.create(owner,{source_id:'pg-e2e',data_owner_user_id:owner.userId,config:{name:'Owned order snapshot',connector:'postgresql',
         mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
         allowed_entities:allowedEntities,delete_contract:'hard_delete'}});
@@ -190,18 +285,10 @@ describe('durable snapshot run admission', () => {
         {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
         {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
         {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
-        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
-        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
-        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
-        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
-        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
-        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
-        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
-        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
-        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
-        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
-        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
-        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
+      ]);
+      await service.writeIdentityMappings(owner,'pg-e2e',[
+        {kind:'user',external_id:'owner-ext',target_id:owner.userId},
+        {kind:'department',external_id:'dept-ext',target_id:'sales-east'},
       ]);
       const tested=await service.test(owner,'pg-e2e','1');
       expect(tested.status).toBe('PASS');
@@ -215,18 +302,17 @@ describe('durable snapshot run admission', () => {
       expect(invalidClaim).toBeTruthy();
       const invalidAttempt=await store.beginAttempt(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidClaim!.claim_token,60);
       const frozen=await store.loadFrozenProof(owner.tenantId,'pg-e2e',invalidRun.run_id);
-      const emptyCounts=[{relation:'customer',row_count:0,page_count:0,page_digests:[]},
-        {relation:'order',row_count:0,page_count:0,page_digests:[]},{relation:'order_line',row_count:0,page_count:0,page_digests:[]}];
-      const validShape={state:'EXTRACTED',relations:['customer','order','order_line'],relation_counts:emptyCounts,row_count:0,page_count:0,
+      const emptyCounts=[{relation:'customer',row_count:0,page_count:0,page_digests:[]}];
+      const validShape={state:'EXTRACTED',relations:['customer'],relation_counts:emptyCounts,row_count:0,page_count:0,
         source_snapshot_identity:'a'.repeat(64),attempt_id:invalidAttempt.attempt_id,operation_id:invalidAttempt.operation_id,
         profile_digest:frozen.endpoint_profile_digest,mapping_digest:frozen.mapping_digest,config_digest:frozen.config_digest,
         identity_mapping_digest:frozen.identity_mapping_digest};
       const {profile_digest:_profile,mapping_digest:_mapping,...missingProof}=validShape;
       const invalidManifests=[
         missingProof,
-        {...validShape,relation_counts:[emptyCounts[0],emptyCounts[0],emptyCounts[0]]},
-        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],row_count:null},emptyCounts[2]]},
-        {...validShape,relation_counts:[emptyCounts[0],{...emptyCounts[1],page_digests:['f'.repeat(64)]},emptyCounts[2]]},
+        {...validShape,relation_counts:[{...emptyCounts[0],relation:'order'}]},
+        {...validShape,relation_counts:[{...emptyCounts[0],row_count:null}]},
+        {...validShape,relation_counts:[{...emptyCounts[0],page_digests:['f'.repeat(64)]}]},
       ];
       for (const malformed of invalidManifests) {
         await expect(store.complete(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
@@ -238,13 +324,15 @@ describe('durable snapshot run admission', () => {
       await expect(store.fail(owner.tenantId,'pg-e2e',invalidRun.run_id,invalidAttempt.attempt_id,invalidClaim!.claim_token,
         'SNAPSHOT_PROFILE_INVALID',false)).resolves.toBe('FAILED');
       const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e','1','owned-e2e-run');
-      const realFactory=createLocalLabPostgresSourceConnectionFactory();
+      const rawFactory=createLocalLabPostgresSourceConnectionFactory();
+      let sourceConnectCalls=0;
+      const realFactory:PostgresSourceConnectionFactory={connect:async input=>{sourceConnectCalls++;return rawFactory.connect(input);}};
       let loseSourceOnce=true;
       let ownedReaderPid:number|undefined;
       const interruptedFactory: PostgresSourceConnectionFactory={connect:async input=>{
         const connection=await realFactory.connect(input);
         return {query:async(sql:string)=>{
-          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_order')) {
+          if(loseSourceOnce && sql.startsWith('FETCH') && sql.includes('hub_snapshot_customer')) {
             loseSourceOnce=false;
             if (!ownedReaderPid) throw new Error('owned source reader PID was not captured');
             const terminated=await sourceFixture.pool.query(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
@@ -271,26 +359,220 @@ describe('durable snapshot run admission', () => {
         count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
         WHERE r.run_id=$1 GROUP BY r.status,a.ordinal,a.status,a.error_code`,[run.run_id]);
-      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:2}]);
+      expect(incomplete.rows).toEqual([{status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE',staged:0}]);
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       await fixture.pool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()-interval '1 second' WHERE run_id=$1`,[run.run_id]);
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
-      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,m.state,m.manifest->'relation_counts' AS counts,
+      const staged=await fixture.pool.query(`SELECT r.status,r.extracted_count,r.completeness_summary,m.state,m.manifest->'relation_counts' AS counts,
         array_agg(DISTINCT s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
         JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
-        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,m.state,m.manifest`,[run.run_id]);
-      expect(staged.rows[0]).toMatchObject({status:'VALIDATING',extracted_count:'5',state:'EXTRACTED',relations:['customer','order','order_line']});
-      expect(staged.rows[0].counts).toEqual([
+        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,r.completeness_summary,m.state,m.manifest`,[run.run_id]);
+      expect(staged.rows[0]).toMatchObject({status:'COMPLETE',extracted_count:'2',state:'EXTRACTED',relations:['customer']});
+      expect(staged.rows[0].counts).toEqual([expect.objectContaining({relation:'customer',row_count:2,page_count:2})]);
+      const candidates=await service.sourceCustomerCandidates(owner,'pg-e2e');
+      expect(candidates.items.map(item=>item.source_pk)).toEqual(['C-1','C-2']);
+      const c1=candidates.items.find(item=>item.source_pk==='C-1');
+      expect(c1).toBeTruthy();
+      const combinedConfig={name:'Owned order snapshot',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
+        endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer','order'],delete_contract:'hard_delete'};
+      const updated=await service.update(owner,'pg-e2e',{expected_revision:'1',config:combinedConfig});
+      await service.writeMappings(owner,'pg-e2e',updated.revision,[
+        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
+        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
+        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
+        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
+        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
+        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
+        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
+        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
+      ]);
+      const testedCombined=await service.test(owner,'pg-e2e',updated.revision);
+      const approvedCombined=await service.approve(owner,'pg-e2e',updated.revision,testedCombined.test_report_id,testedCombined.data_contract_ref);
+      await service.activate(owner,'pg-e2e',updated.revision,approvedCombined.approval_id);
+      const missingMapRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-unmapped-combined-run');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const rejectedCombined=await fixture.pool.query(`SELECT status,completeness_summary FROM control.etl_run WHERE run_id=$1`,[missingMapRun.run_id]);
+      expect(rejectedCombined.rows[0]).toMatchObject({status:'FAILED',completeness_summary:{status:'FAILED',error_code:'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID'}});
+      const rejectedEffects=await fixture.pool.query(`SELECT
+        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=$1) AS ranges`,[missingMapRun.run_id]);
+      expect(rejectedEffects.rows[0]).toEqual({observations:0,outcomes:0,ranges:0});
+      await service.updateIdentityMapping(owner,Buffer.from('pg-e2e\0customer\0C-1','utf8').toString('base64url'),'1',c1!.target_id,
+        'confirm exact source customer before order bootstrap');
+      const revalidatedCombined=await service.test(owner,'pg-e2e',updated.revision);
+      const reapprovedCombined=await service.approve(owner,'pg-e2e',updated.revision,revalidatedCombined.test_report_id,revalidatedCombined.data_contract_ref);
+      await service.activate(owner,'pg-e2e',updated.revision,reapprovedCombined.approval_id);
+      const combinedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-combined-e2e-run');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const combined=await fixture.pool.query(`SELECT r.status,r.extracted_count,r.completeness_summary,m.manifest->'relation_counts' AS counts,
+        array_agg(DISTINCT s.relation ORDER BY s.relation) AS relations FROM control.etl_run r JOIN control.etl_snapshot_manifest m USING(tenant_key,source_id,run_id)
+        JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id)
+        WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,r.completeness_summary,m.manifest`,[combinedRun.run_id]);
+      expect(combined.rows[0]).toMatchObject({status:'COMPLETE',extracted_count:'5',relations:['customer','order','order_line']});
+      expect(combined.rows[0].counts).toEqual([
         expect.objectContaining({relation:'customer',row_count:2,page_count:2}),
         expect.objectContaining({relation:'order',row_count:1,page_count:1}),
         expect.objectContaining({relation:'order_line',row_count:2,page_count:2}),
       ]);
-      for (const relation of staged.rows[0].counts as Array<{page_count:number;page_digests:string[]}>)
+      for (const relation of combined.rows[0].counts as Array<{page_count:number;page_digests:string[]}>)
         expect(relation.page_digests).toHaveLength(relation.page_count);
       const attempts=await fixture.pool.query(`SELECT a.ordinal,a.status,count(s.source_pk)::int AS staged FROM control.etl_run_attempt a
         LEFT JOIN control.etl_snapshot_stage_record s USING(tenant_key,source_id,run_id,attempt_id) WHERE a.run_id=$1
-        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[run.run_id]);
-      expect(attempts.rows).toEqual([{ordinal:1,status:'INCOMPLETE',staged:2},{ordinal:2,status:'COMPLETE',staged:5}]);
+        GROUP BY a.ordinal,a.status ORDER BY a.ordinal`,[combinedRun.run_id]);
+      expect(attempts.rows).toEqual([{ordinal:1,status:'COMPLETE',staged:5}]);
+      const firstObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
+        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,combinedRun.run_id]);
+      const allocationsBeforeReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_observation_allocation
+        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
+      const outboxBeforeReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.canonical_apply_outbox
+        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
+      const unchangedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-unchanged-replay');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const unchangedObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
+        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,unchangedRun.run_id]);
+      const allocationsAfterReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_observation_allocation
+        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
+      const outboxAfterReplay=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.canonical_apply_outbox
+        WHERE tenant_key=$1 AND source_id='pg-e2e'`,[owner.tenantId]);
+      expect(unchangedObservation.rows).toEqual(firstObservation.rows);
+      expect(allocationsAfterReplay.rows).toEqual(allocationsBeforeReplay.rows);
+      expect(outboxAfterReplay.rows).toEqual(outboxBeforeReplay.rows);
+      const sourceWriter=await sourceFixture.pool.connect();
+      try {
+        await sourceWriter.query(`SET ROLE ${sourceOwner}`);
+        await sourceWriter.query(`UPDATE ${sourceSchema}.customers SET customer_name='Changed customer',
+          updated_at='2026-10-25 10:10:00.123456+00' WHERE customer_id='C-1'`);
+      } finally { await sourceWriter.query('RESET ROLE').catch(()=>undefined); sourceWriter.release(); }
+      const changedRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'owned-changed-snapshot');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const changedObservation=await fixture.pool.query(`SELECT sequence_value::text AS sequence_value FROM control.etl_snapshot_observation
+        WHERE tenant_key=$1 AND source_id='pg-e2e' AND run_id=$2`,[owner.tenantId,changedRun.run_id]);
+      expect(BigInt(changedObservation.rows[0].sequence_value)).toBeGreaterThan(BigInt(firstObservation.rows[0].sequence_value));
+      const {runSnapshotContinuationWorkerOnce}=await import('../etl-worker/snapshot-apply-worker.js');
+      const runWithDestinationCrash=async(mode:'before'|'after',key:string)=>{
+        const writer=await sourceFixture.pool.connect();
+        try {
+          await writer.query(`SET ROLE ${sourceOwner}`);
+          await writer.query(`UPDATE ${sourceSchema}.customers SET customer_name=$1,updated_at=$2 WHERE customer_id='C-1'`,
+            [`Crash ${mode} ${key}`,`2026-10-25 10:20:0${mode==='before'?'1':'2'}.123456+00`]);
+        } finally { await writer.query('RESET ROLE').catch(()=>undefined); writer.release(); }
+        const crashRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,key);
+        let faultHit=false;
+        const basePool=roleScopedPool('hub_worker');
+        const faultPool=new Proxy(basePool,{get(target,property){
+          if(property==='connect') return async()=>{
+            const client=await fixture.pool.connect(); if(client.listenerCount('error')===0) client.on('error',()=>undefined);
+            let armed=false; let backendPid:number|undefined;
+            const original=client.query.bind(client);
+            const query=(async(sql:unknown,...args:unknown[])=>{
+              if(typeof sql==='string'&&sql.trim().toUpperCase()==='COMMIT'&&armed) {
+                armed=false; faultHit=true;
+                if(mode==='before') {
+                  if(!backendPid) throw new Error('destination backend PID missing before commit fault');
+                  const killed=await fixture.pool.query<{terminated:boolean}>(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
+                    WHERE pid=$1 AND usename='postgres' AND datname='postgres' AND client_addr IS NOT NULL`,[backendPid]);
+                  if(killed.rows[0]?.terminated!==true) throw new Error('owned destination backend identity changed before termination');
+                  return await original(sql as never,...args as never[]);
+                }
+                await original(sql as never,...args as never[]);
+                if(!backendPid) throw new Error('destination backend PID missing after commit fault');
+                const killed=await fixture.pool.query<{terminated:boolean}>(`SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity
+                  WHERE pid=$1 AND usename='postgres' AND datname='postgres' AND client_addr IS NOT NULL`,[backendPid]);
+                if(killed.rows[0]?.terminated!==true) throw new Error('owned destination backend identity changed after termination');
+                // Surface the driver's real transport failure after the backend is killed.
+                // Do not synthesize a SQLSTATE: recovery must classify the actual pg error.
+                return await original('SELECT 1' as never);
+              }
+              const result=await original(sql as never,...args as never[]);
+              if(typeof sql==='string'&&/^BEGIN(?:\s|$)/i.test(sql.trim())) await original('SET LOCAL ROLE hub_worker');
+              if(typeof sql==='string'&&sql.includes('control.record_etl_snapshot_aggregate')&&Array.isArray(args[0])&&String((args[0] as unknown[])[8])==='C-1') {
+                armed=true;
+                const identity=await original('SELECT pg_backend_pid() AS pid');
+                backendPid=Number(identity.rows[0]?.pid);
+              }
+              return result;
+            }) as typeof client.query;
+            return {query,release:client.release.bind(client)};
+          };
+          const value=Reflect.get(target,property,target);
+          return typeof value==='function'?value.bind(target):value;
+        }}) as typeof fixture.pool;
+        await expect(runDurableWorkerLoop(faultPool,{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},
+          {...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+        expect(faultHit).toBe(true);
+        const beforeRestart=await fixture.pool.query(`SELECT
+          (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=$1) AS outcomes,
+          (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=$1) AS ranges,
+          (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations`,[crashRun.run_id]);
+        expect(beforeRestart.rows[0]).toMatchObject(mode==='before'?{outcomes:0,ranges:0,observations:1}:{outcomes:1,ranges:1,observations:1});
+        const sourceCallsBeforeRestart=sourceConnectCalls;
+        await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET next_retry_at=clock_timestamp() WHERE run_id=$1`,[crashRun.run_id]);
+        const retryState=await fixture.pool.query(`SELECT r.status,s.active_run_id,c.c_start_count,c.next_retry_at<=clock_timestamp() AS due,
+          c.claim_token,c.lease_until FROM control.etl_run r JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_continuation c USING(tenant_key,source_id,run_id) WHERE r.run_id=$1`,[crashRun.run_id]);
+        expect(retryState.rows[0]).toMatchObject({status:'APPLYING',active_run_id:crashRun.run_id,c_start_count:1});
+        if(retryState.rows[0].claim_token!==null) {
+          await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second' WHERE run_id=$1`,
+            [crashRun.run_id]);
+          await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(0);
+        }
+        await fixture.pool.query(`UPDATE control.etl_snapshot_continuation SET next_retry_at=clock_timestamp() WHERE run_id=$1`,[crashRun.run_id]);
+        await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(1);
+        expect(sourceConnectCalls).toBe(sourceCallsBeforeRestart);
+        const recovered=await fixture.pool.query(`SELECT r.status,
+          (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome o WHERE o.run_id=r.run_id) AS outcomes,
+          (SELECT count(*)::int FROM control.etl_snapshot_apply_range a WHERE a.run_id=r.run_id) AS ranges,
+          (SELECT count(*)::int FROM control.etl_snapshot_observation x WHERE x.run_id=r.run_id) AS observations
+          FROM control.etl_run r WHERE r.run_id=$1`,[crashRun.run_id]);
+        expect(recovered.rows[0]).toEqual({status:'COMPLETE',outcomes:3,ranges:3,observations:1});
+      };
+      await runWithDestinationCrash('before','owned-crash-before-commit');
+      await runWithDestinationCrash('after','owned-crash-after-commit');
+      await auth.repository.provisionSourceCredential({sourceId:'pg-version',tenantId:owner.tenantId,token:createCredential().secret,
+        secretRef:'vault:/snapshot/source',allowedEntities:['customer'],revision:'1'});
+      await service.create(owner,{source_id:'pg-version',data_owner_user_id:owner.userId,config:{name:'Owned source version snapshot',connector:'postgresql',
+        mode:'FULL_SNAPSHOT',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',
+        allowed_entities:['customer'],delete_contract:'tombstone'}});
+      await service.writeMappings(owner,'pg-version','1',[
+        {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+        {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+        {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+        {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+      ]);
+      await service.writeIdentityMappings(owner,'pg-version',[
+        {kind:'user',external_id:'owner-ext',target_id:owner.userId},{kind:'department',external_id:'dept-ext',target_id:'sales-east'},
+      ]);
+      const versionTest=await service.test(owner,'pg-version','1');
+      const versionApproval=await service.approve(owner,'pg-version','1',versionTest.test_report_id,versionTest.data_contract_ref);
+      await service.activate(owner,'pg-version','1',versionApproval.approval_id);
+      const versionRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-version','1','owned-source-version-no-observation');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const versionState=await fixture.pool.query(`SELECT r.status,
+        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observations,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id) AS outcomes,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges
+        FROM control.etl_run r WHERE r.run_id=$1`,[versionRun.run_id]);
+      expect(versionState.rows[0]).toEqual({status:'COMPLETE',observations:0,outcomes:2,ranges:2});
+      await ownerPool.query(`UPDATE ${sourceSchema}.customers SET deleted_at='2026-10-25 11:00:00+00',source_version='2',
+        updated_at='2026-10-25 11:00:00+00' WHERE customer_id='C-2'`);
+      const tombstoneRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-version','1','owned-source-version-tombstone');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const deletedReceipt=await fixture.pool.query(`SELECT deleted,source_version::text AS source_version FROM control.source_version_receipt
+        WHERE tenant_key=$1 AND source_id='pg-version' AND entity='customer' AND source_pk='C-2'`,[owner.tenantId]);
+      const tombstoneState=await fixture.pool.query(`SELECT status,
+        (SELECT count(*)::int FROM control.etl_snapshot_observation WHERE run_id=$1) AS observations FROM control.etl_run WHERE run_id=$1`,
+        [tombstoneRun.run_id]);
+      expect(deletedReceipt.rows[0]).toEqual({deleted:true,source_version:'2'});
+      expect(tombstoneState.rows[0]).toEqual({status:'COMPLETE',observations:0});
     } finally {
       await ownerPool.end();
       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
@@ -299,7 +581,7 @@ describe('durable snapshot run admission', () => {
       await sourceFixture.close();
       e2eEndpointProfile=undefined;
     }
-  });
+  },30_000);
 
   it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
     const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');

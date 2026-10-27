@@ -667,6 +667,50 @@ describe('M1 source admission authorization', () => {
     } finally { await app.close(); }
   });
 
+  it('discovers source-qualified customer identities for the owner and removes them after API-014 confirmation', async () => {
+    const owner=await prepareOwner();
+    await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'dept-sales',businessRole:'sales',
+      managementScopes:['source:read','source:write','source:approve','mapping:write']});
+    await auth.repository.provisionSourceCredential({sourceId:'crm-discovery',tenantId:owner.tenantId,token:createCredential().secret,
+      secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'0'});
+    const {service}=managerService(roleScopedPool());
+    await service.create(owner,{source_id:'crm-discovery',data_owner_user_id:owner.userId,config:{name:'CRM discovery',connector:'rest',
+      mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',secret_ref:'vault:/crm/credential-v1',
+      allowed_entities:['customer'],delete_contract:'tombstone'}});
+    const targetIds=['8a2efdd5-3d59-4f5f-97f9-298a68006011','8a2efdd5-3d59-4f5f-97f9-298a68006012'];
+    await fixture.pool.query(`INSERT INTO hub.canonical_customer
+      (tenant_id,id,customer_name,owner_user_id,dept_id,status,source_updated_at,source_version,version_domain,channel_epoch,hub_revision)
+      VALUES($1,$2,'Private name one',$3,'dept-sales','ACTIVE','2026-01-01T00:00:00Z',1,'SOURCE_VERSION',1,1),
+        ($1,$4,'Private name two',$3,'dept-sales','ACTIVE','2026-01-01T00:00:00Z',1,'SOURCE_VERSION',1,1)`,
+      [owner.tenantId,targetIds[0],owner.userId,targetIds[1]]);
+    await fixture.pool.query(`INSERT INTO control.canonical_source_identity
+      (tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+      VALUES($1,'crm-discovery','customer','C-1',$2,$2),($1,'crm-discovery','customer','C-2',$3,$3)`,
+      [owner.tenantId,targetIds[0],targetIds[1]]);
+    const app=await buildApp({logger:false,sourceRegistry:{authenticator:async token=>token==='owner-token'?owner
+      :token==='foreign-owner'?{...owner,userId:'different-owner'}:Promise.reject(new Error('invalid')),authService:auth,sourceService:service}});
+    try {
+      const headers={authorization:'Bearer owner-token'};
+      const first=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer&limit=1',headers});
+      expect(first.statusCode).toBe(200);
+      expect(first.json().data).toMatchObject({source_id:'crm-discovery',items:[{source_pk:'C-1',target_id:targetIds[0]}],next_cursor:expect.any(String)});
+      expect(first.body).not.toContain('Private name');
+      const next=await app.inject({method:'GET',url:`/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer&limit=1&cursor=${encodeURIComponent(first.json().data.next_cursor)}`,headers});
+      expect(next.statusCode).toBe(200);
+      expect(next.json().data).toMatchObject({items:[{source_pk:'C-2',target_id:targetIds[1]}],next_cursor:null});
+      const foreign=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',
+        headers:{authorization:'Bearer foreign-owner'}});
+      expect(foreign.statusCode).toBe(403);
+      const opaqueId=Buffer.from('crm-discovery\0customer\0C-1','utf8').toString('base64url');
+      const confirmed=await app.inject({method:'PUT',url:`/hub/v1/admin/identity-mappings/${opaqueId}`,headers,
+        payload:{expected_revision:'0',target_id:targetIds[0],reason:'confirm exact source customer'}});
+      expect(confirmed.statusCode).toBe(200);
+      const after=await app.inject({method:'GET',url:'/hub/v1/admin/identity-mappings?mode=source_customers&source_id=crm-discovery&kind=customer',headers});
+      expect(after.statusCode).toBe(200);
+      expect(after.json().data.items).toEqual([{source_pk:'C-2',target_id:targetIds[1]}]);
+    } finally { await app.close(); }
+  });
+
   it('performs a bounded authenticated REST capability probe against an owned loopback fixture', async () => {
     let seenAuthorization = '';
     const server = createServer((request, response) => {

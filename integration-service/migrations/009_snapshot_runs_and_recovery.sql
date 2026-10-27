@@ -87,6 +87,7 @@ CREATE TABLE control.etl_run_attempt (
   UNIQUE (operation_id),
   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
+CREATE UNIQUE INDEX etl_run_attempt_scope_idx ON control.etl_run_attempt(tenant_key,source_id,run_id,attempt_id);
 
 CREATE TABLE control.etl_snapshot_schedule (
   tenant_key text NOT NULL,
@@ -97,10 +98,12 @@ CREATE TABLE control.etl_snapshot_schedule (
   schedule_revision bigint NOT NULL CHECK (schedule_revision > 0),
   active_run_id uuid,
   last_run_id uuid,
+  last_successful_run_id uuid,
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY (tenant_key,source_id),
   FOREIGN KEY (tenant_key,source_id) REFERENCES control.source_registry(tenant_key,source_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
   FOREIGN KEY (tenant_key,source_id,active_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_key,source_id,last_successful_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
   FOREIGN KEY (tenant_key,source_id,last_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
 CREATE INDEX etl_snapshot_schedule_due_idx ON control.etl_snapshot_schedule(next_due_at,tenant_key,source_id) WHERE enabled;
@@ -214,17 +217,26 @@ CREATE TABLE control.etl_snapshot_stage_record (
   relation text NOT NULL CHECK (relation IN ('customer','order','order_line')),
   parent_source_pk text NOT NULL DEFAULT '',
   source_pk text NOT NULL CHECK (length(source_pk)>0),
+  page_no integer NOT NULL CHECK (page_no>0),
+  row_ordinal integer NOT NULL CHECK (row_ordinal>0),
   source_version text,
   facts jsonb NOT NULL CHECK (jsonb_typeof(facts)='object'),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
   FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_key,source_id,run_id,attempt_id,entity,relation,page_no)
+    REFERENCES control.etl_snapshot_stage_page(tenant_key,source_id,run_id,attempt_id,entity,relation,page_no) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CHECK ((relation='customer' AND entity='customer' AND parent_source_pk='') OR
     (relation='order' AND entity='order' AND parent_source_pk='') OR
     (relation='order_line' AND entity='order' AND parent_source_pk<>''))
 );
-CREATE INDEX etl_snapshot_stage_record_lookup_idx ON control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation);
+CREATE UNIQUE INDEX etl_snapshot_stage_record_page_ordinal_idx ON control.etl_snapshot_stage_record
+  (tenant_key,source_id,run_id,attempt_id,entity,relation,page_no,row_ordinal);
+CREATE INDEX etl_snapshot_stage_record_lookup_idx ON control.etl_snapshot_stage_record
+  (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk);
+CREATE INDEX etl_snapshot_stage_record_semantic_idx ON control.etl_snapshot_stage_record
+  (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk COLLATE "C",source_pk COLLATE "C");
 CREATE TABLE control.etl_snapshot_manifest (
   tenant_key text NOT NULL,
   source_id text NOT NULL,
@@ -240,6 +252,108 @@ CREATE TABLE control.etl_snapshot_manifest (
   FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
   FOREIGN KEY (attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
 );
+
+-- C continuation state is separate from B extraction attempts and 008 item leases.
+CREATE TABLE control.etl_snapshot_continuation (
+  tenant_key text NOT NULL,
+  source_id text NOT NULL,
+  run_id uuid NOT NULL,
+  attempt_id uuid NOT NULL,
+  claim_token uuid,
+  lease_until timestamptz,
+  c_start_count integer NOT NULL DEFAULT 0 CHECK (c_start_count BETWEEN 0 AND 4),
+  next_retry_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  last_error_code text,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY (tenant_key,source_id,run_id),
+  FOREIGN KEY (tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY (tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_run_attempt(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK ((claim_token IS NULL)=(lease_until IS NULL))
+);
+CREATE INDEX etl_snapshot_continuation_due_idx ON control.etl_snapshot_continuation(next_retry_at,tenant_key,source_id,run_id);
+
+CREATE TABLE control.etl_snapshot_validation (
+  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
+  manifest_digest bytea NOT NULL CHECK(octet_length(manifest_digest)=32),
+  proof_scope_digest bytea NOT NULL CHECK(octet_length(proof_scope_digest)=32),
+  semantic_digest bytea NOT NULL CHECK(octet_length(semantic_digest)=32),
+  coverage jsonb NOT NULL CHECK(jsonb_typeof(coverage)='object'),
+  validated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(tenant_key,source_id,run_id,attempt_id),
+  FOREIGN KEY(tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_manifest(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE control.etl_snapshot_observation_sequence (
+  tenant_key text NOT NULL, source_id text NOT NULL,
+  next_value numeric(20,0) NOT NULL DEFAULT 1 CHECK(next_value BETWEEN 1 AND 99999999999999999999),
+  PRIMARY KEY(tenant_key,source_id)
+);
+CREATE TABLE control.etl_snapshot_observation_allocation (
+  tenant_key text NOT NULL, source_id text NOT NULL, sequence_value numeric(20,0) NOT NULL,
+  semantic_digest bytea NOT NULL CHECK(octet_length(semantic_digest)=32),
+  reuse_scope_digest bytea NOT NULL CHECK(octet_length(reuse_scope_digest)=32),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(tenant_key,source_id,sequence_value),
+  FOREIGN KEY(tenant_key,source_id) REFERENCES control.source_registry(tenant_key,source_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE INDEX etl_snapshot_observation_reuse_idx ON control.etl_snapshot_observation_allocation
+  (tenant_key,source_id,reuse_scope_digest,semantic_digest,sequence_value);
+CREATE TABLE control.etl_snapshot_observation (
+  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
+  sequence_value numeric(20,0) NOT NULL, created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(tenant_key,source_id,run_id),
+  UNIQUE(tenant_key,source_id,run_id,sequence_value),
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,sequence_value) REFERENCES control.etl_snapshot_observation_allocation(tenant_key,source_id,sequence_value) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE TABLE control.etl_snapshot_apply_outcome (
+  outcome_id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
+  entity text NOT NULL CHECK(entity IN ('customer','order')), relation text NOT NULL CHECK(relation IN ('customer','order')),
+  parent_source_pk text NOT NULL DEFAULT '', source_pk text NOT NULL, aggregate_digest bytea NOT NULL CHECK(octet_length(aggregate_digest)=32),
+  status text NOT NULL CHECK(status IN ('APPLIED','DUPLICATE','IGNORED_STALE','QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED')),
+  error_code text, created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
+  UNIQUE(outcome_id,tenant_key,source_id,run_id,attempt_id),
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
+    REFERENCES control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id) REFERENCES control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE TABLE control.etl_snapshot_apply_range (
+  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, attempt_id uuid NOT NULL,
+  entity text NOT NULL, relation text NOT NULL, parent_source_pk text NOT NULL DEFAULT '', source_pk text NOT NULL,
+  aggregate_digest bytea NOT NULL CHECK(octet_length(aggregate_digest)=32), proof_scope_digest bytea NOT NULL CHECK(octet_length(proof_scope_digest)=32),
+  outcome_id uuid NOT NULL, committed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk),
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
+    REFERENCES control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(outcome_id,tenant_key,source_id,run_id,attempt_id)
+    REFERENCES control.etl_snapshot_apply_outcome(outcome_id,tenant_key,source_id,run_id,attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE TABLE control.etl_snapshot_checkpoint (
+  tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL, entity text NOT NULL CHECK(entity IN ('customer','order')),
+  last_relation text, last_parent_source_pk text NOT NULL DEFAULT '', last_source_pk text, completed_count bigint NOT NULL DEFAULT 0 CHECK(completed_count>=0),
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(tenant_key,source_id,run_id,entity),
+  FOREIGN KEY(tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+CREATE FUNCTION control.reject_etl_snapshot_c_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,control
+AS $body$
+BEGIN RAISE EXCEPTION 'snapshot C proof is immutable' USING ERRCODE='55000'; END;
+$body$;
+CREATE TRIGGER etl_snapshot_validation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_validation
+  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
+CREATE TRIGGER etl_snapshot_observation_allocation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_observation_allocation
+  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
+CREATE TRIGGER etl_snapshot_observation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_observation
+  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
+CREATE TRIGGER etl_snapshot_apply_outcome_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_apply_outcome
+  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
+CREATE TRIGGER etl_snapshot_apply_range_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_apply_range
+  FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_c_mutation();
 
 CREATE FUNCTION control.reject_snapshot_stage_mutation() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog,control
@@ -411,11 +525,12 @@ BEGIN
   IF p_page_no<>last_page+1 THEN RAISE EXCEPTION 'snapshot page sequence invalid' USING ERRCODE='22023'; END IF;
   n:=jsonb_array_length(p_rows);
   IF n<1 THEN RAISE EXCEPTION 'snapshot page empty' USING ERRCODE='22023'; END IF;
-  INSERT INTO control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,source_version,facts)
-  SELECT p_tenant_key,p_source_id,p_run_id,p_attempt_id,x.entity,x.relation,COALESCE(x.parent_source_pk,''),x.source_pk,x.source_version,x.facts
-    FROM jsonb_to_recordset(p_rows) AS x(entity text,relation text,parent_source_pk text,source_pk text,source_version text,facts jsonb);
   INSERT INTO control.etl_snapshot_stage_page(tenant_key,source_id,run_id,attempt_id,entity,relation,page_no,row_count,first_key,last_key,page_digest)
     VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_page_no,n,p_first_key,p_last_key,p_digest);
+  INSERT INTO control.etl_snapshot_stage_record(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,page_no,row_ordinal,source_version,facts)
+  SELECT p_tenant_key,p_source_id,p_run_id,p_attempt_id,r.entity,r.relation,COALESCE(r.parent_source_pk,''),r.source_pk,p_page_no,x.ordinality::integer,r.source_version,r.facts
+    FROM jsonb_array_elements(p_rows) WITH ORDINALITY AS x(value,ordinality)
+    CROSS JOIN LATERAL jsonb_to_record(x.value) AS r(entity text,relation text,parent_source_pk text,source_pk text,source_version text,facts jsonb);
   RETURN n;
 END;
 $body$;
@@ -541,3 +656,442 @@ GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_run(text,text,integer),
   control.write_etl_snapshot_page(text,text,uuid,uuid,uuid,text,text,integer,text,text,bytea,jsonb),
   control.fail_etl_snapshot_attempt(text,text,uuid,uuid,uuid,text,boolean),
   control.complete_etl_snapshot_manifest(text,text,uuid,uuid,uuid,jsonb,bytea) TO hub_worker;
+
+CREATE FUNCTION control.claim_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_lease_seconds integer)
+RETURNS TABLE(tenant_key text,source_id text,run_id uuid,attempt_id uuid,claim_token uuid,status text,c_start_count integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE; c control.etl_snapshot_continuation%ROWTYPE; a uuid; token uuid;
+BEGIN
+  PERFORM control.lock_security_barrier_fence();
+  IF p_lease_seconds<10 OR p_lease_seconds>900 THEN RAISE EXCEPTION 'snapshot C lease invalid' USING ERRCODE='22023'; END IF;
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  SELECT er.* INTO r FROM control.etl_run er JOIN control.etl_snapshot_schedule s
+    ON (s.tenant_key,s.source_id,s.active_run_id)=(er.tenant_key,er.source_id,er.run_id)
+    WHERE er.tenant_key=p_tenant_key AND er.source_id=p_source_id AND er.status IN ('VALIDATING','APPLYING') FOR UPDATE OF er,s;
+  IF NOT FOUND THEN RETURN; END IF;
+  SELECT m.attempt_id INTO a FROM control.etl_snapshot_manifest m WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id
+    AND m.run_id=r.run_id AND m.state='EXTRACTED' ORDER BY m.created_at DESC LIMIT 1;
+  IF a IS NULL THEN RETURN; END IF;
+  INSERT INTO control.etl_snapshot_continuation(tenant_key,source_id,run_id,attempt_id)
+    VALUES(p_tenant_key,p_source_id,r.run_id,a) ON CONFLICT ON CONSTRAINT etl_snapshot_continuation_pkey DO NOTHING;
+  SELECT * INTO c FROM control.etl_snapshot_continuation x WHERE x.tenant_key=p_tenant_key AND x.source_id=p_source_id AND x.run_id=r.run_id FOR UPDATE;
+  IF c.attempt_id<>a THEN RAISE EXCEPTION 'snapshot C attempt changed' USING ERRCODE='55000'; END IF;
+  IF c.lease_until IS NOT NULL AND c.lease_until<=clock_timestamp() AND c.c_start_count>0 THEN
+    IF c.c_start_count>=4 THEN
+      UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
+        completeness_summary=jsonb_build_object('status','FAILED','error_code','RETRY_BUDGET_EXHAUSTED') WHERE er.run_id=r.run_id;
+      UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
+        WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
+      UPDATE control.etl_snapshot_continuation AS cc SET claim_token=NULL,lease_until=NULL,last_error_code='WORKER_LEASE_EXPIRED',updated_at=clock_timestamp()
+        WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
+      RETURN;
+    END IF;
+    UPDATE control.etl_snapshot_continuation AS cc SET claim_token=NULL,lease_until=NULL,last_error_code='WORKER_LEASE_EXPIRED',
+      next_retry_at=clock_timestamp()+make_interval(secs=>(ARRAY[5,30,120])[LEAST(c.c_start_count,3)]),updated_at=clock_timestamp()
+      WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
+    RETURN;
+  END IF;
+  IF c.lease_until>clock_timestamp() OR c.next_retry_at>clock_timestamp() THEN RETURN; END IF;
+  IF c.c_start_count>=4 THEN
+    UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
+      completeness_summary=jsonb_build_object('status','FAILED','error_code','RETRY_BUDGET_EXHAUSTED') WHERE er.run_id=r.run_id;
+    UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
+      WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
+    RETURN;
+  END IF;
+  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key AND b.effective_fence>r.security_barrier_fence
+    AND (b.source_id IS NULL OR b.source_id=p_source_id)
+    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN
+    UPDATE control.etl_run AS er SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(er.quarantined_count,1),
+      completeness_summary=jsonb_build_object('status','FAILED','error_code','SECURITY_BARRIER_ACTIVE') WHERE er.run_id=r.run_id;
+    UPDATE control.etl_snapshot_schedule AS ss SET active_run_id=NULL,last_run_id=r.run_id,updated_at=clock_timestamp()
+      WHERE ss.tenant_key=p_tenant_key AND ss.source_id=p_source_id AND ss.active_run_id=r.run_id;
+    RETURN;
+  END IF;
+  token:=gen_random_uuid();
+  UPDATE control.etl_snapshot_continuation AS cc SET claim_token=token,lease_until=clock_timestamp()+make_interval(secs=>p_lease_seconds),updated_at=clock_timestamp()
+    WHERE cc.tenant_key=p_tenant_key AND cc.source_id=p_source_id AND cc.run_id=r.run_id;
+  RETURN QUERY SELECT p_tenant_key,p_source_id,r.run_id,a,token,r.status,c.c_start_count;
+END;
+$body$;
+
+CREATE FUNCTION control.assert_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE;
+BEGIN
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  SELECT er.* INTO r FROM control.etl_run er JOIN control.etl_snapshot_continuation c
+    ON (c.tenant_key,c.source_id,c.run_id)=(er.tenant_key,er.source_id,er.run_id)
+    WHERE er.tenant_key=p_tenant_key AND er.source_id=p_source_id AND er.run_id=p_run_id AND er.status IN ('VALIDATING','APPLYING')
+      AND c.attempt_id=p_attempt_id AND c.claim_token=p_claim_token AND c.lease_until>clock_timestamp() FOR UPDATE OF er,c;
+  IF NOT FOUND THEN RETURN false; END IF;
+  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key AND b.effective_fence>r.security_barrier_fence
+    AND (b.source_id IS NULL OR b.source_id=p_source_id) AND (b.credential_id IS NULL OR b.credential_id=r.credential_id)
+    AND (b.entity IS NULL OR b.entity=ANY(r.expected_entities))
+    AND (b.channel_id IS NULL OR EXISTS(SELECT 1 FROM jsonb_each(r.entity_channel_proof) e
+      WHERE (e.value->>'channel_id')::uuid=b.channel_id))
+    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN RETURN false; END IF;
+  RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.begin_etl_snapshot_c_start(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE c control.etl_snapshot_continuation%ROWTYPE;
+BEGIN
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  SELECT * INTO c FROM control.etl_snapshot_continuation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
+    AND attempt_id=p_attempt_id AND claim_token=p_claim_token AND lease_until>clock_timestamp() AND next_retry_at<=clock_timestamp() FOR UPDATE;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF c.c_start_count>=4 THEN RETURN NULL; END IF;
+  UPDATE control.etl_snapshot_continuation SET c_start_count=c_start_count+1,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  RETURN c.c_start_count+1;
+END;
+$body$;
+
+CREATE FUNCTION control.heartbeat_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_lease_seconds integer) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF p_lease_seconds<10 OR p_lease_seconds>900 THEN RETURN false; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()+make_interval(secs=>p_lease_seconds),updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id
+      AND claim_token=p_claim_token AND lease_until>clock_timestamp();
+  RETURN FOUND;
+END;
+$body$;
+
+CREATE FUNCTION control.fail_etl_snapshot_continuation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_error_code text,p_retryable boolean) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE c control.etl_snapshot_continuation%ROWTYPE; delay_seconds integer[]:=ARRAY[5,30,120];
+BEGIN
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  SELECT * INTO c FROM control.etl_snapshot_continuation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
+    AND attempt_id=p_attempt_id AND claim_token=p_claim_token FOR UPDATE;
+  IF NOT FOUND THEN RETURN 'STALE'; END IF;
+  UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,last_error_code=left(p_error_code,96),
+    next_retry_at=CASE WHEN p_retryable AND c.c_start_count<4 THEN clock_timestamp()+make_interval(secs=>delay_seconds[LEAST(c.c_start_count,3)]) ELSE clock_timestamp() END,
+    updated_at=clock_timestamp() WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  IF NOT p_retryable OR c.c_start_count>=4 THEN
+    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(quarantined_count,1),
+      completeness_summary=jsonb_build_object('status','FAILED','error_code',left(p_error_code,96)) WHERE run_id=p_run_id;
+    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
+    RETURN 'FAILED';
+  END IF;
+  RETURN 'RETRY_PENDING';
+END;
+$body$;
+
+CREATE FUNCTION control.read_etl_snapshot_stage_page(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_entity text,p_relation text,p_page_no integer)
+RETURNS TABLE(row_count integer,page_digest bytea,record jsonb)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_manifest m WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id AND m.run_id=p_run_id
+      AND m.attempt_id=p_attempt_id AND m.state='EXTRACTED') THEN RETURN; END IF;
+  RETURN QUERY SELECT p.row_count,p.page_digest,to_jsonb(r) FROM control.etl_snapshot_stage_page p
+    JOIN control.etl_snapshot_stage_record r ON (r.tenant_key,r.source_id,r.run_id,r.attempt_id,r.entity,r.relation,r.page_no)=
+      (p.tenant_key,p.source_id,p.run_id,p.attempt_id,p.entity,p.relation,p.page_no)
+    WHERE p.tenant_key=p_tenant_key AND p.source_id=p_source_id AND p.run_id=p_run_id AND p.attempt_id=p_attempt_id
+      AND p.entity=p_entity AND p.relation=p_relation AND p.page_no=p_page_no ORDER BY r.row_ordinal;
+END;
+$body$;
+
+CREATE FUNCTION control.read_etl_snapshot_c_proof(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE result jsonb;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
+  SELECT jsonb_build_object(
+    'tenant_key',r.tenant_key,'source_id',r.source_id,'run_id',r.run_id,'status',r.status,'expected_entities',r.expected_entities,
+    'credential_id',r.credential_id,'credential_revision',r.credential_revision,'credential_generation',r.credential_generation,
+    'admission_source_epoch',r.admission_source_epoch,'entity_channel_proof',r.entity_channel_proof,
+    'config_revision',r.config_revision,'config_digest',encode(r.config_digest,'hex'),'config',c.config,
+    'mapping_revision',r.mapping_revision,'mapping_digest',encode(r.mapping_digest,'hex'),'mappings',m.mappings,
+    'identity_mapping_revision',r.identity_mapping_revision,'identity_mapping_digest',encode(r.identity_mapping_digest,'hex'),'identity_mappings',i.mappings,
+    'endpoint_profile_digest',encode(r.endpoint_profile_digest,'hex'),'test_report_id',r.test_report_id,'approval_id',r.approval_id,
+    'data_contract_ref',r.data_contract_ref,'delete_contract',r.delete_contract,'security_barrier_fence',r.security_barrier_fence,
+    'owner_user_id',r.owner_user_id,'owner_revision',r.owner_revision,'manifest',jsonb_build_object('manifest',sm.manifest,'digest',encode(sm.manifest_digest,'hex')))
+  INTO result FROM control.etl_run r JOIN control.source_config_revision c
+      ON (c.tenant_key,c.source_id,c.revision,c.config_digest)=(r.tenant_key,r.source_id,r.config_revision,r.config_digest)
+    JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision,m.mapping_digest)=(r.tenant_key,r.source_id,r.mapping_revision,r.mapping_digest)
+    JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision,i.mapping_digest)=(r.tenant_key,r.source_id,r.identity_mapping_revision,r.identity_mapping_digest)
+    JOIN control.source_owner_approval a ON (a.id,a.tenant_key,a.source_id,a.owner_user_id,a.owner_revision,a.config_revision,a.mapping_revision,
+      a.identity_mapping_revision,a.test_report_id)=(r.approval_id,r.tenant_key,r.source_id,r.owner_user_id,r.owner_revision,r.config_revision,
+      r.mapping_revision,r.identity_mapping_revision,r.test_report_id)
+    JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id,t.config_revision,t.mapping_revision,t.identity_mapping_revision)=
+      (r.test_report_id,r.tenant_key,r.source_id,r.config_revision,r.mapping_revision,r.identity_mapping_revision) AND t.status='PASS'
+    JOIN control.etl_snapshot_manifest sm ON (sm.tenant_key,sm.source_id,sm.run_id,sm.attempt_id)=
+      (r.tenant_key,r.source_id,r.run_id,p_attempt_id) AND sm.state='EXTRACTED'
+    WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id;
+  RETURN result;
+END;
+$body$;
+
+CREATE FUNCTION control.list_etl_snapshot_c_pages(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_relation text,p_after_page integer,p_limit integer)
+RETURNS TABLE(entity text,relation text,page_no integer,row_count integer,first_key text,last_key text,page_digest bytea)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  IF p_relation NOT IN ('customer','order','order_line') OR p_after_page<0 OR p_limit<1 OR p_limit>1000 THEN RETURN; END IF;
+  RETURN QUERY SELECT p.entity,p.relation,p.page_no,p.row_count,p.first_key,p.last_key,p.page_digest
+    FROM control.etl_snapshot_manifest m JOIN control.etl_snapshot_stage_page p
+      ON (p.tenant_key,p.source_id,p.run_id,p.attempt_id)=(m.tenant_key,m.source_id,m.run_id,m.attempt_id)
+    WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id AND m.run_id=p_run_id AND m.attempt_id=p_attempt_id AND m.state='EXTRACTED'
+      AND p.relation=p_relation AND p.page_no>p_after_page ORDER BY p.page_no LIMIT p_limit;
+END;
+$body$;
+
+CREATE FUNCTION control.validate_etl_snapshot_order_references(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_customer_source_id text,p_customer_included boolean,p_identity_mappings jsonb)
+RETURNS TABLE(valid boolean,error_code text) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN
+    RETURN QUERY SELECT false,'SNAPSHOT_CLAIM_LOST'; RETURN;
+  END IF;
+  IF jsonb_typeof(p_identity_mappings)<>'array' THEN RETURN QUERY SELECT false,'SNAPSHOT_PROOF_INVALID'; RETURN; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record l LEFT JOIN control.etl_snapshot_stage_record h
+    ON (h.tenant_key,h.source_id,h.run_id,h.attempt_id,h.entity,h.relation,h.parent_source_pk,h.source_pk)=
+       (l.tenant_key,l.source_id,l.run_id,l.attempt_id,'order','order','',l.parent_source_pk)
+    WHERE l.tenant_key=p_tenant_key AND l.source_id=p_source_id AND l.run_id=p_run_id AND l.attempt_id=p_attempt_id AND l.relation='order_line'
+      AND h.source_pk IS NULL) THEN RETURN QUERY SELECT false,'SNAPSHOT_ORPHAN_LINE'; RETURN; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record h WHERE h.tenant_key=p_tenant_key AND h.source_id=p_source_id
+      AND h.run_id=p_run_id AND h.attempt_id=p_attempt_id AND h.relation='order'
+      AND (SELECT count(*) FROM control.etl_snapshot_stage_record l WHERE l.tenant_key=h.tenant_key AND l.source_id=h.source_id
+        AND l.run_id=h.run_id AND l.attempt_id=h.attempt_id AND l.entity='order' AND l.relation='order_line'
+        AND l.parent_source_pk=h.source_pk)>200) THEN RETURN QUERY SELECT false,'SNAPSHOT_ORDER_LINES_INVALID'; RETURN; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record o
+    LEFT JOIN LATERAL (SELECT x->>'target_id' AS target_id FROM jsonb_array_elements(p_identity_mappings) x
+      WHERE x->>'kind'='customer' AND x->>'external_id'=o.facts->>'customer_id' LIMIT 2) im ON true
+    LEFT JOIN control.canonical_source_identity si ON si.tenant_key=p_tenant_key AND si.source_id=p_customer_source_id
+      AND si.entity='customer' AND si.source_pk=o.facts->>'customer_id'
+    LEFT JOIN hub.canonical_customer cc ON cc.tenant_id=p_tenant_key AND cc.id=si.customer_id AND cc.deleted_at IS NULL
+    WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.run_id=p_run_id AND o.attempt_id=p_attempt_id
+      AND o.entity='order' AND o.relation='order' AND
+      (o.facts->>'customer_id' IS NULL OR im.target_id IS NULL OR im.target_id<>cc.id::text OR cc.id IS NULL OR
+        (p_customer_included AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_stage_record c
+          WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id AND c.attempt_id=p_attempt_id
+            AND c.entity='customer' AND c.relation='customer' AND c.source_pk=o.facts->>'customer_id'
+            AND COALESCE(c.facts->>'deleted_at','false') IN ('false','')))))
+    THEN RETURN QUERY SELECT false,'IDENTITY_MAPPING_TARGET_INVALID'; RETURN; END IF;
+  RETURN QUERY SELECT true,NULL::text;
+END;
+$body$;
+
+CREATE FUNCTION control.read_etl_snapshot_order_lines(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,p_parent_source_pk text)
+RETURNS SETOF control.etl_snapshot_stage_record LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  RETURN QUERY SELECT r.* FROM control.etl_snapshot_stage_record r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
+    AND r.run_id=p_run_id AND r.attempt_id=p_attempt_id AND r.entity='order' AND r.relation='order_line'
+    AND r.parent_source_pk=p_parent_source_pk ORDER BY r.source_pk COLLATE "C" LIMIT 201;
+END;
+$body$;
+
+CREATE FUNCTION control.read_etl_snapshot_semantic_chunk(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_entity text,p_relation text,p_after_parent text,p_after_source text,p_limit integer)
+RETURNS SETOF control.etl_snapshot_stage_record LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  IF p_limit<1 OR p_limit>1000 THEN RETURN; END IF;
+  RETURN QUERY SELECT r.* FROM control.etl_snapshot_stage_record r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
+    AND r.run_id=p_run_id AND r.attempt_id=p_attempt_id AND r.entity=p_entity AND r.relation=p_relation
+    AND (r.parent_source_pk COLLATE "C",r.source_pk COLLATE "C")>(p_after_parent COLLATE "C",p_after_source COLLATE "C")
+    ORDER BY r.parent_source_pk COLLATE "C",r.source_pk COLLATE "C" LIMIT p_limit;
+END;
+$body$;
+
+CREATE FUNCTION control.get_etl_snapshot_apply_range(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_entity text,p_source_pk text)
+RETURNS TABLE(aggregate_digest bytea,proof_scope_digest bytea,status text,error_code text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  RETURN QUERY SELECT a.aggregate_digest,a.proof_scope_digest,o.status,o.error_code FROM control.etl_snapshot_apply_range a
+    JOIN control.etl_snapshot_apply_outcome o ON o.outcome_id=a.outcome_id
+    WHERE a.tenant_key=p_tenant_key AND a.source_id=p_source_id AND a.run_id=p_run_id AND a.attempt_id=p_attempt_id
+      AND a.entity=p_entity AND a.relation=p_entity AND a.parent_source_pk='' AND a.source_pk=p_source_pk;
+END;
+$body$;
+
+CREATE FUNCTION control.seal_etl_snapshot_validation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_manifest_digest bytea,p_proof_scope_digest bytea,p_semantic_digest bytea,p_coverage jsonb) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE; m control.etl_snapshot_manifest%ROWTYPE;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  SELECT * INTO m FROM control.etl_snapshot_manifest WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id;
+  IF m.state<>'EXTRACTED' OR m.manifest_digest<>p_manifest_digest OR octet_length(p_proof_scope_digest)<>32 OR
+     octet_length(p_semantic_digest)<>32 OR jsonb_typeof(p_coverage)<>'object' THEN RETURN false; END IF;
+  INSERT INTO control.etl_snapshot_validation(tenant_key,source_id,run_id,attempt_id,manifest_digest,proof_scope_digest,semantic_digest,coverage)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_manifest_digest,p_proof_scope_digest,p_semantic_digest,p_coverage)
+    ON CONFLICT(tenant_key,source_id,run_id,attempt_id) DO NOTHING;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id
+      AND attempt_id=p_attempt_id AND manifest_digest=p_manifest_digest AND proof_scope_digest=p_proof_scope_digest AND semantic_digest=p_semantic_digest) THEN RETURN false; END IF;
+  UPDATE control.etl_run SET status='APPLYING',completeness_summary=jsonb_build_object('status','VALIDATED','semantic_digest',encode(p_semantic_digest,'hex'))
+    WHERE run_id=p_run_id AND status='VALIDATING';
+  RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.persist_etl_snapshot_observation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_semantic_digest bytea,p_reuse_scope_digest bytea) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE existing numeric(20,0); chosen numeric(20,0); next numeric(20,0);
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id AND v.run_id=p_run_id
+      AND v.attempt_id=p_attempt_id AND v.semantic_digest=p_semantic_digest AND v.proof_scope_digest=p_reuse_scope_digest) THEN RETURN NULL; END IF;
+  SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  IF chosen IS NOT NULL THEN RETURN chosen::text; END IF;
+  SELECT o.sequence_value INTO existing FROM control.etl_snapshot_observation_allocation o
+    JOIN control.etl_snapshot_observation b ON (b.tenant_key,b.source_id,b.sequence_value)=(o.tenant_key,o.source_id,o.sequence_value)
+    JOIN control.etl_run prior ON (prior.tenant_key,prior.source_id,prior.run_id)=(b.tenant_key,b.source_id,b.run_id)
+    WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.semantic_digest=p_semantic_digest
+      AND o.reuse_scope_digest=p_reuse_scope_digest AND prior.status='COMPLETE' ORDER BY o.sequence_value LIMIT 1;
+  IF existing IS NOT NULL THEN chosen:=existing;
+  ELSE
+    INSERT INTO control.etl_snapshot_observation_sequence(tenant_key,source_id) VALUES(p_tenant_key,p_source_id) ON CONFLICT DO NOTHING;
+    SELECT next_value INTO next FROM control.etl_snapshot_observation_sequence WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
+    IF next>99999999999999999999 THEN RAISE EXCEPTION 'observation sequence exhausted' USING ERRCODE='22003'; END IF;
+    chosen:=next;
+    INSERT INTO control.etl_snapshot_observation_allocation(tenant_key,source_id,sequence_value,semantic_digest,reuse_scope_digest)
+      VALUES(p_tenant_key,p_source_id,chosen,p_semantic_digest,p_reuse_scope_digest);
+    UPDATE control.etl_snapshot_observation_sequence SET next_value=chosen+1 WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+  END IF;
+  INSERT INTO control.etl_snapshot_observation(tenant_key,source_id,run_id,attempt_id,sequence_value)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,chosen) ON CONFLICT(tenant_key,source_id,run_id) DO NOTHING;
+  RETURN chosen::text;
+END;
+$body$;
+
+CREATE FUNCTION control.record_etl_snapshot_aggregate(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_entity text,p_relation text,p_parent_source_pk text,p_source_pk text,p_aggregate_digest bytea,p_proof_scope_digest bytea,p_status text,p_error_code text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE prior control.etl_snapshot_checkpoint%ROWTYPE; outcome uuid;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id AND v.run_id=p_run_id
+    AND v.attempt_id=p_attempt_id AND v.proof_scope_digest=p_proof_scope_digest) THEN RETURN false; END IF;
+  IF p_status NOT IN ('APPLIED','DUPLICATE','IGNORED_STALE','QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED') OR octet_length(p_aggregate_digest)<>32 THEN RETURN false; END IF;
+  SELECT * INTO prior FROM control.etl_snapshot_checkpoint WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND entity=p_entity FOR UPDATE;
+  IF prior.completed_count>0 AND prior.last_source_pk COLLATE "C">=p_source_pk COLLATE "C" THEN RETURN false; END IF;
+  INSERT INTO control.etl_snapshot_apply_outcome(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,status,error_code)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,p_aggregate_digest,p_status,p_error_code)
+    RETURNING outcome_id INTO outcome;
+  INSERT INTO control.etl_snapshot_apply_range(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest,outcome_id)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,p_aggregate_digest,p_proof_scope_digest,outcome);
+  INSERT INTO control.etl_snapshot_checkpoint(tenant_key,source_id,run_id,entity,last_relation,last_parent_source_pk,last_source_pk,completed_count)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_entity,p_relation,p_parent_source_pk,p_source_pk,1)
+    ON CONFLICT(tenant_key,source_id,run_id,entity) DO UPDATE SET last_relation=EXCLUDED.last_relation,last_parent_source_pk=EXCLUDED.last_parent_source_pk,
+      last_source_pk=EXCLUDED.last_source_pk,completed_count=control.etl_snapshot_checkpoint.completed_count+1,updated_at=clock_timestamp();
+  UPDATE control.etl_run SET applied_count=applied_count+CASE WHEN p_status='APPLIED' THEN 1 ELSE 0 END,
+    quarantined_count=quarantined_count+CASE WHEN p_status IN ('QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED') THEN 1 ELSE 0 END
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.finish_etl_snapshot_run(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE expected bigint; done bigint; bad bigint; applied bigint;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id) THEN RETURN false; END IF;
+  SELECT count(*) INTO expected FROM control.etl_snapshot_stage_record WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation IN ('customer','order');
+  SELECT count(*),count(*) FILTER(WHERE status IN ('QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED')),
+    count(*) FILTER(WHERE status='APPLIED') INTO done,bad,applied FROM control.etl_snapshot_apply_outcome
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id;
+  IF done<>expected THEN RETURN false; END IF;
+  IF bad=0 THEN
+    UPDATE control.etl_run SET status='COMPLETE',completed_at=clock_timestamp(),applied_count=applied,
+      completeness_summary=jsonb_build_object('status','COMPLETE','outcome_count',done) WHERE run_id=p_run_id AND status='APPLYING';
+    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,last_successful_run_id=p_run_id,
+      next_due_at=clock_timestamp()+make_interval(secs=>interval_seconds),updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
+  ELSE
+    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(quarantined_count,bad),
+      completeness_summary=jsonb_build_object('status','FAILED','outcome_count',done,'failed_count',bad) WHERE run_id=p_run_id AND status='APPLYING';
+    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
+  END IF;
+  UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND claim_token=p_claim_token;
+  RETURN true;
+END;
+$body$;
+
+REVOKE ALL ON control.etl_snapshot_continuation,control.etl_snapshot_validation,control.etl_snapshot_observation_sequence,
+  control.etl_snapshot_observation_allocation,control.etl_snapshot_observation,control.etl_snapshot_apply_outcome,
+  control.etl_snapshot_apply_range,control.etl_snapshot_checkpoint FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
+  control.assert_etl_snapshot_continuation(text,text,uuid,uuid,uuid),control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),
+  control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),
+  control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
+  control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
+  control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
+  control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
+  control.read_etl_snapshot_semantic_chunk(text,text,uuid,uuid,uuid,text,text,text,text,integer),
+  control.seal_etl_snapshot_validation(text,text,uuid,uuid,uuid,bytea,bytea,bytea,jsonb),
+  control.persist_etl_snapshot_observation(text,text,uuid,uuid,uuid,bytea,bytea),
+  control.record_etl_snapshot_aggregate(text,text,uuid,uuid,uuid,text,text,text,text,bytea,bytea,text,text),
+  control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_continuation(text,text,integer),
+  control.begin_etl_snapshot_c_start(text,text,uuid,uuid,uuid),control.heartbeat_etl_snapshot_continuation(text,text,uuid,uuid,uuid,integer),
+  control.fail_etl_snapshot_continuation(text,text,uuid,uuid,uuid,text,boolean),control.read_etl_snapshot_stage_page(text,text,uuid,uuid,uuid,text,text,integer),
+  control.read_etl_snapshot_c_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_c_pages(text,text,uuid,uuid,uuid,text,integer,integer),
+  control.validate_etl_snapshot_order_references(text,text,uuid,uuid,uuid,text,boolean,jsonb),
+  control.read_etl_snapshot_order_lines(text,text,uuid,uuid,uuid,text),control.get_etl_snapshot_apply_range(text,text,uuid,uuid,uuid,text,text),
+  control.read_etl_snapshot_semantic_chunk(text,text,uuid,uuid,uuid,text,text,text,text,integer),
+  control.seal_etl_snapshot_validation(text,text,uuid,uuid,uuid,bytea,bytea,bytea,jsonb),
+  control.persist_etl_snapshot_observation(text,text,uuid,uuid,uuid,bytea,bytea),
+  control.record_etl_snapshot_aggregate(text,text,uuid,uuid,uuid,text,text,text,text,bytea,bytea,text,text),
+  control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) TO hub_worker;
+GRANT SELECT (tenant_key,source_id,run_id,attempt_id,claim_token,lease_until,c_start_count,next_retry_at,last_error_code)
+  ON control.etl_snapshot_continuation TO hub_worker;
+GRANT SELECT (tenant_key,source_id,run_id,attempt_id,manifest_digest,proof_scope_digest,semantic_digest,coverage,validated_at)
+  ON control.etl_snapshot_validation TO hub_worker;
+GRANT SELECT (tenant_key,source_id,run_id,sequence_value) ON control.etl_snapshot_observation TO hub_worker;
+GRANT SELECT (tenant_key,source_id,run_id,entity,last_relation,last_parent_source_pk,last_source_pk,completed_count)
+  ON control.etl_snapshot_checkpoint TO hub_worker;
+
+CREATE INDEX canonical_source_identity_customer_discovery_idx
+  ON control.canonical_source_identity(tenant_key,source_id,source_pk COLLATE "C") WHERE entity='customer';
+CREATE VIEW api.source_customer_identity_candidates AS
+  SELECT si.tenant_key,si.source_id,si.source_pk,ci.id::text AS target_id
+  FROM control.canonical_source_identity si
+  JOIN control.source_registry sr ON (sr.tenant_key,sr.source_id)=(si.tenant_key,si.source_id)
+  JOIN control.source_identity_mapping_revision im ON (im.tenant_key,im.source_id,im.revision)=
+    (sr.tenant_key,sr.source_id,sr.identity_mapping_revision)
+  JOIN api.canonical_customer_identity ci ON ci.tenant_id=si.tenant_key AND ci.id::text=si.canonical_object_id::text
+  WHERE si.entity='customer' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(im.mappings) m
+    WHERE m->>'kind'='customer' AND m->>'external_id'=si.source_pk AND m->>'target_id'=ci.id::text);
+REVOKE ALL ON api.source_customer_identity_candidates FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT SELECT (tenant_key,source_id,source_pk,target_id) ON api.source_customer_identity_candidates TO hub_api;

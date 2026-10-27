@@ -63,6 +63,7 @@ function canonical(value: unknown): string {
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${canonical(record[key])}`).join(',')}}`;
 }
+export function snapshotRowsPageDigest(rows: readonly SnapshotStageRow[]): string { return sha256(canonical(rows)); }
 function mappedValue(raw: unknown, mapping: FieldMapping): string | null {
   if (raw === null || raw === undefined) return null;
   const text = String(raw);
@@ -224,7 +225,7 @@ export async function extractPostgresSnapshot(input: Readonly<{
         const key = (row: SnapshotStageRow) => relation === 'order_line'
           ? `${row.parent_source_pk.length}:${row.parent_source_pk}${row.source_pk.length}:${row.source_pk}` : row.source_pk;
         const page: SnapshotPage = Object.freeze({ entity, relation, page_no: pageNo, rows: Object.freeze(records),
-          first_key: key(records[0]), last_key: key(records.at(-1)!), page_digest: sha256(canonical(records)) });
+          first_key: key(records[0]), last_key: key(records.at(-1)!), page_digest: snapshotRowsPageDigest(records) });
         try { await input.onPage(page); }
         catch (error) { sinkFailure = true; throw error; }
         counts[relation] += records.length;
