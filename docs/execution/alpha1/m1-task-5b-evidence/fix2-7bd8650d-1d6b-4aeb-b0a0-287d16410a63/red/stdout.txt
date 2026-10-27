@@ -1,0 +1,15 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-runs.test.ts -t continues scanning admitted work when another due source is paused by a config edit
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/snapshot-runs.test.ts (23 tests | 1 failed | 22 skipped) 3109ms
+     × continues scanning admitted work when another due source is paused by a config edit 287ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 22 skipped (23)
+   Start at  12:26:55
+   Duration  3.75s (transform 199ms, setup 0ms, import 460ms, tests 3.11s, environment 0ms)
+

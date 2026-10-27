@@ -75,3 +75,21 @@ Each final gate has its own before/after status, actual HEAD, raw stdout/stderr,
 - Evidence and report update are a separate documentation commit.
 
 Production DNS pinning, TLS peer verification, private-network egress policy, and deployment resolver/factory wiring remain unverified; the default real-source factory remains fail-closed. The fixture proves behavior only for the owned local PostgreSQL reader/writer setup. B still stops at VALIDATING with EXTRACTED; it performs no semantic approval, observation assignment, canonical write, delete inference/candidate, API-060 action, cutover, or C/D/E work. Whole-phase review and the final integrated M1-5 gate remain outstanding.
+## Fix 2 — independent review finding N1
+
+Fix 2 handles expected source-local denials during strict-loop due admission. `runDurableWorkerLoop` now catches only `AuthError` values whose codes are `SOURCE_CONFLICT`, `SOURCE_NOT_FOUND`, or `SOURCE_CONTRACT_INVALID` for each schedule; it emits a bounded diagnostic with tenant/source identifiers and the error code, then continues scanning remaining schedules and already-admitted attempts. Other exceptions are rethrown, and the existing guarded admission call remains the security boundary.
+
+### Fix 2 verification
+
+- RED: `npm test -- acceptance-tests/snapshot-runs.test.ts -t "continues scanning admitted work when another due source is paused by a config edit"` — **1 failed, 22 skipped** (exit 1). The paused due schedule raised `SOURCE_CONFLICT` through `lockedProof` / `admitDueSnapshotRun` and escaped `runDurableWorkerLoop` before the unrelated admitted source could proceed.
+- GREEN: the same focused command — **1 passed, 22 skipped** (exit 0). The regression leaves the disabled schedule enabled and due after a config edit to PAUSED, adds an unrelated admitted run, asserts a safe warning for the paused schedule, and verifies the unrelated run reaches the injected connector failure path and is recorded as incomplete.
+- `npm run typecheck` — exit 0. `npm run build` — exit 0. No broader suite was rerun for Fix 2.
+- Both owned PostgreSQL test fixtures used pinned image `postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`; their exact IDs are `efc14f5fc0c81b23db65b6a8529c541a51917dd597ff9a2729e0485f4d41ea03` (RED) and `e10431e9b9137f66f5dfadf75e738791131330a0d99a31898b24a371d1167225` (GREEN). Each lifecycle record confirms ownership, removal, and exact-ID absence.
+- Captures are under four distinct external roots: `E:\m1t5-runtime\fix2-red-ac546846-6b4f-4ac4-aac4-5c9ab95fbfa8`, `E:\m1t5-runtime\fix2-green-36f37381-1b9e-4817-b3fa-ac783b068eaf`, `E:\m1t5-runtime\fix2-typecheck-6439afef-48da-436c-ad74-621fd09471a0`, and `E:\m1t5-runtime\fix2-build-c4346f77-203e-413e-aad9-209c448e5436`. Each gate retained its exact command, stdout/stderr, exit, before/after HEAD and status, and selected source raw/LF SHA-256, byte-size, and Git-blob snapshots. All gates were run against working-tree changes bracketed at `1a0271f650b7c0746f059d24dcf7cdafeb08e7a3`; `committed-source-bindings.json` confirms both tested source blobs match product commit `8e6f1cfc0d1e1f0aa577806d8ba47c66a1a0b93b`.
+- The individually whitelisted copied captures, fixture lifecycle records, binding document, and artifact SHA-256/byte-size manifest are in `docs/execution/alpha1/m1-task-5b-evidence/fix2-7bd8650d-1d6b-4aeb-b0a0-287d16410a63/`.
+
+### Fix 2 commit and remaining limits
+
+- Product and focused regression: `8e6f1cfc0d1e1f0aa577806d8ba47c66a1a0b93b` (`fix: isolate denied snapshot schedules`).
+- Evidence and report update are committed separately.
+- Original R1–R5 remain addressed. The formal 48-case suite remains **NOT_RUN**; production DNS pinning, TLS peer verification, private-network egress policy, and deployment resolver/factory wiring remain unverified. B still ends at VALIDATING with EXTRACTED; C/D/E, whole-phase review, and the final integrated M1-5 gate remain outstanding.

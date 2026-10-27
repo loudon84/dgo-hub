@@ -1,0 +1,266 @@
+{
+  "source_capture_roots": [
+    "E:\\m1t5-runtime\\fix2-red-ac546846-6b4f-4ac4-aac4-5c9ab95fbfa8",
+    "E:\\m1t5-runtime\\fix2-green-36f37381-1b9e-4817-b3fa-ac783b068eaf",
+    "E:\\m1t5-runtime\\fix2-typecheck-6439afef-48da-436c-ad74-621fd09471a0",
+    "E:\\m1t5-runtime\\fix2-build-c4346f77-203e-413e-aad9-209c448e5436"
+  ],
+  "artifacts": [
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "build/after-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "build/after-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "build/after-status.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "build/before-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "build/before-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "build/before-status.txt"
+    },
+    {
+      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26",
+      "bytes": 15,
+      "path": "build/command.txt"
+    },
+    {
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "bytes": 3,
+      "path": "build/exit.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "build/head-after.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "build/head-before.txt"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "path": "build/stderr.txt"
+    },
+    {
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0",
+      "bytes": 79,
+      "path": "build/stdout.txt"
+    },
+    {
+      "sha256": "9090353d9c1668553c843d5a6410164b9fb5986875865f9ff2e0364b8b079aa0",
+      "bytes": 1050,
+      "path": "committed-source-bindings.json"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "green/after-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "green/after-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "green/after-status.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "green/before-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "green/before-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "green/before-status.txt"
+    },
+    {
+      "sha256": "b1fb9ccb0800c04e1b2a172483b296432378f9c843751de980f630eb0a58ec3f",
+      "bytes": 141,
+      "path": "green/command.txt"
+    },
+    {
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "bytes": 3,
+      "path": "green/exit.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "green/head-after.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "green/head-before.txt"
+    },
+    {
+      "sha256": "86bc63679a186643619645a2892811016d8713883d72733c3fa92c806bd1a883",
+      "bytes": 1048,
+      "path": "green/postgres-lifecycle.jsonl"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "path": "green/stderr.txt"
+    },
+    {
+      "sha256": "d822d737c3f413d6408b53616f08390de00c21bd550995016fd15ba4157668f6",
+      "bytes": 436,
+      "path": "green/stdout.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "red/after-head.txt"
+    },
+    {
+      "sha256": "20c2ba6fc008b941cff06e024730c0593f0743ca169d35ab2646823a61927633",
+      "bytes": 325,
+      "path": "red/after-sources.json"
+    },
+    {
+      "sha256": "5dc9828bebb9d762ce78274a85d0e3846c092e6450884e0f715b7ee9b1552e0c",
+      "bytes": 63,
+      "path": "red/after-status.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "red/before-head.txt"
+    },
+    {
+      "sha256": "20c2ba6fc008b941cff06e024730c0593f0743ca169d35ab2646823a61927633",
+      "bytes": 325,
+      "path": "red/before-sources.json"
+    },
+    {
+      "sha256": "5dc9828bebb9d762ce78274a85d0e3846c092e6450884e0f715b7ee9b1552e0c",
+      "bytes": 63,
+      "path": "red/before-status.txt"
+    },
+    {
+      "sha256": "b1fb9ccb0800c04e1b2a172483b296432378f9c843751de980f630eb0a58ec3f",
+      "bytes": 141,
+      "path": "red/command.txt"
+    },
+    {
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "bytes": 3,
+      "path": "red/exit.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "red/head-after.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "red/head-before.txt"
+    },
+    {
+      "sha256": "5373f50674b71b1b3e26162ebd0154e5bc0ae5af46c33e7b36a70375d2a3c063",
+      "bytes": 1048,
+      "path": "red/postgres-lifecycle.jsonl"
+    },
+    {
+      "sha256": "3fab85670579b26454e8d471ee1b5eb7c8c53dbb5bedcb736bb3d9a76e3d0d66",
+      "bytes": 1135,
+      "path": "red/stderr.txt"
+    },
+    {
+      "sha256": "9fe18de42e054b26e4a714764a3666d98c867d5bf62b0df3609c0fadabb21060",
+      "bytes": 622,
+      "path": "red/stdout.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "typecheck/after-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "typecheck/after-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "typecheck/after-status.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "typecheck/before-head.txt"
+    },
+    {
+      "sha256": "affd363364d4be8e75fe907e576bba47497173215ae79f124e05cbda159a53ab",
+      "bytes": 675,
+      "path": "typecheck/before-sources.json"
+    },
+    {
+      "sha256": "7c2db8de8b584de27c0b0f56b1d8d5feab0fcdda702065dc91a8b61fca865592",
+      "bytes": 117,
+      "path": "typecheck/before-status.txt"
+    },
+    {
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6",
+      "bytes": 19,
+      "path": "typecheck/command.txt"
+    },
+    {
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "bytes": 3,
+      "path": "typecheck/exit.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "typecheck/head-after.txt"
+    },
+    {
+      "sha256": "45d15a1f77d5bdd386e370ced1bc5df8a20fefa1e229adc34723c04ca3eae7b2",
+      "bytes": 42,
+      "path": "typecheck/head-before.txt"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "path": "typecheck/stderr.txt"
+    },
+    {
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe",
+      "bytes": 92,
+      "path": "typecheck/stdout.txt"
+    }
+  ],
+  "package_id": "fix2-7bd8650d-1d6b-4aeb-b0a0-287d16410a63"
+}

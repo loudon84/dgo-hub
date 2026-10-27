@@ -1,0 +1,21 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > continues scanning admitted work when another due source is paused by a config edit
+AuthError: SOURCE_CONFLICT
+ ❯ fail etl-worker/snapshot-runs.ts:11:80
+      9| const ENTITY_ORDER: readonly SourceEntity[] = ['customer','order'];
+     10|
+     11| function fail(code: ConstructorParameters<typeof AuthError>[0]): never…
+       |                                                                                ^
+     12| function requireScope(principal: UserPrincipal, scope: 'source:read' |…
+     13|   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDE…
+ ❯ lockedProof etl-worker/snapshot-runs.ts:111:70
+ ❯ etl-worker/snapshot-runs.ts:272:19
+ ❯ transaction etl-worker/snapshot-runs.ts:75:20
+ ❯ runSnapshotWorkerOnce etl-worker/snapshot-worker.ts:73:5
+ ❯ runDurableWorkerLoop etl-worker/worker.ts:384:31
+ ❯ acceptance-tests/snapshot-runs.test.ts:512:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,24 @@
+{
+  "product_commit": "8e6f1cfc0d1e1f0aa577806d8ba47c66a1a0b93b",
+  "bindings": [
+    {
+      "raw_sha256": "d97eb76f394eedbe83238f70718e8fc466501134a7009b94b854eccd5a198e7c",
+      "commit_git_blob": "b171bbfd1d68d841479dadda5c499fa327af2ff1",
+      "bytes": 8194,
+      "path": "integration-service/etl-worker/snapshot-worker.ts",
+      "lf_sha256": "d97eb76f394eedbe83238f70718e8fc466501134a7009b94b854eccd5a198e7c",
+      "gate_git_blob": "b171bbfd1d68d841479dadda5c499fa327af2ff1",
+      "matches": true
+    },
+    {
+      "raw_sha256": "87ff3aeea43d8677c46372831d3f6733ba64337b209f52f0598b492c20e48638",
+      "commit_git_blob": "c77ad0304c60c7917c1a04cf6140432b23bc02d7",
+      "bytes": 67867,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "lf_sha256": "87ff3aeea43d8677c46372831d3f6733ba64337b209f52f0598b492c20e48638",
+      "gate_git_blob": "c77ad0304c60c7917c1a04cf6140432b23bc02d7",
+      "matches": true
+    }
+  ],
+  "tested_head": "1a0271f650b7c0746f059d24dcf7cdafeb08e7a3"
+}
