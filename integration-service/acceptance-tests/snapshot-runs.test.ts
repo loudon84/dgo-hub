@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -476,6 +476,50 @@ describe('durable snapshot run admission', () => {
       expect(connectCalls).toBe(1);
       expect(runs.rows).toEqual([{request_kind:'SCHEDULED',status:'SCANNING',ordinal:1,attempt_status:'INCOMPLETE'}]);
     } finally { e2eEndpointProfile=undefined; }
+  });
+
+  it('continues scanning admitted work when another due source is paused by a config edit', async () => {
+    e2eEndpointProfile = { revision:'paused-due-pg-v1',connector:'postgresql',protocol:'postgres:',host:'127.0.0.1',port:fixture.hostPort,
+      allow_loopback_plaintext:true,database:'postgres',user:'source_reader',schema:'public',
+      entities:{customer:{table:'customers',source_pk:'customer_id',updated_at_field:'updated_at'}} };
+    const config={name:'Paused snapshot CRM',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
+      endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer'],delete_contract:'hard_delete'};
+    await auth.repository.provisionSourceCredential({sourceId:'pg-paused',tenantId:owner.tenantId,token:createCredential().secret,
+      secretRef:'vault:/snapshot/source',allowedEntities:['customer'],revision:'1'});
+    await service.create(owner,{source_id:'pg-paused',data_owner_user_id:owner.userId,config});
+    await service.writeMappings(owner,'pg-paused','1',[
+      {entity:'customer',source_field:'name',target_field:'customer_name',transform:'trim'},
+      {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+      {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+      {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+    ]);
+    const tested=await service.test(owner,'pg-paused','1');
+    const approved=await service.approve(owner,'pg-paused','1',tested.test_report_id,tested.data_contract_ref);
+    await service.activate(owner,'pg-paused','1',approved.approval_id);
+    await fixture.pool.query(`UPDATE control.etl_snapshot_schedule SET next_due_at=clock_timestamp()-interval '1 second'
+      WHERE tenant_key=$1 AND source_id='pg-paused'`,[owner.tenantId]);
+    await service.update(owner,'pg-paused',{expected_revision:'1',config:{...config,name:'Paused after edit'}});
+    const schedule=await fixture.pool.query(`SELECT enabled,active_run_id,next_due_at<=clock_timestamp() AS due
+      FROM control.etl_snapshot_schedule WHERE tenant_key=$1 AND source_id='pg-paused'`,[owner.tenantId]);
+    expect(schedule.rows[0]).toEqual({enabled:true,active_run_id:null,due:true});
+    const {createSnapshotRun}=await import('../etl-worker/snapshot-runs.js');
+    const admitted=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-main','1','continue-after-due-denial');
+    const sourceConnectionFactory:PostgresSourceConnectionFactory={connect:async()=>{
+      throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE');
+    }};
+    const warning=vi.spyOn(console,'warn').mockImplementation(()=>undefined);
+    try {
+      await runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'}, {
+        secretResolver:{isConfiguredReference:async()=>true,resolve:async()=> 'fixture-secret'},sourceConnectionFactory,
+        egressPolicy:{environmentKind:'local_lab',policyId:'owned-due-loopback'},pageSize:10,leaseSeconds:60 });
+      expect(warning).toHaveBeenCalledWith('snapshot due admission denied',{
+        event:'snapshot_due_admission_denied',tenant_key:owner.tenantId,source_id:'pg-paused',code:'SOURCE_CONFLICT'});
+      const attempt=await fixture.pool.query(`SELECT status,error_code FROM control.etl_run_attempt WHERE run_id=$1`,[admitted.run_id]);
+      expect(attempt.rows).toEqual([{status:'INCOMPLETE',error_code:'SNAPSHOT_SOURCE_UNAVAILABLE'}]);
+    } finally {
+      warning.mockRestore();
+      e2eEndpointProfile=undefined;
+    }
   });
 
   it('serializes simultaneous manual and due admissions to one active durable run', async () => {

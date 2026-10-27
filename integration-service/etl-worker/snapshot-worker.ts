@@ -1,4 +1,5 @@
 import type { Pool, PoolClient } from 'pg';
+import { AuthError } from '../auth/errors.js';
 import { validateEndpointProfile } from '../source-registry/capability-probe.js';
 import type { SecretResolver } from '../source-registry/service.js';
 import {
@@ -9,6 +10,8 @@ import { createSnapshotStageStore, expectedSnapshotRelations, snapshotManifestDi
 import { admitDueSnapshotRun } from './snapshot-runs.js';
 
 type SnapshotPageReceipt = Readonly<Pick<SnapshotPage,'entity'|'relation'|'page_no'|'first_key'|'last_key'|'page_digest'> & { row_count:number }>;
+const DUE_ADMISSION_DENIALS = new Set(['SOURCE_CONFLICT','SOURCE_NOT_FOUND','SOURCE_CONTRACT_INVALID']);
+
 export function snapshotPageReceiptMetadata(page:SnapshotPage):SnapshotPageReceipt {
   return Object.freeze({entity:page.entity,relation:page.relation,page_no:page.page_no,first_key:page.first_key,last_key:page.last_key,
     page_digest:page.page_digest,row_count:page.rows.length});
@@ -69,8 +72,14 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
   if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(leaseSeconds) || leaseSeconds < 10 || leaseSeconds > 900)
     throw new Error('SNAPSHOT_WORKER_OPTIONS_INVALID');
   const store = createSnapshotStageStore(pool);
-  for (const schedule of await dueSchedules(pool,limit))
-    await admitDueSnapshotRun(pool,schedule.tenant_key,schedule.source_id);
+  for (const schedule of await dueSchedules(pool,limit)) {
+    try { await admitDueSnapshotRun(pool,schedule.tenant_key,schedule.source_id); }
+    catch (error) {
+      if (!(error instanceof AuthError) || !DUE_ADMISSION_DENIALS.has(error.code)) throw error;
+      console.warn('snapshot due admission denied', { event:'snapshot_due_admission_denied',tenant_key:schedule.tenant_key,
+        source_id:schedule.source_id,code:error.code });
+    }
+  }
   const candidates = await availableSources(pool, limit);
   let claimed = 0;
   for (const source of candidates) {
