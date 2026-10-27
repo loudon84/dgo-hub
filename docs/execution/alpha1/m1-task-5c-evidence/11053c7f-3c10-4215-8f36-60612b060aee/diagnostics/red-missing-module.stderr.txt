@@ -1,0 +1,14 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-validation.test.ts [ acceptance-tests/snapshot-validation.test.ts ]
+Error: Cannot find module '../etl-worker/snapshot-validation.js' imported from E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-validation.test.ts
+ ❯ acceptance-tests/snapshot-validation.test.ts:2:1
+      1| import { describe, expect, it } from 'vitest';
+      2| import { computeSemanticSnapshotDigest, type SemanticSnapshotFact } fr…
+       | ^
+      3|
+      4| const customer: SemanticSnapshotFact = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

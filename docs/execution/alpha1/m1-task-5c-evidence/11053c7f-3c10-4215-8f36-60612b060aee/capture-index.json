@@ -1,0 +1,419 @@
+{
+  "implementationCommit": "b32b746943d6feec97641c31b093b068ab51d4a9",
+  "generatedFor": "M1-5C report/evidence handoff",
+  "copiedArtifacts": [
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-command.txt",
+      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26",
+      "size": 15,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-exit.txt",
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-source-after.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-source-before.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0558d1ff-4a99-4928-aea9-befe7095d87c",
+      "artifact": "build-stdout.txt",
+      "sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "size": 75,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "generated from committed Git blobs for implementation commit b32b746943d6feec97641c31b093b068ab51d4a9",
+      "artifact": "commit-binding.json",
+      "sha256": "91f7e4553e5d77f185ef323fedcecfb01a52ab54fa336f714c5e73e6b7b96d89",
+      "size": 16239,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-command.txt",
+      "sha256": "a0852e593d3e43cf8ec1746145cd282cda6effc38b1ac5b50561b839957c93a8",
+      "size": 149,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-exit.txt",
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-source-after.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-source-before.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "focused-tests-stdout.txt",
+      "sha256": "0bcce7581cf1e70b2ae3a28669e61edfd20e9f5a3adac696594fcb9a2b89fa3b",
+      "size": 223,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\11053c7f-3c10-4215-8f36-60612b060aee",
+      "artifact": "owned-postgres-lifecycle-index.json",
+      "sha256": "da98603c2a2266b83f56841f710313ea5c833e25901e3cafa136c432fb98d514",
+      "size": 7847,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-command.txt",
+      "sha256": "3721edac3385c019703729dbc0790c0c781df8eef67e409ece49a7f019e9f023",
+      "size": 179,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-exit.txt",
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-source-after.json",
+      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a",
+      "size": 1450,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-source-before.json",
+      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a",
+      "size": 1450,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "source-connector-tests-stdout.txt",
+      "sha256": "670423191570e225e4084f1d780147418dba662f2369a8cba9afc398437a62c8",
+      "size": 221,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-command.txt",
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6",
+      "size": 19,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-exit.txt",
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-source-after.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-source-before.json",
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
+      "size": 4036,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\70fc8495-7975-4d24-9817-eb468d886045",
+      "artifact": "typecheck-stdout.txt",
+      "sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "size": 88,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-canonical.exit.txt",
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-canonical.source-after.json",
+      "sha256": "c428c22b954f43c4defa7b434d56c1c197d50eb47094c62d12ff40989ed02a15",
+      "size": 1072,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-canonical.source-before.json",
+      "sha256": "c428c22b954f43c4defa7b434d56c1c197d50eb47094c62d12ff40989ed02a15",
+      "size": 1072,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-canonical.stderr.txt",
+      "sha256": "77f1f083d568424b0c913f00c53b06cc0e15fee76c86db9ed0fedc1748692891",
+      "size": 762,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-canonical.stdout.txt",
+      "sha256": "c567f5976af8839d8ca013d7661baed695bc31d491e3d5551f843dcd24cdbb05",
+      "size": 335,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-missing-module.exit.txt",
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-missing-module.source-before.json",
+      "sha256": "53ff17316397de3fadde826e52c48b9edbeda306db1028ed5684b8172c083b57",
+      "size": 380,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-missing-module.stderr.txt",
+      "sha256": "66c6e867162007a9145af992b53a87265c706a963f028d2bae243e569590b56f",
+      "size": 679,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "NOT_RETAINED: source capture preserved inside repository task evidence; original external M0 runtime root not recorded",
+      "artifact": "diagnostics/red-missing-module.stdout.txt",
+      "sha256": "9708af45dfd6121342622504b054c67aa058d54616f0e08d01fcfffe45c0b1e9",
+      "size": 335,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.command.txt",
+      "sha256": "0c522250888fbb7608cdcda8a4caf07747cf30b4a78b510d229dac0f1a408407",
+      "size": 123,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.exit.txt",
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.source-after.json",
+      "sha256": "25fa2b62e61e0812f37b4d063f6e6c53e3cdcff4be9ac80499e65efb0ccede03",
+      "size": 782,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.source-before.json",
+      "sha256": "25fa2b62e61e0812f37b4d063f6e6c53e3cdcff4be9ac80499e65efb0ccede03",
+      "size": 782,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.stderr.txt",
+      "sha256": "33ab4f9fb388e4e4e5169eeeb6baae83af160b9bde081204b6f73d82dde0543d",
+      "size": 3168,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "diagnostics/untyped-pg-termination-failure.stdout.txt",
+      "sha256": "cab379e774f09da66373d6f3f8872e38f77e5e9c643336b4824d64ed4cd6811a",
+      "size": 427,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.command.txt",
+      "sha256": "0c522250888fbb7608cdcda8a4caf07747cf30b4a78b510d229dac0f1a408407",
+      "size": 123,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.exit.txt",
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size": 3,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.source-after.json",
+      "sha256": "41fef950296a9c118ff9f6d6928554e18f2f43020c30a800b86d714eea19f310",
+      "size": 782,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.source-before.json",
+      "sha256": "41fef950296a9c118ff9f6d6928554e18f2f43020c30a800b86d714eea19f310",
+      "size": 782,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "diagnostics/untyped-pg-termination-fixed.stdout.txt",
+      "sha256": "d59bec2d01d5911f6c49fdde911474d6f3d486dc390a5edec937f25d3432b780",
+      "size": 176,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "owned-postgres-lifecycle/fixture-01.postgres-lifecycle.jsonl",
+      "sha256": "d72e0d455e48decbbb35612450bcb2701829e0cc82de96ca8294baae2ff6df16",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "owned-postgres-lifecycle/fixture-02.postgres-lifecycle.jsonl",
+      "sha256": "48aa22082a36868e028d39dde81948281cdf98179c066cefb478c05e4d4724d5",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "artifact": "owned-postgres-lifecycle/fixture-03.postgres-lifecycle.jsonl",
+      "sha256": "2987219ffa4e5c728f9b5904347adb00499d8a007a27fcc1cde2647717e9ebc1",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "artifact": "owned-postgres-lifecycle/fixture-04.postgres-lifecycle.jsonl",
+      "sha256": "367485305b2352867246738d37e79ac07e3fb4caa5c24008d60603d0a2d323d4",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0e2c707c-02bf-4f73-8eb1-c9a4c552d66f",
+      "artifact": "owned-postgres-lifecycle/fixture-05.postgres-lifecycle.jsonl",
+      "sha256": "923513cf401abd374d6f49c2a9a19c98a5210446e71d4808c85532eefcbaa3cd",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\0e2c707c-02bf-4f73-8eb1-c9a4c552d66f",
+      "artifact": "owned-postgres-lifecycle/fixture-06.postgres-lifecycle.jsonl",
+      "sha256": "0fd86058a57418a4fa803b488eafc794d401199f189468926722574ed23689a5",
+      "size": 1066,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "owned-postgres-lifecycle/fixture-07.postgres-lifecycle.jsonl",
+      "sha256": "64b1927da04fa3f7f054bcb16f0dfbdea719f2141fdae2c981cf98e1eeb8fde9",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "artifact": "owned-postgres-lifecycle/fixture-08.postgres-lifecycle.jsonl",
+      "sha256": "9860a8abb748b3d32a266899073c3e9ef2476feee92b02d775b650de6a94671b",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "owned-postgres-lifecycle/fixture-09.postgres-lifecycle.jsonl",
+      "sha256": "332b1675f98a71f27072574e736727ce524e5475bbe4ea097c3fd92bc8cca80b",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "artifact": "owned-postgres-lifecycle/fixture-10.postgres-lifecycle.jsonl",
+      "sha256": "6b4f6455fcce69b285ed90a5ea1656128b4a1d4827179e5a1ad412489c5f1d59",
+      "size": 1048,
+      "note": null
+    },
+    {
+      "sourceRunRoot": "E:\\m1t5-runtime\\2467ae2f-33c1-4aaa-a5bd-24cae0aaffac",
+      "artifact": "owned-postgres-lifecycle/fixture-11.postgres-lifecycle.jsonl",
+      "sha256": "6a2fc2fada01ac613f23fbc4bd24ab280f68ee650198d22b7757b476b44ceb7c",
+      "size": 1048,
+      "note": null
+    }
+  ],
+  "notRetained": [
+    "Original external root for early missing-module RED captures: NOT_RETAINED; repository-retained stdout/stderr/exit/source manifests are copied and hashed.",
+    "Earlier M0_RUN_EVIDENCE_ROOT run configured inside the repository: NOT_RETAINED as external capture; no relabeling or copy was made.",
+    "Same-source customer lookup/authority-bypass experiment and its revert artifacts: NOT_RETAINED; chronology is described from direct task record only.",
+    "Foreign-source customer-reference fixture: NOT_RUN in final acceptance set.",
+    "Whole Node process crash: NOT_RUN; destination PostgreSQL backend termination was tested."
+  ]
+}

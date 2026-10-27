@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 E:/git/dgo-hub
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 22 skipped (23)
+   Start at  00:28:49
+   Duration  9.74s (tests 96%, import 3%, transform 1%)
+

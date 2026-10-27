@@ -1,0 +1,138 @@
+{
+  "description": "Whitelisted lifecycle JSONL copies from explicit M1-5C runtime roots; each complete lifecycle requires matching created/image_observed/removed events, ownershipConfirmed=true, containerAbsentAfterRemoval=true, and matching IDs. This counts successful owned fixture cleanup, not test pass outcomes.",
+  "fixtures": [
+    {
+      "artifact": "fixture-01.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "taskLabel": "m1task5",
+      "runLabel": "5a92958a-a0b2-4c12-a6e9-8280ec6624f6",
+      "containerId": "23e28f1043bbe12c59b7efd7b449fff1956c21a4c548624f47ab962de6527a8e",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-02.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "taskLabel": "m1task5",
+      "runLabel": "7bf7175e-7df3-463e-9f6f-d3625d324f3f",
+      "containerId": "8b86e93797849b136bd14bb5522a69b05469a6ae5177efe435f317b28073e627",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-03.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\a3d057c3-5540-45bf-ba41-0f19532445ee",
+      "taskLabel": "m1task5",
+      "runLabel": "e7689333-bf6b-4f8d-94a9-5088c5440b37",
+      "containerId": "f05d7bfdf645f68f549198f3d7ea9312fce7c157ffd74b013afa1f55f402736b",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-04.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\c738779e-80cc-4dd3-83fa-3f1a8b6d5572",
+      "taskLabel": "m1task5",
+      "runLabel": "380d6cd6-fb4c-45bf-8c39-e823a3f3ab8c",
+      "containerId": "10154eec1437d1cbb216f9e72270279114eea02da04ee4c37c534de066de7c6a",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-05.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\0e2c707c-02bf-4f73-8eb1-c9a4c552d66f",
+      "taskLabel": "m1task5",
+      "runLabel": "cf14de96-14b9-49dd-b86d-2cb248b27b4e",
+      "containerId": "550bac879d0f0fecf6a4710fe2d9e00a023398e010ddac7b52b23ccfb68acf81",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-06.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\0e2c707c-02bf-4f73-8eb1-c9a4c552d66f",
+      "taskLabel": "m1task5c-upgrade",
+      "runLabel": "c6985e2b-cffa-4c39-bf84-433db0ef8759",
+      "containerId": "2d2141a4ec71fa6a2dac44de6e86eb06e5358b1cb1a71e449062da80b92d0448",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-07.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "taskLabel": "m1task5",
+      "runLabel": "8b293200-efec-4cf1-bcea-5f741aece9b2",
+      "containerId": "a1505b4195ab52fe074b8bf19fc56218f41282ad1507d5119f99ce47c42096a5",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-08.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\944b8ac3-c8dd-4fc3-a618-311e16492c1e",
+      "taskLabel": "m1task5",
+      "runLabel": "fb704314-f2e8-4cc1-a096-df443288dfa8",
+      "containerId": "fadb2aa7f2972a282ab2a4ee119582087feafce566933a833c547f00acb2f0cc",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-09.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "taskLabel": "m1task5",
+      "runLabel": "3b8b4ed2-8979-433c-ae84-25a49fa5f983",
+      "containerId": "74f24d557b7e48556f07d0776dca9f31645331386657546a6c7eb55aba0f35be",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-10.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\f4ef4dd2-52e9-4d11-8c56-59a0edef2add",
+      "taskLabel": "m1task5",
+      "runLabel": "76e8fc37-e1dc-42bd-a522-a75537162261",
+      "containerId": "22d8f396ec15d8686a62e9880fb6132514b2741da68d84e5d14442f94df823c1",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    },
+    {
+      "artifact": "fixture-11.postgres-lifecycle.jsonl",
+      "externalOriginal": "E:\\m1t5-runtime\\2467ae2f-33c1-4aaa-a5bd-24cae0aaffac",
+      "taskLabel": "m1task5",
+      "runLabel": "09c982ee-425d-4074-a48b-1d3f37e1ae8d",
+      "containerId": "1292a7aaf9ede07d374dd76335c5cfe4ca129c5ca18e7c782a4183b72007bb84",
+      "imageReference": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "observedRepoDigest": "postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "ownershipConfirmed": true,
+      "exactContainerAbsenceConfirmed": true,
+      "successfulLifecycle": true
+    }
+  ],
+  "completeOwnedFixtureLifecycleCount": 11
+}

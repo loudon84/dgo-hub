@@ -1,0 +1,19 @@
+{
+  "head": "9e12d44be952cebae4b6286ea92cf1b1b29497ae",
+  "files": [
+    {
+      "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+      "raw_sha256": "353d0be748f49b967c73eea9b7159f97c5ac876dc86eb0677b9305f073dd1350",
+      "lf_sha256": "353d0be748f49b967c73eea9b7159f97c5ac876dc86eb0677b9305f073dd1350",
+      "size": 12402,
+      "git_blob": "8494e6dec7375ece411022a8b7341fa540155002"
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "raw_sha256": "2c9e5240d75a8b83277536f4c64e41211c4cdd8be5659fac8d1efacb5a4d76a0",
+      "lf_sha256": "2c9e5240d75a8b83277536f4c64e41211c4cdd8be5659fac8d1efacb5a4d76a0",
+      "size": 81664,
+      "git_blob": "18e4dec5a317c300fdd34ca8cba1822b0e2a34cc"
+    }
+  ]
+}

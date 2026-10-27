@@ -1,0 +1,15 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-validation.test.ts [ acceptance-tests/snapshot-validation.test.ts ]
+Error: Cannot find module '../etl-worker/snapshot-canonical.js' imported from E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-validation.test.ts
+ ❯ acceptance-tests/snapshot-validation.test.ts:3:1
+      1| import { describe, expect, it } from 'vitest';
+      2| import { computeSemanticSnapshotDigest, type SemanticSnapshotFact } fr…
+      3| import { toCanonicalSnapshotCustomer, toCanonicalSnapshotOrder, type S…
+       | ^
+      4|
+      5| const customer: SemanticSnapshotFact = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

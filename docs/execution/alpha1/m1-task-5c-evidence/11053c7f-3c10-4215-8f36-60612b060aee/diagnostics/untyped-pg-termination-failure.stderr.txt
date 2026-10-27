@@ -1,0 +1,69 @@
+npm warn exec The following package was not found and will be installed: vitest@5.0.5
+stderr | integration-service/acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c6948bc2-0425-4593-8d11-c202a4936663',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:107:28)'
+}
+
+stderr | integration-service/acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'b5006079-1b62-47c7-8dbe-97eba84e37a4',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | integration-service/acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '15cbb191-c111-4b7c-878a-3d9433e35dbe',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  integration-service/acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected { status: 'FAILED', …(5) } to match object { status: 'APPLYING', …(2) }
+(3 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "active_run_id": "15cbb191-c111-4b7c-878a-3d9433e35dbe",
++   "active_run_id": null,
+    "c_start_count": 1,
+-   "status": "APPLYING",
++   "status": "FAILED",
+  }
+
+ ❯ runWithDestinationCrash integration-service/acceptance-tests/snapshot-runs.test.ts:429:36
+    427|           c.claim_token,c.lease_until FROM control.etl_run r JOIN cont…
+    428|           JOIN control.etl_snapshot_continuation c USING(tenant_key,so…
+    429|         expect(retryState.rows[0]).toMatchObject({status:'APPLYING',ac…
+       |                                    ^
+    430|         if(retryState.rows[0].claim_token!==null) {
+    431|           await fixture.pool.query(`UPDATE control.etl_snapshot_contin…
+ ❯ integration-service/acceptance-tests/snapshot-runs.test.ts:446:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

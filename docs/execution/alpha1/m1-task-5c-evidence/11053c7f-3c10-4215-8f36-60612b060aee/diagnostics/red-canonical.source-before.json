@@ -1,0 +1,26 @@
+[
+  {
+    "path": "integration-service/etl-worker/snapshot-validation.ts",
+    "raw_size": 3513,
+    "raw_sha256": "d36110059c9f84d90560f1b71597f5ba7e739880df56916acbd78475c77783b9",
+    "lf_size": 3513,
+    "lf_sha256": "d36110059c9f84d90560f1b71597f5ba7e739880df56916acbd78475c77783b9",
+    "git_blob": "2f0ceb75ce51dfea9d6c569d0bf8342d71886a40"
+  },
+  {
+    "path": "integration-service/acceptance-tests/snapshot-validation.test.ts",
+    "raw_size": 5898,
+    "raw_sha256": "8bc0aa76c607777ec79a4174bc84b92f369ae8b36716d73bc1e5e592927c4447",
+    "lf_size": 5898,
+    "lf_sha256": "8bc0aa76c607777ec79a4174bc84b92f369ae8b36716d73bc1e5e592927c4447",
+    "git_blob": "94b6a8988852b86e095ed9ce0a52f00a527208d6"
+  },
+  {
+    "path": "integration-service/package.json",
+    "raw_size": 1182,
+    "raw_sha256": "6735e7b703baa116a0b12b68f6b2f119a97d86063a0eda1b508d24e9ae1d90b8",
+    "lf_size": 1182,
+    "lf_sha256": "6735e7b703baa116a0b12b68f6b2f119a97d86063a0eda1b508d24e9ae1d90b8",
+    "git_blob": "9ecf9356d39e0c6b88ecfeb00a6d40a38dd137e3"
+  }
+]

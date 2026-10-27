@@ -1,130 +1,300 @@
 {
+  "implementation_commit": "b32b746943d6feec97641c31b093b068ab51d4a9",
   "artifacts": [
     {
-      "size": 149,
-      "sha256": "a0852e593d3e43cf8ec1746145cd282cda6effc38b1ac5b50561b839957c93a8",
-      "path": "focused-tests-command.txt"
-    },
-    {
-      "size": 223,
-      "sha256": "0bcce7581cf1e70b2ae3a28669e61edfd20e9f5a3adac696594fcb9a2b89fa3b",
-      "path": "focused-tests-stdout.txt"
-    },
-    {
-      "size": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "path": "focused-tests-stderr.txt"
-    },
-    {
-      "size": 3,
-      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
-      "path": "focused-tests-exit.txt"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "focused-tests-source-before.json"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "focused-tests-source-after.json"
-    },
-    {
-      "size": 19,
-      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6",
-      "path": "typecheck-command.txt"
-    },
-    {
-      "size": 88,
-      "sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
-      "path": "typecheck-stdout.txt"
-    },
-    {
-      "size": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "path": "typecheck-stderr.txt"
-    },
-    {
-      "size": 3,
-      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
-      "path": "typecheck-exit.txt"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "typecheck-source-before.json"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "typecheck-source-after.json"
-    },
-    {
+      "path": "build-command.txt",
       "size": 15,
-      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26",
-      "path": "build-command.txt"
+      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26"
     },
     {
+      "path": "build-exit.txt",
+      "size": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "build-source-after.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "build-source-before.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "build-stderr.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "build-stdout.txt",
       "size": 75,
-      "sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
-      "path": "build-stdout.txt"
+      "sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a"
     },
     {
-      "size": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "path": "build-stderr.txt"
+      "path": "capture-index.json",
+      "size": 17997,
+      "sha256": "09830a819e33a8efec6c22c2e7afe0cb30b3c8e0ebcee02885c2445b64ab0d42"
     },
     {
-      "size": 3,
-      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
-      "path": "build-exit.txt"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "build-source-before.json"
-    },
-    {
-      "size": 4036,
-      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491",
-      "path": "build-source-after.json"
-    },
-    {
-      "size": 179,
-      "sha256": "3721edac3385c019703729dbc0790c0c781df8eef67e409ece49a7f019e9f023",
-      "path": "source-connector-tests-command.txt"
-    },
-    {
-      "size": 221,
-      "sha256": "670423191570e225e4084f1d780147418dba662f2369a8cba9afc398437a62c8",
-      "path": "source-connector-tests-stdout.txt"
-    },
-    {
-      "size": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "path": "source-connector-tests-stderr.txt"
-    },
-    {
-      "size": 3,
-      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
-      "path": "source-connector-tests-exit.txt"
-    },
-    {
-      "size": 1450,
-      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a",
-      "path": "source-connector-tests-source-before.json"
-    },
-    {
-      "size": 1450,
-      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a",
-      "path": "source-connector-tests-source-after.json"
-    },
-    {
+      "path": "commit-binding.json",
       "size": 16239,
-      "sha256": "91f7e4553e5d77f185ef323fedcecfb01a52ab54fa336f714c5e73e6b7b96d89",
-      "path": "commit-binding.json"
+      "sha256": "91f7e4553e5d77f185ef323fedcecfb01a52ab54fa336f714c5e73e6b7b96d89"
+    },
+    {
+      "path": "diagnostics/red-canonical.exit.txt",
+      "size": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "diagnostics/red-canonical.source-after.json",
+      "size": 1072,
+      "sha256": "c428c22b954f43c4defa7b434d56c1c197d50eb47094c62d12ff40989ed02a15"
+    },
+    {
+      "path": "diagnostics/red-canonical.source-before.json",
+      "size": 1072,
+      "sha256": "c428c22b954f43c4defa7b434d56c1c197d50eb47094c62d12ff40989ed02a15"
+    },
+    {
+      "path": "diagnostics/red-canonical.stderr.txt",
+      "size": 762,
+      "sha256": "77f1f083d568424b0c913f00c53b06cc0e15fee76c86db9ed0fedc1748692891"
+    },
+    {
+      "path": "diagnostics/red-canonical.stdout.txt",
+      "size": 335,
+      "sha256": "c567f5976af8839d8ca013d7661baed695bc31d491e3d5551f843dcd24cdbb05"
+    },
+    {
+      "path": "diagnostics/red-missing-module.exit.txt",
+      "size": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "diagnostics/red-missing-module.source-before.json",
+      "size": 380,
+      "sha256": "53ff17316397de3fadde826e52c48b9edbeda306db1028ed5684b8172c083b57"
+    },
+    {
+      "path": "diagnostics/red-missing-module.stderr.txt",
+      "size": 679,
+      "sha256": "66c6e867162007a9145af992b53a87265c706a963f028d2bae243e569590b56f"
+    },
+    {
+      "path": "diagnostics/red-missing-module.stdout.txt",
+      "size": 335,
+      "sha256": "9708af45dfd6121342622504b054c67aa058d54616f0e08d01fcfffe45c0b1e9"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.command.txt",
+      "size": 123,
+      "sha256": "0c522250888fbb7608cdcda8a4caf07747cf30b4a78b510d229dac0f1a408407"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.exit.txt",
+      "size": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.source-after.json",
+      "size": 782,
+      "sha256": "25fa2b62e61e0812f37b4d063f6e6c53e3cdcff4be9ac80499e65efb0ccede03"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.source-before.json",
+      "size": 782,
+      "sha256": "25fa2b62e61e0812f37b4d063f6e6c53e3cdcff4be9ac80499e65efb0ccede03"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.stderr.txt",
+      "size": 3168,
+      "sha256": "33ab4f9fb388e4e4e5169eeeb6baae83af160b9bde081204b6f73d82dde0543d"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-failure.stdout.txt",
+      "size": 427,
+      "sha256": "cab379e774f09da66373d6f3f8872e38f77e5e9c643336b4824d64ed4cd6811a"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.command.txt",
+      "size": 123,
+      "sha256": "0c522250888fbb7608cdcda8a4caf07747cf30b4a78b510d229dac0f1a408407"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.exit.txt",
+      "size": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.source-after.json",
+      "size": 782,
+      "sha256": "41fef950296a9c118ff9f6d6928554e18f2f43020c30a800b86d714eea19f310"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.source-before.json",
+      "size": 782,
+      "sha256": "41fef950296a9c118ff9f6d6928554e18f2f43020c30a800b86d714eea19f310"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.stderr.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "diagnostics/untyped-pg-termination-fixed.stdout.txt",
+      "size": 176,
+      "sha256": "d59bec2d01d5911f6c49fdde911474d6f3d486dc390a5edec937f25d3432b780"
+    },
+    {
+      "path": "focused-tests-command.txt",
+      "size": 149,
+      "sha256": "a0852e593d3e43cf8ec1746145cd282cda6effc38b1ac5b50561b839957c93a8"
+    },
+    {
+      "path": "focused-tests-exit.txt",
+      "size": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "focused-tests-source-after.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "focused-tests-source-before.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "focused-tests-stderr.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "focused-tests-stdout.txt",
+      "size": 223,
+      "sha256": "0bcce7581cf1e70b2ae3a28669e61edfd20e9f5a3adac696594fcb9a2b89fa3b"
+    },
+    {
+      "path": "owned-postgres-lifecycle-index.json",
+      "size": 7847,
+      "sha256": "da98603c2a2266b83f56841f710313ea5c833e25901e3cafa136c432fb98d514"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-01.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "d72e0d455e48decbbb35612450bcb2701829e0cc82de96ca8294baae2ff6df16"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-02.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "48aa22082a36868e028d39dde81948281cdf98179c066cefb478c05e4d4724d5"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-03.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "2987219ffa4e5c728f9b5904347adb00499d8a007a27fcc1cde2647717e9ebc1"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-04.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "367485305b2352867246738d37e79ac07e3fb4caa5c24008d60603d0a2d323d4"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-05.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "923513cf401abd374d6f49c2a9a19c98a5210446e71d4808c85532eefcbaa3cd"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-06.postgres-lifecycle.jsonl",
+      "size": 1066,
+      "sha256": "0fd86058a57418a4fa803b488eafc794d401199f189468926722574ed23689a5"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-07.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "64b1927da04fa3f7f054bcb16f0dfbdea719f2141fdae2c981cf98e1eeb8fde9"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-08.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "9860a8abb748b3d32a266899073c3e9ef2476feee92b02d775b650de6a94671b"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-09.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "332b1675f98a71f27072574e736727ce524e5475bbe4ea097c3fd92bc8cca80b"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-10.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "6b4f6455fcce69b285ed90a5ea1656128b4a1d4827179e5a1ad412489c5f1d59"
+    },
+    {
+      "path": "owned-postgres-lifecycle/fixture-11.postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "6a2fc2fada01ac613f23fbc4bd24ab280f68ee650198d22b7757b476b44ceb7c"
+    },
+    {
+      "path": "source-connector-tests-command.txt",
+      "size": 179,
+      "sha256": "3721edac3385c019703729dbc0790c0c781df8eef67e409ece49a7f019e9f023"
+    },
+    {
+      "path": "source-connector-tests-exit.txt",
+      "size": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "source-connector-tests-source-after.json",
+      "size": 1450,
+      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a"
+    },
+    {
+      "path": "source-connector-tests-source-before.json",
+      "size": 1450,
+      "sha256": "d8067f9bbbb050d2cf1575c80599f533d4fa8ae3917aec301334274565e5c68a"
+    },
+    {
+      "path": "source-connector-tests-stderr.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "source-connector-tests-stdout.txt",
+      "size": 221,
+      "sha256": "670423191570e225e4084f1d780147418dba662f2369a8cba9afc398437a62c8"
+    },
+    {
+      "path": "typecheck-command.txt",
+      "size": 19,
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6"
+    },
+    {
+      "path": "typecheck-exit.txt",
+      "size": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "typecheck-source-after.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "typecheck-source-before.json",
+      "size": 4036,
+      "sha256": "232ed536725b50d90b23ddb47df095e1d53ecd64dd27bce173201dd8dbdec491"
+    },
+    {
+      "path": "typecheck-stderr.txt",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "typecheck-stdout.txt",
+      "size": 88,
+      "sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e"
     }
-  ],
-  "implementation_commit": "b32b746943d6feec97641c31b093b068ab51d4a9"
+  ]
 }

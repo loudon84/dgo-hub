@@ -1,0 +1,14 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-validation.test.ts --reporter=dot
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  23:16:15
+   Duration  281ms (transform 23ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

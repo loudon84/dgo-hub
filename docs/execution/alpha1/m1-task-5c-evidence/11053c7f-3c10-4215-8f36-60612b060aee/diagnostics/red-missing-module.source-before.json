@@ -1,0 +1,18 @@
+[
+  {
+    "path": "integration-service\\acceptance-tests\\snapshot-validation.test.ts",
+    "raw_size": 0,
+    "raw_sha256": null,
+    "lf_size": 0,
+    "lf_sha256": null,
+    "git_blob": null
+  },
+  {
+    "path": "integration-service\\package.json",
+    "raw_size": 0,
+    "raw_sha256": null,
+    "lf_size": 0,
+    "lf_sha256": null,
+    "git_blob": null
+  }
+]
