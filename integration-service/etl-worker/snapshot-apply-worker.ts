@@ -49,8 +49,8 @@ function outcome(result:ApplyResult):Readonly<{status:'APPLIED'|'DUPLICATE'|'IGN
 export type SnapshotContinuationHooks = Readonly<{
   afterProofLoaded?: (claim:SnapshotContinuationClaim)=>Promise<void>;
   afterValidationSeal?: (claim:SnapshotContinuationClaim)=>Promise<void>;
-  beforeAggregateCommit?: (item:Readonly<{run_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
-  afterAggregateCommit?: (item:Readonly<{run_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
+  beforeAggregateCommit?: (item:Readonly<{run_id:string;attempt_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
+  afterAggregateCommit?: (item:Readonly<{run_id:string;attempt_id:string;entity:'customer'|'order';source_pk:string}>)=>Promise<void>;
 }>;
 async function transaction<T>(pool:Pool,fn:(client:PoolClient)=>Promise<T>):Promise<T> {
   const client=await pool.connect();
@@ -162,7 +162,7 @@ async function applyOne(pool:Pool,store:ReturnType<typeof createSnapshotContinua
     const saved=await store.recordAggregate(client,claim,{entity,source_pk:row.source_pk,
       aggregate_digest:aggregate,proof_scope_digest:proofScope,status:result.status,error_code:result.error});
     if(!saved) throw new Error('SNAPSHOT_OUTCOME_COMMIT_REJECTED');
-    await hooks.beforeAggregateCommit?.({run_id:claim.run_id,entity,source_pk:row.source_pk});
+    await hooks.beforeAggregateCommit?.({run_id:claim.run_id,attempt_id:claim.attempt_id,entity,source_pk:row.source_pk});
     return saved;
   });
   return true;
@@ -225,7 +225,7 @@ async function processClaim(pool:Pool,store:ReturnType<typeof createSnapshotCont
         for(const row of page) {
           await assertLease();
           if(await applyOne(pool,store,claim,proof,entity,row,observation,scope,hooks)) {
-            await hooks.afterAggregateCommit?.({run_id:claim.run_id,entity,source_pk:row.source_pk});
+            await hooks.afterAggregateCommit?.({run_id:claim.run_id,attempt_id:claim.attempt_id,entity,source_pk:row.source_pk});
           }
         }
       }

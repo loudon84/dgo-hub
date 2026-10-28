@@ -194,7 +194,7 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
 }
 
 const SELECT_SUMMARY = `run_id,source_id,run_mode,request_kind,status,expected_entities,extracted_count,applied_count,
-  quarantined_count,created_at,started_at,completed_at,config_revision,mapping_revision,identity_mapping_revision,
+  quarantined_count,created_at,started_at,completed_at,config_revision,mapping_revision,identity_mapping_revision,failure_version,
   completeness_summary,checkpoint_summary`;
 
 async function insertRun(client: PoolClient, proof: Awaited<ReturnType<typeof lockedProof>>, tenantId: string,

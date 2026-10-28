@@ -91,12 +91,23 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
     let leaseLost = false;
     const abort = new AbortController();
     let heartbeat: NodeJS.Timeout | undefined;
+    const stopHeartbeat = () => { stopped = true; if (heartbeat) clearInterval(heartbeat); };
+    const startHeartbeat = (attempt: { attempt_id: string }) => {
+      heartbeat = setInterval(() => {
+        if (stopped) return;
+        void store.heartbeat(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token, leaseSeconds)
+          .then(ok => { if (!ok) { leaseLost = true; abort.abort(); } })
+          .catch(() => { leaseLost = true; abort.abort(); });
+      }, Math.max(2_000, Math.floor(leaseSeconds * 1000 / 3)));
+    };
     try {
       const attempt = await store.beginAttempt(source.tenant_key, source.source_id, claim.run_id, claim.claim_token, leaseSeconds);
       attemptId = attempt.attempt_id;
+      startHeartbeat(attempt);
       const proof = await store.loadFrozenProof(source.tenant_key, source.source_id, claim.run_id);
       if(proof.recovery_mode==='SEALED_STAGE') {
         await store.copySealedStage(source.tenant_key,source.source_id,claim.run_id,attempt.attempt_id,claim.claim_token,attempt.operation_id);
+        if (leaseLost) throw new SnapshotSourceError('SNAPSHOT_CANCELLED');
         continue;
       }
       const profile = proof.endpoint_profile;
@@ -104,13 +115,6 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
       const password = await dependencies.secretResolver.resolve(proof.config.secret_ref);
       if (typeof password !== 'string' || password.length < 1) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
       const pages: SnapshotPageReceipt[] = [];
-      const stopHeartbeat = () => { stopped = true; if (heartbeat) clearInterval(heartbeat); };
-      heartbeat = setInterval(() => {
-        if (stopped) return;
-        void store.heartbeat(source.tenant_key, source.source_id, claim.run_id, attempt.attempt_id, claim.claim_token, leaseSeconds)
-          .then(ok => { if (!ok) { leaseLost = true; abort.abort(); } })
-          .catch(() => { leaseLost = true; abort.abort(); });
-      }, Math.max(2_000, Math.floor(leaseSeconds * 1000 / 3)));
       const scan = await extractPostgresSnapshot({ factory: dependencies.sourceConnectionFactory ?? failClosedPostgresSourceConnectionFactory,
         policy: dependencies.egressPolicy, profile, config: proof.config, password, mappings: proof.mappings, pageSize,
         signal: abort.signal,

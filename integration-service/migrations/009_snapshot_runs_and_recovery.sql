@@ -3031,10 +3031,21 @@ BEGIN
       AND v.attempt_id=p_attempt_id AND v.semantic_digest=p_semantic_digest AND v.proof_scope_digest=p_reuse_scope_digest) THEN RETURN NULL; END IF;
   IF r.recovery_mode='SEALED_STAGE' THEN
     SELECT * INTO operation_row FROM control.etl_snapshot_recovery_operation o WHERE o.operation_id=r.recovery_operation_id
-      AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_run_id AND o.child_attempt_id=p_attempt_id
+      AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_run_id
       AND o.recovery_mode='SEALED_STAGE';
     IF NOT FOUND OR operation_row.original_semantic_digest<>p_semantic_digest OR
-       operation_row.original_proof_scope_digest<>p_reuse_scope_digest THEN RETURN NULL; END IF;
+       operation_row.original_proof_scope_digest<>p_reuse_scope_digest OR NOT EXISTS(
+         SELECT 1 FROM control.etl_snapshot_manifest m
+         WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id AND m.run_id=p_run_id AND m.attempt_id=p_attempt_id
+           AND m.state='EXTRACTED' AND EXISTS(SELECT 1 FROM control.etl_run_attempt a
+             WHERE a.tenant_key=p_tenant_key AND a.source_id=p_source_id AND a.run_id=p_run_id AND a.attempt_id=p_attempt_id
+               AND a.status='COMPLETE' AND a.operation_id::text=m.manifest->>'operation_id')
+           AND m.manifest->>'attempt_id'=p_attempt_id::text
+           AND m.manifest#>>'{recovery_source,run_id}'=operation_row.original_run_id::text
+           AND m.manifest#>>'{recovery_source,attempt_id}'=operation_row.original_attempt_id::text
+           AND m.manifest#>>'{recovery_source,manifest_digest}'=encode(operation_row.original_manifest_digest,'hex')
+           AND m.manifest#>>'{recovery_source,copy_kind}'='EXACT_STAGE_FACTS'
+       ) THEN RETURN NULL; END IF;
     SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id
       AND run_id=operation_row.original_run_id AND attempt_id=operation_row.original_attempt_id;
     RETURN chosen::text;

@@ -104,8 +104,6 @@ export async function startSnapshotRecoveryHttpFixture():Promise<SnapshotRecover
     await runMigrations(pg.pool,{directory:migrationDirectory,environmentKind:'local_lab'});
     await registry.activate(owner,'pg_recovery','1',approved.approval_id);
     const original=await createSnapshotRun(pg.pool,auth,owner,'pg_recovery','1','snapshot-recovery-original');
-    await pg.pool.query(`UPDATE control.etl_run SET status='INCOMPLETE',error_code='SNAPSHOT_SOURCE_INTERRUPTED'
-      WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[owner.tenantId,original.run_id]);
     const authenticator=createOidcAuthenticator({issuer,audience:AUDIENCE,jwksUrl:`http://127.0.0.1:${address.port}/jwks`,
       environmentKind:'local_lab',allowLoopbackHttp:true},auth);
     const token=await new SignJWT({}).setProtectedHeader({alg:'RS256',kid:'snapshot-recovery-key',typ:'JWT'})

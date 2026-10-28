@@ -1,10 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { Pool } from 'pg';
+import { SnapshotSourceError } from '../etl-worker/postgres-snapshot-connector.js';
 import { createOwnedPostgresSourceFactory, startSnapshotRecoveryHttpFixture, type SnapshotRecoveryHttpFixture } from './helpers/snapshot-recovery-http.js';
 import { runSnapshotWorkerOnce } from '../etl-worker/snapshot-worker.js';
 import { runSnapshotContinuationWorkerOnce } from '../etl-worker/snapshot-apply-worker.js';
 
 let fixture:SnapshotRecoveryHttpFixture;
+let acceptedRecovery:Readonly<{runId:string;key:string;reason:string;failedVersion:string}>|undefined;
 beforeAll(async()=>{fixture=await startSnapshotRecoveryHttpFixture();},90_000);
 afterAll(async()=>{if(fixture) await fixture.close();});
 
@@ -33,11 +39,20 @@ async function frozenStageState(runId:string,sourceId='pg_recovery'):Promise<str
 
 async function killNodeAtAggregateBoundary(hostPort:number,runId:string,phase:'before'|'after'):Promise<number>{
   const hookName=phase==='before'?'beforeAggregateCommit':'afterAggregateCommit';
+  const buildCaptureId=process.env.M1_FIX1_BUILD_CAPTURE_ID??'UNBOUND_BUILD_CAPTURE';
+  const modulePath=resolve(process.cwd(),'dist/etl-worker/snapshot-apply-worker.js');
+  const expectedBytes=readFileSync(modulePath);
+  const expectedHash=createHash('sha256').update(expectedBytes).digest('hex');
   const script=`import pg from 'pg';
-    import {runSnapshotContinuationWorkerOnce} from './dist/etl-worker/snapshot-apply-worker.js';
+    import {createHash} from 'node:crypto'; import {readFileSync} from 'node:fs';
+    const moduleUrl=new URL('./dist/etl-worker/snapshot-apply-worker.js',import.meta.url);
+    const moduleBytes=readFileSync(moduleUrl); const moduleSha256=createHash('sha256').update(moduleBytes).digest('hex');
+    process.stdout.write('NODE_MODULE_LOAD '+JSON.stringify({pid:process.pid,run_id:'${runId}',idempotency_key:'snapshot-recovery-sealed',
+      build_capture_id:'${buildCaptureId}',module_path:moduleUrl.pathname,module_sha256:moduleSha256,module_size:moduleBytes.length})+'\\n');
+    const {runSnapshotContinuationWorkerOnce}=await import(moduleUrl.href);
     const pool=new pg.Pool({connectionString:'postgres://postgres@127.0.0.1:${hostPort}/postgres',options:'-c role=hub_worker',max:2});
     try { await runSnapshotContinuationWorkerOnce(pool,20,10,{${hookName}:async item=>{
-      if(item.run_id==='${runId}'&&item.source_pk==='C-REC-2') { process.stdout.write('COMMIT_HOOK '+process.pid+' '+item.run_id+' '+item.source_pk+'\\n');
+      if(item.run_id==='${runId}'&&item.source_pk==='C-REC-4') { process.stdout.write('COMMIT_HOOK '+process.pid+' ${phase} '+item.run_id+' '+item.attempt_id+' '+item.source_pk+'\\n');
         await new Promise(()=>{}); }
     }}); } finally { await pool.end(); }`;
   const child=spawn(process.execPath,['--input-type=module','-e',script],{cwd:process.cwd(),windowsHide:true,stdio:['ignore','pipe','pipe']});
@@ -51,21 +66,114 @@ async function killNodeAtAggregateBoundary(hostPort:number,runId:string,phase:'b
       if(!stdout.includes('COMMIT_HOOK ')){clearTimeout(timeout);reject(new Error(`NODE_CHILD_EXITED_BEFORE_COMMIT:${code}:${signal}:${stderr}`));}
     });
   });
-  const pid=Number(marker.split(' ')[1]);
-  if(!Number.isInteger(pid)||pid<1||!marker.includes(runId)) throw new Error('NODE_CHILD_COMMIT_MARKER_INVALID');
+  const markerFields=marker.split(' ');
+  const pid=Number(markerFields[1]);
+  if(!Number.isInteger(pid)||pid<1||markerFields[2]!==phase||markerFields[3]!==runId||!markerFields[4]||markerFields[5]!=='C-REC-4')
+    throw new Error('NODE_CHILD_COMMIT_MARKER_INVALID');
+  const moduleMarker=stdout.split(/\r?\n/).find(value=>value.startsWith('NODE_MODULE_LOAD '));
+  if(!moduleMarker) throw new Error('NODE_CHILD_MODULE_LOAD_MARKER_MISSING');
+  const loaded=JSON.parse(moduleMarker.slice('NODE_MODULE_LOAD '.length)) as {pid:number;run_id:string;idempotency_key:string;
+    build_capture_id:string;module_path:string;module_sha256:string;module_size:number};
+  if(loaded.pid!==pid||loaded.run_id!==runId||loaded.idempotency_key!=='snapshot-recovery-sealed'||loaded.module_sha256!==expectedHash||
+      loaded.module_size!==expectedBytes.length||loaded.build_capture_id!==buildCaptureId) throw new Error('NODE_CHILD_MODULE_LOAD_BINDING_INVALID');
+  process.stdout.write(`NODE_MODULE_LOAD_RECORD ${JSON.stringify(loaded)}\\n`);
   child.kill('SIGKILL');
   const exitCode=await new Promise<number>(resolve=>child.once('close',(code,signal)=>resolve(code??(signal==='SIGKILL'?-1:-2))));
   if(exitCode!==-1) throw new Error(`NODE_CHILD_KILL_NOT_CONFIRMED:${pid}:${exitCode}`);
-  process.stdout.write(`NODE_CHILD_CRASH pid=${pid} phase=${phase}-aggregate-commit run_id=${runId} source_pk=C-REC-2 signal=SIGKILL\n`);
+  process.stdout.write(`NODE_CHILD_CRASH pid=${pid} phase=${phase}-aggregate-commit run_id=${runId} attempt_id=${markerFields[4]} source_pk=C-REC-4 signal=SIGKILL\n`);
   return pid;
+}
+
+function failSealedManifestOnce(pool:Pool,runId:string):Pool {
+  let failed=false;
+  return new Proxy(pool,{get(target,key,receiver){
+    if(key!=='connect') { const value=Reflect.get(target,key,receiver); return typeof value==='function'?value.bind(target):value; }
+    return async()=>{
+      const client=await target.connect();
+      return new Proxy(client,{get(inner,member,clientReceiver){
+        if(member!=='query') { const value=Reflect.get(inner,member,clientReceiver); return typeof value==='function'?value.bind(inner):value; }
+        return async(...args:unknown[])=>{
+          const sql=args[0]; const values=args[1];
+          if(!failed&&typeof sql==='string'&&sql.includes('complete_etl_snapshot_manifest')&&Array.isArray(values)&&values[2]===runId) {
+            failed=true;
+            throw new SnapshotSourceError('SNAPSHOT_SOURCE_UNAVAILABLE');
+          }
+          return (inner.query as (...queryArgs:unknown[])=>Promise<unknown>)(...args);
+        };
+      }}) as typeof client;
+    };
+  }}) as Pool;
+}
+
+function slowSealedWritePool(pool:Pool,adminPool:Pool,tenantId:string,runId:string,delayMs:number,
+  observations:Array<{beforeExpiry:string;beforeObserved:string;afterExpiry:string;afterObserved:string}>):Pool {
+  return new Proxy(pool,{get(target,key,receiver){
+    if(key!=='connect') { const value=Reflect.get(target,key,receiver); return typeof value==='function'?value.bind(target):value; }
+    return async()=>{
+      const client=await target.connect();
+      let sealedPageCommitted=false;
+      return new Proxy(client,{get(inner,member,clientReceiver){
+        if(member!=='query') { const value=Reflect.get(inner,member,clientReceiver); return typeof value==='function'?value.bind(inner):value; }
+        return async(...args:unknown[])=>{
+          const sql=args[0]; const values=args[1];
+          const result=await (inner.query as (...queryArgs:unknown[])=>Promise<unknown>)(...args);
+          if(typeof sql==='string'&&sql.includes('write_etl_snapshot_page')&&Array.isArray(values)&&values[2]===runId) sealedPageCommitted=true;
+          if(sql==='COMMIT'&&sealedPageCommitted) {
+            sealedPageCommitted=false;
+            const before=await adminPool.query<{expiry:string;observed:string}>(`SELECT snapshot_lease_expires_at::text AS expiry,
+              clock_timestamp()::text AS observed FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[tenantId,runId]);
+            await new Promise(resolve=>setTimeout(resolve,delayMs));
+            const after=await adminPool.query<{expiry:string;observed:string}>(`SELECT snapshot_lease_expires_at::text AS expiry,
+              clock_timestamp()::text AS observed FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[tenantId,runId]);
+            observations.push({beforeExpiry:before.rows[0].expiry,beforeObserved:before.rows[0].observed,
+              afterExpiry:after.rows[0].expiry,afterObserved:after.rows[0].observed});
+          }
+          return result;
+        };
+      }}) as typeof client;
+    };
+  }}) as Pool;
 }
 
 describe('API-022 immutable snapshot recovery',()=>{
   it('accepts a strict retry for a terminal incomplete run over authenticated HTTP',async()=>{
+    await fixture.adminPool.query(`CREATE TABLE public.customers(customer_id text PRIMARY KEY,name text NOT NULL,owner_id text NOT NULL,
+      department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL,source_version bigint NOT NULL)`);
+    await fixture.adminPool.query(`INSERT INTO public.customers VALUES('C-REC-1','Recovery Customer','owner-ext','department-ext','ACTIVE',
+      '2026-10-28 12:00:00+00',1)`);
+    for(let start=1;start<=4;start++) {
+      let interruptedFetches=0;
+      expect(await runSnapshotWorkerOnce(fixture.workerPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',resolve:async()=> 'fixture-secret'},
+        egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},pageSize:1,sourceConnectionFactory:
+          createOwnedPostgresSourceFactory(fixture.adminPool,()=>undefined,()=>{if(++interruptedFetches===2) throw new Error('controlled source interruption after persisted page');})})).toBe(1);
+      await fixture.adminPool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()
+        WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,fixture.originalRunId]);
+    }
+    const interruptedOriginal=await fixture.adminPool.query<{status:string;attempt_status:string;page_count:string;manifest_count:string;record_count:string}>(`
+      SELECT r.status,a.status AS attempt_status,
+        (SELECT count(*) FROM control.etl_snapshot_stage_page p WHERE p.tenant_key=r.tenant_key AND p.source_id=r.source_id AND p.run_id=r.run_id)::text AS page_count,
+        (SELECT count(*) FROM control.etl_snapshot_manifest m WHERE m.tenant_key=r.tenant_key AND m.source_id=r.source_id AND m.run_id=r.run_id)::text AS manifest_count,
+        (SELECT count(*) FROM control.etl_snapshot_stage_record s WHERE s.tenant_key=r.tenant_key AND s.source_id=r.source_id AND s.run_id=r.run_id)::text AS record_count
+      FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
+      WHERE r.tenant_key=$1 AND r.source_id='pg_recovery' AND r.run_id=$2::uuid ORDER BY a.ordinal DESC LIMIT 1`,
+      [fixture.owner.tenantId,fixture.originalRunId]);
+    expect(interruptedOriginal.rows[0]).toEqual({status:'FAILED',attempt_status:'FAILED',page_count:'4',manifest_count:'0',record_count:'4'});
+    const frozenOriginalStage=(await fixture.adminPool.query<{state:string}>(`SELECT jsonb_build_object(
+      'attempts',(SELECT jsonb_agg(jsonb_build_object('attempt_id',attempt_id,'ordinal',ordinal,'status',status,'error_code',error_code)
+        ORDER BY ordinal) FROM control.etl_run_attempt WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid),
+      'pages',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.attempt_id,p.entity,p.relation,p.page_no)
+        FROM control.etl_snapshot_stage_page p WHERE p.tenant_key=$1 AND p.source_id='pg_recovery' AND p.run_id=$2::uuid),
+      'records',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.attempt_id,s.entity,s.relation,s.page_no,s.row_ordinal)
+        FROM control.etl_snapshot_stage_record s WHERE s.tenant_key=$1 AND s.source_id='pg_recovery' AND s.run_id=$2::uuid))::text AS state`,
+      [fixture.owner.tenantId,fixture.originalRunId])).rows[0].state;
     const original=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${fixture.originalRunId}`,
       headers:{authorization:`Bearer ${fixture.token}`}});
     expect(original.statusCode).toBe(200);
     expect(original.json().data.failure_version).toBe('1');
+    const failedList=await fixture.app.inject({method:'GET',url:'/hub/v1/admin/etl-runs?status=FAILED&source_id=pg_recovery',
+      headers:{authorization:`Bearer ${fixture.token}`}});
+    expect(failedList.statusCode).toBe(200);
+    expect(failedList.json().data.items.find((item:{run_id:string})=>item.run_id===fixture.originalRunId)?.failure_version).toBe('1');
     const send=(reason='recover controlled incomplete extraction',failedVersion='1',key='snapshot-recovery-red')=>fixture.app.inject({
       method:'POST',url:`/hub/v1/admin/etl-runs/${fixture.originalRunId}/retry`,
       headers:{authorization:`Bearer ${fixture.token}`,'content-type':'application/json','idempotency-key':key},
@@ -86,6 +194,7 @@ describe('API-022 immutable snapshot recovery',()=>{
     const winnerIndex=concurrent.findIndex(result=>result.statusCode===202);
     const winningKey=winnerIndex===0?'snapshot-recovery-race-a':'snapshot-recovery-race-b';
     const winningReason=winnerIndex===0?'concurrent source snapshot recovery A':'concurrent source snapshot recovery B';
+    acceptedRecovery=Object.freeze({runId:fixture.originalRunId,key:winningKey,reason:winningReason,failedVersion:'1'});
     const response=concurrent[winnerIndex];
     expect(response.statusCode,response.body).toBe(202);
     const accepted=response.json().data;
@@ -106,42 +215,52 @@ describe('API-022 immutable snapshot recovery',()=>{
       headers:{authorization:`Bearer ${fixture.token}`,'content-type':'application/json','idempotency-key':'snapshot-recovery-invalid'},
       payload:{failed_version:1,reason:'number is not accepted'}});
     expect(malformed.statusCode).toBe(400);
-    await fixture.adminPool.query(`CREATE TABLE public.customers(customer_id text PRIMARY KEY,name text NOT NULL,owner_id text NOT NULL,
-      department_id text NOT NULL,status text NOT NULL,updated_at timestamptz NOT NULL,source_version bigint NOT NULL)`);
-    await fixture.adminPool.query(`INSERT INTO public.customers VALUES('C-REC-1','Recovery Customer','owner-ext','department-ext','ACTIVE',
-      '2026-10-28 12:00:00+00',1)`);
+    await fixture.adminPool.query(`UPDATE public.customers SET name='Recovery Customer One',updated_at='2026-10-28 12:01:00+00'
+      WHERE customer_id='C-REC-1'`);
+    await fixture.adminPool.query(`INSERT INTO public.customers VALUES('C-REC-2','Recovery Customer Two','owner-ext','department-ext','ACTIVE',
+      '2026-10-28 12:02:00+00',1)`);
     let sourceConnections=0,sourceRows=0;
     const worked=await runSnapshotWorkerOnce(fixture.workerPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',resolve:async()=> 'fixture-secret'},
       egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},sourceConnectionFactory:
         createOwnedPostgresSourceFactory(fixture.adminPool,()=>sourceConnections++,count=>sourceRows+=count)});
     expect(worked).toBe(1);
     expect(sourceConnections).toBe(1);
-    expect(sourceRows).toBe(1);
+    expect(sourceRows).toBe(2);
     const child=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${accepted.run_id}`,
       headers:{authorization:`Bearer ${fixture.token}`}});
     expect(child.statusCode).toBe(200);
-    expect(child.json().data).toMatchObject({run_id:accepted.run_id,status:'VALIDATING',extracted_count:1});
+    expect(child.json().data).toMatchObject({run_id:accepted.run_id,status:'VALIDATING',extracted_count:2});
     expect(await runSnapshotContinuationWorkerOnce(fixture.workerPool)).toBe(1);
     const completed=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${accepted.run_id}`,
       headers:{authorization:`Bearer ${fixture.token}`}});
     expect(completed.statusCode).toBe(200);
-    expect(completed.json().data).toMatchObject({run_id:accepted.run_id,status:'COMPLETE',extracted_count:1});
+    expect(completed.json().data).toMatchObject({run_id:accepted.run_id,status:'COMPLETE',extracted_count:2});
+    const afterSourceRecovery=(await fixture.adminPool.query<{state:string}>(`SELECT jsonb_build_object(
+      'attempts',(SELECT jsonb_agg(jsonb_build_object('attempt_id',attempt_id,'ordinal',ordinal,'status',status,'error_code',error_code)
+        ORDER BY ordinal) FROM control.etl_run_attempt WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid),
+      'pages',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.attempt_id,p.entity,p.relation,p.page_no)
+        FROM control.etl_snapshot_stage_page p WHERE p.tenant_key=$1 AND p.source_id='pg_recovery' AND p.run_id=$2::uuid),
+      'records',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.attempt_id,s.entity,s.relation,s.page_no,s.row_ordinal)
+        FROM control.etl_snapshot_stage_record s WHERE s.tenant_key=$1 AND s.source_id='pg_recovery' AND s.run_id=$2::uuid))::text AS state`,
+      [fixture.owner.tenantId,fixture.originalRunId])).rows[0].state;
+    expect(afterSourceRecovery).toBe(frozenOriginalStage);
     const canonical=await fixture.adminPool.query<{customer_count:string;outcome_count:string;observation_count:string;delete_count:string}>(`
       SELECT (SELECT count(*) FROM hub.canonical_customer WHERE tenant_id=$1)::text AS customer_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid)::text AS outcome_count,
         (SELECT count(*) FROM control.etl_snapshot_observation WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid)::text AS observation_count,
         (SELECT count(*) FROM control.etl_snapshot_delete_run WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid)::text AS delete_count`,
       [fixture.owner.tenantId,accepted.run_id]);
-    expect(canonical.rows[0]).toEqual({customer_count:'1',outcome_count:'1',observation_count:'1',delete_count:'1'});
+    expect(canonical.rows[0]).toEqual({customer_count:'2',outcome_count:'2',observation_count:'1',delete_count:'1'});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_delete_run SET status='SKIPPED'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,accepted.run_id]);
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_schedule SET enabled=false,schedule_revision=schedule_revision+1
       WHERE tenant_key=$1 AND source_id='pg_recovery'`,[fixture.owner.tenantId]);
 
-    await fixture.adminPool.query(`UPDATE public.customers SET name='Recovery Customer One',updated_at='2026-10-28 12:01:00+00'
-      WHERE customer_id='C-REC-1'`);
-    await fixture.adminPool.query(`INSERT INTO public.customers VALUES('C-REC-2','Recovery Customer Two','owner-ext','department-ext','ACTIVE',
-      '2026-10-28 12:02:00+00',1)`);
+    await fixture.adminPool.query(`UPDATE public.customers SET name='Recovery Customer Two Revised',updated_at='2026-10-28 12:03:00+00'
+      WHERE customer_id='C-REC-2'`);
+    await fixture.adminPool.query(`INSERT INTO public.customers VALUES
+      ('C-REC-3','Recovery Customer Three','owner-ext','department-ext','ACTIVE','2026-10-28 12:04:00+00',1),
+      ('C-REC-4','Recovery Customer Four','owner-ext','department-ext','ACTIVE','2026-10-28 12:05:00+00',1)`);
     const partialOriginalId=await fixture.createInterruptedRun();
     const sendPartial=(runId=partialOriginalId,reason='recover partial C failure',failedVersion='1',key='snapshot-recovery-partial')=>fixture.app.inject({
       method:'POST',url:`/hub/v1/admin/etl-runs/${runId}/retry`,
@@ -156,10 +275,10 @@ describe('API-022 immutable snapshot recovery',()=>{
         createOwnedPostgresSourceFactory(fixture.adminPool,()=>partialSourceConnections++,count=>partialSourceRows+=count)});
     expect(partialWorked).toBe(1);
     expect(partialSourceConnections).toBe(1);
-    expect(partialSourceRows).toBe(2);
+    expect(partialSourceRows).toBe(4);
     let committedRun='';
     expect(await runSnapshotContinuationWorkerOnce(fixture.workerPool,20,60,{afterAggregateCommit:async item=>{
-      if(item.run_id===partialAccepted.json().data.run_id&&!committedRun){committedRun=item.run_id;throw new Error('controlled partial C crash');}
+      if(item.run_id===partialAccepted.json().data.run_id&&item.source_pk==='C-REC-3'&&!committedRun){committedRun=item.run_id;throw new Error('controlled partial C crash');}
     }})).toBe(1);
     expect(committedRun).toBe(partialAccepted.json().data.run_id);
     const wrongParentRetry=await sendPartial(partialOriginalId,'retry parent after child was already reserved','1','snapshot-recovery-wrong-parent');
@@ -174,7 +293,7 @@ describe('API-022 immutable snapshot recovery',()=>{
       FROM control.etl_snapshot_observation o WHERE o.tenant_key=$1 AND o.source_id='pg_recovery' AND o.run_id=$2::uuid`,
       [fixture.owner.tenantId,committedRun]);
     expect(sealedSource.rows).toHaveLength(1);
-    expect(sealedSource.rows[0].range_count).toBe('1');
+    expect(sealedSource.rows[0].range_count).toBe('3');
     expect(sealedSource.rows[0].d_count).toBe('1');
     const frozenBefore=await frozenStageState(committedRun);
     expect(frozenBefore).not.toBe('');
@@ -184,10 +303,10 @@ describe('API-022 immutable snapshot recovery',()=>{
       WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-1'`,
       [fixture.owner.tenantId]);
     expect(changedCanonical.rows[0]?.customer_name).toBe('Recovery Customer One');
-    const originalRange=await fixture.adminPool.query<{outcome_id:string;status:string;aggregate_digest:string;proof_scope_digest:string}>(`
-      SELECT r.outcome_id,o.status,encode(r.aggregate_digest,'hex') AS aggregate_digest,encode(r.proof_scope_digest,'hex') AS proof_scope_digest
+    const originalRange=await fixture.adminPool.query<{outcome_id:string;status:string;aggregate_digest:string;proof_scope_digest:string;source_pk:string}>(`
+      SELECT r.outcome_id,o.status,r.source_pk,encode(r.aggregate_digest,'hex') AS aggregate_digest,encode(r.proof_scope_digest,'hex') AS proof_scope_digest
       FROM control.etl_snapshot_apply_range r JOIN control.etl_snapshot_apply_outcome o ON o.outcome_id=r.outcome_id
-      WHERE r.tenant_key=$1 AND r.source_id='pg_recovery' AND r.run_id=$2::uuid`,[fixture.owner.tenantId,committedRun]);
+      WHERE r.tenant_key=$1 AND r.source_id='pg_recovery' AND r.run_id=$2::uuid AND r.source_pk='C-REC-3'`,[fixture.owner.tenantId,committedRun]);
     expect(originalRange.rows).toHaveLength(1);
     expect(originalRange.rows[0].status).toBe('APPLIED');
     const outboxBefore=await fixture.adminPool.query<{count:string;max_id:string;prefix:string}>(`SELECT count(*)::text AS count,coalesce(max(id),0)::text AS max_id,
@@ -209,36 +328,73 @@ describe('API-022 immutable snapshot recovery',()=>{
     expect(sealedAccepted.statusCode,sealedAccepted.body).toBe(202);
     expect(sealedAccepted.json().data).toMatchObject({recovery_mode:'SEALED_STAGE',status:'QUEUED'});
     let sealedSourceConnections=0;
-    expect(await runSnapshotWorkerOnce(fixture.workerPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',resolve:async()=> 'fixture-secret'},
+    const interruptedCopyPool=failSealedManifestOnce(fixture.workerPool,sealedAccepted.json().data.run_id);
+    expect(await runSnapshotWorkerOnce(interruptedCopyPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',resolve:async()=> 'fixture-secret'},
       egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},sourceConnectionFactory:{
         async connect(){sealedSourceConnections+=1;throw new Error('SEALED_STAGE must not open source IO');},
       }})).toBe(1);
     expect(sealedSourceConnections).toBe(0);
     const sealedRunId=sealedAccepted.json().data.run_id as string;
     const sealedAttemptId=sealedAccepted.json().data.attempt_id as string;
-    const liveClaimResult=await fixture.workerPool.query<{claim_token:string}>(
-      'SELECT claim_token::text FROM control.claim_etl_snapshot_continuation($1,$2,10)',
+    const interruptedCopy=await fixture.adminPool.query<{attempt_id:string;ordinal:number;status:string;manifest_count:string;page_count:string}>(`
+      SELECT a.attempt_id::text,a.ordinal,a.status,
+        (SELECT count(*) FROM control.etl_snapshot_manifest m WHERE (m.tenant_key,m.source_id,m.run_id,m.attempt_id)=
+          (a.tenant_key,a.source_id,a.run_id,a.attempt_id))::text AS manifest_count,
+        (SELECT count(*) FROM control.etl_snapshot_stage_page p WHERE (p.tenant_key,p.source_id,p.run_id,p.attempt_id)=
+          (a.tenant_key,a.source_id,a.run_id,a.attempt_id))::text AS page_count
+      FROM control.etl_run_attempt a WHERE a.tenant_key=$1 AND a.source_id='pg_recovery' AND a.run_id=$2::uuid ORDER BY a.ordinal`,
+      [fixture.owner.tenantId,sealedRunId]);
+    expect(interruptedCopy.rows.at(-1)).toMatchObject({ordinal:1,status:'INCOMPLETE',manifest_count:'0',page_count:'1'});
+    await fixture.adminPool.query(`UPDATE control.etl_run SET snapshot_available_at=clock_timestamp()
+      WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedRunId]);
+    const leaseObservations:Array<{beforeExpiry:string;beforeObserved:string;afterExpiry:string;afterObserved:string}>=[];
+    const slowCopyPool=slowSealedWritePool(fixture.workerPool,fixture.adminPool,fixture.owner.tenantId,sealedRunId,11_500,leaseObservations);
+    expect(await runSnapshotWorkerOnce(slowCopyPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',resolve:async()=> 'fixture-secret'},
+      leaseSeconds:10,
+      egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},sourceConnectionFactory:{
+        async connect(){sealedSourceConnections+=1;throw new Error('SEALED_STAGE must not open source IO');},
+      }})).toBe(1);
+    expect(sealedSourceConnections).toBe(0);
+    const resumedCopy=await fixture.adminPool.query<{attempt_id:string;ordinal:number;status:string;manifest_count:string;page_count:string}>(`
+      SELECT a.attempt_id::text,a.ordinal,a.status,
+        (SELECT count(*) FROM control.etl_snapshot_manifest m WHERE (m.tenant_key,m.source_id,m.run_id,m.attempt_id)=
+          (a.tenant_key,a.source_id,a.run_id,a.attempt_id))::text AS manifest_count,
+        (SELECT count(*) FROM control.etl_snapshot_stage_page p WHERE (p.tenant_key,p.source_id,p.run_id,p.attempt_id)=
+          (a.tenant_key,a.source_id,a.run_id,a.attempt_id))::text AS page_count
+      FROM control.etl_run_attempt a WHERE a.tenant_key=$1 AND a.source_id='pg_recovery' AND a.run_id=$2::uuid ORDER BY a.ordinal`,
+      [fixture.owner.tenantId,sealedRunId]);
+    process.stdout.write(`FIX1_SEALED_LEASE_OBSERVATION ${JSON.stringify(leaseObservations)}\n`);
+    expect(leaseObservations).toHaveLength(1);
+    expect(Date.parse(leaseObservations[0].afterExpiry)).toBeGreaterThan(Date.parse(leaseObservations[0].afterObserved));
+    expect(resumedCopy.rows.at(-1)).toMatchObject({ordinal:2,status:'COMPLETE',manifest_count:'1',page_count:'1'});
+    expect(Date.parse(leaseObservations[0].beforeExpiry)).toBeGreaterThan(Date.parse(leaseObservations[0].beforeObserved));
+    expect(Date.parse(leaseObservations[0].afterExpiry)).toBeGreaterThan(Date.parse(leaseObservations[0].afterObserved));
+    expect(Date.parse(leaseObservations[0].afterExpiry)).toBeGreaterThan(Date.parse(leaseObservations[0].beforeExpiry));
+    const liveClaimResult=await fixture.workerPool.query<{claim_token:string;attempt_id:string}>(
+      'SELECT claim_token::text,attempt_id::text FROM control.claim_etl_snapshot_continuation($1,$2,10)',
       [fixture.owner.tenantId,'pg_recovery']);
     expect(liveClaimResult.rows).toHaveLength(1);
     const liveClaimToken=liveClaimResult.rows[0].claim_token;
+    const liveClaimAttemptId=liveClaimResult.rows[0].attempt_id;
+    expect(liveClaimAttemptId).not.toBe(sealedAttemptId);
     const oldClaimToken='00000000-0000-4000-8000-000000000000';
     for(const token of [null,oldClaimToken]) {
       const rejected=await fixture.workerPool.query<{metadata:unknown;proof:unknown;heartbeat:boolean}>(`
         SELECT control.read_etl_snapshot_recovery_c_metadata($1,$2,$3::uuid,$4::uuid,$5::uuid) AS metadata,
           control.read_etl_snapshot_c_proof($1,$2,$3::uuid,$4::uuid,$5::uuid) AS proof,
           control.heartbeat_etl_snapshot_continuation($1,$2,$3::uuid,$4::uuid,$5::uuid,10) AS heartbeat`,
-        [fixture.owner.tenantId,'pg_recovery',sealedRunId,sealedAttemptId,token]);
+        [fixture.owner.tenantId,'pg_recovery',sealedRunId,liveClaimAttemptId,token]);
       expect(rejected.rows[0]).toEqual({metadata:null,proof:null,heartbeat:false});
     }
     const validClaim=await fixture.workerPool.query<{metadata:Record<string,unknown>;proof:Record<string,unknown>}>(`
       SELECT control.read_etl_snapshot_recovery_c_metadata($1,$2,$3::uuid,$4::uuid,$5::uuid) AS metadata,
         control.read_etl_snapshot_c_proof($1,$2,$3::uuid,$4::uuid,$5::uuid) AS proof`,
-      [fixture.owner.tenantId,'pg_recovery',sealedRunId,sealedAttemptId,liveClaimToken]);
+      [fixture.owner.tenantId,'pg_recovery',sealedRunId,liveClaimAttemptId,liveClaimToken]);
     expect(validClaim.rows[0].metadata).toMatchObject({recovery_mode:'SEALED_STAGE',original_run_id:committedRun});
     expect(validClaim.rows[0].proof).toMatchObject({run_id:sealedRunId,status:'VALIDATING'});
     const unrelatedScope=await fixture.workerPool.query<{proof:unknown}>(
       'SELECT control.read_etl_snapshot_c_proof($1,$2,$3::uuid,$4::uuid,$5::uuid) AS proof',
-      [fixture.owner.tenantId,'pg_recovery',committedRun,sealedAttemptId,liveClaimToken]);
+      [fixture.owner.tenantId,'pg_recovery',committedRun,liveClaimAttemptId,liveClaimToken]);
     expect(unrelatedScope.rows[0].proof).toBeNull();
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedRunId]);
@@ -246,7 +402,7 @@ describe('API-022 immutable snapshot recovery',()=>{
       SELECT control.read_etl_snapshot_recovery_c_metadata($1,$2,$3::uuid,$4::uuid,$5::uuid) AS metadata,
         control.read_etl_snapshot_c_proof($1,$2,$3::uuid,$4::uuid,$5::uuid) AS proof,
         control.heartbeat_etl_snapshot_continuation($1,$2,$3::uuid,$4::uuid,$5::uuid,10) AS heartbeat`,
-      [fixture.owner.tenantId,'pg_recovery',sealedRunId,sealedAttemptId,liveClaimToken]);
+      [fixture.owner.tenantId,'pg_recovery',sealedRunId,liveClaimAttemptId,liveClaimToken]);
     expect(expiredClaim.rows[0]).toEqual({metadata:null,proof:null,heartbeat:false});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedRunId]);
@@ -255,24 +411,24 @@ describe('API-022 immutable snapshot recovery',()=>{
     const beforeCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
       receipt_count:string;outbox_count:string;checkpoint:{completed_count:number;last_source_pk:string}}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
-        AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
+        AND entity='customer' AND source_pk='C-REC-4')::text AS identity_count,
         (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.canonical_object_id)=(c.tenant_id,c.id) WHERE i.tenant_key=$1 AND i.source_id='pg_recovery'
-            AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS canonical_count,
+            AND i.entity='customer' AND i.source_pk='C-REC-4')::text AS canonical_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-4')::text AS outcome_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_range WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS range_count,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-4')::text AS range_count,
         (SELECT count(*) FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND entity='customer' AND source_pk='C-REC-2')::text AS receipt_count,
+          AND entity='customer' AND source_pk='C-REC-4')::text AS receipt_count,
         (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
-          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
+          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-4')::text AS outbox_count,
         (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)
           FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
     expect(beforeCommitEffect.rows[0]).toEqual({identity_count:'0',canonical_count:'0',outcome_count:'0',range_count:'0',receipt_count:'0',outbox_count:'0',
-      checkpoint:{completed_count:1,last_source_pk:'C-REC-1'}});
+      checkpoint:{completed_count:3,last_source_pk:'C-REC-3'}});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
@@ -283,24 +439,24 @@ describe('API-022 immutable snapshot recovery',()=>{
     const afterCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
       receipt_count:string;outbox_count:string;checkpoint:{completed_count:number;last_source_pk:string}}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
-        AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
+        AND entity='customer' AND source_pk='C-REC-4')::text AS identity_count,
         (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.canonical_object_id)=(c.tenant_id,c.id) WHERE i.tenant_key=$1 AND i.source_id='pg_recovery'
-            AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS canonical_count,
+            AND i.entity='customer' AND i.source_pk='C-REC-4')::text AS canonical_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-4')::text AS outcome_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_range WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS range_count,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-4')::text AS range_count,
         (SELECT count(*) FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND entity='customer' AND source_pk='C-REC-2')::text AS receipt_count,
+          AND entity='customer' AND source_pk='C-REC-4')::text AS receipt_count,
         (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
-          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
+          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-4')::text AS outbox_count,
         (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)
           FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
     expect(afterCommitEffect.rows[0]).toEqual({identity_count:'1',canonical_count:'1',outcome_count:'1',range_count:'1',receipt_count:'1',outbox_count:'1',
-      checkpoint:{completed_count:2,last_source_pk:'C-REC-2'}});
+      checkpoint:{completed_count:4,last_source_pk:'C-REC-4'}});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
@@ -312,29 +468,29 @@ describe('API-022 immutable snapshot recovery',()=>{
     expect(await runSnapshotContinuationWorkerOnce(fixture.workerPool)).toBe(1);
     const sealedComplete=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${sealedAccepted.json().data.run_id}`,
       headers:{authorization:`Bearer ${fixture.token}`}});
-    expect(sealedComplete.json().data).toMatchObject({status:'COMPLETE',extracted_count:2});
+    expect(sealedComplete.json().data).toMatchObject({status:'COMPLETE',extracted_count:4});
     const postRecoverySource=await fixture.adminPool.query<{lifecycle:string;current_config_revision:string;credential_revision:string;enabled:boolean}>(`
       SELECT r.lifecycle,r.current_config_revision::text AS current_config_revision,c.revision::text AS credential_revision,c.enabled
       FROM control.source_registry r JOIN control.source_credential c ON c.tenant_key=r.tenant_key AND c.source_id=r.source_id
       WHERE r.tenant_key=$1 AND r.source_id='pg_recovery'`,[fixture.owner.tenantId]);
     expect(postRecoverySource.rows[0]).toMatchObject({lifecycle:'PAUSED',current_config_revision:'2',credential_revision:'2',enabled:true});
-    const sealedOutcome=await fixture.adminPool.query<{reused_count:string;applied_count:string;reused_source_status:string;reused_outcome_id:string;d_count:string;allocation_count:string;sequence_value:string;child_observation_count:string}>(`
+    const sealedOutcome=await fixture.adminPool.query<{reused_count:string;applied_count:string;reused_source_statuses:string[];reused_outcome_ids:string[];d_count:string;allocation_count:string;sequence_value:string;child_observation_count:string}>(`
       SELECT (SELECT count(*) FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
         AND x.run_id=$2::uuid AND x.reused_original_outcome_id IS NOT NULL)::text AS reused_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
           AND x.run_id=$2::uuid AND x.status='APPLIED')::text AS applied_count,
-        (SELECT status FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
-          AND x.run_id=$2::uuid AND x.reused_original_outcome_id IS NOT NULL) AS reused_source_status,
-        (SELECT reused_original_outcome_id::text FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
-          AND x.run_id=$2::uuid AND x.reused_original_outcome_id IS NOT NULL) AS reused_outcome_id,
+        (SELECT array_agg(x.status ORDER BY x.source_pk) FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
+          AND x.run_id=$2::uuid AND x.reused_original_outcome_id IS NOT NULL) AS reused_source_statuses,
+        (SELECT array_agg(x.reused_original_outcome_id::text ORDER BY x.source_pk) FROM control.etl_snapshot_apply_outcome x WHERE x.tenant_key=$1 AND x.source_id='pg_recovery'
+          AND x.run_id=$2::uuid AND x.reused_original_outcome_id IS NOT NULL) AS reused_outcome_ids,
         (SELECT count(*) FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg_recovery')::text AS d_count,
         (SELECT count(*) FROM control.etl_snapshot_observation_allocation a WHERE a.tenant_key=$1 AND a.source_id='pg_recovery')::text AS allocation_count,
         (SELECT sequence_value::text FROM control.etl_snapshot_observation o WHERE o.tenant_key=$1 AND o.source_id='pg_recovery' AND o.run_id=$3::uuid) AS sequence_value,
         (SELECT count(*) FROM control.etl_snapshot_observation o WHERE o.tenant_key=$1 AND o.source_id='pg_recovery' AND o.run_id=$2::uuid)::text AS child_observation_count`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id,committedRun]);
-    expect(sealedOutcome.rows[0]).toMatchObject({reused_count:'1',applied_count:'1',reused_source_status:'DUPLICATE',d_count:'1',allocation_count:'2',
+    expect(sealedOutcome.rows[0]).toMatchObject({reused_count:'3',applied_count:'1',reused_source_statuses:['DUPLICATE','DUPLICATE','DUPLICATE'],d_count:'1',allocation_count:'2',
       sequence_value:sealedSource.rows[0].sequence_value,child_observation_count:'0'});
-    expect(sealedOutcome.rows[0].reused_outcome_id).toBe(originalRange.rows[0].outcome_id);
+    expect(sealedOutcome.rows[0].reused_outcome_ids).toContain(originalRange.rows[0].outcome_id);
     const originalObservation=await fixture.adminPool.query<{created_at:string}>(`SELECT created_at::text FROM control.etl_snapshot_observation
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,committedRun]);
     expect(originalObservation.rows[0].created_at).toBe(sealedSource.rows[0].created_at);
@@ -494,13 +650,21 @@ describe('API-022 immutable snapshot recovery',()=>{
     expect(worker.rows[0]).toEqual({role:'hub_worker',admission:false,proof:true});
   });
   it('does not replay an accepted operation after caller disablement',async()=>{
+    expect(acceptedRecovery).toBeDefined();
+    const accepted=acceptedRecovery!;
+    const stored=await fixture.adminPool.query<{operation_id:string;child_run_id:string;request_digest:string}>(`
+      SELECT operation_id::text,child_run_id::text,encode(request_digest,'hex') AS request_digest
+      FROM control.etl_snapshot_recovery_operation
+      WHERE tenant_key=$1 AND source_id='pg_recovery' AND route='API-022' AND idempotency_key=$2
+        AND parent_run_id=$3::uuid`,[fixture.owner.tenantId,accepted.key,accepted.runId]);
+    expect(stored.rowCount).toBe(1);
     const before=await fixture.adminPool.query<{count:string}>(`SELECT count(*)::text AS count FROM control.etl_snapshot_recovery_operation
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND route='API-022'`,[fixture.owner.tenantId]);
     await fixture.adminPool.query(`UPDATE control.auth_subject SET enabled=false WHERE tenant_key=$1 AND user_id=$2`,
       [fixture.owner.tenantId,fixture.owner.userId]);
-    const denied=await fixture.app.inject({method:'POST',url:`/hub/v1/admin/etl-runs/${fixture.originalRunId}/retry`,
-      headers:{authorization:`Bearer ${fixture.token}`,'content-type':'application/json','idempotency-key':'snapshot-recovery-red'},
-      payload:{failed_version:'1',reason:'recover controlled incomplete extraction'}});
+    const denied=await fixture.app.inject({method:'POST',url:`/hub/v1/admin/etl-runs/${accepted.runId}/retry`,
+      headers:{authorization:`Bearer ${fixture.token}`,'content-type':'application/json','idempotency-key':accepted.key},
+      payload:{failed_version:accepted.failedVersion,reason:accepted.reason}});
     expect(denied.statusCode).toBe(401);
     expect(denied.json().data).toBeUndefined();
     const after=await fixture.adminPool.query<{count:string}>(`SELECT count(*)::text AS count FROM control.etl_snapshot_recovery_operation
