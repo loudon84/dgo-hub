@@ -1,0 +1,14 @@
+{
+  "start_state": "schema migrations 001-008 applied; one eligible REST item already QUARANTINED before final 009",
+  "migration_path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+  "final009_raw_sha256": "824f12e74c9e5f3a2bca91c25b3d4bb5631bfeedb084c4c8ebeba7c656598db1",
+  "final009_raw_bytes": 274351,
+  "final009_lf_sha256": "eb83fc993dc1b0a5d3c1d089b1ba225d9f9867e0a67fd403aadab3eb31d8bc6f",
+  "final009_lf_bytes": 274347,
+  "final009_git_blob": "a9f9785aec7fccc0986de4d52525297ec894cd31",
+  "job_id": "0622c21e-b1b0-4072-8641-13c6ff153360",
+  "event_id": "42f841d0-b36b-4e5e-9223-9d0d56eefeb2",
+  "source_pk": "PRE009-REST-C-1",
+  "quarantine_id": "68e20d3d-7f1d-4135-8acd-6e027880a879",
+  "migration_runner_reentry": "identical final 009 checksum skipped; index identity and source fact unchanged"
+}

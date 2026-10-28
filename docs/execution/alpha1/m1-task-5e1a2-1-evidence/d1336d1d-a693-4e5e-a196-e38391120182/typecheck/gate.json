@@ -1,0 +1,8 @@
+{
+  "head_before": "b7ca6b3a19577de42efd0dcb1fbed5202eb1063e",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "env_root": "E:\\m1t5-runtime\\f1dbcefc-3d4f-480d-a9a3-b0635a7791f3",
+  "head_after": "b7ca6b3a19577de42efd0dcb1fbed5202eb1063e",
+  "gate": "npm run typecheck",
+  "exit_code": 0
+}

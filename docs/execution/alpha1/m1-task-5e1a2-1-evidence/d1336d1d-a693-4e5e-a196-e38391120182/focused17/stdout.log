@@ -1,0 +1,14 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/quarantine-read.test.ts --reporter=dot
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+·················
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  18:30:49
+   Duration  10.25s (transform 282ms, setup 0ms, import 558ms, tests 9.52s, environment 0ms)
+

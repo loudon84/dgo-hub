@@ -1,0 +1,161 @@
+{
+  "task": "M1-5E1a2-1",
+  "M0_RUN_EVIDENCE_ROOT": "E:\\m1t5-runtime\\97c95e6a-316f-4c76-b834-a06c765eafb2",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "after": {
+    "head": "ccbb312c8d1abd0b5fb6fe6b77ce543d809a65ff",
+    "label": "after",
+    "sources": [
+      {
+        "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+        "git_blob": "719777ec137bfc94f5ab0060c3a737fac08343d8",
+        "raw_sha256": "3b447d0320b198062b56687303dfbb98d78f412a1a18fbbe34e5377f6825e3ee",
+        "lf_sha256": "3b447d0320b198062b56687303dfbb98d78f412a1a18fbbe34e5377f6825e3ee",
+        "byte_size": 4899
+      },
+      {
+        "path": "integration-service/app.ts",
+        "git_blob": "7748a5c150f53914d77d3026dc5a329f28e602a5",
+        "raw_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+        "lf_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+        "byte_size": 3945
+      },
+      {
+        "path": "integration-service/ingestion-api/routes.ts",
+        "git_blob": "b7fbaf57dd7413579d2d87598785122f11224763",
+        "raw_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+        "lf_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+        "byte_size": 8392
+      },
+      {
+        "path": "integration-service/ingestion-api/strict-ingestion.ts",
+        "git_blob": "9f2d7d21df99035d427657731432820455b738ef",
+        "raw_sha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+        "lf_sha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+        "byte_size": 21808
+      },
+      {
+        "path": "integration-service/auth/oidc.ts",
+        "git_blob": "18d7056a4ac9a7fa751a4a3ee17b4e54cf17ac85",
+        "raw_sha256": "2ee2ce3757a1563902b5d95750fd2e183148abb2988249b6eef15f4a1e1aee86",
+        "lf_sha256": "2ee2ce3757a1563902b5d95750fd2e183148abb2988249b6eef15f4a1e1aee86",
+        "byte_size": 5254
+      },
+      {
+        "path": "integration-service/auth/service.ts",
+        "git_blob": "23fa7a76a31ca04b89a8a704f1bd51069ba28620",
+        "raw_sha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+        "lf_sha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+        "byte_size": 33506
+      },
+      {
+        "path": "integration-service/auth/types.ts",
+        "git_blob": "0d776ebde0b102c58162e35d54b0ff7f760b93ac",
+        "raw_sha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+        "lf_sha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+        "byte_size": 4857
+      },
+      {
+        "path": "integration-service/migrations/runner.ts",
+        "git_blob": "77f27900f6e7b78df8f5beed3fff8fad8792332e",
+        "raw_sha256": "7f35f014e8f6dd3e5c21e90a0c306361704be401c2cc6f4279a97bb2e541bdca",
+        "lf_sha256": "efdd19f2facc19a9e4fd9f41c5421509f4be53d74008c53e11f02850d73e6a98",
+        "byte_size": 16956
+      },
+      {
+        "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+        "git_blob": "7a5dca418542976a22cf786d302e36a617ee22df",
+        "raw_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+        "lf_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+        "byte_size": 13435
+      },
+      {
+        "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+        "git_blob": "b7b3d6963f08abaafda21cfd2e11daa60bcc3112",
+        "raw_sha256": "72138e7f4b540027d97856e1daa369517a43570ff4e392e12ae3abf714ac5fa2",
+        "lf_sha256": "0dc88c4348967e58e42d3539ae06eca5eb16190cf6df0637b7495f5f43f286b9",
+        "byte_size": 257507
+      }
+    ]
+  },
+  "run_id": "97c95e6a-316f-4c76-b834-a06c765eafb2",
+  "command": "npm run test -- acceptance-tests/quarantine-read.test.ts --reporter=dot",
+  "before": {
+    "head": "ccbb312c8d1abd0b5fb6fe6b77ce543d809a65ff",
+    "label": "before",
+    "sources": [
+      {
+        "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+        "git_blob": "719777ec137bfc94f5ab0060c3a737fac08343d8",
+        "raw_sha256": "3b447d0320b198062b56687303dfbb98d78f412a1a18fbbe34e5377f6825e3ee",
+        "lf_sha256": "3b447d0320b198062b56687303dfbb98d78f412a1a18fbbe34e5377f6825e3ee",
+        "byte_size": 4899
+      },
+      {
+        "path": "integration-service/app.ts",
+        "git_blob": "7748a5c150f53914d77d3026dc5a329f28e602a5",
+        "raw_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+        "lf_sha256": "55efca733d65657ea76c7cce6d7c0123e3e361abff077c596c8fcffc8fa32874",
+        "byte_size": 3945
+      },
+      {
+        "path": "integration-service/ingestion-api/routes.ts",
+        "git_blob": "b7fbaf57dd7413579d2d87598785122f11224763",
+        "raw_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+        "lf_sha256": "40cd8e3d4c053115b9c5298df8829399f769ba967b93a1459b0a03967d657625",
+        "byte_size": 8392
+      },
+      {
+        "path": "integration-service/ingestion-api/strict-ingestion.ts",
+        "git_blob": "9f2d7d21df99035d427657731432820455b738ef",
+        "raw_sha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+        "lf_sha256": "2d6d2be077fd78aeea6754c49791621ccf079314d412dc04a44ad99037c1decd",
+        "byte_size": 21808
+      },
+      {
+        "path": "integration-service/auth/oidc.ts",
+        "git_blob": "18d7056a4ac9a7fa751a4a3ee17b4e54cf17ac85",
+        "raw_sha256": "2ee2ce3757a1563902b5d95750fd2e183148abb2988249b6eef15f4a1e1aee86",
+        "lf_sha256": "2ee2ce3757a1563902b5d95750fd2e183148abb2988249b6eef15f4a1e1aee86",
+        "byte_size": 5254
+      },
+      {
+        "path": "integration-service/auth/service.ts",
+        "git_blob": "23fa7a76a31ca04b89a8a704f1bd51069ba28620",
+        "raw_sha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+        "lf_sha256": "f5058d81e13363d615b1c720e064da4bcf3022dd5aff497db81b7c023761eaed",
+        "byte_size": 33506
+      },
+      {
+        "path": "integration-service/auth/types.ts",
+        "git_blob": "0d776ebde0b102c58162e35d54b0ff7f760b93ac",
+        "raw_sha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+        "lf_sha256": "991658e1721e4304c759c7672c0adf618d43dc1b83673bf4d70f7f01047a8b66",
+        "byte_size": 4857
+      },
+      {
+        "path": "integration-service/migrations/runner.ts",
+        "git_blob": "77f27900f6e7b78df8f5beed3fff8fad8792332e",
+        "raw_sha256": "7f35f014e8f6dd3e5c21e90a0c306361704be401c2cc6f4279a97bb2e541bdca",
+        "lf_sha256": "efdd19f2facc19a9e4fd9f41c5421509f4be53d74008c53e11f02850d73e6a98",
+        "byte_size": 16956
+      },
+      {
+        "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+        "git_blob": "7a5dca418542976a22cf786d302e36a617ee22df",
+        "raw_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+        "lf_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+        "byte_size": 13435
+      },
+      {
+        "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+        "git_blob": "b7b3d6963f08abaafda21cfd2e11daa60bcc3112",
+        "raw_sha256": "72138e7f4b540027d97856e1daa369517a43570ff4e392e12ae3abf714ac5fa2",
+        "lf_sha256": "0dc88c4348967e58e42d3539ae06eca5eb16190cf6df0637b7495f5f43f286b9",
+        "byte_size": 257507
+      }
+    ]
+  },
+  "exit_code": 1,
+  "gate": "valid-current-owner-missing-route-RED"
+}

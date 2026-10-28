@@ -48,8 +48,12 @@ Each owned PostgreSQL container used by the final focused run used pinned image 
 | Main 17-case acceptance fixture | `d2bf0962-82ad-490f-8eb6-80162749c5c4` | `beab8fe09201b68298b8bd49ce59df8b6ec179076e7e4d60f7bb5d88e43babdd` | removed; absent after removal |
 | Initial valid-current-Owner missing-route RED fixture | `a294ac60-1ecd-40a4-93c9-defb52797a09` | `ccb61a3bf5a6e553e739ece34475ffec568531ff1049f3dffb758564ea709861` | removed; absent after removal |
 
-No application Node child was started. The separate red check is qualified: at base HEAD it obtained a real valid-current-Owner authenticated 404 for the missing route (expected feature RED); it did not establish final behavior and is not counted as a passing implementation gate. Formal 48-hour observation and site gate: **NOT RUN**.
+No application Node child was started. The separate red check is qualified: at base HEAD it obtained a real valid-current-Owner authenticated 404 for the missing route (expected feature RED); it did not establish final behavior and is not counted as a passing implementation gate. Formal 48-case/site acceptance: **NOT RUN**.
 
 ## Commits and remaining work
 
 Product/source/test/docs/schema contract are in product commit `b7ca6b3a19577de42efd0dcb1fbed5202eb1063e`. This report and the identical execution copy are committed separately as the evidence/report commit. Root-owned progress and brief files remain outside these commits. No independent review, merge, push or deployment is claimed here.
+
+## Controller repository packaging supplement
+
+The implementer report-only commit is `8e9edca62993383f5982d4b19b811ca89d520eb1`; its external evidence package remains preserved at its original path. The controller additionally copied the 28 explicitly listed ORIGINAL capture files into `docs/execution/alpha1/m1-task-5e1a2-1-evidence/d1336d1d-a693-4e5e-a196-e38391120182/`, without editing or removing the originals or the external copies. Its `evidence-manifest.json` SHA-256 is `a2be8b5a5f10cfce4c85ec1fbf73908e7faab9aa247eaa523b3fcc79775a8334`. Each original, prior external copy and repository copy was checked for identical raw SHA-256 and byte size, with unique validated destination paths. All 21 seven-file before/after source-bracket pairs match product b7ca6b3 Git blobs; three gate HEADs stay b7ca6b3 and exits are zero. Source files were not changed or semantically read by the controller. All four actual owned PostgreSQL lifecycle files remain separately mapped. No additional tests were run during packaging. Independent task review remains pending.

@@ -1,0 +1,9 @@
+{
+  "exit_code": 0,
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "gate": "npm run build",
+  "head_after": "b7ca6b3a19577de42efd0dcb1fbed5202eb1063e",
+  "env_root": "E:\\m1t5-runtime\\4796b285-5d88-407f-b298-0b8a9ec51646",
+  "build_manifest_sha256": "b029c5fed470733fc940ca6585286ad4abf6f1b01a84fc5adc67ba14524dbe7b",
+  "head_before": "b7ca6b3a19577de42efd0dcb1fbed5202eb1063e"
+}
