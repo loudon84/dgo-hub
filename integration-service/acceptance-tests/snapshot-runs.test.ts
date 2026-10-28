@@ -28,6 +28,7 @@ let owner = { userId: 'snapshot_owner', tenantId: 'snapshot_tenant', departmentI
   businessTimezone: 'UTC', issuer: 'https://idp.example.test', subject: 'snapshot-owner' };
 
 let e2eEndpointProfile: EndpointProfile | undefined;
+let e2eCapabilityProbePass = true;
 const endpointAllowlist = { resolve: async (reference: string) => {
   if (reference !== 'pg-test') throw new Error('endpoint not approved');
   return e2eEndpointProfile ?? { revision: 'pg-v1', connector: 'postgresql' as const, protocol: 'postgres:' as const, host: 'source.fixture.invalid',
@@ -39,7 +40,7 @@ const endpointAllowlist = { resolve: async (reference: string) => {
 function makeService(pool: typeof fixture.pool): SourceRegistryService {
   return createSourceRegistryService({ pool, auth, environmentKind: 'local_lab',
     secretResolver: { isConfiguredReference: async value => value === 'vault:/snapshot/source', resolve: async () => 'fixture-secret' },
-    endpointAllowlist, capabilityProbe: { run: async () => ({ passed: true, checks: ['READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'] }) } });
+    endpointAllowlist, capabilityProbe: { run: async () => ({ passed: e2eCapabilityProbePass, checks: ['READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID'] }) } });
 }
 
 beforeAll(async () => {
@@ -356,6 +357,16 @@ describe('durable snapshot run admission', () => {
         egressPolicy:{environmentKind:'local_lab' as const,policyId:'owned-local-egress'},pageSize:1,leaseSeconds:60};
       const strictWorkerTick=(dependencies:typeof workerDependencies & {sourceConnectionFactory:PostgresSourceConnectionFactory}) =>
         runDurableWorkerLoop(roleScopedPool('hub_worker'),{HUB_STRICT_INGESTION_WORKER_ONCE:'true'},dependencies);
+      const completeCWithoutD=async(sourceId:string,revision:string,key:string)=>{
+        const run=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,sourceId,revision,key);
+        const {runSnapshotWorkerOnce}=await import('../etl-worker/snapshot-worker.js');
+        const {runSnapshotContinuationWorkerOnce}=await import('../etl-worker/snapshot-apply-worker.js');
+        await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThan(0);
+        await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(1);
+        const completed=await fixture.pool.query('SELECT status FROM control.etl_run WHERE run_id=$1',[run.run_id]);
+        expect(completed.rows).toEqual([{status:'COMPLETE'}]);
+        return run;
+      };
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:interruptedFactory})).resolves.toBeUndefined();
       const incomplete=await fixture.pool.query(`SELECT r.status,a.ordinal,a.status AS attempt_status,a.error_code,
         count(s.source_pk)::int AS staged FROM control.etl_run r JOIN control.etl_run_attempt a USING(tenant_key,source_id,run_id)
@@ -1131,12 +1142,14 @@ describe('durable snapshot run admission', () => {
       const profileWithDeletedField=e2eEndpointProfile!;
       const {delete_field:_removedDeleteField,...acceptedCustomerProfile}=profileWithDeletedField.entities.customer!;
       e2eEndpointProfile={...profileWithDeletedField,entities:{...profileWithDeletedField.entities,customer:acceptedCustomerProfile}};
-      const createDSource=async(sourceId:string,includeOrder=true)=>{
+      const createDSource=async(sourceId:string,includeOrder=true,deleteContract:'hard_delete'|'tombstone'='hard_delete')=>{
+        const originalEndpointProfile=e2eEndpointProfile;
+        if(deleteContract==='tombstone') e2eEndpointProfile=profileWithDeletedField;
         const allowedDens:('customer'|'order')[]=includeOrder?['customer','order']:['customer'];
         await auth.repository.provisionSourceCredential({sourceId,tenantId:owner.tenantId,token:createCredential().secret,
           secretRef:'vault:/snapshot/source',allowedEntities:allowedDens,revision:'1'});
         const dConfig={name:`Owned D source ${sourceId}`,connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
-          endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:allowedDens,delete_contract:'hard_delete'};
+          endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:allowedDens,delete_contract:deleteContract};
         await service.create(owner,{source_id:sourceId,data_owner_user_id:owner.userId,config:dConfig});
         await service.writeMappings(owner,sourceId,'1',[
           {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
@@ -1165,7 +1178,15 @@ describe('durable snapshot run admission', () => {
         const dTest=await service.test(owner,sourceId,'1');
         const dApproval=await service.approve(owner,sourceId,'1',dTest.test_report_id,dTest.data_contract_ref);
         await service.activate(owner,sourceId,'1',dApproval.approval_id);
-        return dApproval;
+        e2eEndpointProfile=originalEndpointProfile;
+        return {approval:dApproval,config:dConfig};
+      };
+      const reviseDSource=async(sourceId:string,config:Record<string,unknown>,revision='1')=>{
+        const updated=await service.update(owner,sourceId,{expected_revision:revision,config:{...config,name:`${String(config.name)} revised`}});
+        const report=await service.test(owner,sourceId,updated.revision);
+        const approval=await service.approve(owner,sourceId,updated.revision,report.test_report_id,report.data_contract_ref);
+        await service.activate(owner,sourceId,updated.revision,approval.approval_id);
+        return updated.revision;
       };
       const ownerWriter=await sourceFixture.pool.connect();
       try {
@@ -1225,7 +1246,8 @@ describe('durable snapshot run admission', () => {
       await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
         VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
       await ownerPool.query(`UPDATE ${sourceSchema}.orders SET customer_id='C-1' WHERE order_id=9007199254740993123`);
-      const overApproval=await createDSource('pg-e2e-over',true);
+      const overSource=await createDSource('pg-e2e-over',true);
+      const overApproval=overSource.approval;
       const overBaseline=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-over','1','d1-over-five-baseline');
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
       const overWriter=await sourceFixture.pool.connect();
@@ -1266,6 +1288,112 @@ describe('durable snapshot run admission', () => {
         WHERE run_id=$1 AND entity='order'`,[overSecond.run_id]);
       expect(orderHeader.rows).toEqual([{baseline_count:'1',candidate_count:'0'}]);
       expect(overBaseline.run_id).not.toBe(overFirst.run_id);
+
+      // A new proof scope starts its own first-absence fact for objects that
+      // were live before the scope changed. The second valid absence can then
+      // freeze the candidate.
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES('C-19','Customer 19','owner-ext','dept-ext','ACTIVE','2026-10-25 12:19:00.123456+00')`);
+      const scopeSource=await createDSource('pg-e2e-scope',false);
+      await completeCWithoutD('pg-e2e-scope','1','d1-scope-baseline');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id='C-20'`);
+      const scopeRevision=await reviseDSource('pg-e2e-scope',scopeSource.config);
+      const scopeFirst=await completeCWithoutD('pg-e2e-scope',scopeRevision,'d1-scope-first');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const seededScope=await fixture.pool.query(`SELECT absence_count,last_processed_run_id::text FROM control.etl_snapshot_delete_streak
+        WHERE tenant_key=$1 AND source_id='pg-e2e-scope' AND entity='customer' AND source_pk='C-20' AND last_processed_run_id=$2`,
+        [owner.tenantId,scopeFirst.run_id]);
+      expect(seededScope.rows).toEqual([{absence_count:1,last_processed_run_id:scopeFirst.run_id}]);
+      const scopeSecond=await completeCWithoutD('pg-e2e-scope',scopeRevision,'d1-scope-second');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const scopedCandidate=await fixture.pool.query(`SELECT d.status,c.candidate_count::text FROM control.etl_snapshot_delete_run d
+        JOIN control.etl_snapshot_delete_candidate c USING(tenant_key,source_id,run_id)
+        WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-scope' AND d.run_id=$2 AND c.entity='customer'`,[owner.tenantId,scopeSecond.run_id]);
+      expect(scopedCandidate.rows).toEqual([{status:'PENDING',candidate_count:'1'}]);
+      const pendingDriftUpdate=await service.update(owner,'pg-e2e-scope',{expected_revision:scopeRevision,
+        config:{...scopeSource.config,name:'Owned D source pg-e2e-scope drifted'}});
+      const pendingDriftReport=await service.test(owner,'pg-e2e-scope',pendingDriftUpdate.revision);
+      await service.approve(owner,'pg-e2e-scope',pendingDriftUpdate.revision,pendingDriftReport.test_report_id,pendingDriftReport.data_contract_ref);
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const stalePending=await fixture.pool.query(`SELECT d.status,control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy
+        FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-scope' AND d.run_id=$2`,
+        [owner.tenantId,scopeSecond.run_id]);
+      expect(stalePending.rows).toEqual([{status:'STALE',busy:false}]);
+
+      // Tombstone mode is not an absence authorization and has no D side effects.
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
+      const tombstoneSource=await createDSource('pg-e2e-tombstone',false,'tombstone');
+      const tombstoneDRun=await completeCWithoutD('pg-e2e-tombstone','1','d1-tombstone-noop');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const tombstoneReservation=await fixture.pool.query(`SELECT status,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_consumption c WHERE c.tenant_key=d.tenant_key
+          AND c.source_id=d.source_id AND c.run_id=d.run_id) AS consumed,
+        control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy
+        FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-tombstone' AND d.run_id=$2`,
+        [owner.tenantId,tombstoneDRun.run_id]);
+      expect(tombstoneReservation.rows).toEqual([{status:'SKIPPED',consumed:0,busy:false}]);
+      expect(tombstoneSource.config.delete_contract).toBe('tombstone');
+
+      // A fresh unconsumed reservation outranks prepared candidate checks at a
+      // one-source worker limit, so lexically early prepared work cannot starve it.
+      const laterSource=await createDSource('pg-e2e-later',false);
+      const laterRun=await completeCWithoutD('pg-e2e-later','1','d1-fair-later-reservation');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'),1);
+      const fairness=await fixture.pool.query(`SELECT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption
+        WHERE tenant_key=$1 AND source_id='pg-e2e-later' AND run_id=$2) AS later_consumed`,[owner.tenantId,laterRun.run_id]);
+      expect(fairness.rows).toEqual([{later_consumed:true}]);
+      expect(laterSource.config.delete_contract).toBe('hard_delete');
+
+      // A same-revision retest supersedes the PASS used by the frozen C proof.
+      await createDSource('pg-e2e-retest-pass',false);
+      const passRetestRun=await completeCWithoutD('pg-e2e-retest-pass','1','d1-retest-pass-currentness');
+      const newestPass=await service.test(owner,'pg-e2e-retest-pass','1');
+      expect(newestPass.status).toBe('PASS');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const passRetestState=await fixture.pool.query(`SELECT d.status,EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption c
+        WHERE c.tenant_key=d.tenant_key AND c.source_id=d.source_id AND c.run_id=d.run_id) AS consumed
+        FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-retest-pass' AND d.run_id=$2`,
+        [owner.tenantId,passRetestRun.run_id]);
+      expect(passRetestState.rows).toEqual([{status:'STALE',consumed:false}]);
+
+      const retestSource=await createDSource('pg-e2e-retest',false);
+      const retestRun=await completeCWithoutD('pg-e2e-retest','1','d1-retest-currentness');
+      e2eCapabilityProbePass=false;
+      const newestReport=await service.test(owner,'pg-e2e-retest','1');
+      e2eCapabilityProbePass=true;
+      expect(newestReport.status).toBe('FAIL');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const retestState=await fixture.pool.query(`SELECT d.status,EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption c
+        WHERE c.tenant_key=d.tenant_key AND c.source_id=d.source_id AND c.run_id=d.run_id) AS consumed
+        FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-retest' AND d.run_id=$2`,
+        [owner.tenantId,retestRun.run_id]);
+      expect(retestState.rows).toEqual([{status:'STALE',consumed:false}]);
+      expect(retestSource.approval.approval_id).toBeTruthy();
+
+      // Prepared over-threshold candidates stale on proof/config drift while
+      // preserving the policy pause and disabled schedule.
+      const overUpdate=await service.update(owner,'pg-e2e-over',{expected_revision:'1',
+        config:{...overSource.config,name:'Owned D source pg-e2e-over revised'}});
+      const overRevision=overUpdate.revision;
+      const overReport=await service.test(owner,'pg-e2e-over',overRevision);
+      const overNewApproval=await service.approve(owner,'pg-e2e-over',overRevision,overReport.test_report_id,overReport.data_contract_ref);
+      await fixture.pool.query(`UPDATE control.source_registry SET lifecycle='PAUSED'
+        WHERE tenant_key=$1 AND source_id='pg-e2e-over'`,[owner.tenantId]);
+      await fixture.pool.query(`UPDATE control.etl_snapshot_schedule SET enabled=false WHERE tenant_key=$1 AND source_id='pg-e2e-over'`,
+        [owner.tenantId]);
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const stalePrepared=await fixture.pool.query(`SELECT d.status,sr.lifecycle,s.enabled,
+        control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy,
+        EXISTS(SELECT 1 FROM control.source_owner_approval a WHERE a.id=$3) AS newer_approval_exists
+        FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+        JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+        WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-over' AND d.run_id=$2`,
+        [owner.tenantId,overSecond.run_id,overNewApproval.approval_id]);
+      expect(stalePrepared.rows).toEqual([{status:'STALE',lifecycle:'PAUSED',enabled:false,busy:false,newer_approval_exists:true}]);
     } finally {
       await ownerPool.end();
       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);

@@ -1194,6 +1194,8 @@ CREATE TABLE control.etl_snapshot_delete_run (
   candidate_count bigint NOT NULL DEFAULT 0 CHECK (candidate_count>=0),
   above_threshold boolean NOT NULL DEFAULT false,
   pause_reason text,
+  -- Mutable scheduling hint only; reservation and proof facts stay unchanged.
+  last_worker_checked_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   PRIMARY KEY (tenant_key,source_id,run_id),
@@ -1345,6 +1347,7 @@ BEGIN
   SELECT coalesce(bool_and(value->>'version_domain'='SNAPSHOT_OBSERVATION'),false) INTO entity_domains_ok
     FROM jsonb_each(r.entity_channel_proof);
   next_status:=CASE WHEN config_value->>'mode'='FULL_SNAPSHOT' AND config_value->>'version_domain'='SNAPSHOT_OBSERVATION'
+      AND config_value->>'delete_contract'='hard_delete' AND r.delete_contract='hard_delete'
       AND entity_domains_ok THEN 'PENDING' ELSE 'SKIPPED' END;
   INSERT INTO control.etl_snapshot_delete_run(tenant_key,source_id,run_id,attempt_id,status,sequence_value,c_completed_at)
     VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,next_status,
@@ -1416,6 +1419,11 @@ AS $body$
     JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id,t.config_revision,t.mapping_revision,t.identity_mapping_revision)=
       (r.test_report_id,r.tenant_key,r.source_id,r.config_revision,r.mapping_revision,r.identity_mapping_revision) AND t.status='PASS'
     WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id AND r.status='COMPLETE'
+      AND NOT EXISTS(SELECT 1 FROM control.source_test_report newer
+        WHERE newer.tenant_key=t.tenant_key AND newer.source_id=t.source_id
+          AND newer.config_revision=t.config_revision AND newer.mapping_revision=t.mapping_revision
+          AND newer.identity_mapping_revision=t.identity_mapping_revision
+          AND (newer.created_at,newer.id)>(t.created_at,t.id))
       AND sr.data_owner_user_id=r.owner_user_id AND sr.owner_revision=r.owner_revision
       AND sr.current_config_revision=r.config_revision AND sr.mapping_revision=r.mapping_revision
       AND sr.identity_mapping_revision=r.identity_mapping_revision
@@ -1451,7 +1459,8 @@ BEGIN
     AND d.status='PENDING' AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption c
       WHERE c.tenant_key=d.tenant_key AND c.source_id=d.source_id AND c.run_id=d.run_id)) THEN RETURN false; END IF;
   SELECT d.* INTO latest FROM control.etl_snapshot_delete_run d JOIN control.etl_snapshot_delete_consumption c
-    USING(tenant_key,source_id,run_id) WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id AND d.status='PENDING'
+    USING(tenant_key,source_id,run_id) WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id
+      AND d.status IN ('PENDING','AWAITING_OWNER')
     ORDER BY d.reservation_ordinal DESC LIMIT 1 FOR UPDATE OF d;
   IF NOT FOUND THEN RETURN false; END IF;
   SELECT * INTO run_row FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=latest.run_id;
@@ -1473,7 +1482,11 @@ BEGIN
     RETURN true;
   END IF;
   IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate WHERE tenant_key=p_tenant_key
-    AND source_id=p_source_id AND run_id=latest.run_id) THEN RETURN false; END IF;
+    AND source_id=p_source_id AND run_id=latest.run_id) THEN
+    UPDATE control.etl_snapshot_delete_run SET last_worker_checked_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=latest.run_id;
+    RETURN false;
+  END IF;
   proof_json:=latest.stable_scope_json;
   -- Candidate keys are full source identities, while the denominator is live canonical objects.
   -- Ambiguous aliases could otherwise make the key count understate the canonical impact ratio.
@@ -1612,7 +1625,7 @@ BEGIN
       WHEN total_count=0 THEN 'COMPLETE' ELSE 'PENDING' END,
     candidate_count=total_count,above_threshold=has_above,
     pause_reason=CASE WHEN has_above THEN 'DELETE_CANDIDATES_EXCEED_FIVE_PERCENT' ELSE NULL END,
-    updated_at=clock_timestamp()
+    last_worker_checked_at=clock_timestamp(),updated_at=clock_timestamp()
     WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=latest.run_id;
   UPDATE control.etl_snapshot_delete_run d SET status='COMPLETE',candidate_count=0,updated_at=clock_timestamp()
     WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id AND d.status='PENDING'
@@ -1637,8 +1650,17 @@ BEGIN
     ORDER BY x.reservation_ordinal LIMIT 1 FOR UPDATE SKIP LOCKED;
   IF NOT FOUND THEN RETURN control.freeze_etl_snapshot_delete_candidates(p_tenant_key,p_source_id); END IF;
   IF EXISTS(SELECT 1 FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id
-    AND status IN ('QUEUED','SCANNING','VALIDATING','READY','APPLYING')) THEN RETURN false; END IF;
+    AND status IN ('QUEUED','SCANNING','VALIDATING','READY','APPLYING')) THEN
+    UPDATE control.etl_snapshot_delete_run SET last_worker_checked_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+    RETURN false;
+  END IF;
   SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id FOR UPDATE;
+  IF r.delete_contract IS DISTINCT FROM 'hard_delete' THEN
+    UPDATE control.etl_snapshot_delete_run SET status='SKIPPED',last_worker_checked_at=clock_timestamp(),updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+    RETURN true;
+  END IF;
   IF NOT control.etl_snapshot_delete_proof_current(p_tenant_key,p_source_id,d.run_id)
     OR EXISTS(SELECT 1 FROM control.source_security_barrier b
       WHERE b.tenant_key=r.tenant_key AND b.effective_fence>r.security_barrier_fence
@@ -1691,6 +1713,27 @@ BEGIN
       last_processed_run_id=EXCLUDED.last_processed_run_id,last_presence_run_id=EXCLUDED.last_presence_run_id,
       first_absence_run_id=NULL,second_absence_run_id=NULL,absence_count=0,last_presence_sequence=EXCLUDED.last_presence_sequence,
       second_absence_sequence=NULL,second_absence_completed_at=NULL,updated_at=clock_timestamp();
+  -- Seed first-scope absences from live canonical identities with a matching
+  -- channel epoch and OBS receipt. A missing/stale receipt cannot start a streak.
+  INSERT INTO control.etl_snapshot_delete_streak(tenant_key,source_id,entity,source_pk,scope_digest,stable_scope_json,
+    last_processed_run_id,last_presence_run_id,first_absence_run_id,absence_count,last_presence_sequence,updated_at)
+    SELECT p_tenant_key,p_source_id,i.entity,i.source_pk,
+      public.digest(convert_to(jsonb_build_object('proof',scope_json,'entity',i.entity)::text,'UTF8'),'sha256'),
+      scope_json,d.run_id,NULL,d.run_id,1,vr.source_version,clock_timestamp()
+    FROM control.canonical_source_identity i
+    JOIN control.source_version_receipt vr ON vr.tenant_key=i.tenant_key AND vr.source_id=i.source_id
+      AND vr.channel_id=(r.entity_channel_proof->i.entity->>'channel_id')::uuid
+      AND vr.channel_epoch=(r.entity_channel_proof->i.entity->>'channel_epoch')::bigint
+      AND vr.version_domain='SNAPSHOT_OBSERVATION' AND vr.entity=i.entity AND vr.source_pk=i.source_pk
+      AND vr.canonical_object_id=i.canonical_object_id
+    WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=ANY(r.expected_entities)
+      AND ((i.entity='customer' AND i.customer_id IS NOT NULL AND EXISTS(SELECT 1 FROM hub.canonical_customer cc
+            WHERE cc.tenant_id=i.tenant_key AND cc.id=i.customer_id AND cc.deleted_at IS NULL))
+        OR (i.entity='order' AND i.order_id IS NOT NULL AND EXISTS(SELECT 1 FROM hub.canonical_order co
+            WHERE co.tenant_id=i.tenant_key AND co.id=i.order_id AND co.deleted_at IS NULL)))
+      AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_presence p WHERE p.tenant_key=d.tenant_key
+        AND p.source_id=d.source_id AND p.run_id=d.run_id AND p.entity=i.entity AND p.source_pk=i.source_pk)
+    ON CONFLICT(tenant_key,source_id,entity,source_pk,scope_digest) DO NOTHING;
   -- Update only prior keys in this exact stable scope; this D pause/epoch is deliberately absent from scope_hash.
   UPDATE control.etl_snapshot_delete_streak s SET
     first_absence_run_id=CASE WHEN s.absence_count=0 THEN d.run_id ELSE s.first_absence_run_id END,
