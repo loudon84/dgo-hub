@@ -1,0 +1,13 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+{"level":30,"time":1793200718562,"pid":13696,"hostname":"WIN-20231024AVS","reqId":"25879c3c-d3f6-41b9-b881-a39da974f837","req":{"id":"25879c3c-d3f6-41b9-b881-a39da974f837","method":"POST","route":"/hub/v1/ingest/crm/customers"},"msg":"incoming request"}
+{"level":30,"time":1793200718687,"pid":13696,"hostname":"WIN-20231024AVS","reqId":"25879c3c-d3f6-41b9-b881-a39da974f837","res":{"statusCode":202},"responseTime":124.22670000000016,"msg":"request completed"}
+{"level":30,"time":1793200718791,"pid":13696,"hostname":"WIN-20231024AVS","reqId":"1d772b80-7177-45ee-beeb-a45cb5f08139","req":{"id":"1d772b80-7177-45ee-beeb-a45cb5f08139","method":"POST","route":"/hub/v1/ingest/orders/orders"},"msg":"incoming request"}
+{"level":30,"time":1793200718885,"pid":13696,"hostname":"WIN-20231024AVS","reqId":"1d772b80-7177-45ee-beeb-a45cb5f08139","res":{"statusCode":202},"responseTime":93.77369999999974,"msg":"request completed"}
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 28 skipped (30)
+   Start at  23:18:34
+   Duration  5.32s (transform 379ms, setup 0ms, import 628ms, tests 4.48s, environment 0ms)
+

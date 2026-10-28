@@ -1,0 +1,27 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts [ acceptance-tests/quarantine-read.test.ts ]
+Error: Transform failed with 1 error:
+
+[PARSE_ERROR] Expected `,` or `)` but found `finally`
+      ╭─[ acceptance-tests/quarantine-read.test.ts:1378:7 ]
+      │
+ 1151 │   it('creates and runs a same-target recovery child with the original UUID', async () => {
+      │     ┬  
+      │     ╰── Opened here
+      │ 
+ 1378 │     } finally {
+      │       ───┬───  
+      │          ╰───── `,` or `)` expected
+──────╯
+
+  Plugin: vite:oxc
+  File: E:/git/dgo-hub/integration-service/acceptance-tests/quarantine-read.test.ts
+ ❯ transformWithOxc node_modules/vite/dist/node/chunks/node.js:7618:19
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:7690:26
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:51
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

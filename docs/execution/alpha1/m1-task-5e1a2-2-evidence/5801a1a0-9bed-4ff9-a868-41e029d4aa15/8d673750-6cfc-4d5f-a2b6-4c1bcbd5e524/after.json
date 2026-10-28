@@ -1,0 +1,65 @@
+[
+  {
+    "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+    "size": 108661,
+    "raw_sha256": "00efde2476804d1e50e4019e1907674976848728368bd50f6671c26e43c4ff43",
+    "lf_sha256": "00efde2476804d1e50e4019e1907674976848728368bd50f6671c26e43c4ff43",
+    "git_blob": "2dff0d4a5231bcb31218b67354f64b0680577c47"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-read.ts",
+    "size": 12327,
+    "raw_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "lf_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "git_blob": "4ad65b94fdb5d5b3becafec64c4bc59f56090bcb"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-recovery.ts",
+    "size": 7397,
+    "raw_sha256": "eb21436ee8cab9eca90ad04529187b7fc64db1f964105f2e23d264963427c4e9",
+    "lf_sha256": "350231f6112871742206ae32c7fb4b32fbdab86b2760b03de66a7ceb8350eabe",
+    "git_blob": "18535ee9bc1e0e7d392fde1ea385542f338c7717"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-ingestion.ts",
+    "size": 22348,
+    "raw_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "lf_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "git_blob": "69f29605bf2f16857d87c3b46b561f1e50751994"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-contract.ts",
+    "size": 17191,
+    "raw_sha256": "3c33a347e1f84f3ec7019d7b44642f5c13fb37dafbfcbe038d3391e04dbaafc5",
+    "lf_sha256": "3c33a347e1f84f3ec7019d7b44642f5c13fb37dafbfcbe038d3391e04dbaafc5",
+    "git_blob": "1095f669816afddf4dd5c2162302b93c4f4de5bf"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "size": 31058,
+    "raw_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "lf_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "git_blob": "1aa2837826c8446f5c83c1537addbb1f17e791d1"
+  },
+  {
+    "path": "integration-service/normalization/apply.ts",
+    "size": 32386,
+    "raw_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "lf_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "git_blob": "5ca57404992df9bc49ac15e966ba24bdf588528d"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "size": 301398,
+    "raw_sha256": "fd034d3c9f8b406184aafe7d16ee9baf8267ccb8cb3f76ad3bd6a920663df2a7",
+    "lf_sha256": "5a51c954f28bf2674209b4f290458c5715e61627e205a6d60a6f996e5bec25f3",
+    "git_blob": "c3b7029e437f27cfdbb1cdee577a936d31c8fa6e"
+  },
+  {
+    "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a2-2-schema-contract.md",
+    "size": 13559,
+    "raw_sha256": "e7fbf8463825b55050def3da329017c62d41fe39291fb1821801cc6e03efb60c",
+    "lf_sha256": "77ecf86e723ab32381faa0cdaa6602b6190edc70e25ae23232397584e456bfef",
+    "git_blob": "05038a888d08b6b1ba51e41cc85d7f6cc6f11f94"
+  }
+]

@@ -1,0 +1,10 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/quarantine-read.test.ts (0 test)
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  23:17:18
+   Duration  218ms (transform 0ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

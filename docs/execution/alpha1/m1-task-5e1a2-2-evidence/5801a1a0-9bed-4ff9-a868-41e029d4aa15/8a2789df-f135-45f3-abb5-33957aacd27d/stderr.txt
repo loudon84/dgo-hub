@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read > API-024 rejects a snapshot origin with the scoped recovery conflict
+AssertionError: expected 404 to be 409 // Object.is equality
+
+- Expected
++ Received
+
+- 409
++ 404
+
+ ❯ acceptance-tests/quarantine-read.test.ts:596:35
+    594|         headers: { authorization: `Bearer ${await tokenFor(subject)}`,…
+    595|         payload: { expected_state: expectedState, mapping_revision: '1…
+    596|       expect(response.statusCode).toBe(409);
+       |                                   ^
+    597|       expect(response.json().error.code).toBe('RECOVERY_SCOPE_UNAVAILA…
+    598|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

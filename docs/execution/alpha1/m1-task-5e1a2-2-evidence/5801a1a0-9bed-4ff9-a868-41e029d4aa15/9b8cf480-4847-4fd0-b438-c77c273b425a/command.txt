@@ -1,0 +1,1 @@
+cwd=E:/git/dgo-hub/integration-service; command=npm run typecheck; M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\9b8cf480-4847-4fd0-b438-c77c273b425a

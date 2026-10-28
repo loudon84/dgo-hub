@@ -1,0 +1,18 @@
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read
+MigrationRunnerError: MIGRATION_APPLY_FAILED 009 snapshot_runs_and_recovery
+ ❯ invalid migrations/runner.ts:198:10
+    196|
+    197| function invalid(code: string, migration?: Migration): MigrationRunner…
+    198|   return new MigrationRunnerError(code, migration?.versionText, migrat…
+       |          ^
+    199| }
+    200|
+ ❯ applyMigration migrations/runner.ts:325:11
+ ❯ runMigrations migrations/runner.ts:400:7
+ ❯ acceptance-tests/quarantine-read.test.ts:615:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,51 @@
+[
+  {
+    "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+    "size": 79660,
+    "raw_sha256": "91618d5ac0e4b8b17076741edaeb40c9e69f43ecf40569a9570e0456570518f4",
+    "lf_sha256": "91618d5ac0e4b8b17076741edaeb40c9e69f43ecf40569a9570e0456570518f4",
+    "git_blob": "7a783402141d81f0b353a5a09ae878f4b8950a58"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-read.ts",
+    "size": 11069,
+    "raw_sha256": "86647634a67a83c994149573d549ad28f924e642f48d4231dd5102c9aa164a84",
+    "lf_sha256": "86647634a67a83c994149573d549ad28f924e642f48d4231dd5102c9aa164a84",
+    "git_blob": "619b404c8a69a11506745bde80c4f812995f26a7"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-ingestion.ts",
+    "size": 22093,
+    "raw_sha256": "db70e3ee65b39d4a4103156f0de5052fe353570ad835a0e31acd8d2f23fdcd3b",
+    "lf_sha256": "db70e3ee65b39d4a4103156f0de5052fe353570ad835a0e31acd8d2f23fdcd3b",
+    "git_blob": "f06366a2f2d6e360414112281be9f531b20f89b1"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "size": 30357,
+    "raw_sha256": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+    "lf_sha256": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+    "git_blob": "832773de94354c1c76c3440fa322bdb5550742da"
+  },
+  {
+    "path": "integration-service/normalization/apply.ts",
+    "size": 32386,
+    "raw_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "lf_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "git_blob": "5ca57404992df9bc49ac15e966ba24bdf588528d"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "size": 274503,
+    "raw_sha256": "740db83bc730e31a746aa644a7cfd89f72ab8740c27223391a8d5fc8fd9ee217",
+    "lf_sha256": "3aa3605551e5394af984874c0b0791680e78ab3d9bbe3fc9c5ca58e5c3a18549",
+    "git_blob": "60f190c9d7c9bea672fa3cd2b2e34b961474e4f6"
+  },
+  {
+    "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a2-2-schema-contract.md",
+    "size": 10409,
+    "raw_sha256": "4fddad01f369f509442eeee90f5c193d9f9ffd7b11c5d0382e4a71013895892d",
+    "lf_sha256": "029396a9831ead32ce0cca481f7daa2fb6549b28b040097dc3374dd2d7a219f7",
+    "git_blob": "1be9761f3733a7889027dd283012b6f126c8794c"
+  }
+]

@@ -1,0 +1,1 @@
+cwd=E:/git/dgo-hub/integration-service; command=npx vitest run acceptance-tests/quarantine-read.test.ts -t "API-024 rejects a snapshot origin"; M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\8a2789df-f135-45f3-abb5-33957aacd27d

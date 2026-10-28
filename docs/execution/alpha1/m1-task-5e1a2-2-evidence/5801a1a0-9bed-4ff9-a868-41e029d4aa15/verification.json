@@ -1,0 +1,136 @@
+{
+  "source_head": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+  "gates": [
+    {
+      "run": "ecc42356-0b15-4e11-98f7-9c4eb2c0277d",
+      "capture_unchanged": true,
+      "head_before": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "head_after": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "9b8cf480-4847-4fd0-b438-c77c273b425a",
+      "capture_unchanged": true,
+      "head_before": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "head_after": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "ef677cf0-5a6c-4b6d-ba5b-0f760802e538",
+      "capture_unchanged": true,
+      "head_before": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "head_after": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "81041366-a8f6-4504-9a3e-9211cdae3c46",
+      "capture_unchanged": true,
+      "head_before": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "head_after": "528f2fa28864d61aa9b894dc36c0d3182f1e4dba",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    }
+  ],
+  "worker_build_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+  "node_pid": 21052,
+  "node_loaded_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+  "node_absent": true,
+  "frozen_migrations": [
+    {
+      "file": "001_init.sql",
+      "before_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7",
+      "after_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+    },
+    {
+      "file": "002_identity_auth.sql",
+      "before_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1",
+      "after_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+    },
+    {
+      "file": "003_mcp_audit_boundary.sql",
+      "before_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68",
+      "after_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+    },
+    {
+      "file": "004_alpha1_runtime_security.sql",
+      "before_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d",
+      "after_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+    },
+    {
+      "file": "005_source_registry.sql",
+      "before_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158",
+      "after_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+    },
+    {
+      "file": "006_canonical_data_and_receipts.sql",
+      "before_blob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a",
+      "after_blob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a"
+    },
+    {
+      "file": "007_durable_ingestion_jobs.sql",
+      "before_blob": "7a5dca418542976a22cf786d302e36a617ee22df",
+      "after_blob": "7a5dca418542976a22cf786d302e36a617ee22df"
+    },
+    {
+      "file": "008_durable_worker_leases_and_retries.sql",
+      "before_blob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837",
+      "after_blob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837"
+    }
+  ],
+  "postgres_lifecycle": [
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/8a2789df-f135-45f3-abb5-33957aacd27d/m1task5/035a14a6-a4f2-429d-a50c-00c5708c7d39/postgres-lifecycle.jsonl",
+      "container_id": "404e14ed403ff36d99bc067340dc75612bb06cec3630ab585098c14ee996e279",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/a50dcdbe-4414-485d-99f2-d71f4b204827/m1task5/5e90fc5b-e1c0-43fc-aeb6-cb5df898ab8e/postgres-lifecycle.jsonl",
+      "container_id": "16261861b6b08874192cc7932025cfae8f1f4a95fe7719ce70ab0f9dbf4b0879",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/a50dcdbe-4414-485d-99f2-d71f4b204827/m1task5/c1871853-b653-463f-9f22-8fd97a9855f5/postgres-lifecycle.jsonl",
+      "container_id": "81a6c8afb2c2517ef8f661adc76446822688856ac2f886beaa1f594216ebb924",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/a50dcdbe-4414-485d-99f2-d71f4b204827/m1task5/fd81b5e5-003a-4b6b-86f3-af5980fd12bc/postgres-lifecycle.jsonl",
+      "container_id": "8f3e9e474df97d8c88b37bb25a75020a9c4a9d5f2711a4221cc4896643313f53",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/8d673750-6cfc-4d5f-a2b6-4c1bcbd5e524/m1task5/2c289dd1-741a-4c5f-ac55-c684419a5a1e/postgres-lifecycle.jsonl",
+      "container_id": "cd1b472fb4384b67e1e55a0cfdcd8c259561baa9d792ca8237fcd48f7602d10c",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/ef677cf0-5a6c-4b6d-ba5b-0f760802e538/m1task5/50cc12b4-b275-4be2-a267-de8f560fed4a/postgres-lifecycle.jsonl",
+      "container_id": "385dcdab74346f00648a15e21bed2610c685a73bef4ed907285a830c1dde12c2",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/ef677cf0-5a6c-4b6d-ba5b-0f760802e538/m1task5/cea02dee-43e0-4c79-b92b-21b777865c1a/postgres-lifecycle.jsonl",
+      "container_id": "8e030f9f3fa2694b69065909fc5f85b765bf6e1b151cd045c9f8f26dd0979976",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/ef677cf0-5a6c-4b6d-ba5b-0f760802e538/m1task5/d532e2c6-078e-4140-b98f-448735df6a77/postgres-lifecycle.jsonl",
+      "container_id": "e993dc647dfdb2f4f70ba2cef52e5b7e836de1a1dcf94ac9262975703df48a65",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/ef677cf0-5a6c-4b6d-ba5b-0f760802e538/m1task5/fb05c762-277f-4b05-91f9-7875a3fcc5bf/postgres-lifecycle.jsonl",
+      "container_id": "d1b9527a85a075f4be6f6fd65c72f9d11fb783791914e7a2ea73ca20dde22b95",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-evidence/5801a1a0-9bed-4ff9-a868-41e029d4aa15/81041366-a8f6-4504-9a3e-9211cdae3c46/task3/101c9ade-2c56-46b7-ac9c-9b36f68b992a/postgres-lifecycle.jsonl",
+      "container_id": "42a308fac10288dca9af90614b15c43c7f6dde0c63cd2b2751e8cfaddfdb1dac",
+      "absent": true
+    }
+  ],
+  "copied_artifacts": 85
+}

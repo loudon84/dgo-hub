@@ -1,0 +1,1 @@
+cwd=E:/git/dgo-hub/integration-service; command=npx vitest run acceptance-tests/strict-ingestion.test.ts -t "applies a committed HTTP job|quarantines an order"; M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\81041366-a8f6-4504-9a3e-9211cdae3c46

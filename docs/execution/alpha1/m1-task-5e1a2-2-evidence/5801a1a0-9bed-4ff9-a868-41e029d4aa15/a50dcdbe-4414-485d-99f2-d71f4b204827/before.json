@@ -1,0 +1,58 @@
+[
+  {
+    "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+    "size": 86243,
+    "raw_sha256": "8c623412625cf0a148e279226cbc408b6b181b0f83b3a9922c7a7f4a64cae9af",
+    "lf_sha256": "8c623412625cf0a148e279226cbc408b6b181b0f83b3a9922c7a7f4a64cae9af",
+    "git_blob": "7f7e0d8904bcb5666ccf8d4bdd52bffc296177ff"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-read.ts",
+    "size": 12327,
+    "raw_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "lf_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "git_blob": "4ad65b94fdb5d5b3becafec64c4bc59f56090bcb"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-recovery.ts",
+    "size": 7360,
+    "raw_sha256": "b66ad0b014f7f46e3344ffe4c139d13fa2ab37e019bb85ee597aadc047cf03df",
+    "lf_sha256": "d53c17fa2e6f60243f68ed64cf333a7b1e28b28c6860c65b8a9221d37e3dee87",
+    "git_blob": "ead1125e5143299905b4da34892c4d259b6506d0"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-ingestion.ts",
+    "size": 22348,
+    "raw_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "lf_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "git_blob": "69f29605bf2f16857d87c3b46b561f1e50751994"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "size": 31058,
+    "raw_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "lf_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "git_blob": "1aa2837826c8446f5c83c1537addbb1f17e791d1"
+  },
+  {
+    "path": "integration-service/normalization/apply.ts",
+    "size": 32386,
+    "raw_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "lf_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "git_blob": "5ca57404992df9bc49ac15e966ba24bdf588528d"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "size": 301125,
+    "raw_sha256": "993fc0e99146351d42f59822ed403bcace8a37a5b86d1bd361e59e3908686093",
+    "lf_sha256": "f187663cbee80dbc076529e82f1d94ec6e7aa1eef016a7f5366963fccd675151",
+    "git_blob": "b385049b07f04763dc473e78cb1c5e182114ccda"
+  },
+  {
+    "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a2-2-schema-contract.md",
+    "size": 13370,
+    "raw_sha256": "8aaa604e6c7a4f5fe11b79063ee48cf9860f93770a919b3328703c4e89b85e64",
+    "lf_sha256": "ab4753904a6d4f9010692ef3fbfc20d3923e5a01a7ff562415e50a979764a7db",
+    "git_blob": "6f2c60c919b84e9c97e5e9966585c3856239021e"
+  }
+]
