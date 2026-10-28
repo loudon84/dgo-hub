@@ -381,6 +381,24 @@
       "source_runtime_path": "E:\\m1t5-runtime\\0805cee9-4640-46bb-975b-4c30c72b22be\\source-after.json",
       "size": 1929,
       "sha256": "76859cb12df6193c70efd71a006c3f6e3470072f49c27f8c9144a9b6a6730cd9"
+    },
+    {
+      "file": "postgres-lifecycle-0805cee9-4640-46bb-975b-4c30c72b22be.jsonl",
+      "source_runtime_path": "E:\\m1t5-runtime\\0805cee9-4640-46bb-975b-4c30c72b22be\\m1task5\\b2c6fb44-e653-4989-9d3a-acfb12b0f2ab\\postgres-lifecycle.jsonl",
+      "size": 1048,
+      "sha256": "583718be2f7c0c020887dceb36b5ab0de9a44866dfee406ed1a09420170de33a"
+    },
+    {
+      "file": "final-child-pid-presence-20261028T040649Z.json",
+      "source_runtime_path": "Captured directly in evidence package at 2026-10-28T04:06:49.3806219Z",
+      "size": 593,
+      "sha256": "a342ba8196db40f2975bb9c78ea9ad8a42576677dffdebb1fa5fb87515b53325"
+    },
+    {
+      "file": "final-child-pid-presence-20261028T040649Z-command.txt",
+      "source_runtime_path": "Captured directly in evidence package at 2026-10-28T04:06:49.3806219Z",
+      "size": 109,
+      "sha256": "ca4e30b593ad1cf8519289a0112342306916867d6ed0de60b77c71c644c02b01"
     }
   ]
 }

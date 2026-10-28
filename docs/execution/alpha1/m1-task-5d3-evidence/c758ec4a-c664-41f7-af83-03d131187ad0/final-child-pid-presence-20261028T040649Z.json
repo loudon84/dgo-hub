@@ -1,0 +1,23 @@
+{
+  "observed_at_utc": "2026-10-28T04:06:49.3806219+00:00",
+  "query": "Get-Process -Id 45180,41260,44388,18568 (one exact PID per lookup); no process was signaled",
+  "results": [
+    {
+      "pid": 45180,
+      "state": "absent"
+    },
+    {
+      "pid": 41260,
+      "state": "absent"
+    },
+    {
+      "pid": 44388,
+      "state": "absent"
+    },
+    {
+      "pid": 18568,
+      "state": "absent"
+    }
+  ],
+  "interpretation": "All four PIDs were absent at this later observation. This does not claim an absence observation at the instant each test child exited."
+}
