@@ -1,0 +1,1 @@
+cwd=E:/git/dgo-hub/integration-service; command=npx vitest run acceptance-tests/quarantine-read.test.ts -t 'creates and runs a same-target|preserves the complete order'; M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\3d023e00-eb2f-4999-9238-21d653024934

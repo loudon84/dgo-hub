@@ -1,0 +1,1 @@
+cwd=E:/git/dgo-hub/integration-service; command=npm run build; M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\f3dc604d-7b9c-46fd-92ab-ca6aa968a034

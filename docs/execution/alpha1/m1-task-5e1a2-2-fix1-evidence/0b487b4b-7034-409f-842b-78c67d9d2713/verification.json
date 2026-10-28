@@ -1,0 +1,83 @@
+{
+  "source_head": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+  "gates": [
+    {
+      "run": "f3dc604d-7b9c-46fd-92ab-ca6aa968a034",
+      "capture_unchanged": true,
+      "head_before": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "head_after": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "c212aec5-d2c0-437c-9507-25877e041ea9",
+      "capture_unchanged": true,
+      "head_before": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "head_after": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "3d023e00-eb2f-4999-9238-21d653024934",
+      "capture_unchanged": true,
+      "head_before": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "head_after": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    },
+    {
+      "run": "e913dd50-9f15-4345-8f98-420467e5140c",
+      "capture_unchanged": true,
+      "head_before": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "head_after": "229cbf136052212c26f378d6ab6868ceb4d9856c",
+      "source_blob_mismatches": [],
+      "exit": "0"
+    }
+  ],
+  "worker_build_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+  "nodes": [
+    {
+      "pid": 39152,
+      "loaded_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+      "absent": true
+    },
+    {
+      "pid": 46064,
+      "loaded_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+      "absent": true
+    }
+  ],
+  "postgres_lifecycle": [
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/a60ac4b7-c688-4125-8930-3b75121d1de9/m1task5/a5455d82-1fb7-4922-970a-8cfe92358e13/postgres-lifecycle.jsonl",
+      "container_id": "bd11490706e64a8ada02c8e1794a2a09a0639233eb4d4e5687d2bc752a885cf2",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/3d023e00-eb2f-4999-9238-21d653024934/m1task5/f1899c84-50b0-4cd4-b6b7-b68b47c180e8/postgres-lifecycle.jsonl",
+      "container_id": "2b49a96710dd2472a015f283fa65f3c34be4d015ab17f87ef85fee9e4e12a177",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/e913dd50-9f15-4345-8f98-420467e5140c/m1task5/48719f86-882f-4394-9308-e63dffcd5c55/postgres-lifecycle.jsonl",
+      "container_id": "0b23f65db6a5f5ddf8f5211bcd90eeae770ebafa895c6c54a021f32393527d3b",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/e913dd50-9f15-4345-8f98-420467e5140c/m1task5/5ab143e2-70f1-4de0-ae37-480d1576ef6f/postgres-lifecycle.jsonl",
+      "container_id": "3f8423dc1f669c21640904fe80ccb67c13eb23c0b64ad1c75f1f6d37a3cbc253",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/e913dd50-9f15-4345-8f98-420467e5140c/m1task5/ba352f0e-5bf2-47c2-9e65-0ba5748e6b3d/postgres-lifecycle.jsonl",
+      "container_id": "9b8f71b978bf962ed926f70577546eb4402a9556ca89eb5d9790ba9f05aac377",
+      "absent": true
+    },
+    {
+      "file": "E:/git/dgo-hub/docs/execution/alpha1/m1-task-5e1a2-2-fix1-evidence/0b487b4b-7034-409f-842b-78c67d9d2713/e913dd50-9f15-4345-8f98-420467e5140c/m1task5/fdc9437e-61af-486e-8b79-177bc0c641a0/postgres-lifecycle.jsonl",
+      "container_id": "c2b18d443c3f21494592a18a8b4afd1f595426a41cd2658d34060409b2039d40",
+      "absent": true
+    }
+  ],
+  "copied_artifacts": 60
+}

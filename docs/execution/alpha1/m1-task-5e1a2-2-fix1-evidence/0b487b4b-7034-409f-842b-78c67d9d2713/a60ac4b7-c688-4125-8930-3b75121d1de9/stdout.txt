@@ -1,0 +1,12 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+ ❯ acceptance-tests/quarantine-read.test.ts (34 tests | 2 failed | 32 skipped) 3401ms
+     × creates and runs a same-target recovery child with the original UUID 87ms
+     × preserves the complete order customer tuple through unavailable-target recovery 64ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 32 skipped (34)
+   Start at  23:29:01
+   Duration  4.18s (transform 305ms, setup 0ms, import 594ms, tests 3.40s, environment 0ms)
+

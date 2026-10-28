@@ -1,0 +1,149 @@
+[
+  {
+    "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+    "size": 140970,
+    "raw_sha256": "418606580d1351a2cd1964151cf5dcd8d2ba7c869ec08dcfd075368231da9ad8",
+    "lf_sha256": "418606580d1351a2cd1964151cf5dcd8d2ba7c869ec08dcfd075368231da9ad8",
+    "git_blob": "e7da2eb0a1479fdf810ecf797023197adebbc585"
+  },
+  {
+    "path": "integration-service/acceptance-tests/recovery-crash-driver.mjs",
+    "size": 871,
+    "raw_sha256": "0e534eebac044ed3ccb246618c97cc597e529dba5be821bb7163829fd69d3d54",
+    "lf_sha256": "99935fdacc7d4932806b7fbfdb69f61793387b7e15d387e058f29ad088a83a16",
+    "git_blob": "49e57094479620e2e6214158d51a95c1e78b4eff"
+  },
+  {
+    "path": "integration-service/acceptance-tests/strict-ingestion.test.ts",
+    "size": 75315,
+    "raw_sha256": "f9cb3c728b257fdd923280b8f575fa23b4815bdd05a9d731e074d811fcf6aee5",
+    "lf_sha256": "f9cb3c728b257fdd923280b8f575fa23b4815bdd05a9d731e074d811fcf6aee5",
+    "git_blob": "a14bc5e26ada7e929d77abf226f1ef0a076a873d"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-read.ts",
+    "size": 12327,
+    "raw_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "lf_sha256": "4a4ead38c3405a46ff6a17bcde664a707f998c92ad6095a0dd25c910553c0e50",
+    "git_blob": "4ad65b94fdb5d5b3becafec64c4bc59f56090bcb"
+  },
+  {
+    "path": "integration-service/ingestion-api/quarantine-recovery.ts",
+    "size": 7397,
+    "raw_sha256": "eb21436ee8cab9eca90ad04529187b7fc64db1f964105f2e23d264963427c4e9",
+    "lf_sha256": "350231f6112871742206ae32c7fb4b32fbdab86b2760b03de66a7ceb8350eabe",
+    "git_blob": "18535ee9bc1e0e7d392fde1ea385542f338c7717"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-ingestion.ts",
+    "size": 22348,
+    "raw_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "lf_sha256": "932ebf63f8faf703e7c1aab0d3ee248790c66e04ae5f8f4610aaaa76030aef01",
+    "git_blob": "69f29605bf2f16857d87c3b46b561f1e50751994"
+  },
+  {
+    "path": "integration-service/ingestion-api/strict-contract.ts",
+    "size": 17191,
+    "raw_sha256": "3c33a347e1f84f3ec7019d7b44642f5c13fb37dafbfcbe038d3391e04dbaafc5",
+    "lf_sha256": "3c33a347e1f84f3ec7019d7b44642f5c13fb37dafbfcbe038d3391e04dbaafc5",
+    "git_blob": "1095f669816afddf4dd5c2162302b93c4f4de5bf"
+  },
+  {
+    "path": "integration-service/etl-worker/worker.ts",
+    "size": 31058,
+    "raw_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "lf_sha256": "32dcd389e626a41051d4a9835ff244e19d61a7d99dd1aabcdaec70e8c3c6b719",
+    "git_blob": "1aa2837826c8446f5c83c1537addbb1f17e791d1"
+  },
+  {
+    "path": "integration-service/normalization/apply.ts",
+    "size": 32386,
+    "raw_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "lf_sha256": "df19d3b111609f97e31797369e12cc83c1bc6bf908e4fdec4a7ae338792f7710",
+    "git_blob": "5ca57404992df9bc49ac15e966ba24bdf588528d"
+  },
+  {
+    "path": "integration-service/migrations/001_init.sql",
+    "size": 4988,
+    "raw_sha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+    "lf_sha256": "600491b647d88dd2f282a425afe1005e7fe2c4c87a67b30570de52408a7f2251",
+    "git_blob": "523be309e06915b1b3c03c5f1ffb55c8b3bfe4f7"
+  },
+  {
+    "path": "integration-service/migrations/002_identity_auth.sql",
+    "size": 5633,
+    "raw_sha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+    "lf_sha256": "1267fd0803ae543e73e701ccf277de8a9d09cb6f1a601658b11f3ac1d926c062",
+    "git_blob": "4d9bb4b40fac91f65262d84834c1958d5121cdc1"
+  },
+  {
+    "path": "integration-service/migrations/003_mcp_audit_boundary.sql",
+    "size": 803,
+    "raw_sha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+    "lf_sha256": "e682d1f350cde309e5c556904ce694ee3d8cfafa58ae8fbad0e610ce0ee7274e",
+    "git_blob": "1b6f8ef3c89013cc8d5cc3e78601dd11a009be68"
+  },
+  {
+    "path": "integration-service/migrations/004_alpha1_runtime_security.sql",
+    "size": 5349,
+    "raw_sha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+    "lf_sha256": "11549b816bd696841ab30beb2b2b457617efa929a9ad397976e1409d75ff7298",
+    "git_blob": "d9d6dae66ee205b37e2f83418713a94c9249fc1d"
+  },
+  {
+    "path": "integration-service/migrations/005_source_registry.sql",
+    "size": 22627,
+    "raw_sha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+    "lf_sha256": "7085104c2ef23033398ade93441def385fc04b67bd3d39c73bf7e5cfe90a3f7f",
+    "git_blob": "b59b25d1e9b08790eec943e9b159e39ee3593158"
+  },
+  {
+    "path": "integration-service/migrations/006_canonical_data_and_receipts.sql",
+    "size": 49406,
+    "raw_sha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+    "lf_sha256": "fb52f395bd0c0f1d29e5234788b39737a922bf0f9928f7e99becfb6be91f3065",
+    "git_blob": "ac1b0dd90adf84314a47d181594ccb9fe4d6316a"
+  },
+  {
+    "path": "integration-service/migrations/007_durable_ingestion_jobs.sql",
+    "size": 13435,
+    "raw_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+    "lf_sha256": "4e2ccefe6f34d3ef4aa043ee8fe54fc88c45c225d07fd80fb827fef37b564159",
+    "git_blob": "7a5dca418542976a22cf786d302e36a617ee22df"
+  },
+  {
+    "path": "integration-service/migrations/008_durable_worker_leases_and_retries.sql",
+    "size": 2804,
+    "raw_sha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+    "lf_sha256": "4fcd01d104945a16102034b906d8df5423bbc325f08b6105106b0383f5cd370a",
+    "git_blob": "05fe4d73a7ac85cb606b4f9c48dd30978e321837"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "size": 303470,
+    "raw_sha256": "814628154b1467077a0f10d7ef478a2052dc8732ddb3adcb3a92e2b7c5c67e6b",
+    "lf_sha256": "ea8548111a131dc3477d8fbc8657294a36f933ea8a54221a8258202266c4795e",
+    "git_blob": "0460c3377c38510ee8345b3fb715630f2cbfdd09"
+  },
+  {
+    "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a2-2-schema-contract.md",
+    "size": 13864,
+    "raw_sha256": "265a47c461ab3664a9a9618b43ec2f8a008d5fddc9ee110a9dd35fa55d471224",
+    "lf_sha256": "b6537fca6e81348202ad3ed08128964dae12e1b88d7494d0e2e2c4f97ba7dd31",
+    "git_blob": "2de360109078312d84939b47390a2d35f141bc8e"
+  },
+  {
+    "path": "docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md",
+    "size": 165947,
+    "raw_sha256": "b61a64926013b1a118a1829735c7087cef6d629c6b50f5c98ac6650c13cc37e0",
+    "lf_sha256": "b61a64926013b1a118a1829735c7087cef6d629c6b50f5c98ac6650c13cc37e0",
+    "git_blob": "881a3b604ff58cf7cf1df3e17dcab55398deaf44"
+  },
+  {
+    "path": "docs/plans/2026-10-24-alpha1-m1-source-ingestion-implementation-plan.md",
+    "size": 47739,
+    "raw_sha256": "f818f7693082d7ddd69f9c87b0edbaf2989b3a5f711883da46098f3b80170b01",
+    "lf_sha256": "deae2e8485bc1af77667050b575dfedde81eca5ba95886cd1ed055dfd78f90dd",
+    "git_blob": "390ba1a1005ff92fec14b21fa1ebc45bbd42fc14"
+  }
+]

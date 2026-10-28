@@ -1,0 +1,23 @@
+{
+  "pid": 46064,
+  "loaded": [
+    {
+      "event": "loaded",
+      "pid": 46064,
+      "worker_path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\worker.js",
+      "worker_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d"
+    },
+    {
+      "event": "ready",
+      "pid": 46064
+    }
+  ],
+  "expected_worker_sha256": "04814affe67868128b1f03653a25ce74578ab78a6a750f1131d6eef361a6493d",
+  "exit": {
+    "code": null,
+    "signal": "SIGTERM"
+  },
+  "exited_observed": true,
+  "process_absent": true,
+  "stderr": ""
+}

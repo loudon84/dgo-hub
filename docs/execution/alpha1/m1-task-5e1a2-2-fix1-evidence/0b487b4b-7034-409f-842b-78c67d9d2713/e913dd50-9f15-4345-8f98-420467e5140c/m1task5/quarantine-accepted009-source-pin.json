@@ -1,0 +1,16 @@
+{
+  "accepted_commit": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "migration_path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+  "baseline_raw_sha256": "0dc88c4348967e58e42d3539ae06eca5eb16190cf6df0637b7495f5f43f286b9",
+  "baseline_raw_bytes": 257503,
+  "baseline_lf_sha256": "0dc88c4348967e58e42d3539ae06eca5eb16190cf6df0637b7495f5f43f286b9",
+  "baseline_lf_bytes": 257503,
+  "baseline_git_blob": "b7b3d6963f08abaafda21cfd2e11daa60bcc3112",
+  "suffix_raw_sha256": "f6b07bcc7095a9b69914388065750908f2ec7d8bd085bc4c2399c00fa5a8c62a",
+  "suffix_raw_bytes": 45962,
+  "suffix_lf_sha256": "6b96ea5174f0fc761b8f568ff0eed3c4aa43e3a765926cd8151b8991b73eabc1",
+  "suffix_lf_bytes": 45958,
+  "suffix_git_blob": "8094ff1830701ac69ab542e26fd55c88ec65ae8b",
+  "outcome_id": "947cc565-0653-4a46-b803-8909ab564d03",
+  "historical_origins": "snapshot facts seeded on accepted full 009 before phase-owned index suffix"
+}

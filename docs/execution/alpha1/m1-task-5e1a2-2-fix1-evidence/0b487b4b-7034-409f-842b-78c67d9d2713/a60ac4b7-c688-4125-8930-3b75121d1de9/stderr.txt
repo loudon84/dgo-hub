@@ -1,0 +1,35 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read > creates and runs a same-target recovery child with the original UUID
+AssertionError: expected 'c744897c-4632-4b75-900c-51bae0580e6f' to be '55ab9bbd-5ff6-4910-9672-9c107b2ea7ed' // Object.is equality
+
+Expected: "55ab9bbd-5ff6-4910-9672-9c107b2ea7ed"
+Received: "c744897c-4632-4b75-900c-51bae0580e6f"
+
+ ❯ acceptance-tests/quarantine-read.test.ts:1190:41
+    1188|         JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordin…
+    1189|       const expectedRaw=Buffer.from(JSON.stringify({schema_version:'hu…
+    1190|       expect(receipt.rows[0]!.batch_id).toBe(batchId);
+       |                                         ^
+    1191|       expect(receipt.rows[0]!.body_bytes).toEqual(expectedRaw);
+    1192|       expect(receipt.rows[0]!.event_id).toBe(eventId);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read > preserves the complete order customer tuple through unavailable-target recovery
+AssertionError: expected 'c744897c-4632-4b75-900c-51bae0580e6f' to be '61675021-9271-466b-b5d4-91da0c2b38c0' // Object.is equality
+
+Expected: "61675021-9271-466b-b5d4-91da0c2b38c0"
+Received: "c744897c-4632-4b75-900c-51bae0580e6f"
+
+ ❯ acceptance-tests/quarantine-read.test.ts:1441:41
+    1439|         JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordin…
+    1440|       const expectedRaw=Buffer.from(JSON.stringify({schema_version:'hu…
+    1441|       expect(receipt.rows[0]!.batch_id).toBe(batchId);
+       |                                         ^
+    1442|       expect(receipt.rows[0]!.body_bytes).toEqual(expectedRaw);
+    1443|       expect(receipt.rows[0]!.event_id).toBe(event);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
