@@ -2,7 +2,7 @@
 
 > For agentic workers: execute sequentially with superpowers:subagent-driven-development. GPT-6 Luna implements and reads product source; GPT-6.1 Sol independently reviews every dependent slice.
 
-**Status:** Controller preparation; product implementation awaits the accepted-pin preflight and exact slice dispatch. User authorized the whole E phase on 2026-10-28. Continue authorized local work without an additional plan-approval pause.
+**Status:** E1a1 locally accepted after two repair rounds: product55bc0ea, evidence023dde5, final independent Spec PASS / Quality Approved. E1a2-1 is next. User authorized the whole E phase on 2026-10-28. Continue authorized local work without an additional plan-approval pause.
 
 **Goal:** Provide explicit auditable manual recovery of preserved ingestion/snapshot facts and a controlled primary-channel cutover with immutable reconciliation evidence.
 
@@ -46,8 +46,10 @@ Exact slice boundaries and signatures are finalized from `context/m1-task5e-inte
 
 ## Controller-selected slice sequence (2026-10-28)
 
-- [ ] **E1a1:** API-022 immutable linked snapshot retry, fresh scan vs sealed-stage recovery, lineage-safe D counting. Exact requirements in task-5e1a1-brief.md. Independent Sol gate first.
-- [ ] **E1a2:** API-023 safe unified quarantine index and API-024 same-target REST/snapshot recovery through existing canonical workers; exact original fact/target proof and immutable operation. Freeze detailed brief from accepted E1a1 pin.
+- [x] **E1a1:** API-022 immutable linked snapshot retry, fresh scan vs sealed-stage recovery, lineage-safe D counting. Product55bc0ea; evidence023dde5; task-5e1a1-rereview-2.md Spec PASS / Quality Approved. Formal/integrated limits remain.
+- [ ] **E1a2-1:** API-023 safe unified quarantine identity/index and listing, including immutable REST and snapshot origins, exact current Owner scope, payload exclusion and bounded stable paging. Refresh source seams at the accepted E1a1 pin before the detailed dispatch.
+- [ ] **E1a2-2:** API-024 same-target REST recovery through a real linked child job/outbox and existing canonical worker. Preserve the original frozen field-mapping and identity-mapping proof separately. The public mapping_revision retains its field-mapping meaning. Snapshot origins return a documented scope-unavailable conflict in this intermediate slice.
+- [ ] **E1a3:** API-024 targeted snapshot aggregate recovery with a C-compatible linked operation and frozen provenance. Do not silently expand a single aggregate into a whole-run API-022 retry or derive source:write authority from Owner source:approve. This slice is required before whole-E completion.
 - [ ] **E1b:** Explicit current-Owner remap confirmation bound to original fact, exact target UUID and approved mapping revision/digest, with identity fencing. No implicit retarget in ordinary retry.
 - [ ] **E2a:** Separate pending source/config/credential/channel proof, targeted capability test and config preapproval; preserve current lane.
 - [ ] **E2b:** Full pending-stage-only snapshot validation and immutable digest, zero canonical/delete/observation effects before cutover.

@@ -154,3 +154,19 @@ M1-5 remains IN_PROGRESS. Next stage is E manual recovery/cutover, followed by i
 ## M1-5E preparation started — 2026-10-28
 
 User authorized local manual recovery and channel cutover after D closure3f1661d. GPT-6 Luna refreshed accepted-pin interfaces: strict API-022–024 remain unimplemented; the ordinary snapshot path requires the active current lane and performs canonical apply, so it cannot serve as pending stage-only reconciliation. Implementation will proceed in independently reviewed slices: same-target manual recovery, explicit remap confirmation, separate pending configuration/staging, then exact Owner approval and atomic cutover. No E product code has been dispatched at this checkpoint. Live cutover and formal/site acceptance remain NOT_RUN.
+
+### E1a1 implementation dispatched
+
+GPT-6 Luna is implementing strict API-022 snapshot recovery from base4dc37f85. The slice preserves terminal originals, creates a linked recovery child, separates fresh extraction from sealed-stage destination recovery, and binds deletion observation lineage. Implementation details are in the E task workspace; GPT-6.1 Sol review is required before dependent recovery/cutover slices. E remains IN_PROGRESS.
+
+### E1a1 first independent review — repairs required
+
+Implementation source a724c25 passed build/typecheck and four focused local cases, including customer/order sealed recovery and process termination. GPT-6.1 Sol [review](reviews/m1-task-5e1a1-review.md) found two P1 lifecycle defects and three P2 public-contract/test-evidence gaps. Fix round 1 is in progress; E1a1 is not approved. A genuine interrupted original extraction/source-writer recovery oracle is also required. A policy-rejected evidence-directory cleanup is recorded; that directory is preserved and non-authoritative, and the permitted replacement package uses the original external captures. E remains IN_PROGRESS, with dependent slices gated on review.
+
+### E1a1 API-022 local implementation and review closed
+
+Product `55bc0ea` implements immutable linked snapshot recovery, fresh scans after lost extraction, sealed-stage reuse, claim/heartbeat continuation and lineage-safe observations. GPT-6.1 Sol [final scoped review](reviews/m1-task-5e1a1-rereview-2.md) records Spec PASS / Quality Approved, with all five original findings and the real partial-scan acceptance gap closed. [Implementation and repair report](m1-task-5e1a1-report.md).
+
+Fix1 build/typecheck and focused4/4 ran at55bc0ea. Evidence-only Fix2 reran build and focused4/4 at actualHEAD4bc2ebf with unchanged product bytes, then verified a pre-test build-output manifest against both actual Node child import hashes. Root checked22 original/copy pairs and36 source records; Sol independently checked the build-to-runtime chain and36 raw/LF/size/blob records. Evidence delivery is023dde5. Earlier captures remain separately qualified.
+
+Next is E1a2-1 API-023 immutable quarantine identity/listing, then REST retry, targeted snapshot retry, explicit Owner remap and pending-channel reconciliation/cutover. Whole E and M1-5 remain IN_PROGRESS; integrated review, formal48/site, live upstream/Hermes and production verification remain outstanding. No real cutover was executed.
