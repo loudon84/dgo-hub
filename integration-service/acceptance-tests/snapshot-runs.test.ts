@@ -6,6 +6,7 @@ import { copyFile, mkdir, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createAuthService } from '../auth/service.js';
+import type { UserPrincipal } from '../auth/types.js';
 import { createCredential } from '../auth/credentials.js';
 import { createSourceRegistryService, type SourceRegistryService } from '../source-registry/service.js';
 import { runMigrations } from '../migrations/runner.js';
@@ -23,7 +24,7 @@ let fixture: OwnedPostgres;
 let auth: ReturnType<typeof createAuthService>;
 let initialMigrations: { applied: string[]; skipped: string[] };
 let service: SourceRegistryService;
-let owner = { userId: 'snapshot_owner', tenantId: 'snapshot_tenant', departmentId: null, businessRole: null,
+let owner: UserPrincipal = { userId: 'snapshot_owner', tenantId: 'snapshot_tenant', departmentId: null, businessRole: null,
   managementScopes: ['source:read','source:write','source:approve','mapping:write'] as const, authEpoch: '0',
   businessTimezone: 'UTC', issuer: 'https://idp.example.test', subject: 'snapshot-owner' };
 
@@ -1205,6 +1206,21 @@ describe('durable snapshot run admission', () => {
       const baselineCount=await fixture.pool.query(`SELECT baseline_count::text,candidate_count::text FROM control.etl_snapshot_delete_candidate
         WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND run_id=$2 AND entity='customer'`,[owner.tenantId,baselineRun.run_id]);
       expect(baselineCount.rows).toEqual([{baseline_count:'20',candidate_count:'0'}]);
+      const baselineFingerprint=await fixture.pool.query<{baseline_membership_digest:Buffer}>(`SELECT baseline_membership_digest
+        FROM control.etl_snapshot_delete_candidate WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND run_id=$2 AND entity='customer'`,
+        [owner.tenantId,baselineRun.run_id]);
+      expect(baselineFingerprint.rows[0]?.baseline_membership_digest).toBeInstanceOf(Buffer);
+      expect(baselineFingerprint.rows[0]?.baseline_membership_digest).toHaveLength(32);
+      const reservationGuard=await fixture.pool.connect();
+      try {
+        await reservationGuard.query('BEGIN');
+        await expect(reservationGuard.query(`UPDATE control.etl_snapshot_delete_run SET sequence_value=sequence_value+1
+          WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND run_id=$2`,[owner.tenantId,baselineRun.run_id]))
+          .rejects.toMatchObject({code:'55000'});
+      } finally {
+        await reservationGuard.query('ROLLBACK').catch(()=>undefined);
+        reservationGuard.release();
+      }
       await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id='C-20'`);
       const firstMissing=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-first-absence');
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
@@ -1254,6 +1270,8 @@ describe('durable snapshot run admission', () => {
       try {
         await overWriter.query(`SET ROLE ${sourceOwner}`);
         await overWriter.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id IN ('C-19','C-20')`);
+        await overWriter.query(`DELETE FROM ${sourceSchema}.order_lines WHERE order_id=9007199254740993123`);
+        await overWriter.query(`DELETE FROM ${sourceSchema}.orders WHERE order_id=9007199254740993123`);
       } finally { await overWriter.query('RESET ROLE').catch(()=>undefined); overWriter.release(); }
       const overFirst=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-over','1','d1-over-five-first-absence');
       await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
@@ -1270,14 +1288,14 @@ describe('durable snapshot run admission', () => {
         (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate h WHERE h.run_id=d.run_id
           AND h.entity='customer' AND h.baseline_count=20 AND h.candidate_count=2) AS customer_header,
         (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate h WHERE h.run_id=d.run_id
-          AND h.entity='order' AND h.baseline_count=1 AND h.candidate_count=0) AS zero_order_header
+        AND h.entity='order' AND h.baseline_count=1 AND h.candidate_count=1) AS order_header
         FROM control.etl_snapshot_delete_run d JOIN control.etl_run r USING(tenant_key,source_id,run_id)
         JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id) JOIN control.source_credential c USING(tenant_key,source_id)
         JOIN control.source_registry sr USING(tenant_key,source_id)
         WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-over' AND d.run_id=$2`,
         [owner.tenantId,overSecond.run_id,owner.userId,overApproval.approval_id]);
-      expect(pausedCohort.rows).toEqual([{status:'AWAITING_OWNER',above_threshold:true,candidate_count:'2',lifecycle:'PAUSED',enabled:false,
-        source_epoch:expect.any(String),headers:2,members:2,audits:1,genuine_audit:true,customer_header:1,zero_order_header:1}]);
+      expect(pausedCohort.rows).toEqual([{status:'AWAITING_OWNER',above_threshold:true,candidate_count:'3',lifecycle:'PAUSED',enabled:false,
+        source_epoch:expect.any(String),headers:2,members:3,audits:2,genuine_audit:true,customer_header:1,order_header:1}]);
       expect(BigInt(pausedCohort.rows[0]!.source_epoch)).toBeGreaterThan(0n);
       const overCandidate=await fixture.pool.query(`SELECT h.baseline_count::text,h.candidate_count::text,
         array_agg(m.source_pk ORDER BY m.source_pk COLLATE "C") AS keys
@@ -1286,8 +1304,249 @@ describe('durable snapshot run admission', () => {
       expect(overCandidate.rows).toEqual([{baseline_count:'20',candidate_count:'2',keys:['C-19','C-20']}]);
       const orderHeader=await fixture.pool.query(`SELECT baseline_count::text,candidate_count::text FROM control.etl_snapshot_delete_candidate
         WHERE run_id=$1 AND entity='order'`,[overSecond.run_id]);
-      expect(orderHeader.rows).toEqual([{baseline_count:'1',candidate_count:'0'}]);
+      expect(orderHeader.rows).toEqual([{baseline_count:'1',candidate_count:'1'}]);
       expect(overBaseline.run_id).not.toBe(overFirst.run_id);
+
+      const ownerApi=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+        authenticator:async()=>owner}});
+      try {
+        const candidateRow=await fixture.pool.query(`SELECT candidate_id::text,candidate_revision,encode(candidate_digest,'hex') AS candidate_digest
+          FROM control.etl_snapshot_delete_candidate WHERE tenant_key=$1 AND source_id='pg-e2e-over' AND run_id=$2 AND entity='customer'`,
+          [owner.tenantId,overSecond.run_id]);
+        const candidate=candidateRow.rows[0]!;
+        const summaryResponse=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(summaryResponse.statusCode).toBe(200);
+        expect(summaryResponse.json().data.delete_reconciliation.candidates).toEqual(expect.arrayContaining([
+          expect.objectContaining({candidate_id:candidate.candidate_id,entity:'customer',candidate_count:2,baseline_count:20,
+            approval_status:'AWAITING_OWNER'})]));
+        expect(summaryResponse.json().data).not.toHaveProperty('delete_candidate_members');
+        await fixture.pool.query(`CREATE FUNCTION control.test_reject_d2_read_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN RAISE EXCEPTION 'test read audit sink failure' USING ERRCODE='55000'; END $$`);
+        await fixture.pool.query(`CREATE TRIGGER test_reject_d2_read_audit BEFORE INSERT ON control.etl_snapshot_delete_api_audit
+          FOR EACH ROW WHEN (NEW.action='EXACT_MEMBER_READ') EXECUTE FUNCTION control.test_reject_d2_read_audit()`);
+        try {
+          const auditBlockedRead=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+            headers:{authorization:'Bearer owner-token'}});
+          expect(auditBlockedRead.statusCode).toBe(503);
+          expect(auditBlockedRead.json().data).toBeUndefined();
+        } finally {
+          await fixture.pool.query('DROP TRIGGER test_reject_d2_read_audit ON control.etl_snapshot_delete_api_audit');
+          await fixture.pool.query('DROP FUNCTION control.test_reject_d2_read_audit()');
+        }
+        const defaultPage=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(defaultPage.statusCode).toBe(200);
+        expect(defaultPage.json().data.delete_candidate_members).toHaveLength(2);
+        expect(defaultPage.json().data.next_cursor).toBeNull();
+        const maximumPage=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}&limit=100`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(maximumPage.statusCode).toBe(200);
+        expect(maximumPage.json().data.delete_candidate_members).toHaveLength(2);
+        const firstPage=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}&limit=1`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(firstPage.statusCode).toBe(200);
+        expect(firstPage.json().data.delete_candidate_members).toEqual([{tenant_key:owner.tenantId,source_id:'pg-e2e-over',entity:'customer',source_pk:'C-19'}]);
+        const nextCursor=firstPage.json().data.next_cursor as string;
+        expect(nextCursor).toBeTruthy();
+        const secondPage=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}&limit=1&cursor=${encodeURIComponent(nextCursor)}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(secondPage.statusCode).toBe(200);
+        expect(secondPage.json().data.delete_candidate_members).toEqual([{tenant_key:owner.tenantId,source_id:'pg-e2e-over',entity:'customer',source_pk:'C-20'}]);
+        const cursorValue=JSON.parse(Buffer.from(nextCursor,'base64url').toString('utf8')) as Record<string,unknown>;
+        const mismatchedCursor=Buffer.from(JSON.stringify({...cursorValue,tenant_key:'other-tenant'}),'utf8').toString('base64url');
+        const cursorMismatch=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}&cursor=${encodeURIComponent(mismatchedCursor)}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(cursorMismatch.statusCode).toBe(400);
+        const maxRejected=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}&limit=101`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(maxRejected.statusCode).toBe(400);
+        const invalidQuery=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?candidate_id=${candidate.candidate_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(invalidQuery.statusCode).toBe(400);
+        const crossSourcePage=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${secondMissing.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(crossSourcePage.statusCode).toBe(409);
+        const nonOwner={...owner,userId:'snapshot_not_owner',subject:'snapshot-not-owner'};
+        await auth.repository.provisionSubject({tenantId:owner.tenantId,userId:nonOwner.userId,managementScopes:owner.managementScopes});
+        await auth.repository.bindIdentity({issuer:owner.issuer,subject:nonOwner.subject,tenantId:owner.tenantId,userId:nonOwner.userId});
+        const nonOwnerApp=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+          authenticator:async()=>auth.resolveOidc(owner.issuer,nonOwner.subject)}});
+        try {
+          const denied=await nonOwnerApp.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+            headers:{authorization:'Bearer non-owner-token'}});
+          expect(denied.statusCode).toBe(403);
+        } finally { await nonOwnerApp.close(); }
+        const otherTenant='snapshot_other_d2';
+        await auth.repository.provisionTenant({tenantId:otherTenant,businessTimezone:'UTC'});
+        await auth.repository.provisionSubject({tenantId:otherTenant,userId:'snapshot_other_d2_owner',managementScopes:owner.managementScopes});
+        await auth.repository.bindIdentity({issuer:owner.issuer,subject:'snapshot-other-d2-owner',tenantId:otherTenant,userId:'snapshot_other_d2_owner'});
+        const otherPrincipal=await auth.resolveOidc(owner.issuer,'snapshot-other-d2-owner');
+        const otherTenantApp=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+          authenticator:async()=>otherPrincipal}});
+        try {
+          const denied=await otherTenantApp.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+            headers:{authorization:'Bearer other-tenant-token'}});
+          expect(denied.statusCode).toBe(404);
+        } finally { await otherTenantApp.close(); }
+        const approvalBody={run_id:overSecond.run_id,candidate_revision:candidate.candidate_revision,
+          candidate_digest:candidate.candidate_digest,expected_owner_revision:'1',reason:'reviewed exact candidate set'};
+        const approvalRoute=`/hub/v1/admin/sources/pg-e2e-over/delete-candidates/${candidate.candidate_id}/approve`;
+        const approvalHeaders={authorization:'Bearer owner-token','idempotency-key':'d2-api060-approval'};
+        const invalidApprovalBody=await ownerApi.inject({method:'POST',url:approvalRoute,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d2-invalid-body'},payload:{...approvalBody,unexpected:true}});
+        expect(invalidApprovalBody.statusCode).toBe(400);
+
+        // Keep the candidate count fixed while changing one live baseline tuple.
+        const baselineIdentity=await fixture.pool.query(`SELECT canonical_object_id::text,customer_id::text
+          FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg-e2e-over' AND entity='customer' AND source_pk='C-18'`,
+          [owner.tenantId]);
+        const replacementIdentity=await fixture.pool.query(`SELECT cc.id::text FROM hub.canonical_customer cc
+          WHERE cc.tenant_id=$1 AND cc.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM control.canonical_source_identity i
+            WHERE i.tenant_key=$1 AND i.source_id='pg-e2e-over' AND i.entity='customer' AND i.canonical_object_id=cc.id) LIMIT 1`,
+          [owner.tenantId]);
+        expect(baselineIdentity.rowCount).toBe(1);
+        expect(replacementIdentity.rowCount).toBe(1);
+        await fixture.pool.query(`UPDATE hub.canonical_customer SET deleted_at=clock_timestamp()
+          WHERE tenant_id=$1 AND id=$2::uuid`,[owner.tenantId,baselineIdentity.rows[0].customer_id]);
+        await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+          VALUES($1,'pg-e2e-over','customer','C-18-REPLACED',$2::uuid,$2::uuid)`,[owner.tenantId,replacementIdentity.rows[0].id]);
+        try {
+          const substitutedBaseline=await fixture.pool.query(`SELECT count(DISTINCT i.canonical_object_id)::int AS count
+            FROM control.canonical_source_identity i JOIN hub.canonical_customer cc ON (cc.tenant_id,cc.id)=(i.tenant_key,i.customer_id)
+            WHERE i.tenant_key=$1 AND i.source_id='pg-e2e-over' AND i.entity='customer' AND i.customer_id IS NOT NULL AND cc.deleted_at IS NULL`,
+            [owner.tenantId]);
+          expect(substitutedBaseline.rows[0].count).toBe(20);
+          const staleApproval=await ownerApi.inject({method:'POST',url:approvalRoute,
+            headers:{authorization:'Bearer owner-token','idempotency-key':'d2-baseline-substitution'},payload:approvalBody});
+          expect(staleApproval.statusCode).toBe(409);
+          const noStaleApproval=await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_snapshot_delete_approval
+            WHERE candidate_id=$1`,[candidate.candidate_id]);
+          expect(noStaleApproval.rows[0].count).toBe(0);
+        } finally {
+          await fixture.pool.query(`DELETE FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg-e2e-over'
+            AND entity='customer' AND source_pk='C-18-REPLACED'`,[owner.tenantId]);
+          await fixture.pool.query(`UPDATE hub.canonical_customer SET deleted_at=NULL WHERE tenant_id=$1 AND id=$2::uuid`,
+            [owner.tenantId,baselineIdentity.rows[0].customer_id]);
+        }
+        const businessBeforeApproval=await fixture.pool.query(`SELECT
+          (SELECT count(*)::int FROM hub.canonical_customer WHERE tenant_id=$1) AS customers,
+          (SELECT count(*)::int FROM hub.canonical_order WHERE tenant_id=$1) AS orders,
+          (SELECT count(*)::int FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg-e2e-over') AS receipts,
+          (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id='pg-e2e-over') AS outbox`,
+          [owner.tenantId]);
+
+        await fixture.pool.query(`CREATE FUNCTION control.test_reject_d2_approval_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN RAISE EXCEPTION 'test audit sink failure' USING ERRCODE='55000'; END $$`);
+        await fixture.pool.query(`CREATE TRIGGER test_reject_d2_approval_audit BEFORE INSERT ON control.etl_snapshot_delete_api_audit
+          FOR EACH ROW WHEN (NEW.action='OWNER_APPROVAL') EXECUTE FUNCTION control.test_reject_d2_approval_audit()`);
+        try {
+          const blockedApproval=await ownerApi.inject({method:'POST',url:approvalRoute,
+            headers:{authorization:'Bearer owner-token','idempotency-key':'d2-audit-fail-closed'},payload:approvalBody});
+          expect(blockedApproval.statusCode).toBe(503);
+          const noPartialApproval=await fixture.pool.query(`SELECT
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_approval WHERE candidate_id=$1) AS approvals,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_idempotency WHERE idempotency_key='d2-audit-fail-closed') AS idem`,
+            [candidate.candidate_id]);
+          expect(noPartialApproval.rows).toEqual([{approvals:0,idem:0}]);
+        } finally {
+          await fixture.pool.query('DROP TRIGGER test_reject_d2_approval_audit ON control.etl_snapshot_delete_api_audit');
+          await fixture.pool.query('DROP FUNCTION control.test_reject_d2_approval_audit()');
+        }
+        await auth.repository.updateSubject({tenantId:owner.tenantId,userId:owner.userId,
+          departmentId:'sales-east',businessRole:'sales',
+          managementScopes:[...owner.managementScopes,'ops:read']});
+        const currentEpoch=await fixture.pool.query(`SELECT auth_epoch::text FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2`,
+          [owner.tenantId,owner.userId]);
+        const approved=await ownerApi.inject({method:'POST',url:approvalRoute,headers:approvalHeaders,payload:approvalBody});
+        expect(approved.statusCode).toBe(200);
+        expect(approved.json().data).toMatchObject({status:'APPROVED',candidate_id:candidate.candidate_id,replayed:false});
+        const orderCandidateRow=await fixture.pool.query(`SELECT candidate_id::text,candidate_revision,encode(candidate_digest,'hex') AS candidate_digest
+          FROM control.etl_snapshot_delete_candidate WHERE tenant_key=$1 AND source_id='pg-e2e-over' AND run_id=$2 AND entity='order'`,
+          [owner.tenantId,overSecond.run_id]);
+        const orderCandidate=orderCandidateRow.rows[0]!;
+        const partialSummary=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(partialSummary.statusCode).toBe(200);
+        expect(partialSummary.json().data.delete_reconciliation.candidates).toEqual(expect.arrayContaining([
+          expect.objectContaining({candidate_id:candidate.candidate_id,approval_status:'APPROVED'}),
+          expect.objectContaining({candidate_id:orderCandidate.candidate_id,approval_status:'AWAITING_OWNER'})]));
+        const partialState=await fixture.pool.query(`SELECT d.status,sr.lifecycle,s.enabled,
+            control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id) WHERE d.run_id=$1`,[overSecond.run_id]);
+        expect(partialState.rows).toEqual([{status:'AWAITING_OWNER',lifecycle:'PAUSED',enabled:false,busy:true}]);
+        const orderApproval=await ownerApi.inject({method:'POST',
+          url:`/hub/v1/admin/sources/pg-e2e-over/delete-candidates/${orderCandidate.candidate_id}/approve`,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d2-api060-order-approval'},
+          payload:{run_id:overSecond.run_id,candidate_revision:orderCandidate.candidate_revision,candidate_digest:orderCandidate.candidate_digest,
+            expected_owner_revision:'1',reason:'reviewed exact order set'}});
+        expect(orderApproval.statusCode).toBe(200);
+        const fullyApprovedSummary=await ownerApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(fullyApprovedSummary.json().data.delete_reconciliation.candidates).toEqual(expect.arrayContaining([
+          expect.objectContaining({candidate_id:candidate.candidate_id,approval_status:'APPROVED'}),
+          expect.objectContaining({candidate_id:orderCandidate.candidate_id,approval_status:'APPROVED'})]));
+        const stillPaused=await fixture.pool.query(`SELECT lifecycle FROM control.source_registry WHERE tenant_key=$1 AND source_id='pg-e2e-over'`,
+          [owner.tenantId]);
+        expect(stillPaused.rows).toEqual([{lifecycle:'PAUSED'}]);
+        const replay=await ownerApi.inject({method:'POST',url:approvalRoute,headers:approvalHeaders,payload:approvalBody});
+        expect(replay.statusCode).toBe(200);
+        expect(replay.json().data).toMatchObject({approval_id:approved.json().data.approval_id,replayed:true});
+        const changedReplay=await ownerApi.inject({method:'POST',url:approvalRoute,headers:approvalHeaders,
+          payload:{...approvalBody,reason:'changed request'}});
+        expect(changedReplay.statusCode).toBe(409);
+        await auth.repository.setIdentityBinding(owner.issuer,owner.subject,false);
+        const disabledReplay=await ownerApi.inject({method:'POST',url:approvalRoute,headers:approvalHeaders,payload:approvalBody});
+        expect(disabledReplay.statusCode).toBe(403);
+        await auth.repository.setIdentityBinding(owner.issuer,owner.subject,true);
+        await auth.repository.bindIdentity({issuer:owner.issuer,subject:owner.subject,tenantId:owner.tenantId,userId:nonOwner.userId});
+        const reboundReplay=await ownerApi.inject({method:'POST',url:approvalRoute,headers:approvalHeaders,payload:approvalBody});
+        expect(reboundReplay.statusCode).toBe(403);
+        await auth.repository.bindIdentity({issuer:owner.issuer,subject:owner.subject,tenantId:owner.tenantId,userId:owner.userId});
+        const narrowPrincipal={...owner,managementScopes:['source:read'] as const};
+        const readerApp=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+          authenticator:async()=>narrowPrincipal}});
+        try {
+          const denied=await readerApp.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${overSecond.run_id}?include=delete_candidates&candidate_id=${candidate.candidate_id}`,
+            headers:{authorization:'Bearer reader-token'}});
+          expect(denied.statusCode).toBe(403);
+        } finally { await readerApp.close(); }
+        const durable=await fixture.pool.query(`SELECT a.approver_tenant_key,a.approver_user_id,a.oidc_issuer,a.oidc_subject,
+            a.approver_auth_epoch::text,a.required_scope,a.reason,i.request_digest IS NOT NULL AS idempotent,
+            count(*) FILTER(WHERE audit.action='OWNER_APPROVAL')::int AS audit_count,sr.lifecycle,s.enabled
+          FROM control.etl_snapshot_delete_approval a
+          JOIN control.etl_snapshot_delete_idempotency i ON (i.approval_id,i.tenant_key,i.source_id)=(a.approval_id,a.tenant_key,a.source_id)
+          JOIN control.source_registry sr ON (sr.tenant_key,sr.source_id)=(a.tenant_key,a.source_id)
+          JOIN control.etl_snapshot_schedule s ON (s.tenant_key,s.source_id)=(a.tenant_key,a.source_id)
+          LEFT JOIN control.etl_snapshot_delete_api_audit audit ON (audit.approval_id,audit.tenant_key,audit.source_id)=
+            (a.approval_id,a.tenant_key,a.source_id)
+          WHERE a.candidate_id=$1 GROUP BY a.approval_id,i.request_digest,sr.lifecycle,s.enabled`,[candidate.candidate_id]);
+        expect(durable.rows).toEqual([{approver_tenant_key:owner.tenantId,approver_user_id:owner.userId,oidc_issuer:owner.issuer,
+          oidc_subject:owner.subject,approver_auth_epoch:currentEpoch.rows[0].auth_epoch,required_scope:'source:approve',reason:'reviewed exact candidate set',
+          idempotent:true,audit_count:1,lifecycle:'PAUSED',enabled:false}]);
+        const d2ApiRole=await fixture.pool.connect();
+        try {
+          await d2ApiRole.query('SET ROLE hub_api');
+          await expect(d2ApiRole.query(`UPDATE control.etl_snapshot_delete_approval SET reason='direct DML' WHERE candidate_id=$1`,
+            [candidate.candidate_id])).rejects.toMatchObject({code:'42501'});
+          await expect(d2ApiRole.query(`DELETE FROM control.etl_snapshot_delete_api_audit WHERE candidate_id=$1`,
+            [candidate.candidate_id])).rejects.toMatchObject({code:'42501'});
+          await d2ApiRole.query('RESET ROLE');
+        } finally { await d2ApiRole.query('RESET ROLE').catch(()=>undefined); d2ApiRole.release(); }
+        await expect(fixture.pool.query(`UPDATE control.etl_snapshot_delete_approval SET reason='trigger bypass' WHERE candidate_id=$1`,
+          [candidate.candidate_id])).rejects.toMatchObject({code:'55000'});
+        await expect(fixture.pool.query(`DELETE FROM control.etl_snapshot_delete_api_audit WHERE candidate_id=$1`,
+          [candidate.candidate_id])).rejects.toMatchObject({code:'55000'});
+        const businessAfterApproval=await fixture.pool.query(`SELECT
+          (SELECT count(*)::int FROM hub.canonical_customer WHERE tenant_id=$1) AS customers,
+          (SELECT count(*)::int FROM hub.canonical_order WHERE tenant_id=$1) AS orders,
+          (SELECT count(*)::int FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg-e2e-over') AS receipts,
+          (SELECT count(*)::int FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id='pg-e2e-over') AS outbox`,
+          [owner.tenantId]);
+        expect(businessAfterApproval.rows).toEqual(businessBeforeApproval.rows);
+      } finally { await ownerApi.close(); }
+      owner=await auth.resolveOidc(owner.issuer,owner.subject);
 
       // A new proof scope starts its own first-absence fact for objects that
       // were live before the scope changed. The second valid absence can then

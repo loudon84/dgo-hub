@@ -9,7 +9,7 @@ const TERMINAL = new Set(['COMPLETE','FAILED','INCOMPLETE','CANCELLED']);
 const ENTITY_ORDER: readonly SourceEntity[] = ['customer','order'];
 
 function fail(code: ConstructorParameters<typeof AuthError>[0]): never { throw new AuthError(code); }
-function requireScope(principal: UserPrincipal, scope: 'source:read' | 'source:write'): void {
+function requireScope(principal: UserPrincipal, scope: 'source:read' | 'source:write' | 'source:approve'): void {
   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDEN');
 }
 function stable(value: unknown): string {
@@ -78,6 +78,10 @@ async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Pro
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     if (error instanceof AuthError) throw error;
+    if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+      const safeCode = error.message.match(/^(AUTH_FORBIDDEN|AUTH_INPUT_INVALID|SOURCE_CONFLICT|SOURCE_NOT_FOUND|IDEMPOTENCY_CONFLICT)$/)?.[1];
+      if (safeCode) return fail(safeCode as ConstructorParameters<typeof AuthError>[0]);
+    }
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === '23505') return fail('SOURCE_CONFLICT');
     return fail('AUTH_UNAVAILABLE');
   } finally { client.release(); }
@@ -320,16 +324,66 @@ export async function listSnapshotRuns(pool: Pool, auth: Pick<AuthService,'asser
   });
 }
 
-export async function getSnapshotRun(pool: Pool, auth: Pick<AuthService,'assertCurrentPrincipal'>, principal: UserPrincipal, runId: string) {
+type DeleteCandidatePage = Readonly<{ candidateId: string; limit: number; cursor?: string; requestId: string }>;
+type DeleteCandidateCursor = Readonly<{ tenant_key:string; source_id:string; run_id:string; candidate_id:string;
+  candidate_revision:number; candidate_digest:string; last_key:Readonly<{tenant_key:string;source_id:string;entity:string;source_pk:string}> }>;
+function decodeDeleteCursor(value: string): DeleteCandidateCursor {
+  if (value.length>1024 || !/^[A-Za-z0-9_-]+$/.test(value)) fail('AUTH_INPUT_INVALID');
+  let parsed: unknown;
+  try { const decoded=Buffer.from(value,'base64url').toString('utf8'); if(Buffer.from(decoded,'utf8').toString('base64url')!==value) fail('AUTH_INPUT_INVALID'); parsed=JSON.parse(decoded); }
+  catch { return fail('AUTH_INPUT_INVALID'); }
+  if (!parsed || typeof parsed!=='object' || Array.isArray(parsed)) fail('AUTH_INPUT_INVALID');
+  const cursor=parsed as DeleteCandidateCursor;
+  const keys=Object.keys(cursor).sort().join(',');
+  if(keys!=='candidate_digest,candidate_id,candidate_revision,last_key,run_id,source_id,tenant_key' ||
+    typeof cursor.tenant_key!=='string' || typeof cursor.source_id!=='string' || !UUID.test(cursor.run_id) ||
+    !UUID.test(cursor.candidate_id) || !Number.isSafeInteger(cursor.candidate_revision) || cursor.candidate_revision<1 ||
+    typeof cursor.candidate_digest!=='string' || !/^[0-9a-f]{64}$/.test(cursor.candidate_digest) || !cursor.last_key ||
+    cursor.last_key.tenant_key!==cursor.tenant_key || cursor.last_key.source_id!==cursor.source_id ||
+    typeof cursor.last_key.entity!=='string' || !['customer','order'].includes(cursor.last_key.entity) ||
+    typeof cursor.last_key.source_pk!=='string' || cursor.last_key.source_pk.length<1 || cursor.last_key.source_pk.length>128) fail('AUTH_INPUT_INVALID');
+  return cursor;
+}
+function encodeDeleteCursor(cursor: DeleteCandidateCursor): string { return Buffer.from(JSON.stringify(cursor),'utf8').toString('base64url'); }
+
+export async function getSnapshotRun(pool: Pool, auth: Pick<AuthService,'assertCurrentPrincipal'>, principal: UserPrincipal, runId: string,
+  deleteCandidatePage?: DeleteCandidatePage) {
   requireScope(principal,'source:read');
+  if(deleteCandidatePage) requireScope(principal,'source:approve');
   if (!UUID.test(runId)) fail('SOURCE_NOT_FOUND');
+  const parsedCursor=deleteCandidatePage?.cursor===undefined ? null : decodeDeleteCursor(deleteCandidatePage.cursor);
   return transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
-    await auth.assertCurrentPrincipal(principal,'source:read',client);
+    if(!deleteCandidatePage) await auth.assertCurrentPrincipal(principal,'source:read',client);
     const result = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY},checkpoint_summary,completeness_summary FROM control.etl_run
       WHERE tenant_key=$1 AND run_id=$2::uuid`, [principal.tenantId,runId]);
     if (!result.rowCount) fail('SOURCE_NOT_FOUND');
-    return summary(result.rows[0]);
+    const runSummary=summary(result.rows[0]);
+    let pageRows: Array<{tenant_key:string;source_id:string;entity:string;source_pk:string}>|undefined;
+    if(deleteCandidatePage) {
+      const page=await client.query<{tenant_key:string;source_id:string;entity:string;source_pk:string}>(
+        `SELECT * FROM control.api021_delete_candidate_page($1,$2,$3::uuid,$4::uuid,$5::jsonb,$6,$7,$8,$9,$10)`,
+        [principal.tenantId,runSummary.source_id,runId,deleteCandidatePage.candidateId,
+          parsedCursor===null?null:JSON.stringify(parsedCursor),deleteCandidatePage.limit+1,
+          principal.userId,principal.issuer,principal.subject,deleteCandidatePage.requestId]);
+      pageRows=page.rows;
+    }
+    const dSummary=await client.query<{summary:Record<string,unknown>|null}>(
+      'SELECT control.api021_snapshot_delete_summary($1,$2::uuid) AS summary',[principal.tenantId,runId]);
+    const reconciliation=dSummary.rows[0]?.summary ?? null;
+    if(!deleteCandidatePage) return Object.freeze({...runSummary,delete_reconciliation:reconciliation});
+    const candidates=(reconciliation && Array.isArray(reconciliation.candidates) ? reconciliation.candidates : []) as Array<Record<string,unknown>>;
+    const candidate=candidates.find(value=>value.candidate_id===deleteCandidatePage.candidateId);
+    if(!candidate || typeof candidate.entity!=='string' || typeof candidate.candidate_revision!=='number' ||
+      typeof candidate.candidate_digest!=='string') fail('SOURCE_CONFLICT');
+    const cursorBinding={tenant_key:principal.tenantId,source_id:runSummary.source_id,run_id:runId,
+      candidate_id:deleteCandidatePage.candidateId,candidate_revision:candidate.candidate_revision,candidate_digest:candidate.candidate_digest};
+    const hasMore=pageRows!.length>deleteCandidatePage.limit;
+    const rows=hasMore?pageRows!.slice(0,deleteCandidatePage.limit):pageRows!;
+    const last=rows.at(-1);
+    const nextCursor=hasMore && last ? encodeDeleteCursor({...cursorBinding,last_key:{tenant_key:last.tenant_key,
+      source_id:last.source_id,entity:last.entity,source_pk:last.source_pk}}) : null;
+    return Object.freeze({...runSummary,delete_reconciliation:reconciliation,delete_candidate_members:Object.freeze(rows),next_cursor:nextCursor});
   });
 }
 
