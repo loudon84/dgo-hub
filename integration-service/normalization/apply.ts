@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import { canonicalVersion, sourceContentDigest, validateCanonicalIdentifier, validateCanonicalSourceId } from './canonical.js';
+import { canonicalCustomerInput } from './durable-record.js';
+import type { ImportRecoveryWorkerScope } from '../etl-worker/import-recovery-context.js';
 import {
   canonicalCustomerSchema,
   canonicalDeleteSchema,
@@ -228,17 +230,58 @@ async function lockSourceIdentity(client: PoolClient, context: ApplyContext, sou
 
 export async function applyCustomer(client: PoolClient, context: ApplyContext, inputValue: CanonicalCustomer | CanonicalDelete): Promise<ApplyResult> {
   if (context.entity !== 'customer') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
+  return applyCustomerValidated(client,context,inputValue);
+}
+
+/** The only recovery entry point takes the live claim scope, never caller-supplied proofs or targets. */
+export async function applyImportRecoveryCustomer(client:PoolClient,scope:ImportRecoveryWorkerScope):Promise<ApplyResult> {
+  // Dynamic import avoids a static dependency cycle: the reader uses the ordinary proof verifier above.
+  const {readImportRecoveryWorkerContext}=await import('../etl-worker/import-recovery-context.js');
+  const recovery=await readImportRecoveryWorkerContext(client,scope);
+  if(recovery.entity!=='customer') throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
+  return applyCustomerValidated(client,recovery.originalContext,canonicalCustomerInput(recovery.original.record),{...recovery,scope});
+}
+
+type CustomerRecovery = Awaited<ReturnType<typeof import('../etl-worker/import-recovery-context.js').readImportRecoveryWorkerContext>> & {scope:ImportRecoveryWorkerScope};
+async function resolveRecoveryCustomerOwner(client:PoolClient,context:ApplyContext,proof:FrozenProof,recovery:CustomerRecovery,input:CanonicalCustomer) {
+  const keys=[{kind:'user',externalId:input.owner_external_id},{kind:'department',externalId:input.dept_external_id}];
+  const selected:IdentityMapping[]=[];
+  for(const key of keys) {
+    const original=proof.identity_mappings.filter(m=>m.kind===key.kind && m.external_id===key.externalId);
+    const binding=recovery.bindingProof.identity_mappings.filter(m=>m.kind===key.kind && m.external_id===key.externalId);
+    const confirmed=recovery.confirmedBindings.filter(m=>m.kind===key.kind && m.externalId===key.externalId);
+    if(original.length>1 || binding.length!==1 || !binding[0]!.target_id || confirmed.length>1) throw new Error('IMPORT_RECOVERY_PROOF_INVALID');
+    const originalTarget=original[0]?.target_id,bindingTarget=binding[0]!.target_id;
+    if(originalTarget) {
+      if(confirmed.length || originalTarget!==bindingTarget) throw new Error('IMPORT_RECOVERY_PROOF_INVALID');
+      if(await identityFenceIsNewer(client,context,key)) return {result:{status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED'} as const};
+      selected.push(original[0]!);
+    } else {
+      if(confirmed.length!==1 || confirmed[0]!.targetId!==bindingTarget) throw new Error('IMPORT_RECOVERY_PROOF_INVALID');
+      if(await identityFenceIsNewer(client,recovery.bindingContext,key)) return {result:{status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED'} as const};
+      selected.push(binding[0]!);
+    }
+  }
+  if(recovery.confirmedBindings.length!==keys.filter(key=>!proof.identity_mappings.find(m=>m.kind===key.kind && m.external_id===key.externalId)?.target_id).length) throw new Error('IMPORT_RECOVERY_PROOF_INVALID');
+  return resolveCustomerOwner(client,context,selected,input);
+}
+
+async function applyCustomerValidated(client: PoolClient, context: ApplyContext, inputValue: CanonicalCustomer | CanonicalDelete,
+  recovery?:CustomerRecovery):Promise<ApplyResult> {
   const fullInput = canonicalCustomerSchema.safeParse(inputValue);
   const input = fullInput.success ? fullInput.data : canonicalDeleteSchema.parse(inputValue);
   validateCanonicalIdentifier(context.tenantId);
   validateCanonicalSourceId(context.sourceId);
   const version = canonicalVersion(input.source_version);
   const sourceDigest = Buffer.from(sourceContentDigest(input),'hex');
-  const proof = await verifyFrozenApplyContext(client,context);
-  if ('status' in proof) return proof;
-
+  const proof=recovery?.originalProof ?? await verifyFrozenApplyContext(client,context);
+  if('status' in proof) return proof;
+  const recoveryInput=recovery ? canonicalCustomerSchema.parse(inputValue) : undefined;
+  const recoveryOwner=recovery && recoveryInput ? await resolveRecoveryCustomerOwner(client,context,proof,recovery,recoveryInput) : undefined;
+  if(recoveryOwner && 'result' in recoveryOwner && recoveryOwner.result) return recoveryOwner.result;
   const prior = await receiptFor(client,context,input.source_pk);
   if (prior) {
+    if(recovery && prior.canonical_object_id!==recovery.reservedObjectId) throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
     const priorVersion = BigInt(prior.source_version);
     const currentVersion = BigInt(version);
     if (currentVersion < priorVersion) return { status:'IGNORED_STALE',objectId:prior.canonical_object_id,digest:prior.source_content_digest.toString('hex') };
@@ -270,15 +313,17 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
     await writeOutbox(client,context,{objectId,revision,operation:'DELETE',projection,digest:sourceDigest});
     return {status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex')};
   }
-  const customerInput=canonicalCustomerSchema.parse(inputValue);
+  const customerInput=recoveryInput ?? canonicalCustomerSchema.parse(inputValue);
   const keys = [
     {kind:'user',externalId:customerInput.owner_external_id},
     {kind:'department',externalId:customerInput.dept_external_id},
   ];
-  for (const key of keys) {
-    if (await identityFenceIsNewer(client,context,key)) return { status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED' };
+  if(!recovery) {
+    for (const key of keys) {
+      if (await identityFenceIsNewer(client,context,key)) return { status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED' };
+    }
   }
-  const resolved = await resolveCustomerOwner(client,context,proof.identity_mappings,customerInput);
+  const resolved = recoveryOwner ?? await resolveCustomerOwner(client,context,proof.identity_mappings,customerInput);
   if ('result' in resolved && resolved.result) return resolved.result;
   if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) && !prior.deleted) {
     const current=await client.query<{owner_user_id:string;dept_id:string;deleted_at:Date|null}>(`SELECT owner_user_id,dept_id,deleted_at
@@ -292,6 +337,7 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
     }
   }
   const identity = await lockSourceIdentity(client,context,input.source_pk);
+  if(recovery && identity.rows[0]?.canonical_object_id!==recovery.reservedObjectId) throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
   const objectId = identity.rows[0]?.canonical_object_id ?? randomUUID();
   const existingAuthority=identity.rows[0]?.customer_id ? await client.query<{owner_user_id:string;dept_id:string}>(
     'SELECT owner_user_id,dept_id FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2',
@@ -323,7 +369,10 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
   await writeReceipt(client,context,{sourcePk:customerInput.source_pk,objectId,version,digest:sourceDigest,projection,deleted:customerInput.deleted_at != null});
   await writeOutbox(client,context,{objectId,revision,operation:customerInput.deleted_at?'DELETE':'UPSERT',projection,digest:sourceDigest});
   if(ownershipChanges.length) {
-    await client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
+    if(recovery) await client.query(`SELECT control.record_import_recovery_customer_owner_change($1,$2,$3::uuid,$4,$5::uuid,$6::uuid)`,[
+      recovery.scope.tenantId,recovery.scope.sourceId,recovery.scope.jobId,recovery.scope.ordinal,recovery.scope.itemOperationId,recovery.scope.claimToken,
+    ]);
+    else await client.query(`SELECT control.record_canonical_customer_owner_change($1,$2,$3,$4,$5,$6::bigint,$7,$8::bigint,$9,$10,$11::bigint,$12::jsonb)`,[
       context.tenantId,context.sourceId,customerInput.source_pk,context.credentialId,context.channelId,context.channelEpoch,
       context.versionDomain,context.securityBarrierFenceAtAdmission,context.ownerApprovalId,context.testReportId,
       context.identityMappingRevision,JSON.stringify(ownershipChanges),

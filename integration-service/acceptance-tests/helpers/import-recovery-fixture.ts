@@ -32,7 +32,7 @@ export async function setupImportRecoveryFixture(suite:'candidate'|'binding'|'sc
  fixture=await startOwnedPostgres({evidenceRoot:root,evidenceFile:'unused',taskLabel:'m1task1'});
  const migrations=fileURLToPath(new URL('../../migrations/',import.meta.url)), dir=join(root,'migrations');
  await mkdir(dir,{recursive:true});
- for(const name of await readdir(migrations)) if(/^\d{3}_.+\.sql$/.test(name) && !name.startsWith('013_') && !name.startsWith('014_') && !name.startsWith('015_') && !name.startsWith('016_') && !name.startsWith('017_')) await copyFile(join(migrations,name),join(dir,name));
+ for(const name of await readdir(migrations)) if(/^\d{3}_.+\.sql$/.test(name) && Number(name.slice(0,3))<=12) await copyFile(join(migrations,name),join(dir,name));
  await writeFile(join(dir,'009_snapshot_runs_and_recovery.sql'),execFileSync('git',['show','HEAD:integration-service/migrations/009_snapshot_runs_and_recovery.sql']));
  await runMigrations(fixture.pool,{directory:dir,environmentKind:'local_lab'});
  auth=createAuthService({pool:fixture.pool});

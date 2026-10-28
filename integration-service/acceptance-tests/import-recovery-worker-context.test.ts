@@ -128,6 +128,8 @@ async function prepareChildren() {
   expect(origin.original_ordinal).toBe(1);expect(origin.binding_approval_id).not.toBe(origin.owner_approval_id);
   await copyFile(fileURLToPath(new URL('../migrations/017_import_recovery_worker_context.sql',import.meta.url)),join(context.migrationDirectory,'017_import_recovery_worker_context.sql'));
   expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['017_import_recovery_worker_context']);
+  await copyFile(fileURLToPath(new URL('../migrations/018_import_recovery_customer_apply.sql',import.meta.url)),join(context.migrationDirectory,'018_import_recovery_customer_apply.sql'));
+  expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['018_import_recovery_customer_apply']);
   return {customerJob,orderJob};
  })();
  return prepared;
@@ -139,8 +141,11 @@ async function childStates(ids:string[]) {
   WHERE j.id=ANY($1::uuid[]) ORDER BY j.id`,[ids])).rows;
 }
 
-it('leaves both admitted recovery children untouched and advances a later ordinary job before LIMIT',async()=>{
- const {customerJob,orderJob}=await prepareChildren();const ids=[customerJob,orderJob],before=await childStates(ids);
+it('leaves the order child untouched and advances a later ordinary job before LIMIT',async()=>{
+ const {customerJob,orderJob}=await prepareChildren();
+ // Keep the customer available for the independent rollback-only reader tests below.
+ await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp()+interval '1 day' WHERE job_id=$1`,[customerJob]);
+ const ids=[customerJob,orderJob],before=await childStates(ids);
  expect(before).toHaveLength(2);
  for(const child of before) expect(child).toMatchObject({job_status:'RECEIVED',item_status:'RECEIVED',attempts_started:0,retries_used:0,error_code:null,claim_token:null,lease_expires_at:null,acknowledged_at:null});
  const ordinary=structuredClone(customerBody);ordinary.batch_id='abcdef12-3456-0000-0000-000000000031';ordinary.records[0]!.event_id='abcdef12-3456-0000-0000-000000000032';ordinary.records[0]!.source_pk='w0-later-ordinary';

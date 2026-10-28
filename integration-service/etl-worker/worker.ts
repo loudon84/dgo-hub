@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from '../contracts/runtime-config.js';
 import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-contract.js';
-import { applyCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
+import { applyCustomer, applyImportRecoveryCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
 import { canonicalCustomerInput, canonicalOrderInput } from '../normalization/durable-record.js';
 import { durableRetryDelayMs } from './retry.js';
 import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
@@ -79,10 +79,19 @@ async function lockClaim(client: PoolClient, claim: DurableClaim, leaseMs = LEAS
       AND o.lease_expires_at>clock_timestamp() AND o.acknowledged_at IS NULL FOR UPDATE OF o`,
   [claim.jobId, claim.tenantId, claim.sourceId, claim.token]);
   if (!locked.rowCount) return false;
-  await client.query(`UPDATE control.ingestion_processing_outbox SET lease_expires_at=clock_timestamp()+($5::integer*interval '1 millisecond')
-    WHERE job_id=$1 AND claim_token=$4 AND EXISTS (SELECT 1 FROM control.ingestion_job j
-      WHERE j.id=$1 AND j.tenant_key=$2 AND j.source_id=$3)`, [claim.jobId, claim.tenantId, claim.sourceId, claim.token, leaseMs]);
-  return true;
+  const renewed=await client.query(`UPDATE control.ingestion_processing_outbox SET lease_expires_at=clock_timestamp()+($5::integer*interval '1 millisecond')
+    WHERE job_id=$1 AND claim_token=$4 AND acknowledged_at IS NULL AND lease_expires_at>clock_timestamp()
+      AND EXISTS (SELECT 1 FROM control.ingestion_job j WHERE j.id=$1 AND j.tenant_key=$2 AND j.source_id=$3)`,
+  [claim.jobId, claim.tenantId, claim.sourceId, claim.token, leaseMs]);
+  return !!renewed.rowCount;
+}
+
+async function assertLiveClaim(client:PoolClient,claim:DurableClaim):Promise<void> {
+  const live=await client.query(`SELECT 1 FROM control.ingestion_processing_outbox o JOIN control.ingestion_job j ON j.id=o.job_id
+    WHERE o.job_id=$1 AND j.tenant_key=$2 AND j.source_id=$3 AND o.claim_token=$4::uuid
+      AND o.acknowledged_at IS NULL AND o.lease_expires_at>clock_timestamp()`,
+  [claim.jobId,claim.tenantId,claim.sourceId,claim.token]);
+  if(!live.rowCount) throw new Error('WORKER_CLAIM_LOST');
 }
 
 async function updateJobSummary(client: PoolClient, job: DurableJob): Promise<void> {
@@ -116,7 +125,7 @@ async function claimJobs(pool: Pool, limit: number, leaseMs: number): Promise<Du
   return transaction(pool, async client => {
     const candidates = await client.query<{ job_id: string; tenant_key: string; source_id: string }>(`SELECT o.job_id,j.tenant_key,j.source_id
       FROM control.ingestion_processing_outbox o JOIN control.ingestion_job j ON j.id=o.job_id
-      WHERE (to_jsonb(j)->>'import_recovery_operation_id') IS NULL
+      WHERE ((to_jsonb(j)->>'import_recovery_operation_id') IS NULL OR j.entity='customer')
         AND o.acknowledged_at IS NULL AND o.available_at<=clock_timestamp()
         AND (o.claim_token IS NULL OR o.lease_expires_at<=clock_timestamp())
       ORDER BY o.available_at,o.id LIMIT $1 FOR UPDATE OF o SKIP LOCKED`, [limit]);
@@ -155,7 +164,7 @@ async function loadItems(pool: Pool, job: DurableJob): Promise<DurableItem[]> {
 }
 
 async function setInvalidFacts(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, errorCode: string): Promise<void> {
-  if (job.import_recovery_operation_id !== null) return;
+  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   await transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if (!await lockClaim(client, claim)) return;
@@ -167,6 +176,7 @@ async function setInvalidFacts(pool: Pool, claim: DurableClaim, job: DurableJob,
         WHERE job_id=$1 AND ordinal=$2 AND EXISTS (SELECT 1 FROM control.ingestion_job j
           WHERE j.id=$1 AND j.tenant_key=$4 AND j.source_id=$5)`, [job.id,item.ordinal,errorCode,job.tenant_key,job.source_id]);
       await updateJobSummary(client, job);
+      if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
     }
   });
 }
@@ -187,6 +197,7 @@ async function startAttempt(pool: Pool, claim: DurableClaim, job: DurableJob, it
       await client.query(`UPDATE control.ingestion_job_item SET status='QUARANTINED',error_code='RETRY_BUDGET_EXHAUSTED',next_retry_at=NULL
         WHERE job_id=$1 AND ordinal=$2`, [job.id,row.ordinal]);
       await updateJobSummary(client, job);
+      if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
       return undefined;
     }
     const attempts = row.attempts_started + 1;
@@ -198,6 +209,7 @@ async function startAttempt(pool: Pool, claim: DurableClaim, job: DurableJob, it
         public_record,status,attempts_started::integer,retries_used::integer,next_retry_at,operation_id::text`,
     [job.id,row.ordinal,attempts,attempts-1,delay]);
     await updateJobSummary(client, job);
+    if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
     return updated.rows[0];
   });
 }
@@ -237,7 +249,7 @@ function itemOutcome(result: ApplyResult): { status: 'APPLIED'|'DUPLICATE'|'IGNO
   }
 }
 
-async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem): Promise<void> {
+async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, terminalCode?:string): Promise<void> {
   await transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if (!await lockClaim(client, claim)) return;
@@ -247,19 +259,20 @@ async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: Dura
     [job.id,job.tenant_key,job.source_id,item.ordinal]);
     const row=current.rows[0];
     if (!row || TERMINAL_ITEM_STATES.has(row.status)) return;
-    const exhausted=row.attempts_started>=4;
+    const exhausted=!!terminalCode || row.attempts_started>=4;
     const delay=durableRetryDelayMs(row.attempts_started);
     await client.query(`UPDATE control.ingestion_job_item SET status=$3,error_code=$4,next_retry_at=CASE WHEN $5::integer IS NULL THEN NULL
       ELSE clock_timestamp()+($5::integer*interval '1 millisecond') END
       WHERE job_id=$1 AND ordinal=$2`, [job.id,item.ordinal,exhausted?'QUARANTINED':'RETRY_PENDING',
-        exhausted?'RETRY_BUDGET_EXHAUSTED':'WORKER_TRANSIENT_FAILURE',exhausted?null:delay]);
+        terminalCode ?? (exhausted?'RETRY_BUDGET_EXHAUSTED':'WORKER_TRANSIENT_FAILURE'),exhausted?null:delay]);
     await updateJobSummary(client,job);
+    if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
   });
 }
 
 async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, record: PublicRecord,
   leaseMs: number, hooks: DurableWorkerHooks): Promise<void> {
-  if (job.import_recovery_operation_id !== null) return;
+  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   const started = await startAttempt(pool,claim,job,item,leaseMs);
   if (!started) return;
   const hookItem = { jobId:job.id,ordinal:item.ordinal,operationId:started.operation_id };
@@ -272,6 +285,11 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
         WHERE i.job_id=$1 AND i.ordinal=$4 AND j.tenant_key=$2 AND j.source_id=$3 FOR UPDATE OF i`,
       [job.id,job.tenant_key,job.source_id,item.ordinal]);
       if (current.rows[0]?.status !== 'APPLYING' || current.rows[0].operation_id !== started.operation_id) return;
+      let outcome:ApplyResult;
+      if(job.import_recovery_operation_id!==null) {
+        outcome=await applyImportRecoveryCustomer(client,{tenantId:job.tenant_key,sourceId:job.source_id,jobId:job.id,
+          ordinal:item.ordinal,itemOperationId:started.operation_id,claimToken:claim.token});
+      } else {
       const recovery = await client.query<{ state: string }>(
         'SELECT control.check_recovery_worker_binding($1,$2,$3::uuid,$4,$5::uuid,$6::uuid) AS state',
         [job.tenant_key,job.source_id,job.id,item.ordinal,started.operation_id,claim.token]);
@@ -289,9 +307,10 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
         return;
       }
       const context=contextFor(job);
-      const outcome=job.entity==='customer'
+      outcome=job.entity==='customer'
         ? await applyCustomer(client,context,canonicalCustomerInput(record))
         : await applyOrderAggregate(client,context,canonicalOrderInput(job,record),{afterHeader:hooks.afterOrderHeader,afterLine:hooks.afterOrderLine});
+      }
       await hooks.afterCanonicalApply?.(hookItem);
       const persisted=itemOutcome(outcome);
       await hooks.beforeItemStatus?.(hookItem);
@@ -299,18 +318,24 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
         WHERE job_id=$1 AND ordinal=$2`,[job.id,item.ordinal,persisted.status,persisted.errorCode]);
       await updateJobSummary(client,job);
       await hooks.beforeItemCommit?.(hookItem);
+      if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'WORKER_CLAIM_LOST') return;
     await hooks.onApplyError?.(error);
-    await recordTransientFailure(pool,claim,job,started);
+    const terminal=job.import_recovery_operation_id!==null && error instanceof Error &&
+      ['IMPORT_RECOVERY_CONTEXT_INVALID','IMPORT_RECOVERY_AUTHORITY_INVALID','IMPORT_RECOVERY_PROOF_INVALID'].includes(error.message)
+      ? error.message : undefined;
+    try {await recordTransientFailure(pool,claim,job,started,terminal);} catch(failure) {
+      if(!(failure instanceof Error && failure.message==='WORKER_CLAIM_LOST')) throw failure;
+    }
     return;
   }
   await hooks.afterItemCommit?.(hookItem);
 }
 
 async function finishClaim(pool: Pool, claim: DurableClaim, job: DurableJob): Promise<void> {
-  if (job.import_recovery_operation_id !== null) return;
+  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   await transaction(pool, async client => {
     const locked=await client.query(`SELECT o.id FROM control.ingestion_processing_outbox o
       JOIN control.ingestion_job j ON j.id=o.job_id WHERE o.job_id=$1 AND j.tenant_key=$2 AND j.source_id=$3
@@ -323,13 +348,16 @@ async function finishClaim(pool: Pool, claim: DurableClaim, job: DurableJob): Pr
       FROM control.ingestion_job_item i JOIN control.ingestion_job j ON j.id=i.job_id
       WHERE i.job_id=$1 AND j.tenant_key=$2 AND j.source_id=$3`,[job.id,job.tenant_key,job.source_id]);
     if (states.rows[0]!.pending===0) {
+      if(job.import_recovery_operation_id!==null) await assertLiveClaim(client,claim);
       await client.query(`UPDATE control.ingestion_processing_outbox SET acknowledged_at=clock_timestamp(),claim_token=NULL,lease_expires_at=NULL
-        WHERE job_id=$1 AND claim_token=$2 AND acknowledged_at IS NULL`,[job.id,claim.token]);
+        WHERE job_id=$1 AND claim_token=$2 AND acknowledged_at IS NULL
+          AND ($3::boolean=false OR lease_expires_at>clock_timestamp())`,[job.id,claim.token,job.import_recovery_operation_id!==null]);
       return;
     }
     await client.query(`UPDATE control.ingestion_processing_outbox SET claim_token=NULL,lease_expires_at=NULL,
-      available_at=COALESCE($3::timestamptz,clock_timestamp()) WHERE job_id=$1 AND claim_token=$2 AND acknowledged_at IS NULL`,
-    [job.id,claim.token,states.rows[0]!.next_retry_at]);
+      available_at=COALESCE($3::timestamptz,clock_timestamp()) WHERE job_id=$1 AND claim_token=$2 AND acknowledged_at IS NULL
+        AND ($4::boolean=false OR lease_expires_at>clock_timestamp())`,
+    [job.id,claim.token,states.rows[0]!.next_retry_at,job.import_recovery_operation_id!==null]);
   });
 }
 
@@ -340,19 +368,27 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
   const claims=await claimJobs(pool,limit,leaseMs);
   for (const claim of claims) {
     const job=await loadJob(pool,claim);
-    // Recovery application is intentionally unavailable until W1/W2. A stale
-    // or direct claim must never enter ordinary processing or acknowledge it.
-    if (job.import_recovery_operation_id !== null) continue;
+    // Order recovery is pending W2, including stale/direct claims.
+    if (job.import_recovery_operation_id !== null && job.entity !== 'customer') continue;
     await options.hooks?.afterClaim?.(claim);
     const items=await loadItems(pool,job);
     for (const item of items) {
       if (TERMINAL_ITEM_STATES.has(item.status)) continue;
       let record: PublicRecord;
       try { record=adaptRecord(job,item); }
-      catch { await setInvalidFacts(pool,claim,job,item,'DURABLE_FACTS_INVALID'); continue; }
-      await applyItem(pool,claim,job,item,record,leaseMs,options.hooks ?? {});
+      catch {
+        try {await setInvalidFacts(pool,claim,job,item,'DURABLE_FACTS_INVALID');} catch(error) {
+          if(!(error instanceof Error && error.message==='WORKER_CLAIM_LOST')) throw error;
+        }
+        continue;
+      }
+      try {await applyItem(pool,claim,job,item,record,leaseMs,options.hooks ?? {});} catch(error) {
+        if(!(error instanceof Error && error.message==='WORKER_CLAIM_LOST')) throw error;
+      }
     }
-    await finishClaim(pool,claim,job);
+    try {await finishClaim(pool,claim,job);} catch(error) {
+      if(!(error instanceof Error && error.message==='WORKER_CLAIM_LOST')) throw error;
+    }
   }
   return claims.length;
 }
