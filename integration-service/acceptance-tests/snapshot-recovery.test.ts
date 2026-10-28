@@ -253,7 +253,7 @@ describe('API-022 immutable snapshot recovery',()=>{
     const beforeCrashPid=await killNodeAtAggregateBoundary(fixture.hostPort,sealedAccepted.json().data.run_id,'before');
     expect(beforeCrashPid).toBeGreaterThan(0);
     const beforeCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
-      receipt_count:string;outbox_count:string;checkpoint:string}>(`
+      receipt_count:string;outbox_count:string;checkpoint:{completed_count:number;last_source_pk:string}}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
         AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
         (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
@@ -268,11 +268,11 @@ describe('API-022 immutable snapshot recovery',()=>{
         (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
           WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
-        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)::text
+        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)
           FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
     expect(beforeCommitEffect.rows[0]).toEqual({identity_count:'0',canonical_count:'0',outcome_count:'0',range_count:'0',receipt_count:'0',outbox_count:'0',
-      checkpoint:'{"completed_count":1,"last_source_pk":"C-REC-1"}'});
+      checkpoint:{completed_count:1,last_source_pk:'C-REC-1'}});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
@@ -281,7 +281,7 @@ describe('API-022 immutable snapshot recovery',()=>{
     const crashedChildPid=await killNodeAtAggregateBoundary(fixture.hostPort,sealedAccepted.json().data.run_id,'after');
     expect(crashedChildPid).toBeGreaterThan(0);
     const afterCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
-      receipt_count:string;outbox_count:string;checkpoint:string}>(`
+      receipt_count:string;outbox_count:string;checkpoint:{completed_count:number;last_source_pk:string}}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
         AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
         (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
@@ -296,11 +296,11 @@ describe('API-022 immutable snapshot recovery',()=>{
         (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
           ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
           WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
-        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)::text
+        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)
           FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
     expect(afterCommitEffect.rows[0]).toEqual({identity_count:'1',canonical_count:'1',outcome_count:'1',range_count:'1',receipt_count:'1',outbox_count:'1',
-      checkpoint:'{"completed_count":2,"last_source_pk":"C-REC-2"}'});
+      checkpoint:{completed_count:2,last_source_pk:'C-REC-2'}});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
