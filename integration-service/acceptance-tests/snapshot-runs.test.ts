@@ -2261,6 +2261,85 @@ describe('durable snapshot run admission', () => {
           expect(candidate.rows[0]).toMatchObject({candidate_count:'1',baseline_count:'22'});
           return {baseline,first,second,candidate:candidate.rows[0]!};
         };
+        const expectNullClaimRejected=async(sourceId:string,runId:string,candidateId:string)=>{
+          const attempt=await fixture.pool.query<{attempt_id:string}>(
+            'SELECT attempt_id::text FROM control.etl_snapshot_delete_run WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3',
+            [owner.tenantId,sourceId,runId]);
+          const stateSql=`SELECT d.status,d.d_start_count,d.d_claim_token::text,d.d_lease_expires_at,
+              d.d_next_retry_at,d.d_error_code,
+              (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e WHERE e.candidate_id=$4) AS effects,
+              (SELECT count(*)::int FROM control.etl_snapshot_delete_operation o WHERE o.candidate_id=$4) AS operations,
+              (SELECT count(*)::int FROM control.source_version_receipt r WHERE r.tenant_key=$1 AND r.source_id=$2) AS receipts,
+              (SELECT count(*)::int FROM control.canonical_apply_outbox o WHERE o.tenant_key=$1 AND o.source_id=$2) AS outbox,
+              (SELECT cc.deleted_at FROM control.etl_snapshot_delete_candidate_member m
+                JOIN hub.canonical_customer cc ON cc.tenant_id=m.tenant_key AND cc.id=m.canonical_object_id
+                WHERE m.candidate_id=$4 AND m.entity='customer' AND m.source_pk='C-19') AS canonical_deleted_at
+            FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`;
+          const stateValues=[owner.tenantId,sourceId,runId,candidateId];
+          const readState=()=>fixture.pool.query(stateSql,stateValues);
+          const before=await readState();
+          const client=await roleScopedPool('hub_worker').connect();
+          const observed:Record<string,unknown>[]=[];
+          try {
+            await client.query('BEGIN');
+            const attemptId=attempt.rows[0]!.attempt_id;
+            const probe=async(name:string,sql:string,values:unknown[])=>{
+              await client.query('SAVEPOINT null_claim_probe');
+              try {
+                await client.query('RESET ROLE');
+                const beforeProbe=await client.query(stateSql,stateValues);
+                await client.query('SET LOCAL ROLE hub_worker');
+                const result=await client.query(sql,values);
+                await client.query('RESET ROLE');
+                const afterProbe=await client.query(stateSql,stateValues);
+                expect(afterProbe.rows).toEqual(beforeProbe.rows);
+                observed.push({[name]:result.rows[0]});
+              } finally {
+                await client.query('ROLLBACK TO SAVEPOINT null_claim_probe');
+                await client.query('RELEASE SAVEPOINT null_claim_probe');
+              }
+            };
+            await probe('begin',
+              'SELECT control.begin_etl_snapshot_delete_start($1,$2,$3::uuid,NULL::uuid) AS started',
+              [owner.tenantId,sourceId,runId]);
+            await probe('heartbeat',
+              'SELECT control.heartbeat_etl_snapshot_delete_apply($1,$2,$3::uuid,NULL::uuid,60) AS renewed',
+              [owner.tenantId,sourceId,runId]);
+            await probe('retry',
+              "SELECT control.retry_etl_snapshot_delete_apply($1,$2,$3::uuid,NULL::uuid,'NULL_TOKEN_TEST') AS result",
+              [owner.tenantId,sourceId,runId]);
+            await probe('proof',
+              'SELECT control.load_etl_snapshot_delete_apply_proof($1,$2,$3::uuid,$4::uuid,NULL::uuid) AS proof',
+              [owner.tenantId,sourceId,runId,attemptId]);
+            await probe('members',
+              'SELECT control.list_etl_snapshot_delete_apply_members($1,$2,$3::uuid,NULL::uuid) AS members',
+              [owner.tenantId,sourceId,runId]);
+            await probe('preflight',
+              'SELECT control.preflight_etl_snapshot_delete_apply_candidate($1,$2,$3::uuid,$4::uuid,NULL::uuid) AS current',
+              [owner.tenantId,sourceId,runId,candidateId]);
+            await probe('effect',
+              "SELECT control.record_etl_snapshot_delete_effect($1,$2,$3::uuid,$4::uuid,'customer','C-19',NULL::uuid,'APPLIED') AS recorded",
+              [owner.tenantId,sourceId,runId,candidateId]);
+            await probe('finish',
+              "SELECT control.finish_etl_snapshot_delete_apply($1,$2,$3::uuid,NULL::uuid,'FAILED','NULL_TOKEN_TEST') AS result",
+              [owner.tenantId,sourceId,runId]);
+            expect(observed).toEqual([
+              {begin:{started:null}},
+              {heartbeat:{renewed:false}},
+              {retry:{result:'STALE'}},
+              {proof:{proof:null}},
+              {members:{members:null}},
+              {preflight:{current:false}},
+              {effect:{recorded:false}},
+              {finish:{result:'STALE'}},
+            ]);
+          } finally {
+            await client.query('ROLLBACK').catch(()=>undefined);
+            client.release();
+          }
+          const after=await readState();
+          expect(after.rows).toEqual(before.rows);
+        };
 
         // Expired started D leases use C's durable recovery contract: charge
         // the dead start, persist the database-clock 5/30/120 schedule, and
@@ -2317,6 +2396,7 @@ describe('durable snapshot run admission', () => {
             expect(replacedFinish.rows).toEqual([{result:'STALE'}]);
             expect(replacedState.rows).toEqual([{status:'APPLYING',d_start_count:expiredStart,d_claim_token:token,
               d_lease_expires_at:expect.any(Date),lease_live:true,effects:0}]);
+            await expectNullClaimRejected(expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id);
           }
           await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second'
             WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
@@ -2333,6 +2413,7 @@ describe('durable snapshot run admission', () => {
           const delay=[5,30,120][expiredStart-1]!;
           expect(Number(state.retry_seconds)).toBeGreaterThan(delay-0.5);
           expect(Number(state.retry_seconds)).toBeLessThan(delay+0.5);
+          await expectNullClaimRejected(expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id);
           const oldBegin=await roleScopedPool('hub_worker').query(
             'SELECT control.begin_etl_snapshot_delete_start($1,$2,$3::uuid,$4::uuid) AS started',
             [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);

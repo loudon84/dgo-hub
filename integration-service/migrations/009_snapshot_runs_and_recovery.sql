@@ -2526,7 +2526,8 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR p_claim_token IS NULL OR d.d_claim_token IS NULL
+    OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at IS NULL OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
   SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   IF NOT FOUND OR NOT control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,p_candidate_id,false) THEN RETURN false; END IF;
   SELECT r.data_owner_user_id,r.owner_revision,r.lifecycle INTO owner_row FROM control.source_registry r
@@ -2575,7 +2576,8 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR p_claim_token IS NULL OR d.d_claim_token IS NULL
+    OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at IS NULL OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
   SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   SELECT * INTO m FROM control.etl_snapshot_delete_candidate_member WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk FOR UPDATE;
   SELECT operation_id INTO operation FROM control.etl_snapshot_delete_operation WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk;
@@ -2618,7 +2620,8 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR p_claim_token IS NULL OR d.d_claim_token IS NULL
+    OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at IS NULL OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
   IF p_status='COMPLETE' THEN
     SELECT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
       WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id
@@ -2646,7 +2649,8 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR p_claim_token IS NULL OR d.d_claim_token IS NULL
+    OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at IS NULL OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
   IF d.d_start_count>=4 THEN
     UPDATE control.etl_snapshot_delete_run SET status='FAILED',d_claim_token=NULL,d_lease_expires_at=NULL,d_error_code=p_error_code,updated_at=clock_timestamp()
       WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
