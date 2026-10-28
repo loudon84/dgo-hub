@@ -17,3 +17,17 @@ The older M0 guard remains independently binding at `../../2026-10-23-alpha1-m0-
 `E:\git\dgo-hub\docs\execution\alpha1\m1-task-5d2-evidence\e7ec769d-155f-47f4-aae3-be349e2d7931`
 
 This is a separate, incomplete, untracked directory from a failed partial packaging attempt. It is not the valid Fix 1 evidence package (`docs/execution/alpha1/m1-task-5d2-evidence/08be4383-e3c1-4c0b-86f3-232a55bca1af`) and is not referenced by the reports. The prior execution summary records that a recursive cleanup action targeting this directory was rejected by policy. The exact command text, rejection reason, and pre-execution status are not retained; these details are unknown and are not inferred from the separate task-2 entry above. No cleanup retry was reported. Do not read, enumerate, copy, move, or delete this path. Its untracked state does not affect read-only review of the valid package.
+
+## M1-5E1a1 policy-blocked cleanup record
+
+This entry records a refusal from the M1-5E1a1 implementation session without reopening or enumerating any target.
+
+- Exact target: `E:\git\dgo-hub\docs\execution\alpha1\m1-task-5e1a1-evidence\b1f6295c-6bb2-4c46-b12b-b544d8c03a66`.
+- Attempted action: remove that exact directory after a path-containment check.
+- Attempted PowerShell command:
+  ```powershell
+  $base=(Resolve-Path -LiteralPath 'E:\git\dgo-hub\docs\execution\alpha1\m1-task-5e1a1-evidence').Path; $target=[IO.Path]::GetFullPath('E:\git\dgo-hub\docs\execution\alpha1\m1-task-5e1a1-evidence\b1f6295c-6bb2-4c46-b12b-b544d8c03a66'); if(-not $target.StartsWith($base+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'refusing to remove outside own evidence folder'}; if(Test-Path -LiteralPath $target){Remove-Item -LiteralPath $target -Recurse -Force}; Write-Output 'Removed only the failed partial evidence-copy directory created in the previous command.'
+  ```
+- Tool result: `exec_command failed: CreateProcess { message: Rejected("... blocked by policy") }`. The process was rejected before PowerShell execution; no part of the removal command ran. There was no retry of the rejected deletion through another command, path, or tool.
+- Subsequent handling: before the prohibition was clarified, later commands did write two snapshot copies and an evidence manifest at this same path, then commit it as `e4fefdc`. That package is therefore recorded as **partial and non-authoritative; do not use its manifest as a valid evidence manifest**. Its manifest SHA-256 and format are unknown here because the target must not be reopened. The original external captures remain at their previously recorded exact UUID roots; no further access to this target is authorized by this entry.
+- Tool rejection time: not present in the returned error; exact UTC time is unknown.
