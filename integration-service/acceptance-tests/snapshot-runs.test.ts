@@ -371,6 +371,11 @@ describe('durable snapshot run admission', () => {
         WHERE r.run_id=$1 GROUP BY r.status,r.extracted_count,r.completeness_summary,m.state,m.manifest`,[run.run_id]);
       expect(staged.rows[0]).toMatchObject({status:'COMPLETE',extracted_count:'2',state:'EXTRACTED',relations:['customer']});
       expect(staged.rows[0].counts).toEqual([expect.objectContaining({relation:'customer',row_count:2,page_count:2})]);
+      const deleteReservation=await fixture.pool.query(`SELECT d.status,d.reservation_ordinal::text AS reservation_ordinal,
+        c.run_id IS NOT NULL AS consumed FROM control.etl_snapshot_delete_run d
+        LEFT JOIN control.etl_snapshot_delete_consumption c USING(tenant_key,source_id,run_id)
+        WHERE d.tenant_key=$1 AND d.source_id='pg-e2e' AND d.run_id=$2`,[owner.tenantId,run.run_id]);
+      expect(deleteReservation.rows).toEqual([{status:'COMPLETE',reservation_ordinal:expect.stringMatching(/^[1-9][0-9]*$/),consumed:true}]);
       const candidates=await service.sourceCustomerCandidates(owner,'pg-e2e');
       expect(candidates.items.map(item=>item.source_pk)).toEqual(['C-1','C-2']);
       const c1=candidates.items.find(item=>item.source_pk==='C-1');
@@ -577,6 +582,8 @@ describe('durable snapshot run admission', () => {
       expect(longProofPause).toBe(true);
       expect(heartbeatCalls).toBeGreaterThan(0);
       expect(longRunState.rows[0]).toEqual({status:'COMPLETE',starts:1});
+      await expect((await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker')))
+        .resolves.toBeGreaterThanOrEqual(1);
       const nullRoleWriter=await sourceFixture.pool.connect();
       try {
         await nullRoleWriter.query(`SET ROLE ${sourceOwner}`);
@@ -721,6 +728,8 @@ describe('durable snapshot run admission', () => {
       expect(heartbeatRetryComplete.rows[0].range_outcome).toBe(heartbeatPartialRange.rows[0].outcome_id);
       expect(heartbeatRetryComplete.rows[0].range_digest).toBe(heartbeatPartialRange.rows[0].digest);
       expect(heartbeatRetryComplete.rows[0].outbox_id).toBe(heartbeatPartialRange.rows[0].outbox_id);
+      await expect((await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker')))
+        .resolves.toBeGreaterThanOrEqual(1);
       const expiredFailRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e',updated.revision,'expired-token-failure-fence');
       await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThanOrEqual(1);
       const {createSnapshotContinuationStore}=await import('../etl-worker/snapshot-continuation-store.js');
@@ -894,6 +903,8 @@ describe('durable snapshot run admission', () => {
           (SELECT count(*)::int FROM control.etl_snapshot_observation x WHERE x.run_id=r.run_id) AS observations
           FROM control.etl_run r WHERE r.run_id=$1`,[crashRun.run_id]);
         expect(recovered.rows[0]).toEqual({status:'COMPLETE',outcomes:3,ranges:3,observations:1});
+        await expect((await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker')))
+          .resolves.toBeGreaterThanOrEqual(1);
       };
       await runWithDestinationCrash('before','owned-crash-before-commit');
       await runWithDestinationCrash('after','owned-crash-after-commit');
@@ -912,7 +923,9 @@ describe('durable snapshot run admission', () => {
         const crashAttempt=await fixture.pool.query<{attempt_id:string}>(`SELECT attempt_id::text FROM control.etl_snapshot_manifest WHERE run_id=$1`,
           [crashRun.run_id]);
         const crashAttemptId=crashAttempt.rows[0].attempt_id;
-        const child=fork('acceptance-tests/fixtures/snapshot-continuation-child.mjs',[],{cwd:process.cwd(),stdio:['ignore','pipe','pipe','ipc'],env:{
+        const childEntry='acceptance-tests/fixtures/snapshot-continuation-child.mjs';
+        const childLabel=`snapshot-continuation-child:${phase}:${crashRun.run_id}`;
+        const child=fork(childEntry,[],{cwd:process.cwd(),stdio:['ignore','pipe','pipe','ipc'],env:{
           SNAPSHOT_C_TEST_PG_PORT:String(fixture.hostPort),SNAPSHOT_C_TEST_PHASE:phase,SNAPSHOT_C_TEST_RUN_ID:crashRun.run_id}});
         const canonicalIdentity=await fixture.pool.query(`SELECT customer_id::text FROM control.canonical_source_identity
           WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId]);
@@ -944,7 +957,8 @@ describe('durable snapshot run admission', () => {
           [owner.tenantId,objectId,crashRun.run_id]);
         const preCrashBusinessState=await captureCrashBusinessState();
         const lifecycle=join(evidenceRoot,'node-child-lifecycle.jsonl');
-        await appendFile(lifecycle,JSON.stringify({event:'spawned',phase,pid:child.pid,run_id:crashRun.run_id})+'\n','utf8');
+        await appendFile(lifecycle,JSON.stringify({event:'spawned',phase,label:childLabel,entry:childEntry,
+          ownership_scope:'test-created child pid only',pid:child.pid,run_id:crashRun.run_id})+'\n','utf8');
         const boundary=await new Promise<{type:string;run_id:string}>((resolve,reject)=>{
           const timer=setTimeout(()=>reject(new Error('NODE_CRASH_BOUNDARY_TIMEOUT')),30_000);
           child.on('message',message=>{const value=message as {type:string;run_id:string};if(value.type==='aggregate-boundary') {clearTimeout(timer);resolve(value);}});
@@ -953,7 +967,8 @@ describe('durable snapshot run admission', () => {
         expect(boundary.run_id).toBe(crashRun.run_id);
         child.kill('SIGKILL');
         const exit=await new Promise<{code:number|null;signal:NodeJS.Signals|null}>(resolve=>child.once('exit',(code,signal)=>resolve({code,signal})));
-        await appendFile(lifecycle,JSON.stringify({event:'killed',phase,pid:child.pid,signal:exit.signal,run_id:crashRun.run_id})+'\n','utf8');
+        await appendFile(lifecycle,JSON.stringify({event:'killed',phase,label:childLabel,pid:child.pid,
+          exit_code:exit.code,signal:exit.signal,run_id:crashRun.run_id})+'\n','utf8');
         expect(exit.signal).toBe('SIGKILL');
         const stateAtCrash=await captureCrashBusinessState();
         const beforeRestart=await fixture.pool.query(`SELECT
@@ -998,6 +1013,8 @@ describe('durable snapshot run admission', () => {
           (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=r.run_id) AS observation
           FROM control.etl_run r WHERE r.run_id=$1`,[crashRun.run_id]);
         expect(afterRestart.rows[0]).toEqual({status:'COMPLETE',outcomes:3,ranges:3,observation});
+        await expect((await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker')))
+          .resolves.toBeGreaterThanOrEqual(1);
         const recoveredBusinessState=await captureCrashBusinessState();
         expect(recoveredBusinessState.rows[0].customer_name).toBe(changedName);
         expect(recoveredBusinessState.rows[0].canonical_source_time).toBe(sourceTime.replace(' ','T').replace('+00','Z'));
@@ -1033,7 +1050,8 @@ describe('durable snapshot run admission', () => {
           expect(recoveredRows.at(-1)).toMatchObject({digest:recoveredBusinessState.rows[0].source_digest});
           expect(BigInt(recoveredRows.at(-1)!.id)).toBeGreaterThan(BigInt(beforeRows.at(-1)!.id));
         }
-        await appendFile(lifecycle,JSON.stringify({event:'recovered',phase,pid:child.pid,signal:exit.signal,run_id:crashRun.run_id,
+        await appendFile(lifecycle,JSON.stringify({event:'recovered',phase,label:childLabel,pid:child.pid,
+          exit_code:exit.code,signal:exit.signal,run_id:crashRun.run_id,
           observation,range_count:rangesAfter.rowCount})+'\n','utf8');
       };
       await processCrashRun('before');
@@ -1107,6 +1125,147 @@ describe('durable snapshot run admission', () => {
         [tombstoneRun.run_id]);
       expect(deletedReceipt.rows[0]).toEqual({deleted:true,source_version:'2',deleted_at:'2026-10-25 11:00:00.654321+00'});
       expect(tombstoneState.rows[0]).toEqual({status:'COMPLETE',observations:0});
+
+      // Exercise D on actual C-completed proofs: 1/20 is exactly 5%, while
+      // 2/20 pauses every entity header in the same source cohort.
+      const profileWithDeletedField=e2eEndpointProfile!;
+      const {delete_field:_removedDeleteField,...acceptedCustomerProfile}=profileWithDeletedField.entities.customer!;
+      e2eEndpointProfile={...profileWithDeletedField,entities:{...profileWithDeletedField.entities,customer:acceptedCustomerProfile}};
+      const createDSource=async(sourceId:string,includeOrder=true)=>{
+        const allowedDens:('customer'|'order')[]=includeOrder?['customer','order']:['customer'];
+        await auth.repository.provisionSourceCredential({sourceId,tenantId:owner.tenantId,token:createCredential().secret,
+          secretRef:'vault:/snapshot/source',allowedEntities:allowedDens,revision:'1'});
+        const dConfig={name:`Owned D source ${sourceId}`,connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
+          endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:allowedDens,delete_contract:'hard_delete'};
+        await service.create(owner,{source_id:sourceId,data_owner_user_id:owner.userId,config:dConfig});
+        await service.writeMappings(owner,sourceId,'1',[
+          {entity:'customer',source_field:'customer_name',target_field:'customer_name',transform:'trim'},
+          {entity:'customer',source_field:'owner_id',target_field:'owner_user_id',transform:'source-id'},
+          {entity:'customer',source_field:'department_id',target_field:'dept_id',transform:'source-id'},
+          {entity:'customer',source_field:'status',target_field:'status',transform:'identity'},
+          {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+          {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+          {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
+          {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+          {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+          {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
+          {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
+          {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
+          {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
+          {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
+          {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
+          {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
+        ].filter(mapping=>includeOrder||mapping.entity==='customer'));
+        await service.writeIdentityMappings(owner,sourceId,[
+          {kind:'user',external_id:'owner-ext',target_id:owner.userId},{kind:'department',external_id:'dept-ext',target_id:'sales-east'},
+        ]);
+        if(includeOrder) await service.updateIdentityMapping(owner,
+          Buffer.from(`${sourceId}\0customer\0C-1`,'utf8').toString('base64url'),'1',c1!.target_id,
+          'bind D1 order fixture to its customer source identity');
+        const dTest=await service.test(owner,sourceId,'1');
+        const dApproval=await service.approve(owner,sourceId,'1',dTest.test_report_id,dTest.data_contract_ref);
+        await service.activate(owner,sourceId,'1',dApproval.approval_id);
+        return dApproval;
+      };
+      const ownerWriter=await sourceFixture.pool.connect();
+      try {
+        await ownerWriter.query(`SET ROLE ${sourceOwner}`);
+        for(let number=3;number<=20;number++) {
+          const key=`C-${number}`;
+          await ownerWriter.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+            VALUES($1,$2,'owner-ext','dept-ext','ACTIVE',$3) ON CONFLICT(customer_id) DO UPDATE SET
+            customer_name=EXCLUDED.customer_name,updated_at=EXCLUDED.updated_at` ,
+            [key,`Customer ${number}`,`2026-10-25 12:${String(number).padStart(2,'0')}:00.123456+00`]);
+        }
+      } finally { await ownerWriter.query('RESET ROLE').catch(()=>undefined); ownerWriter.release(); }
+      await createDSource('pg-e2e-exact',false);
+      const baselineRun=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-baseline');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const baselineCount=await fixture.pool.query(`SELECT baseline_count::text,candidate_count::text FROM control.etl_snapshot_delete_candidate
+        WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND run_id=$2 AND entity='customer'`,[owner.tenantId,baselineRun.run_id]);
+      expect(baselineCount.rows).toEqual([{baseline_count:'20',candidate_count:'0'}]);
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id='C-20'`);
+      const firstMissing=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-first-absence');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const firstStreak=await fixture.pool.query(`SELECT absence_count,last_processed_run_id::text FROM control.etl_snapshot_delete_streak
+        WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND entity='customer' AND source_pk='C-20'`,[owner.tenantId]);
+      expect(firstStreak.rows).toEqual([{absence_count:1,last_processed_run_id:firstMissing.run_id}]);
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
+      const presenceReset=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-presence-reset');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const resetStreak=await fixture.pool.query(`SELECT absence_count,last_processed_run_id::text,last_presence_run_id::text,
+        first_absence_run_id::text,second_absence_run_id::text FROM control.etl_snapshot_delete_streak
+        WHERE tenant_key=$1 AND source_id='pg-e2e-exact' AND entity='customer' AND source_pk='C-20'`,[owner.tenantId]);
+      expect(resetStreak.rows).toEqual([{absence_count:0,last_processed_run_id:presenceReset.run_id,last_presence_run_id:presenceReset.run_id,
+        first_absence_run_id:null,second_absence_run_id:null}]);
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id='C-20'`);
+      const candidateOrigin=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-first-absence-after-reset');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const secondMissing=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-exact','1','d1-exact-five-second-absence');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const exactFive=await fixture.pool.query(`SELECT d.status,d.above_threshold,d.candidate_count::text,c.candidate_id::text,
+        c.baseline_count::text,c.candidate_count::text AS entity_candidate_count,
+        m.source_pk,m.origin_run_id::text,m.second_run_id::text,m.sequence_value::text,
+        to_char(m.inferred_completed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS inferred_at,
+        to_char(r.completed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS completed_at,
+        (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE run_id=$2) AS observation,
+        (SELECT lifecycle FROM control.source_registry WHERE tenant_key=$1 AND source_id='pg-e2e-exact') AS lifecycle
+        FROM control.etl_snapshot_delete_run d JOIN control.etl_snapshot_delete_candidate c USING(tenant_key,source_id,run_id)
+        JOIN control.etl_snapshot_delete_candidate_member m USING(candidate_id)
+        JOIN control.etl_run r ON r.run_id=m.second_run_id
+        WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-exact' AND d.run_id=$2 AND c.entity='customer'`,
+        [owner.tenantId,secondMissing.run_id]);
+      expect(exactFive.rows).toEqual([{status:'PENDING',above_threshold:false,candidate_count:'1',candidate_id:expect.any(String),
+        baseline_count:'20',entity_candidate_count:'1',source_pk:'C-20',origin_run_id:candidateOrigin.run_id,second_run_id:secondMissing.run_id,
+        sequence_value:expect.any(String),inferred_at:expect.any(String),completed_at:expect.any(String),observation:expect.any(String),lifecycle:'ACTIVE'}]);
+      expect(exactFive.rows[0]!.inferred_at).toBe(exactFive.rows[0]!.completed_at);
+      expect(exactFive.rows[0]!.sequence_value).toBe(exactFive.rows[0]!.observation);
+
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
+      await ownerPool.query(`UPDATE ${sourceSchema}.orders SET customer_id='C-1' WHERE order_id=9007199254740993123`);
+      const overApproval=await createDSource('pg-e2e-over',true);
+      const overBaseline=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-over','1','d1-over-five-baseline');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const overWriter=await sourceFixture.pool.connect();
+      try {
+        await overWriter.query(`SET ROLE ${sourceOwner}`);
+        await overWriter.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id IN ('C-19','C-20')`);
+      } finally { await overWriter.query('RESET ROLE').catch(()=>undefined); overWriter.release(); }
+      const overFirst=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-over','1','d1-over-five-first-absence');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const overSecond=await createSnapshotRun(roleScopedPool('hub_api'),auth,owner,'pg-e2e-over','1','d1-over-five-second-absence');
+      await expect(strictWorkerTick({...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeUndefined();
+      const pausedCohort=await fixture.pool.query(`SELECT d.status,d.above_threshold,d.candidate_count::text,
+        sr.lifecycle,s.enabled,c.source_epoch::text,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate h WHERE h.run_id=d.run_id) AS headers,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate_member m WHERE m.run_id=d.run_id) AS members,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_policy_audit a WHERE a.run_id=d.run_id) AS audits,
+        (SELECT bool_and(actor_kind='SYSTEM_POLICY' AND database_worker_role='hub_worker' AND owner_user_id=$3
+          AND approval_id=$4 AND reason_code='DELETE_CANDIDATES_EXCEED_FIVE_PERCENT')
+          FROM control.etl_snapshot_delete_policy_audit a WHERE a.run_id=d.run_id) AS genuine_audit,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate h WHERE h.run_id=d.run_id
+          AND h.entity='customer' AND h.baseline_count=20 AND h.candidate_count=2) AS customer_header,
+        (SELECT count(*)::int FROM control.etl_snapshot_delete_candidate h WHERE h.run_id=d.run_id
+          AND h.entity='order' AND h.baseline_count=1 AND h.candidate_count=0) AS zero_order_header
+        FROM control.etl_snapshot_delete_run d JOIN control.etl_run r USING(tenant_key,source_id,run_id)
+        JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id) JOIN control.source_credential c USING(tenant_key,source_id)
+        JOIN control.source_registry sr USING(tenant_key,source_id)
+        WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-over' AND d.run_id=$2`,
+        [owner.tenantId,overSecond.run_id,owner.userId,overApproval.approval_id]);
+      expect(pausedCohort.rows).toEqual([{status:'AWAITING_OWNER',above_threshold:true,candidate_count:'2',lifecycle:'PAUSED',enabled:false,
+        source_epoch:expect.any(String),headers:2,members:2,audits:1,genuine_audit:true,customer_header:1,zero_order_header:1}]);
+      expect(BigInt(pausedCohort.rows[0]!.source_epoch)).toBeGreaterThan(0n);
+      const overCandidate=await fixture.pool.query(`SELECT h.baseline_count::text,h.candidate_count::text,
+        array_agg(m.source_pk ORDER BY m.source_pk COLLATE "C") AS keys
+        FROM control.etl_snapshot_delete_candidate h JOIN control.etl_snapshot_delete_candidate_member m USING(candidate_id)
+        WHERE h.run_id=$1 AND h.entity='customer' GROUP BY h.baseline_count,h.candidate_count`,[overSecond.run_id]);
+      expect(overCandidate.rows).toEqual([{baseline_count:'20',candidate_count:'2',keys:['C-19','C-20']}]);
+      const orderHeader=await fixture.pool.query(`SELECT baseline_count::text,candidate_count::text FROM control.etl_snapshot_delete_candidate
+        WHERE run_id=$1 AND entity='order'`,[overSecond.run_id]);
+      expect(orderHeader.rows).toEqual([{baseline_count:'1',candidate_count:'0'}]);
+      expect(overBaseline.run_id).not.toBe(overFirst.run_id);
     } finally {
       await ownerPool.end();
       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
@@ -1115,7 +1274,7 @@ describe('durable snapshot run admission', () => {
       await sourceFixture.close();
       e2eEndpointProfile=undefined;
     }
-  },60_000);
+  },120_000);
 
   it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
     const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
@@ -1269,6 +1428,43 @@ describe('durable snapshot run admission', () => {
     expect(first.run_id).toBeTruthy();
     const count = await fixture.pool.query(`SELECT count(*)::int AS count FROM control.etl_run WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
     expect(count.rows[0].count).toBe(1);
+  });
+
+  it('uses exact integer arithmetic for the five-percent boundary across independent entity scopes', async () => {
+    const result = await fixture.pool.query<{empty:boolean;at_five:boolean;above_five:boolean;large_at_five:boolean;large_above_five:boolean}>(`SELECT
+      control.etl_snapshot_delete_ratio_exceeds(0,0) AS empty,
+      control.etl_snapshot_delete_ratio_exceeds(1,20) AS at_five,
+      control.etl_snapshot_delete_ratio_exceeds(2,20) AS above_five,
+      control.etl_snapshot_delete_ratio_exceeds(100000000000000000::bigint,2000000000000000000::bigint) AS large_at_five,
+      control.etl_snapshot_delete_ratio_exceeds(100000000000000001::bigint,2000000000000000000::bigint) AS large_above_five`);
+    expect(result.rows[0]).toEqual({empty:false,at_five:false,above_five:true,large_at_five:false,large_above_five:true});
+    const scopes = await fixture.pool.query(`SELECT bool_or(control.etl_snapshot_delete_ratio_exceeds(candidate_count,baseline_count)) AS pause_all
+      FROM (VALUES(1::bigint,20::bigint),(2::bigint,20::bigint)) AS entity_scope(candidate_count,baseline_count)`);
+    expect(scopes.rows[0].pause_all).toBe(true);
+  });
+
+  it('preserves same-key API-019 replay while a D reservation blocks new manual, due, and activation work', async () => {
+    const { createSnapshotRun, admitDueSnapshotRun } = await import('../etl-worker/snapshot-runs.js');
+    const run = await createSnapshotRun(roleScopedPool('hub_api'), auth, owner, 'pg-main', '1', 'd-busy-replay');
+    const attempt = await fixture.pool.query<{attempt_id:string}>(`SELECT attempt_id::text FROM control.etl_run_attempt WHERE run_id=$1`, [run.run_id]);
+    await fixture.pool.query(`INSERT INTO control.etl_snapshot_delete_run
+      (tenant_key,source_id,run_id,attempt_id,status,scope_digest,stable_scope_json)
+      VALUES($1,'pg-main',$2,$3,'PENDING',decode(repeat('a',64),'hex'),'{}'::jsonb)`, [owner.tenantId,run.run_id,attempt.rows[0]!.attempt_id]);
+
+    const replay = await createSnapshotRun(roleScopedPool('hub_api'), auth, owner, 'pg-main', '1', 'd-busy-replay');
+    expect(replay.run_id).toBe(run.run_id);
+    await fixture.pool.query(`UPDATE control.etl_run SET status='CANCELLED',completed_at=clock_timestamp() WHERE run_id=$1`, [run.run_id]);
+    await fixture.pool.query(`UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,next_due_at=clock_timestamp()-interval '1 second'
+      WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+    await expect(createSnapshotRun(roleScopedPool('hub_api'), auth, owner, 'pg-main', '1', 'd-busy-other-key'))
+      .rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await fixture.pool.query(`UPDATE control.etl_snapshot_schedule SET next_due_at=clock_timestamp()-interval '1 second'
+      WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+    await expect(admitDueSnapshotRun(roleScopedPool('hub_worker'), owner.tenantId, 'pg-main')).resolves.toBeNull();
+
+    await service.pause(owner,'pg-main','1','exercise activation while D is unresolved');
+    const approval = await fixture.pool.query<{id:string}>(`SELECT id::text FROM control.source_owner_approval WHERE tenant_key=$1 AND source_id='pg-main'`, [owner.tenantId]);
+    await expect(service.activate(owner,'pg-main','1',approval.rows[0]!.id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
   });
 
   it('admits and scans a due schedule from the strict worker loop without a manual run', async () => {

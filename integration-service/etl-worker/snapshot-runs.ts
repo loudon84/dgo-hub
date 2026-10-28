@@ -94,6 +94,9 @@ async function lockedProof(client: PoolClient, tenantId: string, sourceId: strin
   const sourceLock = await client.query<{ lock_etl_snapshot_source: boolean }>(
     'SELECT control.lock_etl_snapshot_source($1,$2)',[tenantId,sourceId]);
   if (!sourceLock.rows[0]?.lock_etl_snapshot_source) fail('SOURCE_NOT_FOUND');
+  const deleteBusy = await client.query<{ busy:boolean }>(
+    'SELECT control.etl_snapshot_source_delete_busy($1,$2) AS busy',[tenantId,sourceId]);
+  if (deleteBusy.rows[0]?.busy) fail('SOURCE_CONFLICT');
   const sourceResult = await client.query<RunRow>(
     `SELECT r.tenant_key,r.source_id,r.lifecycle,r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,
         r.data_owner_user_id,r.owner_revision,c.id AS credential_id,c.enabled AS credential_enabled,c.allowed_entities,
@@ -254,6 +257,9 @@ export async function admitDueSnapshotRun(pool: Pool, tenantId: string, sourceId
     await client.query('SELECT * FROM control.lock_source_credential($1,$2)', [tenantId,sourceId]);
     const source = await client.query<RunRow>(`SELECT control.lock_etl_snapshot_source($1,$2) AS locked`, [tenantId,sourceId]);
     if (!source.rows[0]?.locked) return null;
+    const deleteBusy = await client.query<RunRow>(
+      'SELECT control.etl_snapshot_source_delete_busy($1,$2) AS busy',[tenantId,sourceId]);
+    if (deleteBusy.rows[0]?.busy) return null;
     const currentSource = await client.query<RunRow>(`SELECT current_config_revision FROM control.source_registry
       WHERE tenant_key=$1 AND source_id=$2`, [tenantId,sourceId]);
     if (!currentSource.rowCount) return null;

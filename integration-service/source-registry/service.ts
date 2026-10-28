@@ -552,6 +552,13 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     if (typeof expected !== 'string' || !/^[1-9][0-9]*$/.test(expected) || typeof approvalId !== 'string' || !/^[0-9a-f-]{36}$/i.test(approvalId)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      const deleteReconciliationInstalled = await client.query<{ installed:boolean }>(
+        `SELECT to_regclass('control.etl_snapshot_delete_run') IS NOT NULL AS installed`);
+      if (deleteReconciliationInstalled.rows[0]?.installed) {
+        const busy = await client.query<{ busy:boolean }>(
+          'SELECT control.etl_snapshot_source_delete_busy($1,$2) AS busy',[principal.tenantId,sourceId]);
+        if (busy.rows[0]?.busy) fail('SOURCE_CONFLICT');
+      }
       if (decimal(row.current_config_revision)!==expected || !['APPROVED','PAUSED'].includes(String(row.lifecycle))) fail('SOURCE_CONFLICT');
       const config = row.config as SourceConfig;
       if (!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
