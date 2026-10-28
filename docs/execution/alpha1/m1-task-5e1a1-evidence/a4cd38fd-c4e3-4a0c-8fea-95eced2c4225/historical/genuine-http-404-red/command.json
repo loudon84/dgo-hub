@@ -1,0 +1,15 @@
+{
+  "label": "api022-genuine-red",
+  "program": "npm.cmd",
+  "arguments": [
+    "run",
+    "test",
+    "--",
+    "acceptance-tests/snapshot-recovery.test.ts"
+  ],
+  "exit_code": 1,
+  "stdout": "E:\\m1t5-runtime\\e672d3f7-2dc5-44e3-a08a-9af6976bb3b5\\api022-genuine-red\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\e672d3f7-2dc5-44e3-a08a-9af6976bb3b5\\api022-genuine-red\\stderr.txt",
+  "started_utc": "2026-10-28T07:18:47.0548070Z",
+  "finished_utc": "2026-10-28T07:18:53.0606994Z"
+}

@@ -1,0 +1,44 @@
+stderr | acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > accepts a strict retry for a terminal incomplete run over authenticated HTTP
+snapshot continuation failed {
+  tenant_key: 'm1_recovery_tenant',
+  source_id: 'pg_recovery',
+  run_id: '5d69e0af-e025-465b-8a40-f17944127d06',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at Object.afterAggregateCommit (E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-recovery.test.ts:162:106)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > accepts a strict retry for a terminal incomplete run over authenticated HTTP
+AssertionError: expected { identity_count: '0', …(6) } to deeply equal { identity_count: '0', …(6) }
+
+- Expected
++ Received
+
+@@ -1,8 +1,8 @@
+  {
+    "canonical_count": "0",
+-   "checkpoint": "{\"completed_count\":1,\"last_source_pk\":\"C-REC-1\"}",
++   "checkpoint": "{\"last_source_pk\": \"C-REC-1\", \"completed_count\": 1}",
+    "identity_count": "0",
+    "outbox_count": "0",
+    "outcome_count": "0",
+    "range_count": "0",
+    "receipt_count": "0",
+
+ ❯ acceptance-tests/snapshot-recovery.test.ts:274:40
+    272|           FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND…
+    273|       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
+    274|     expect(beforeCommitEffect.rows[0]).toEqual({identity_count:'0',can…
+       |                                        ^
+    275|       checkpoint:'{"completed_count":1,"last_source_pk":"C-REC-1"}'});
+    276|     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+

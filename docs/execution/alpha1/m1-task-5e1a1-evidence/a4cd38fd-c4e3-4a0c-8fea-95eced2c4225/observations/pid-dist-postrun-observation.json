@@ -1,0 +1,31 @@
+{
+  "observed_utc": "2026-10-28T08:34:34.7840132Z",
+  "pids": [
+    {
+      "present": false,
+      "pid": 40740
+    },
+    {
+      "present": false,
+      "pid": 25100
+    }
+  ],
+  "postrun_build_artifacts": [
+    {
+      "path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\snapshot-worker.js",
+      "test_import_site": "integration-service/acceptance-tests/snapshot-recovery.test.ts:4",
+      "size_bytes": 8153,
+      "sha256": "e85f9120e52b283a36a8b353571ac81bb06c756bb23586b45506f1dfaddc1759",
+      "last_write_utc": "2026-10-28T08:25:00.8058101Z"
+    },
+    {
+      "path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\snapshot-apply-worker.js",
+      "test_import_site": "integration-service/acceptance-tests/snapshot-recovery.test.ts:37",
+      "size_bytes": 15509,
+      "sha256": "ae7671a43998ec8ed76a95e7a45c8dbcbf6be729baa71f1a637fc97ac1bc8d6d",
+      "last_write_utc": "2026-10-28T08:25:00.8193008Z"
+    }
+  ],
+  "child_loaded_digest_emitted": false,
+  "interpretation": "postrun artifact-path hashes and later PID absence only; neither child emitted runtime loaded-module digest; no exact exit times inferred"
+}
