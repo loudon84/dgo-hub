@@ -1,0 +1,28 @@
+{
+  "head": "d98639be8e2af6baf3d7f6d1054fdc3d58cc550c",
+  "utc": "2026-10-28T04:40:47.5556169Z",
+  "files": [
+    {
+      "git_blob": "9b2a74666d8bc3886482a710ee9ce19deac497c7",
+      "raw_sha256": "e05cfc644dc65cb2f782650d44cbd95754546ca01d19c645eccb466741f3589f",
+      "raw_size": 215018,
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "lf_sha256": "04424482f53fff8a88ec5e4c60784480479570927906d7e6201cb4f9c57d6229"
+    },
+    {
+      "git_blob": "9c4ad472af587ee1dd2287819e900433b3d04d4f",
+      "raw_sha256": "ab5737e7897c341ee20fb5e5a00646bf9bf2ed5d38177c8ea0c5b4b6179805da",
+      "raw_size": 272234,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "lf_sha256": "ab5737e7897c341ee20fb5e5a00646bf9bf2ed5d38177c8ea0c5b4b6179805da"
+    },
+    {
+      "git_blob": "dde90426efad9f53686e0d3a1c8904e53bad0a8c",
+      "raw_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d",
+      "raw_size": 12060,
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "lf_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d"
+    }
+  ],
+  "phase": "before"
+}

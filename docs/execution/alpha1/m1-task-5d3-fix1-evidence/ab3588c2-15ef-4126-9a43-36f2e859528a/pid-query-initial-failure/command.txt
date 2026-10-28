@@ -1,0 +1,1 @@
+Get-CimInstance Win32_Process for exact test child PIDs 31104,45700,14932,41772,45492

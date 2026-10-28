@@ -1,0 +1,28 @@
+{
+  "utc": "2026-10-28T04:33:02.2813863Z",
+  "files": [
+    {
+      "git_blob": "379262a5537d7233f4e05b935fb07d99fc790290",
+      "lf_sha256": "272eba3633bd387cdcb248d9cae038f03ed083cf8e8d03d5fb8c95aba84122c0",
+      "raw_size": 214687,
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "raw_sha256": "c4e01f042821a9d5ab3de8ac94bafc150df987443564c8afd06317c9dc996f2f"
+    },
+    {
+      "git_blob": "a44e4c66bb32920347257e33a9bbf78d9d7f8e55",
+      "lf_sha256": "f584d9c19f2b40f045709b100512dfac679bde7b76963382cf92d73ea48ff235",
+      "raw_size": 269362,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "raw_sha256": "f584d9c19f2b40f045709b100512dfac679bde7b76963382cf92d73ea48ff235"
+    },
+    {
+      "git_blob": "dde90426efad9f53686e0d3a1c8904e53bad0a8c",
+      "lf_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d",
+      "raw_size": 12060,
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "raw_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d"
+    }
+  ],
+  "phase": "before",
+  "head": "d98639be8e2af6baf3d7f6d1054fdc3d58cc550c"
+}
