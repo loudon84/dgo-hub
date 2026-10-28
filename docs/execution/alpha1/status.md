@@ -114,3 +114,7 @@ D2 Owner review/approval and D3 logical deletion have not started. Migration 009
 ### D1 first review repairs in progress
 
 Independent review records five Important defects in scope initialization, delete-contract eligibility, bounded worker fairness, superseded capability-test proof, and stale AWAITING_OWNER handling. Luna is implementing focused repairs; D1 is not approved. D2/D3 coding remains gated on that approval.
+
+### D1 review closed; D2 next
+
+Source `634e0c84` closes all five D1 findings. GPT-6.1 Sol [scoped rereview](reviews/m1-task-5d1-rereview-1.md) records Spec PASS / Quality Approved with no new material defects. Final gates passed 26/26 snapshot tests, typecheck/build; 29 repair artifacts and all 21 source-manifest pairs verified. Earlier assurance limits remain explicit. D2 Owner candidate review and exact approval is next; D3 logical effects and E remain pending.

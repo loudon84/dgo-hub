@@ -147,3 +147,7 @@ B extraction/staging source findings R1–R5 and repair regression N1 are closed
 ## M1-5C checkpoint — 2026-10-28
 
 C local implementation and source-finding review are complete. Latest product e46a938e, report/evidence96afe89a, independent GPT-6.1 Sol scoped Spec Pass / Quality Approved at docs/execution/alpha1/reviews/m1-task-5c-rereview-2.md. Latest repair gate: snapshot-runs24/24, typecheck/build0. R1–R10/F1 and required changed-data worker-process crash acceptance G1 are closed; E1 historical byte-binding qualification is recorded. Whole M1-5 remains IN_PROGRESS: D/E and integrated gate/whole-phase review remain; 009 stays phase-owned/unreleased and 001–008 unchanged. Formal48/site acceptance remains NOT_RUN. Next work is D deletion reconciliation after refreshing its provisional brief to the accepted C interfaces.
+
+## M1-5D1 checkpoint — 2026-10-28
+
+D1 candidate accounting/threshold/source reservation is locally complete at product634e0c84/evidence4a67e6cc. Independent Sol scoped review closes I1–I5 with Spec PASS / Quality Approved. Latest snapshot gate26/26/typecheck/build0; prior evidence defects are qualified and corrected. D2 safe review/Owner060 approval proceeds from refreshed accepted interfaces; D3 effects, E, whole-phase integrated verification remain. 009 remains unreleased phase-owned; formal48/site tests NOT_RUN.

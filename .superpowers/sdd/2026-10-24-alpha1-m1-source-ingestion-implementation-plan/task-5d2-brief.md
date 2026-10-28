@@ -1,6 +1,6 @@
 # M1-5D2 — safe API-021 candidate review and API-060 approval
 
-**Status:** Provisional builder brief for a later reviewed gate. Dispatch only after D1 implementation is independently accepted and the exact source pin is refreshed. One writer, then independent Sol Spec/Quality review. This slice records approval only; it performs no canonical business DML and no candidate apply.
+**Status:** Ready for controller dispatch after accepted D1 source `634e0c84cf2cf3d7953feb1e03d35f3387b27dfd`, independently Spec PASS / Quality Approved in task-5d1-rereview-1.md. Refreshed exact-pin interfaces are in context/m1-task5d2-api-preflight.md. One writer, then independent Sol Spec/Quality review. This slice records approval only; it performs no canonical business DML and no candidate apply.
 
 ## Goal
 
@@ -62,3 +62,13 @@ Persist the current database `auth_epoch` obtained under the locked existing ide
 ### Reservation fact immutability carry-forward
 
 Before relying on D1 reservation proof, reconcile the D1 review's assurance note: add/verify a selective database update guard on immutable D reservation identity and original C/OBS/scope binding fields. Operational status, lease, retry and freshness cursor fields must remain explicitly mutable only through narrow authorized procedures. Add a focused trigger/grant regression; do not grant direct API/worker UPDATE. This closes the schema-contract claim before D2/D3 use the records as approval authority.
+
+## Final dispatch contract
+
+Read the refreshed preflight and create a concise exact schema/function/lock/grant contract in `context/m1-task5d2-schema-contract.md` before product edits. Then implement this whole D2 slice as the sole product writer, using existing repo checkout branch. D1 accepted source is 634e0c84; dispatch BASE is the subsequent controller documentation commit. The first schema step is the selective reservation fact guard and its regression; do not claim it was already D1-delivered. Reuse D1 server digest algorithm precisely; no parallel serializer authority.
+
+API-060 replay must revalidate operation-time principal, current exact enabled Owner and current candidate authority before returning the durable original result; stale approval authority is a safe conflict and never grants fresh approval. A different request under the same key always conflicts. Approval/result records are immutable. Normal API-021 safe summary must remain available to ordinary current source:read callers without exposing member keys or approval OIDC identifiers.
+
+Final gates must capture actual HEAD and true source-before/after manifests immediately around each command in fresh external UUID roots with exactly matching absolute M0_RUN_EVIDENCE_ROOT. Include covering actual HTTP/API-role + worker-negative grants, populated001–008→assembled009 and identical009 reapply, typecheck/build. Capture command/output/exit, raw/LF bytes/hash/size/blobs; bind captured bytes to product commit. Individually whitelist evidence and only exact-owned PG/Node resources; preserve failed attempts and old unrelated host artifacts. No `.env`, npm config, secrets, reference clones or blocked cleanup paths. Commit product/test separately from evidence/report; root controls ledger and review.
+
+Write both identical reports at `.superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/task-5d2-report.md` and `docs/execution/alpha1/m1-task-5d2-report.md`; never literal workspace/. Include source/evidence commits, exact tests/commands/outputs, lifecycle and assurance limits, and return concise status/commits/results. Independent Sol review follows; no D3 implementation or self-dispatched reviewer.
