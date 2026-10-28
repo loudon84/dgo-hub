@@ -110,3 +110,7 @@ D absence reconciliation/Owner approval, E manual recovery/cutover, integrated M
 D1 source `68bfa362` adds durable complete-run consumption, per-entity absence candidates and exact 5% threshold control, source-wide policy pause, and admission/activation reservation guards. Fresh local gates passed 26/26 snapshot tests, typecheck and build. Root verified 137 evidence artifacts and 21 before/after source-manifest pairs with no mismatches. Historical capture shortcomings are qualified in the [D1 report](m1-task-5d1-report.md); corrected captures supersede them. GPT-6.1 Sol independent Spec/Quality review is pending.
 
 D2 Owner review/approval and D3 logical deletion have not started. Migration 009 remains phase-owned; formal site acceptance and real upstream/Hermes integration remain NOT_RUN.
+
+### D1 first review repairs in progress
+
+Independent review records five Important defects in scope initialization, delete-contract eligibility, bounded worker fairness, superseded capability-test proof, and stale AWAITING_OWNER handling. Luna is implementing focused repairs; D1 is not approved. D2/D3 coding remains gated on that approval.

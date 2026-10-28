@@ -1,8 +1,8 @@
 # M1-5D2 API preflight — candidate review and approval
 
-**Status:** Read-only exact-pin preflight; not implementation authorization. Source pin abbreviation `68bfa36` resolves to full commit `68bfa36203be6446c47e0927ab9d982b5a380343`. All product observations below were read only with `git show <full-pin>:<path>`; no mutable product source was read. No source files, tests, resources, secret/environment, Git state, or external systems were changed. This document is the only write.
+**Status:** Read-only exact-pin preflight; not implementation authorization. Current refresh pin abbreviation `634e0c8` resolves to full commit `634e0c84cf2cf3d7953feb1e03d35f3387b27dfd`. Earlier baseline: `68bfa36203be6446c47e0927ab9d982b5a380343`. All product observations below were read only with `git show <full-pin>:<path>`; no mutable product source was read. No source files, tests, resources, secret/environment, Git state, or external systems were changed. This document is the only write.
 
-**Requirements:** `task-5d2-brief.md` including its controller clarifications. D1 is implemented at this pin but still awaits independent review; if D1 changes, refresh this map from that accepted pin before D2 implementation.
+**Requirements:** `task-5d2-brief.md` including its controller clarifications. D1 Fix 1 is present at the current pin but remains under independent review. D2 implementation is not authorized until D1 passes and this map is refreshed from the accepted pin.
 
 ## API-021 route, query and errors
 
@@ -85,3 +85,27 @@ D1 digest is formed in SQL from stable frozen proof JSON, entity, candidate run,
 7. Above-threshold approval is per candidate entity set; D3 is held until every required above-threshold set has current approval. API-060 has no activation/schedule side effect.
 
 No tests, runtime commands, migrations, database, external services, or 001–008 mutation were part of this preflight. The exact source pin should be refreshed after D1 review before D2 implementation.
+
+
+## Fixed-pin refresh after D1 Fix 1 (634e0c8)
+
+The pin was verified as `634e0c84cf2cf3d7953feb1e03d35f3387b27dfd`. The refreshed requirement is `task-5d2-brief.md`, including durable `auth_epoch` invalidation and reservation-fact immutability carry-forward. Product source was inspected only through fixed-pin Git object reads. Between `68bfa36203be6446c47e0927ab9d982b5a380343` and this pin, the only changed product files in bounded D1 paths are `integration-service/etl-worker/snapshot-delete-worker.ts` and `integration-service/migrations/009_snapshot_runs_and_recovery.sql`; API-021 route, API-060 absence, AuthService, source Owner path, pagination convention, principal shape and existing idempotency/audit seams have no D2-facing source changes in this delta. Findings above remain applicable, subject to D1 acceptance.
+
+### Changed D1 facts affecting D2 currentness and scheduling
+
+- C completion reservation now enters `PENDING` only when the frozen run and its current config both prove `delete_contract='hard_delete'`, FULL_SNAPSHOT and `SNAPSHOT_OBSERVATION` at the run and every entity channel. Other completed C contracts reserve as `SKIPPED`; they are not actionable candidates and must not be interpreted as `SOURCE_VERSION` tombstones.
+- `etl_snapshot_delete_proof_current(tenant,source,run)` now rejects an older run if a newer PASS `source_test_report` exists for the same tenant/source/config/mapping/identity revisions, ordered by `(created_at,id)`. D2 approval must require this current proof result, so a candidate cannot remain approvable after a newer same-scope proof is recorded.
+- Worker scheduling now selects source groups having `PENDING` or `AWAITING_OWNER`, ordered by oldest `last_worker_checked_at` (NULL first), reservation ordinal, then source identity. `last_worker_checked_at` is only a mutable scheduling hint; it is not candidate authority or approval freshness.
+- Consumption selects the latest consumed reservation in either `PENDING` or `AWAITING_OWNER`. If a candidate already exists for that run, it updates only the scheduling hint and returns without changing the immutable candidate. If another C run is active, it updates the hint and defers. It skips reservations whose frozen contract is not `hard_delete`.
+- First-scope processing seeds first-absence streaks only from live canonical identities with a source-version receipt matching the frozen entity channel ID/epoch and `SNAPSHOT_OBSERVATION`, absent from this run's staged presence. Missing or stale receipts cannot start a streak. D2 must present and approve the exact frozen D1 membership and digest, not independently infer it from current canonical rows.
+
+These changes add no API-021 projection, exact-member reader, API-060 route, durable approval/idempotency record or human audit seam. The D2 route contract and grants are unchanged by this source delta.
+
+### Current D2 blockers carried by the refreshed brief
+
+- Persist DB `auth_epoch` obtained from `lock_api_identity(issuer,subject)` under lock with the actual approver's tenant/user/issuer/subject binding and required scope. Any subsequent epoch change invalidates that approval. D3 must recheck through existing identity authority and mark pending work stale before effects. This is separate from bearer expiry and does not require changing global `assertCurrentPrincipal` semantics.
+- The refreshed brief requires a selective update guard over immutable D reservation identity and original C/OBS/scope binding fields, while operational status/lease/retry/freshness fields remain mutable only through narrow authorized procedures. The fixed pin migration has no trigger on `etl_snapshot_delete_run` enforcing this split (only consumption, presence, candidate, member and policy-audit tables have immutability triggers). The refreshed D2 brief assigns this guard and its focused trigger/grant regression as D2's first schema step, before D2 reads or approval depend on reservation facts. D2 must add and verify it before treating reservations as immutable approval authority. D1 review treats it as an assurance item, not a D1 blocker; no authorized runtime corruption path was identified. Do not compensate with direct API or worker UPDATE grants.
+- Existing D1 current proof now checks newer PASS test-report ordering, but D2 still needs current C/source proof, Owner revision, exact candidate revision/digest/membership/denominator, newer-run/current-cohort state, source pause and barrier checks in the guarded approval transaction. The refresh does not establish a `hub_api` safe candidate projection, server digest recomputation, approval lock, idempotency result or human audit function. These remain D2 additions with narrow `hub_api` EXECUTE grants only; no canonical DML.
+
+D2 external API contract: **no interface change found** relative to the prior preflight. The new D1 fields affect internal freshness and scheduling only. This refresh is a bounded seam map, not authorization to begin D2 before independent D1 acceptance.
+

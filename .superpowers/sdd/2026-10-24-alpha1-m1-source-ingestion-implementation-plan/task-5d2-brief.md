@@ -58,3 +58,7 @@ The durable approval must capture the actual approver's existing identity bindin
 ### Durable identity epoch ruling
 
 Persist the current database `auth_epoch` obtained under the locked existing identity authority with the actual approver binding. Any subsequent epoch change invalidates that approval, in addition to enabled/tenant/binding/Owner/scope/barrier checks; D3 must mark pending work stale before effects. This is conservative durable-authority binding, not bearer-token expiry. Do not globally change `assertCurrentPrincipal` semantics for unrelated APIs. A new approval after authority changes requires a current valid candidate; never mutate an old approval.
+
+### Reservation fact immutability carry-forward
+
+Before relying on D1 reservation proof, reconcile the D1 review's assurance note: add/verify a selective database update guard on immutable D reservation identity and original C/OBS/scope binding fields. Operational status, lease, retry and freshness cursor fields must remain explicitly mutable only through narrow authorized procedures. Add a focused trigger/grant regression; do not grant direct API/worker UPDATE. This closes the schema-contract claim before D2/D3 use the records as approval authority.
