@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
 import { fork } from 'node:child_process';
@@ -76,6 +76,17 @@ beforeEach(async () => {
   const tested = await service.test(owner, 'pg-main', '1');
   const approved = await service.approve(owner, 'pg-main', '1', tested.test_report_id, tested.data_contract_ref);
   await service.activate(owner, 'pg-main', '1', approved.approval_id);
+});
+
+afterEach(async () => {
+  if(!evidenceRoot) return;
+  const failedC=await fixture.pool.query(`SELECT run_id::text,source_id,idempotency_key,status,
+      completeness_summary->>'error_code' AS error_code,
+      (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome o WHERE o.run_id=r.run_id) AS outcomes,
+      (SELECT count(*)::int FROM control.etl_snapshot_apply_range x WHERE x.run_id=r.run_id) AS ranges
+    FROM control.etl_run r WHERE r.status='FAILED' ORDER BY source_id COLLATE "C",idempotency_key COLLATE "C"`);
+  if(failedC.rowCount) await appendFile(join(evidenceRoot,'m1-task5d-c-failure-run-map.jsonl'),
+    JSON.stringify({test_file:'acceptance-tests/snapshot-runs.test.ts',failed_runs:failedC.rows})+'\n','utf8');
 });
 
 afterAll(async () => { if (fixture) await fixture.close(); });
@@ -363,7 +374,7 @@ describe('durable snapshot run admission', () => {
         const {runSnapshotWorkerOnce}=await import('../etl-worker/snapshot-worker.js');
         const {runSnapshotContinuationWorkerOnce}=await import('../etl-worker/snapshot-apply-worker.js');
         await expect(runSnapshotWorkerOnce(roleScopedPool('hub_worker'),{...workerDependencies,sourceConnectionFactory:realFactory})).resolves.toBeGreaterThan(0);
-        await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBe(1);
+        await expect(runSnapshotContinuationWorkerOnce(roleScopedPool('hub_worker'))).resolves.toBeGreaterThan(0);
         const completed=await fixture.pool.query('SELECT status FROM control.etl_run WHERE run_id=$1',[run.run_id]);
         expect(completed.rows).toEqual([{status:'COMPLETE'}]);
         return run;
@@ -478,12 +489,12 @@ describe('durable snapshot run admission', () => {
           await fixture.pool.query(`UPDATE control.canonical_source_identity SET customer_id=$2,canonical_object_id=$2
             WHERE tenant_key=$1 AND source_id='pg-main' AND entity='customer' AND source_pk='C-F'`,[owner.tenantId,targetC2]);
         }})).resolves.toBe(1);
-        const tupleRace=await fixture.pool.query(`SELECT r.status,
+        const tupleRace=await fixture.pool.query(`SELECT r.status,r.completeness_summary->>'error_code' AS error_code,
           (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id) AS outcomes,
           (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges,
           (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id AND entity='order') AS order_outcomes
           FROM control.etl_run r WHERE r.run_id=$1`,[tupleRaceRun.run_id]);
-        expect(tupleRace.rows[0]).toEqual({status:'FAILED',outcomes:2,ranges:2,order_outcomes:0});
+        expect(tupleRace.rows[0]).toEqual({status:'FAILED',error_code:'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',outcomes:2,ranges:2,order_outcomes:0});
       } finally {
         await fixture.pool.query(`UPDATE control.canonical_source_identity SET customer_id=$2,canonical_object_id=$2
           WHERE tenant_key=$1 AND source_id='pg-main' AND entity='customer' AND source_pk='C-F'`,[owner.tenantId,foreignTarget]);
@@ -1081,18 +1092,29 @@ describe('durable snapshot run admission', () => {
         WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId]);
       const sameSourceC1=sameSourceTarget.rows[0].customer_id;
       let sameSourceChanged=false;
+      let sameSourceMutationFailure:{code?:string;constraint?:string}|undefined;
       const {runSnapshotContinuationWorkerOnce:runSameSourceContinuation}=await import('../etl-worker/snapshot-apply-worker.js');
       await expect(runSameSourceContinuation(roleScopedPool('hub_worker'),20,60,{afterAggregateCommit:async item=>{
         if(!sameSourceChanged&&item.entity==='customer'&&item.source_pk==='C-1') {
           sameSourceChanged=true;
-          await fixture.pool.query(`UPDATE control.canonical_source_identity SET customer_id=$2,canonical_object_id=$2
-            WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId,targetC2]);
+          try {
+            await fixture.pool.query(`UPDATE control.canonical_source_identity SET customer_id=$2,canonical_object_id=$2
+              WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId,targetC2]);
+          } catch(error) {
+            const pg=error as {code?:string;constraint?:string};
+            sameSourceMutationFailure={code:pg.code,constraint:pg.constraint};
+            expect(sameSourceMutationFailure).toEqual({code:'23503',constraint:'source_version_receipt_tenant_key_source_id_entity_source__fkey'});
+            throw error;
+          }
         }
       }})).resolves.toBe(1);
-      const sameRace=await fixture.pool.query(`SELECT r.status,
+      expect(sameSourceMutationFailure).toEqual({code:'23503',constraint:'source_version_receipt_tenant_key_source_id_entity_source__fkey'});
+      const sameRace=await fixture.pool.query(`SELECT r.status,r.completeness_summary->>'error_code' AS error_code,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id) AS outcomes,
+        (SELECT count(*)::int FROM control.etl_snapshot_apply_range WHERE run_id=r.run_id) AS ranges,
         (SELECT count(*)::int FROM control.etl_snapshot_apply_outcome WHERE run_id=r.run_id AND entity='order') AS order_outcomes
         FROM control.etl_run r WHERE r.run_id=$1`,[sameSourceRaceRun.run_id]);
-      expect(sameRace.rows[0]).toEqual({status:'FAILED',order_outcomes:0});
+      expect(sameRace.rows[0]).toEqual({status:'FAILED',error_code:'SNAPSHOT_C_PROCESSING_FAILED',outcomes:1,ranges:1,order_outcomes:0});
       await fixture.pool.query(`UPDATE control.canonical_source_identity SET customer_id=$2,canonical_object_id=$2
         WHERE tenant_key=$1 AND source_id='pg-e2e' AND entity='customer' AND source_pk='C-1'`,[owner.tenantId,sameSourceC1]);
       await ownerPool.query(`ALTER TABLE ${sourceSchema}.customers ADD COLUMN boolean_delete boolean NOT NULL DEFAULT false`);
@@ -1253,11 +1275,23 @@ describe('durable snapshot run admission', () => {
         JOIN control.etl_run r ON r.run_id=m.second_run_id
         WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-exact' AND d.run_id=$2 AND c.entity='customer'`,
         [owner.tenantId,secondMissing.run_id]);
-      expect(exactFive.rows).toEqual([{status:'PENDING',above_threshold:false,candidate_count:'1',candidate_id:expect.any(String),
+      expect(exactFive.rows).toEqual([{status:'COMPLETE',above_threshold:false,candidate_count:'1',candidate_id:expect.any(String),
         baseline_count:'20',entity_candidate_count:'1',source_pk:'C-20',origin_run_id:candidateOrigin.run_id,second_run_id:secondMissing.run_id,
         sequence_value:expect.any(String),inferred_at:expect.any(String),completed_at:expect.any(String),observation:expect.any(String),lifecycle:'ACTIVE'}]);
       expect(exactFive.rows[0]!.inferred_at).toBe(exactFive.rows[0]!.completed_at);
       expect(exactFive.rows[0]!.sequence_value).toBe(exactFive.rows[0]!.observation);
+      const exactApplied=await fixture.pool.query(`SELECT e.operation_id::text,e.sequence_value::text,e.inferred_deleted_at=r.completed_at AS exact_time,
+        e.outbox_id IS NOT NULL AS outbox,
+        EXISTS(SELECT 1 FROM control.source_version_receipt vr WHERE vr.tenant_key=e.tenant_key AND vr.source_id=e.source_id
+          AND vr.entity=e.entity AND vr.source_pk=e.source_pk AND vr.source_version=e.sequence_value AND vr.deleted
+          AND vr.canonical_object_id=e.canonical_object_id) AS receipt,
+        control.etl_snapshot_delete_candidate_current_d3(c.tenant_key,c.source_id,c.candidate_id,true) AS current_after_own_effect,
+        EXISTS(SELECT 1 FROM control.etl_snapshot_delete_approval a WHERE a.candidate_id=c.candidate_id) AS approved
+        FROM control.etl_snapshot_delete_candidate c JOIN control.etl_snapshot_delete_effect e USING(candidate_id)
+        JOIN control.etl_run r ON r.run_id=c.run_id
+        WHERE c.candidate_id=$1`,[exactFive.rows[0]!.candidate_id]);
+      expect(exactApplied.rows).toEqual([{operation_id:expect.any(String),sequence_value:exactFive.rows[0]!.sequence_value,
+        exact_time:true,outbox:true,receipt:true,current_after_own_effect:true,approved:false}]);
 
       await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
         VALUES('C-20','Customer 20','owner-ext','dept-ext','ACTIVE','2026-10-25 12:20:00.123456+00')`);
@@ -1581,16 +1615,21 @@ describe('durable snapshot run admission', () => {
       const scopedCandidate=await fixture.pool.query(`SELECT d.status,c.candidate_count::text FROM control.etl_snapshot_delete_run d
         JOIN control.etl_snapshot_delete_candidate c USING(tenant_key,source_id,run_id)
         WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-scope' AND d.run_id=$2 AND c.entity='customer'`,[owner.tenantId,scopeSecond.run_id]);
-      expect(scopedCandidate.rows).toEqual([{status:'PENDING',candidate_count:'1'}]);
-      const pendingDriftUpdate=await service.update(owner,'pg-e2e-scope',{expected_revision:scopeRevision,
+      expect(scopedCandidate.rows).toEqual([{status:'COMPLETE',candidate_count:'1'}]);
+      const completedScope=await fixture.pool.query(`SELECT count(*)::int AS effects,bool_and(e.sequence_value=m.sequence_value) AS same_observation,
+        bool_and(e.inferred_deleted_at=r.completed_at) AS exact_completion_time
+        FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c ON c.candidate_id=e.candidate_id
+        JOIN control.etl_snapshot_delete_candidate_member m ON (m.candidate_id,m.entity,m.source_pk)=(e.candidate_id,e.entity,e.source_pk)
+        JOIN control.etl_run r ON r.run_id=m.second_run_id
+        WHERE c.tenant_key=$1 AND c.source_id='pg-e2e-scope' AND c.run_id=$2`,[owner.tenantId,scopeSecond.run_id]);
+      expect(completedScope.rows).toEqual([{effects:1,same_observation:true,exact_completion_time:true}]);
+      const scopeAfterConfigDrift=await service.update(owner,'pg-e2e-scope',{expected_revision:scopeRevision,
         config:{...scopeSource.config,name:'Owned D source pg-e2e-scope drifted'}});
-      const pendingDriftReport=await service.test(owner,'pg-e2e-scope',pendingDriftUpdate.revision);
-      await service.approve(owner,'pg-e2e-scope',pendingDriftUpdate.revision,pendingDriftReport.test_report_id,pendingDriftReport.data_contract_ref);
-      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
       const stalePending=await fixture.pool.query(`SELECT d.status,control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy
         FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-scope' AND d.run_id=$2`,
         [owner.tenantId,scopeSecond.run_id]);
-      expect(stalePending.rows).toEqual([{status:'STALE',busy:false}]);
+      expect(stalePending.rows).toEqual([{status:'COMPLETE',busy:false}]);
+      expect(scopeAfterConfigDrift.revision).toBe('3');
 
       // Tombstone mode is not an absence authorization and has no D side effects.
       await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
@@ -1707,6 +1746,490 @@ describe('durable snapshot run admission', () => {
         WHERE d.tenant_key=$1 AND d.source_id='pg-e2e-over' AND d.run_id=$2`,
         [owner.tenantId,overSecond.run_id,overNewApproval.approval_id]);
       expect(stalePrepared.rows).toEqual([{status:'STALE',lifecycle:'PAUSED',enabled:false,busy:false,newer_approval_exists:true}]);
+
+      // The D crash fixture starts after the older D1/D2 cases so its real
+      // tombstones cannot change their live-only baselines.
+      const crashFixtureSuffix=randomUUID().slice(0,8);
+      const crashSources={before:`pg-e2e-d-crash-before-${crashFixtureSuffix}`,after:`pg-e2e-d-crash-after-${crashFixtureSuffix}`,
+        epoch:`pg-e2e-d-crash-epoch-${crashFixtureSuffix}`,barrier:`pg-e2e-d-crash-barrier-${crashFixtureSuffix}`,
+        baseline:`pg-e2e-d-crash-baseline-${crashFixtureSuffix}`,retry:`pg-e2e-d-crash-retry-${crashFixtureSuffix}`} as const;
+      const crashSourceApprovalIds=new Map<string,string>();
+      const deleteWorker=await import('../etl-worker/snapshot-delete-worker.js');
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.orders(order_id,customer_id,order_no,status,order_at,amount,currency,updated_at)
+        VALUES(9007199254740993123,'C-1','O-1','DRAFT','2026-10-25 10:01:02.123456+00',123456789012345678.12,'USD','2026-10-25 10:01:03.123456+00')
+        ON CONFLICT(order_id) DO NOTHING`);
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.order_lines(line_id,order_id,product_code,product_name,quantity,unit_price,line_amount)
+        VALUES('L-1',9007199254740993123,'SKU-1','Line',1.123456,123456789012.123456,138636548569.22),
+          ('L-2',9007199254740993123,'SKU-2','Second Line',2.123456,223456789012.123456,238636548569.22) ON CONFLICT(line_id) DO NOTHING`);
+      for(const sourceId of Object.values(crashSources)) {
+        const setup=await createDSource(sourceId,sourceId===crashSources.after||sourceId===crashSources.retry);
+        crashSourceApprovalIds.set(sourceId,setup.approval.approval_id);
+        const conflictingD=await fixture.pool.query(`SELECT run_id::text,status FROM control.etl_snapshot_delete_run
+          WHERE tenant_key=$1 AND source_id=$2 AND status IN ('PENDING','AWAITING_OWNER','APPLYING') ORDER BY run_id`,
+          [owner.tenantId,sourceId]);
+        expect(conflictingD.rows,`unexpected preexisting D source lock for ${sourceId}`).toEqual([]);
+        await completeCWithoutD(sourceId,'1',`d3-${sourceId}-baseline`);
+        // Each activated fixture gets a due schedule. Retire its empty baseline
+        // cohort before activating the next source, so the C worker cannot
+        // start another fixture's schedule while draining this baseline.
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const afterEmptyBaseline=await fixture.pool.query(`SELECT status FROM control.etl_snapshot_delete_run
+          WHERE tenant_key=$1 AND source_id=$2 AND status IN ('PENDING','AWAITING_OWNER','APPLYING')`,
+          [owner.tenantId,sourceId]);
+        expect(afterEmptyBaseline.rows,`empty baseline D reservation remained active for ${sourceId}`).toEqual([]);
+      }
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id IN ('C-19','C-20')`);
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.order_lines WHERE order_id=9007199254740993123`);
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.orders WHERE order_id=9007199254740993123`);
+      for(const sourceId of Object.values(crashSources)) {
+        await completeCWithoutD(sourceId,'1',`d3-${sourceId}-first-absence`);
+      }
+      await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const crashCohorts=new Map<string,{run:Awaited<ReturnType<typeof completeCWithoutD>>;candidates:{candidate_id:string;entity:string;candidate_revision:number;candidate_digest:string}[]}>();
+      for(const sourceId of Object.values(crashSources)) {
+        const run=await completeCWithoutD(sourceId,'1',`d3-${sourceId}-second-absence`);
+        crashCohorts.set(sourceId,{run,candidates:[]});
+      }
+      await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      for(const sourceId of Object.values(crashSources)) {
+        const cohort=crashCohorts.get(sourceId)!;
+        const candidateRow=await fixture.pool.query(`SELECT candidate_id::text,entity,candidate_revision,
+          encode(candidate_digest,'hex') AS candidate_digest,candidate_count::text,baseline_count::text
+          FROM control.etl_snapshot_delete_candidate WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3 ORDER BY entity COLLATE "C"`,
+          [owner.tenantId,sourceId,cohort.run.run_id]);
+        expect(candidateRow.rows).toEqual(sourceId===crashSources.after||sourceId===crashSources.retry?
+          [{candidate_id:expect.any(String),entity:'customer',candidate_revision:1,candidate_digest:expect.any(String),candidate_count:'2',baseline_count:'22'},
+           {candidate_id:expect.any(String),entity:'order',candidate_revision:1,candidate_digest:expect.any(String),candidate_count:'1',baseline_count:'1'}]:
+          [{candidate_id:expect.any(String),entity:'customer',candidate_revision:1,candidate_digest:expect.any(String),candidate_count:'2',baseline_count:'22'}]);
+        const waiting=await fixture.pool.query(`SELECT d.status,d.d_start_count,
+          (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+            WHERE c.run_id=d.run_id) AS effects
+          FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+          [owner.tenantId,sourceId,cohort.run.run_id]);
+        expect(waiting.rows).toEqual([{status:'AWAITING_OWNER',d_start_count:0,effects:0}]);
+        cohort.candidates=candidateRow.rows;
+      }
+
+      const crashApi=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+        authenticator:async()=>owner}});
+      try {
+        if(!evidenceRoot) throw new Error('M0_RUN_EVIDENCE_ROOT_REQUIRED');
+        const crashEvidenceRoot=evidenceRoot;
+        for(const phase of ['before','after'] as const) {
+          const crashSource=crashSources[phase];
+          const cohort=crashCohorts.get(crashSource)!;
+          const crashRun=cohort.run;
+          const crashCandidate=cohort.candidates.find(candidate=>candidate.entity==='customer')!;
+          const crashApprovalBody={run_id:crashRun.run_id,candidate_revision:crashCandidate.candidate_revision,
+          candidate_digest:crashCandidate.candidate_digest,expected_owner_revision:'1',reason:'approved exact D crash fixture'};
+          const crashApprovalRoute=`/hub/v1/admin/sources/${crashSource}/delete-candidates/${crashCandidate.candidate_id}/approve`;
+          const crashApprovalHeaders={authorization:'Bearer owner-token','idempotency-key':`d3-node-crash-${phase}-approval-customer`};
+          let crashApproval:Awaited<ReturnType<typeof crashApi.inject>>|undefined;
+          for(const candidate of cohort.candidates) {
+            const body={...crashApprovalBody,candidate_revision:candidate.candidate_revision,candidate_digest:candidate.candidate_digest};
+            const response=await crashApi.inject({method:'POST',url:`/hub/v1/admin/sources/${crashSource}/delete-candidates/${candidate.candidate_id}/approve`,
+              headers:{...crashApprovalHeaders,'idempotency-key':`d3-node-crash-${phase}-approval-${candidate.entity}`},payload:body});
+            expect(response.statusCode).toBe(200);
+            if(candidate.entity==='customer') crashApproval=response;
+          }
+          expect(crashApproval).toBeDefined();
+          const lifecycle=join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl');
+          const childEntry='acceptance-tests/fixtures/snapshot-delete-child.mjs';
+          const beforeSpawn=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_claim_token::text,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_approval a JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS approvals,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_operation o JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS operations
+            FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+            [owner.tenantId,crashSource,crashRun.run_id]);
+          expect(beforeSpawn.rows).toEqual([{status:'AWAITING_OWNER',d_start_count:0,d_claim_token:null,approvals:cohort.candidates.length,effects:0,operations:0}]);
+          await appendFile(lifecycle,JSON.stringify({event:'pre_spawn_state',phase,run_id:crashRun.run_id,state:beforeSpawn.rows[0]})+'\n','utf8');
+          const child=fork(childEntry,[],{cwd:process.cwd(),stdio:['ignore','pipe','pipe','ipc'],env:{
+            SNAPSHOT_D_TEST_PG_PORT:String(fixture.hostPort),SNAPSHOT_D_TEST_PHASE:phase,SNAPSHOT_D_TEST_RUN_ID:crashRun.run_id}});
+          if(!child.pid) throw new Error('D_NODE_CHILD_PID_MISSING');
+          const childPid=child.pid;
+          let childStderr='';
+          child.stderr?.on('data',chunk=>{childStderr+=String(chunk);void appendFile(join(crashEvidenceRoot,`d-node-${phase}.stderr.txt`),String(chunk),'utf8');});
+          child.stdout?.on('data',chunk=>{void appendFile(join(crashEvidenceRoot,`d-node-${phase}.stdout.txt`),String(chunk),'utf8');});
+          await appendFile(lifecycle,JSON.stringify({event:'spawned',task:'m1task5-d3',phase,entry:childEntry,pid:childPid,
+            run_id:crashRun.run_id,source_id:crashSource,container_id:fixture.containerId,image:fixture.imageReference,
+            image_digest:fixture.repoDigest,runtime_image_id:fixture.runtimeImageId})+'\n','utf8');
+          const workerLoaded=await new Promise<{type:string;pid:number;worker_sha256:string;worker_path:string;hasWorker:boolean}>((resolve,reject)=>{
+            const timer=setTimeout(()=>{child.kill('SIGKILL');reject(new Error('D_NODE_WORKER_IMPORT_TIMEOUT'));},10_000);
+            child.on('message',message=>{const value=message as {type:string;pid:number;worker_sha256:string;worker_path:string;hasWorker:boolean};
+              if(value.type==='worker-loaded') {clearTimeout(timer);resolve(value);}});
+            child.once('error',error=>{clearTimeout(timer);reject(error);});
+            child.once('exit',(code,signal)=>{clearTimeout(timer);reject(new Error(`D_NODE_CHILD_EXITED_BEFORE_IMPORT:${code}:${signal}:${childStderr}`));});
+          });
+          expect(workerLoaded).toMatchObject({pid:childPid,hasWorker:true,worker_sha256:expect.any(String)});
+          await appendFile(lifecycle,JSON.stringify({event:'worker_loaded',phase,...workerLoaded})+'\n','utf8');
+          const boundary=await new Promise<{type:string;phase:string;run_id:string;source_pk:string;operation_id:string;pid:number}>((resolve,reject)=>{
+            const timer=setTimeout(()=>{child.kill('SIGKILL');reject(new Error('D_NODE_CRASH_BOUNDARY_TIMEOUT'));},30_000);
+            child.on('message',message=>{const value=message as {type:string;phase:string;run_id:string;source_pk:string;operation_id:string;pid:number};
+              if(value.type==='aggregate-boundary') {clearTimeout(timer);resolve(value);}});
+            child.once('error',error=>{clearTimeout(timer);reject(error);});
+            child.once('exit',(code,signal)=>{clearTimeout(timer);reject(new Error(`D_NODE_CHILD_EXITED:${code}:${signal}:${childStderr}`));});
+          });
+          expect(boundary).toMatchObject({type:'aggregate-boundary',phase,run_id:crashRun.run_id,pid:childPid});
+          const applicationName=`dgo-m1t5-d-${phase}`;
+          const pgBackends=await fixture.pool.query(`SELECT pid::int FROM pg_stat_activity WHERE application_name=$1
+            AND datname='postgres' AND usename='postgres' AND client_addr IS NOT NULL ORDER BY pid`,[applicationName]);
+          expect(pgBackends.rowCount).toBeGreaterThan(0);
+          const operations=await fixture.pool.query(`SELECT m.source_pk,o.operation_id::text,m.canonical_object_id::text,m.sequence_value::text,
+            e.operation_id::text AS effect_operation_id,e.outbox_id,
+            (SELECT deleted_at FROM hub.canonical_customer c WHERE c.tenant_id=m.tenant_key AND c.id=m.canonical_object_id) AS deleted_at,
+            EXISTS(SELECT 1 FROM control.source_version_receipt r WHERE r.tenant_key=m.tenant_key AND r.source_id=m.source_id
+              AND r.entity=m.entity AND r.source_pk=m.source_pk AND r.deleted AND r.source_version=m.sequence_value) AS deleted_receipt
+            FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_operation o USING(candidate_id,entity,source_pk)
+            LEFT JOIN control.etl_snapshot_delete_effect e USING(candidate_id,entity,source_pk)
+            WHERE m.candidate_id=$1 ORDER BY m.source_pk COLLATE "C"`,[crashCandidate.candidate_id]);
+          expect(operations.rows).toHaveLength(2);
+          const committedMembers=operations.rows.filter(row=>row.effect_operation_id!==null);
+          expect(committedMembers.length).toBe(phase==='before'?0:1);
+          if(phase==='after') {
+            expect(committedMembers[0]).toMatchObject({source_pk:boundary.source_pk,effect_operation_id:boundary.operation_id,
+              outbox_id:expect.any(String),deleted_at:expect.any(Date),deleted_receipt:true});
+            const leaseBeforeHeartbeat=await fixture.pool.query(`SELECT d_heartbeat_at::text,d_lease_expires_at,clock_timestamp() AS db_now,
+                d_lease_expires_at>clock_timestamp() AS lease_live
+              FROM control.etl_snapshot_delete_run WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
+              [owner.tenantId,crashSource,crashRun.run_id]);
+            const heartbeatBefore=leaseBeforeHeartbeat.rows[0]?.d_heartbeat_at;
+            const originalLeaseUntil=leaseBeforeHeartbeat.rows[0]?.d_lease_expires_at as Date|undefined;
+            expect(leaseBeforeHeartbeat.rows[0]?.lease_live).toBe(true);
+            expect(originalLeaseUntil).toBeInstanceOf(Date);
+            const heartbeatDeadline=Date.now()+120_000;
+            let heartbeatAfter:string|undefined;
+            let renewedLeaseUntil:Date|undefined,heartbeatDbNow:Date|undefined;
+            while(Date.now()<heartbeatDeadline) {
+              await new Promise(resolve=>setTimeout(resolve,250));
+              const heartbeat=await fixture.pool.query(`SELECT d_heartbeat_at::text,d_lease_expires_at,clock_timestamp() AS db_now
+                FROM control.etl_snapshot_delete_run
+                WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,crashSource,crashRun.run_id]);
+              heartbeatAfter=heartbeat.rows[0]?.d_heartbeat_at;
+              renewedLeaseUntil=heartbeat.rows[0]?.d_lease_expires_at as Date|undefined;
+              heartbeatDbNow=heartbeat.rows[0]?.db_now as Date|undefined;
+              if(heartbeatAfter&&heartbeatAfter!==heartbeatBefore&&heartbeatDbNow&&originalLeaseUntil&&
+                  heartbeatDbNow>originalLeaseUntil&&renewedLeaseUntil&&renewedLeaseUntil>heartbeatDbNow) break;
+            }
+            expect(heartbeatAfter).toBeTruthy();
+            expect(heartbeatAfter).not.toBe(heartbeatBefore);
+            expect(heartbeatDbNow).toBeInstanceOf(Date);
+            expect(heartbeatDbNow!.getTime()).toBeGreaterThan(originalLeaseUntil!.getTime());
+            expect(renewedLeaseUntil).toBeInstanceOf(Date);
+            expect(renewedLeaseUntil!.getTime()).toBeGreaterThan(heartbeatDbNow!.getTime());
+            await appendFile(lifecycle,JSON.stringify({event:'heartbeat_renewed_while_worker_inflight',phase,run_id:crashRun.run_id,
+              heartbeat_before:heartbeatBefore,heartbeat_after:heartbeatAfter,initial_lease_until:originalLeaseUntil!.toISOString(),
+              db_now_after_initial_expiry:heartbeatDbNow!.toISOString(),renewed_lease_until:renewedLeaseUntil!.toISOString(),
+              pause_ms:heartbeatDbNow!.getTime()-(leaseBeforeHeartbeat.rows[0].db_now as Date).getTime()})+'\n','utf8');
+          }
+          await appendFile(lifecycle,JSON.stringify({event:'boundary',phase,pid:childPid,run_id:crashRun.run_id,
+            source_pk:boundary.source_pk,operation_id:boundary.operation_id,postgres_pids:pgBackends.rows.map(row=>row.pid),
+            committed_effects:committedMembers.length,child_stderr:childStderr})+'\n','utf8');
+          expect(child.kill('SIGKILL')).toBe(true);
+          const childExit=await new Promise<{code:number|null;signal:NodeJS.Signals|null}>(resolve=>
+            child.once('close',(code,signal)=>resolve({code,signal})));
+          expect(childExit).toEqual({code:null,signal:'SIGKILL'});
+          await appendFile(lifecycle,JSON.stringify({event:'killed',phase,pid:childPid,run_id:crashRun.run_id,
+            kill_signal:'SIGKILL',exit_code:childExit.code,exit_signal:childExit.signal})+'\n','utf8');
+          const gone=await fixture.pool.query(`SELECT count(*)::int AS count FROM pg_stat_activity WHERE application_name=$1
+            AND datname='postgres' AND usename='postgres'`,[applicationName]);
+          expect(gone.rows).toEqual([{count:0}]);
+          if(phase==='after') {
+            const replay=await crashApi.inject({method:'POST',url:crashApprovalRoute,headers:crashApprovalHeaders,payload:crashApprovalBody});
+            expect(replay.statusCode).toBe(200);
+            expect(replay.json().data).toMatchObject({approval_id:crashApproval!.json().data.approval_id,replayed:true});
+          }
+          await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second',
+            d_next_retry_at=clock_timestamp() WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
+            [owner.tenantId,crashSource,crashRun.run_id]);
+          await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+          const recovered=await fixture.pool.query(`SELECT d.status,d.d_start_count,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects,
+            control.etl_snapshot_delete_candidate_current_d3($1,$2,c.candidate_id,true) AS current_after_effect
+            FROM control.etl_snapshot_delete_run d JOIN control.etl_snapshot_delete_candidate c USING(tenant_key,source_id,run_id)
+            WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3 AND c.entity='customer'`,
+            [owner.tenantId,crashSource,crashRun.run_id]);
+          expect(recovered.rows).toEqual([{status:'COMPLETE',d_start_count:2,effects:phase==='after'?3:2,current_after_effect:true}]);
+          const finalOperations=await fixture.pool.query(`SELECT m.source_pk,o.operation_id::text,e.operation_id::text AS effect_operation_id,
+            e.sequence_value::text,m.sequence_value::text,e.inferred_deleted_at=r.completed_at AS exact_time,
+            e.outbox_id IS NOT NULL AS outbox,
+            EXISTS(SELECT 1 FROM control.source_version_receipt vr JOIN control.canonical_apply_outbox ob
+              ON (ob.apply_xid,ob.source_content_digest,ob.projection_digest)=(vr.apply_xid,vr.source_content_digest,vr.projection_digest)
+              WHERE vr.tenant_key=e.tenant_key AND vr.source_id=e.source_id AND vr.entity=e.entity AND vr.source_pk=e.source_pk
+                AND vr.deleted AND vr.source_version=e.sequence_value AND ob.id=e.outbox_id AND ob.operation='DELETE') AS receipt_outbox_match,
+            (SELECT deleted_at FROM hub.canonical_customer cc WHERE cc.tenant_id=m.tenant_key AND cc.id=m.canonical_object_id) AS deleted_at
+            FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_operation o USING(candidate_id,entity,source_pk)
+            JOIN control.etl_snapshot_delete_effect e USING(candidate_id,entity,source_pk)
+            JOIN control.etl_run r ON r.run_id=m.second_run_id WHERE m.candidate_id=$1 ORDER BY m.source_pk COLLATE "C"`,
+            [crashCandidate.candidate_id]);
+          expect(finalOperations.rows).toHaveLength(2);
+          for(const row of finalOperations.rows) {
+            const original=operations.rows.find(item=>item.source_pk===row.source_pk);
+            expect(row).toMatchObject({operation_id:original.operation_id,effect_operation_id:original.operation_id,
+              sequence_value:original.sequence_value,exact_time:true,outbox:true,receipt_outbox_match:true,deleted_at:expect.any(Date)});
+          }
+          if(phase==='after') {
+            const orderCandidate=cohort.candidates.find(candidate=>candidate.entity==='order')!;
+            const orderState=await fixture.pool.query(`SELECT o.operation_id::text,e.operation_id::text AS effect_operation_id,
+                e.sequence_value::text,e.inferred_deleted_at=r.completed_at AS exact_time,e.outbox_id IS NOT NULL AS outbox,
+                EXISTS(SELECT 1 FROM control.source_version_receipt vr JOIN control.canonical_apply_outbox ob
+                  ON (ob.apply_xid,ob.source_content_digest,ob.projection_digest)=(vr.apply_xid,vr.source_content_digest,vr.projection_digest)
+                  WHERE vr.tenant_key=e.tenant_key AND vr.source_id=e.source_id AND vr.entity='order' AND vr.source_pk=e.source_pk
+                    AND vr.deleted AND vr.source_version=e.sequence_value AND ob.id=e.outbox_id AND ob.operation='DELETE') AS receipt_outbox_match,
+                (SELECT deleted_at FROM hub.canonical_order co WHERE co.tenant_id=m.tenant_key AND co.id=m.canonical_object_id) AS deleted_at,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=m.tenant_key AND cl.order_id=m.canonical_object_id
+                  AND cl.deleted_at=(SELECT completed_at FROM control.etl_run WHERE run_id=m.second_run_id)) AS tombstoned_lines,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=m.tenant_key AND cl.order_id=m.canonical_object_id) AS total_lines
+              FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_operation o USING(candidate_id,entity,source_pk)
+              JOIN control.etl_snapshot_delete_effect e USING(candidate_id,entity,source_pk) JOIN control.etl_run r ON r.run_id=m.second_run_id
+              WHERE m.candidate_id=$1`,[orderCandidate.candidate_id]);
+            expect(orderState.rows).toEqual([{operation_id:expect.any(String),effect_operation_id:expect.any(String),sequence_value:expect.any(String),
+              exact_time:true,outbox:true,receipt_outbox_match:true,deleted_at:expect.any(Date),tombstoned_lines:2,total_lines:2}]);
+          }
+          if(phase==='after') {
+            const replay=await crashApi.inject({method:'POST',url:crashApprovalRoute,headers:crashApprovalHeaders,payload:crashApprovalBody});
+            expect(replay.statusCode).toBe(200);
+            expect(replay.json().data).toMatchObject({approval_id:crashApproval!.json().data.approval_id,replayed:true});
+          }
+          await appendFile(lifecycle,JSON.stringify({event:'recovered',phase,pid:childPid,run_id:crashRun.run_id,
+            d_status:recovered.rows[0].status,d_start_count:recovered.rows[0].d_start_count,effects:recovered.rows[0].effects})+'\n','utf8');
+        }
+        const retrySource=crashSources.retry;
+        const retryCohort=crashCohorts.get(retrySource)!;
+        const retryOrder=retryCohort.candidates.find(candidate=>candidate.entity==='order')!;
+        for(const candidate of retryCohort.candidates) {
+          const body={run_id:retryCohort.run.run_id,candidate_revision:candidate.candidate_revision,
+            candidate_digest:candidate.candidate_digest,expected_owner_revision:'1',reason:'approved retry and rollback fixture'};
+          const response=await crashApi.inject({method:'POST',
+            url:`/hub/v1/admin/sources/${retrySource}/delete-candidates/${candidate.candidate_id}/approve`,
+            headers:{authorization:'Bearer owner-token','idempotency-key':`d3-order-retry-${candidate.entity}`},payload:body});
+          expect(response.statusCode).toBe(200);
+        }
+        const retryBusinessBefore=await fixture.pool.query(`SELECT co.deleted_at AS order_deleted,
+            (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id) AS total_lines,
+            (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id AND cl.deleted_at IS NULL) AS live_lines,
+            (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2 AND vr.entity='order') AS receipts,
+            (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2 AND ob.entity='order') AS outbox
+          FROM control.canonical_source_identity i JOIN hub.canonical_order co ON (co.tenant_id,co.id)=(i.tenant_key,i.order_id)
+          WHERE i.tenant_key=$1 AND i.source_id=$2 AND i.entity='order' AND i.source_pk='9007199254740993123'`,
+          [owner.tenantId,retrySource]);
+        expect(retryBusinessBefore.rows).toEqual([{order_deleted:null,total_lines:2,live_lines:2,receipts:1,outbox:1}]);
+        const retrySourceSqlLiteral=`'${retrySource.replaceAll("'","''")}'`;
+        await fixture.pool.query('CREATE SEQUENCE control.test_skip_d3_order_effect_hits');
+        await fixture.pool.query(`CREATE FUNCTION control.test_skip_d3_order_effect() RETURNS trigger LANGUAGE plpgsql AS $$
+          BEGIN IF NEW.source_id=${retrySourceSqlLiteral} AND NEW.entity='order' THEN
+            PERFORM nextval('control.test_skip_d3_order_effect_hits'); RETURN NULL; END IF; RETURN NEW; END $$`);
+        await fixture.pool.query(`CREATE TRIGGER test_skip_d3_order_effect BEFORE INSERT ON control.etl_snapshot_delete_effect
+          FOR EACH ROW EXECUTE FUNCTION control.test_skip_d3_order_effect()`);
+        let retryOperationId:string|undefined;
+        try {
+          for(let expectedStart=1;expectedStart<=4;expectedStart+=1) {
+            if(expectedStart>1) await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second',
+              d_next_retry_at=clock_timestamp() WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
+              [owner.tenantId,retrySource,retryCohort.run.run_id]);
+            const faultHitBefore=await fixture.pool.query<{last_value:string;is_called:boolean}>(
+              'SELECT last_value::text,is_called FROM control.test_skip_d3_order_effect_hits');
+            let workerFault:unknown;
+            try { await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker')); }
+            catch(error) { workerFault=error; }
+            const faultHitAfter=await fixture.pool.query<{last_value:string;is_called:boolean}>(
+              'SELECT last_value::text,is_called FROM control.test_skip_d3_order_effect_hits');
+            const retryAfterFault=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,d.d_lease_expires_at,
+                d.d_next_retry_at,(SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                  WHERE c.run_id=d.run_id AND c.entity='order') AS order_effects
+              FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+              [owner.tenantId,retrySource,retryCohort.run.run_id]);
+            const faultBusinessAfter=await fixture.pool.query(`SELECT co.deleted_at AS order_deleted,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id) AS total_lines,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id AND cl.deleted_at IS NULL) AS live_lines,
+                (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2 AND vr.entity='order') AS receipts,
+                (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2 AND ob.entity='order') AS outbox
+              FROM control.canonical_source_identity i JOIN hub.canonical_order co ON (co.tenant_id,co.id)=(i.tenant_key,i.order_id)
+              WHERE i.tenant_key=$1 AND i.source_id=$2 AND i.entity='order' AND i.source_pk='9007199254740993123'`,
+              [owner.tenantId,retrySource]);
+            await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'d_false_outcome_attempt',
+              run_id:retryCohort.run.run_id,source_id:retrySource,expected_start:expectedStart,
+              error:workerFault instanceof Error?{name:workerFault.name,message:workerFault.message,
+                code:(workerFault as NodeJS.ErrnoException).code,detail:(workerFault as Error&{detail?:string}).detail,
+                where:(workerFault as Error&{where?:string}).where,constraint:(workerFault as Error&{constraint?:string}).constraint}:String(workerFault),
+              trigger_hits_before:faultHitBefore.rows[0],trigger_hits_after:faultHitAfter.rows[0],d_state:retryAfterFault.rows[0],
+              order_business_before:retryBusinessBefore.rows[0],order_business_after:faultBusinessAfter.rows[0]})+'\n','utf8');
+            const hitsBefore=faultHitBefore.rows[0].is_called?BigInt(faultHitBefore.rows[0].last_value):0n;
+            const hitsAfter=faultHitAfter.rows[0].is_called?BigInt(faultHitAfter.rows[0].last_value):0n;
+            expect(hitsAfter).toBe(hitsBefore+1n);
+            expect(workerFault).toBeInstanceOf(Error);
+            expect((workerFault as Error).message).toBe('D_EFFECT_OUTCOME_REJECTED');
+            expect(retryAfterFault.rows[0].order_effects).toBe(0);
+            expect(faultBusinessAfter.rows).toEqual(retryBusinessBefore.rows);
+            const retryState=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,
+                CASE WHEN isfinite(d.d_next_retry_at) THEN extract(epoch FROM (d.d_next_retry_at-clock_timestamp()))::numeric END AS retry_seconds,
+                (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                  WHERE c.run_id=d.run_id AND c.entity='customer') AS customer_effects,
+                (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                  WHERE c.run_id=d.run_id AND c.entity='order') AS order_effects
+              FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+              [owner.tenantId,retrySource,retryCohort.run.run_id]);
+            const state=retryState.rows[0]!;
+            expect(state.d_start_count).toBe(expectedStart);
+            expect(state.d_error_code).toBe('D_EFFECT_OUTCOME_REJECTED');
+            expect(state.customer_effects).toBe(2);
+            expect(state.order_effects).toBe(0);
+            if(expectedStart<4) {
+              expect(state.status).toBe('APPLYING');
+              const delay=[5,30,120][expectedStart-1]!;
+              expect(Math.abs(Number(state.retry_seconds)-delay)).toBeLessThan(1.5);
+            } else { expect(state.status).toBe('FAILED'); expect(state.retry_seconds).toBeNull(); }
+            const retryOperation=await fixture.pool.query(`SELECT operation_id::text FROM control.etl_snapshot_delete_operation
+              WHERE candidate_id=$1 AND entity='order' AND source_pk='9007199254740993123'`,[retryOrder.candidate_id]);
+            expect(retryOperation.rows).toHaveLength(1);
+            if(retryOperationId) expect(retryOperation.rows[0]!.operation_id).toBe(retryOperationId);
+            retryOperationId=retryOperation.rows[0]!.operation_id;
+            const retryBusinessAfter=await fixture.pool.query(`SELECT co.deleted_at AS order_deleted,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id) AS total_lines,
+                (SELECT count(*)::int FROM hub.canonical_order_line cl WHERE cl.tenant_id=co.tenant_id AND cl.order_id=co.id AND cl.deleted_at IS NULL) AS live_lines,
+                (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2 AND vr.entity='order') AS receipts,
+                (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2 AND ob.entity='order') AS outbox
+              FROM control.canonical_source_identity i JOIN hub.canonical_order co ON (co.tenant_id,co.id)=(i.tenant_key,i.order_id)
+              WHERE i.tenant_key=$1 AND i.source_id=$2 AND i.entity='order' AND i.source_pk='9007199254740993123'`,
+              [owner.tenantId,retrySource]);
+            expect(retryBusinessAfter.rows).toEqual(retryBusinessBefore.rows);
+          }
+        } finally {
+          await fixture.pool.query('DROP TRIGGER test_skip_d3_order_effect ON control.etl_snapshot_delete_effect');
+          await fixture.pool.query('DROP FUNCTION control.test_skip_d3_order_effect()');
+        }
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'d_false_outcome_rollback_retry_budget',
+          run_id:retryCohort.run.run_id,source_id:retrySource,candidate_id:retryOrder.candidate_id,operation_id:retryOperationId,
+          starts:4,delays_seconds:[5,30,120],status:'FAILED',canonical_receipt_outbox_effect_orderline_rollback:true})+'\n','utf8');
+
+        const epochSource=crashSources.epoch;
+        const epochCohort=crashCohorts.get(epochSource)!;
+        const epochCandidate=epochCohort.candidates.find(candidate=>candidate.entity==='customer')!;
+        const epochApprovalBody={run_id:epochCohort.run.run_id,candidate_revision:epochCandidate.candidate_revision,
+          candidate_digest:epochCandidate.candidate_digest,expected_owner_revision:'1',reason:'approved before authority epoch change'};
+        const epochApprovalRoute=`/hub/v1/admin/sources/${epochSource}/delete-candidates/${epochCandidate.candidate_id}/approve`;
+        const epochApproval=await crashApi.inject({method:'POST',url:epochApprovalRoute,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d3-epoch-change-approval'},payload:epochApprovalBody});
+        expect(epochApproval.statusCode).toBe(200);
+        await auth.repository.updateSubject({tenantId:owner.tenantId,userId:owner.userId,managementScopes:['source:read']});
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const epochStale=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,sr.lifecycle,s.enabled,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,[owner.tenantId,epochSource,epochCohort.run.run_id]);
+        expect(epochStale.rows).toEqual([{status:'STALE',d_start_count:0,d_error_code:'D_APPROVAL_AUTHORITY_STALE',
+          lifecycle:'PAUSED',enabled:false,effects:0}]);
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'authority_epoch_revoked_before_first_effect',
+          run_id:epochCohort.run.run_id,source_id:epochSource,approval_id:epochApproval.json().data.approval_id,state:epochStale.rows[0]})+'\n','utf8');
+        await auth.repository.updateSubject({tenantId:owner.tenantId,userId:owner.userId,departmentId:'sales-east',businessRole:'sales',
+          managementScopes:owner.managementScopes});
+
+        const barrierSource=crashSources.barrier;
+        const barrierCohort=crashCohorts.get(barrierSource)!;
+        const barrierCandidate=barrierCohort.candidates.find(candidate=>candidate.entity==='customer')!;
+        const barrierBody={run_id:barrierCohort.run.run_id,candidate_revision:barrierCandidate.candidate_revision,
+          candidate_digest:barrierCandidate.candidate_digest,expected_owner_revision:'1',reason:'approved before matching security barrier'};
+        const barrierApproval=await crashApi.inject({method:'POST',
+          url:`/hub/v1/admin/sources/${barrierSource}/delete-candidates/${barrierCandidate.candidate_id}/approve`,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d3-matching-barrier-approval'},payload:barrierBody});
+        expect(barrierApproval.statusCode).toBe(200);
+        await fixture.pool.query(`INSERT INTO control.source_security_barrier
+          (tenant_key,source_id,barrier_type,reason_code,created_by)
+          VALUES($1,$2,'SOURCE_SCOPE_SECURITY_REMOVAL','D3_MATCHING_SOURCE_BARRIER','snapshot_owner')`,
+          [owner.tenantId,barrierSource]);
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const barrierStale=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,sr.lifecycle,s.enabled,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,[owner.tenantId,barrierSource,barrierCohort.run.run_id]);
+        expect(barrierStale.rows).toEqual([{status:'STALE',d_start_count:0,d_error_code:'D_CANDIDATE_STALE',
+          lifecycle:'PAUSED',enabled:false,effects:0}]);
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'matching_security_barrier_before_first_effect',
+          run_id:barrierCohort.run.run_id,source_id:barrierSource,approval_id:barrierApproval.json().data.approval_id,state:barrierStale.rows[0]})+'\n','utf8');
+
+        const baselineSource=crashSources.baseline;
+        const baselineCohort=crashCohorts.get(baselineSource)!;
+        const baselineCandidate=baselineCohort.candidates.find(candidate=>candidate.entity==='customer')!;
+        const baselineApprovalBody={run_id:baselineCohort.run.run_id,candidate_revision:baselineCandidate.candidate_revision,
+          candidate_digest:baselineCandidate.candidate_digest,expected_owner_revision:'1',reason:'approved before equal-count membership substitution'};
+        const baselineApproval=await crashApi.inject({method:'POST',
+          url:`/hub/v1/admin/sources/${baselineSource}/delete-candidates/${baselineCandidate.candidate_id}/approve`,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d3-baseline-swap-approval'},payload:baselineApprovalBody});
+        expect(baselineApproval.statusCode).toBe(200);
+        const liveBaseline=await fixture.pool.query<{source_pk:string;canonical_object_id:string;customer_id:string}>(`SELECT i.source_pk,i.canonical_object_id::text,i.customer_id::text
+          FROM control.canonical_source_identity i JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
+          WHERE i.tenant_key=$1 AND i.source_id=$2 AND i.entity='customer' AND c.deleted_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate_member m
+              WHERE m.candidate_id=$3 AND m.source_pk=i.source_pk)
+          ORDER BY i.source_pk COLLATE "C" LIMIT 1`,[owner.tenantId,baselineSource,baselineCandidate.candidate_id]);
+        expect(liveBaseline.rowCount).toBe(1);
+        const baselineBeforeSwap=await fixture.pool.query(`SELECT baseline_count::text,encode(baseline_digest,'hex') AS digest
+          FROM control.etl_snapshot_delete_baseline_fingerprint($1,$2,'customer',
+            (SELECT stable_scope_json->'proof' FROM control.etl_snapshot_delete_candidate WHERE candidate_id=$3))`,
+          [owner.tenantId,baselineSource,baselineCandidate.candidate_id]);
+        const aliasSourcePk=`D3-ALIAS-${crashFixtureSuffix}`;
+        await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+          VALUES($1,$2,'customer',$3,$4::uuid,$5::uuid)`,
+          [owner.tenantId,baselineSource,aliasSourcePk,liveBaseline.rows[0].canonical_object_id,liveBaseline.rows[0].customer_id]);
+        const baselineAfterSwap=await fixture.pool.query(`SELECT baseline_count::text,encode(baseline_digest,'hex') AS digest
+          FROM control.etl_snapshot_delete_baseline_fingerprint($1,$2,'customer',
+            (SELECT stable_scope_json->'proof' FROM control.etl_snapshot_delete_candidate WHERE candidate_id=$3))`,
+          [owner.tenantId,baselineSource,baselineCandidate.candidate_id]);
+        expect(baselineAfterSwap.rows[0].baseline_count).toBe(baselineBeforeSwap.rows[0].baseline_count);
+        expect(baselineAfterSwap.rows[0].digest).not.toBe(baselineBeforeSwap.rows[0].digest);
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const baselineStale=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,sr.lifecycle,s.enabled,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,[owner.tenantId,baselineSource,baselineCohort.run.run_id]);
+        expect(baselineStale.rows).toEqual([{status:'STALE',d_start_count:0,d_error_code:'D_CANDIDATE_STALE',
+          lifecycle:'PAUSED',enabled:false,effects:0}]);
+        await fixture.pool.query(`DELETE FROM control.canonical_source_identity
+          WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' AND source_pk=$3`,[owner.tenantId,baselineSource,aliasSourcePk]);
+        const presenceWriter=await sourceFixture.pool.connect();
+        try {
+          await presenceWriter.query(`SET ROLE ${sourceOwner}`);
+          await presenceWriter.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+            VALUES('C-19','Customer 19 restored','owner-ext','dept-ext','ACTIVE','2026-10-28 03:40:19.123456+00'),
+              ('C-20','Customer 20 restored','owner-ext','dept-ext','ACTIVE','2026-10-28 03:40:20.123456+00')
+            ON CONFLICT(customer_id) DO UPDATE SET customer_name=EXCLUDED.customer_name,updated_at=EXCLUDED.updated_at`);
+        } finally { await presenceWriter.query('RESET ROLE').catch(()=>undefined); presenceWriter.release(); }
+        await service.activate(owner,baselineSource,'1',crashSourceApprovalIds.get(baselineSource)!);
+        const newerPresenceRun=await completeCWithoutD(baselineSource,'1',`d3-${baselineSource}-newer-presence`);
+        const sourceCallsBeforeDWorker=sourceConnectCalls;
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const newerPresence=await fixture.pool.query(`SELECT entity,source_pk,source_deleted FROM control.etl_snapshot_delete_presence
+          WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3 AND entity='customer' AND source_pk IN ('C-19','C-20') ORDER BY source_pk COLLATE "C"`,
+          [owner.tenantId,baselineSource,newerPresenceRun.run_id]);
+        expect(newerPresence.rows).toEqual([{entity:'customer',source_pk:'C-19',source_deleted:false},
+          {entity:'customer',source_pk:'C-20',source_deleted:false}]);
+        await service.pause(owner,baselineSource,'1','pause after newer C presence replay fixture');
+        const staleApprovalReplay=await crashApi.inject({method:'POST',
+          url:`/hub/v1/admin/sources/${baselineSource}/delete-candidates/${baselineCandidate.candidate_id}/approve`,
+          headers:{authorization:'Bearer owner-token','idempotency-key':'d3-baseline-swap-approval'},payload:baselineApprovalBody});
+        expect(staleApprovalReplay.statusCode).toBe(409);
+        expect(staleApprovalReplay.json().error.code).toBe('SOURCE_CONFLICT');
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'same_count_unrelated_baseline_membership_swap',
+          run_id:baselineCohort.run.run_id,source_id:baselineSource,approval_id:baselineApproval.json().data.approval_id,
+          baseline_before:baselineBeforeSwap.rows[0],baseline_after:baselineAfterSwap.rows[0],state:baselineStale.rows[0],
+          newer_presence_run_id:newerPresenceRun.run_id,newer_presence:newerPresence.rows,
+          old_approval_replay_status:staleApprovalReplay.statusCode,old_approval_replay_error:staleApprovalReplay.json().error.code})+'\n','utf8');
+        expect(sourceConnectCalls).toBe(sourceCallsBeforeDWorker);
+        const pausedCrashSources=await fixture.pool.query(`SELECT sr.source_id,sr.lifecycle,s.enabled FROM control.source_registry sr
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id) WHERE sr.tenant_key=$1 AND sr.source_id=ANY($2::text[])
+          ORDER BY sr.source_id COLLATE "C"`,[owner.tenantId,Object.values(crashSources)]);
+        expect(pausedCrashSources.rows).toEqual(Object.values(crashSources).sort().map(source_id=>({source_id,lifecycle:'PAUSED',enabled:false})));
+      } finally { await crashApi.close(); }
+
     } finally {
       await ownerPool.end();
       await sourceFixture.pool.query(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
@@ -1715,7 +2238,7 @@ describe('durable snapshot run admission', () => {
       await sourceFixture.close();
       e2eEndpointProfile=undefined;
     }
-  },120_000);
+  },240_000);
 
   it('persists the five second retry delay and fences a prior attempt after a fresh claim', async () => {
     const { createSnapshotRun } = await import('../etl-worker/snapshot-runs.js');

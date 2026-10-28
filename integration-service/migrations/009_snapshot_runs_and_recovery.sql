@@ -1475,7 +1475,11 @@ BEGIN
         AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')
         AND ((b.entity IS NULL AND b.channel_id IS NULL) OR EXISTS(SELECT 1 FROM jsonb_each(run_row.entity_channel_proof) cp
           WHERE (b.entity IS NULL OR cp.key=b.entity) AND (b.channel_id IS NULL OR cp.value->>'channel_id'=b.channel_id::text)))) THEN
-    UPDATE control.etl_snapshot_delete_run SET status='STALE',updated_at=clock_timestamp()
+    UPDATE control.etl_snapshot_delete_run d SET status='STALE',
+      d_error_code=CASE WHEN EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate c
+        WHERE c.tenant_key=d.tenant_key AND c.source_id=d.source_id AND c.run_id=d.run_id)
+        THEN 'D_CANDIDATE_STALE' ELSE d.d_error_code END,
+      updated_at=clock_timestamp()
       WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=latest.run_id;
     UPDATE control.etl_snapshot_delete_run d SET status='COMPLETE',candidate_count=0,updated_at=clock_timestamp()
       WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id AND d.status='PENDING'
@@ -2112,9 +2116,7 @@ BEGIN
     AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   IF NOT FOUND OR c.candidate_revision IS DISTINCT FROM p_candidate_revision OR c.candidate_digest IS DISTINCT FROM p_candidate_digest
-    OR d.status IS DISTINCT FROM 'AWAITING_OWNER' OR NOT d.above_threshold
-    OR NOT control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count)
-    OR NOT control.etl_snapshot_delete_candidate_current(p_tenant_key,p_source_id,p_candidate_id) THEN
+    OR NOT d.above_threshold OR NOT control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count) THEN
     RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
   END IF;
   request_hash:=public.digest(convert_to(jsonb_build_object('route','API-060','source_id',p_source_id,'candidate_id',p_candidate_id,
@@ -2126,9 +2128,21 @@ BEGIN
     IF previous.request_digest IS DISTINCT FROM request_hash THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT' USING ERRCODE='P0001'; END IF;
     SELECT * INTO approval FROM control.etl_snapshot_delete_approval WHERE approval_id=previous.approval_id
       AND tenant_key=p_tenant_key AND source_id=p_source_id;
-    IF NOT FOUND OR approval.candidate_id IS DISTINCT FROM p_candidate_id THEN RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001'; END IF;
+    IF NOT FOUND OR approval.candidate_id IS DISTINCT FROM p_candidate_id OR approval.run_id IS DISTINCT FROM p_run_id
+      OR approval.candidate_revision IS DISTINCT FROM p_candidate_revision OR approval.candidate_digest IS DISTINCT FROM p_candidate_digest
+      OR approval.approver_tenant_key IS DISTINCT FROM principal.tenant_key OR approval.approver_user_id IS DISTINCT FROM principal.user_id
+      OR approval.oidc_issuer IS DISTINCT FROM principal.issuer OR approval.oidc_subject IS DISTINCT FROM principal.subject
+      OR approval.approver_auth_epoch IS DISTINCT FROM principal.auth_epoch OR approval.required_scope IS DISTINCT FROM 'source:approve'
+      OR approval.owner_user_id IS DISTINCT FROM source_row.data_owner_user_id OR approval.owner_revision IS DISTINCT FROM source_row.owner_revision
+      OR NOT ((d.status='AWAITING_OWNER' AND control.etl_snapshot_delete_candidate_current(p_tenant_key,p_source_id,p_candidate_id))
+        OR (d.status IN ('APPLYING','COMPLETE') AND control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,p_candidate_id,true))) THEN
+      RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+    END IF;
     RETURN jsonb_build_object('approval_id',approval.approval_id,'status','APPROVED','candidate_id',approval.candidate_id,
       'candidate_revision',approval.candidate_revision,'candidate_digest',encode(approval.candidate_digest,'hex'),'replayed',true);
+  END IF;
+  IF d.status IS DISTINCT FROM 'AWAITING_OWNER' OR NOT control.etl_snapshot_delete_candidate_current(p_tenant_key,p_source_id,p_candidate_id) THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
   END IF;
   IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_approval WHERE candidate_id=p_candidate_id AND candidate_revision=p_candidate_revision) THEN
     RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
@@ -2159,3 +2173,488 @@ REVOKE ALL ON FUNCTION control.guard_etl_snapshot_delete_d2_immutable(),
 GRANT EXECUTE ON FUNCTION control.api021_snapshot_delete_summary(text,uuid),
   control.api021_delete_candidate_page(text,text,uuid,uuid,jsonb,integer,text,text,text,text),
   control.api060_approve_delete_candidate(text,text,uuid,uuid,integer,bytea,bigint,text,text,text,text,text,text,text) TO hub_api;
+
+-- M1-5D3 fenced logical apply. 009 is still unreleased; these are additive
+-- D-owned facts and routines, with no second canonical writer.
+ALTER TABLE control.etl_snapshot_delete_run
+  ADD COLUMN d_claim_token uuid,
+  ADD COLUMN d_lease_expires_at timestamptz,
+  ADD COLUMN d_start_count smallint NOT NULL DEFAULT 0 CHECK (d_start_count BETWEEN 0 AND 4),
+  ADD COLUMN d_next_retry_at timestamptz NOT NULL DEFAULT '-infinity'::timestamptz,
+  ADD COLUMN d_heartbeat_at timestamptz,
+  ADD COLUMN d_error_code text CHECK (d_error_code IS NULL OR d_error_code ~ '^[A-Z0-9_]{1,80}$');
+
+CREATE TABLE control.etl_snapshot_delete_operation (
+  candidate_id uuid NOT NULL,
+  entity text NOT NULL CHECK(entity IN ('customer','order')),
+  source_pk text COLLATE "C" NOT NULL,
+  operation_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(candidate_id,entity,source_pk),
+  UNIQUE(operation_id),
+  FOREIGN KEY(candidate_id,entity,source_pk)
+    REFERENCES control.etl_snapshot_delete_candidate_member(candidate_id,entity,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE TABLE control.etl_snapshot_delete_effect (
+  candidate_id uuid NOT NULL,
+  entity text NOT NULL CHECK(entity IN ('customer','order')),
+  source_pk text COLLATE "C" NOT NULL,
+  tenant_key text NOT NULL,
+  source_id text NOT NULL,
+  run_id uuid NOT NULL,
+  operation_id uuid NOT NULL,
+  canonical_object_id uuid NOT NULL,
+  channel_id uuid NOT NULL,
+  sequence_value numeric(20,0) NOT NULL CHECK(sequence_value BETWEEN 0 AND 99999999999999999999),
+  inferred_deleted_at timestamptz NOT NULL,
+  source_content_digest bytea NOT NULL CHECK(octet_length(source_content_digest)=32),
+  projection_digest bytea NOT NULL CHECK(octet_length(projection_digest)=32),
+  hub_revision bigint NOT NULL CHECK(hub_revision>0),
+  outbox_id bigint NOT NULL,
+  start_count smallint NOT NULL CHECK(start_count BETWEEN 1 AND 4),
+  claim_token uuid NOT NULL,
+  applied_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  PRIMARY KEY(candidate_id,entity,source_pk),
+  UNIQUE(outbox_id),
+  FOREIGN KEY(candidate_id,entity,source_pk)
+    REFERENCES control.etl_snapshot_delete_candidate_member(candidate_id,entity,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(candidate_id,entity,source_pk)
+    REFERENCES control.etl_snapshot_delete_operation(candidate_id,entity,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE TRIGGER etl_snapshot_delete_operation_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_delete_operation
+FOR EACH ROW EXECUTE FUNCTION control.guard_etl_snapshot_delete_immutable();
+CREATE TRIGGER etl_snapshot_delete_effect_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_delete_effect
+FOR EACH ROW EXECUTE FUNCTION control.guard_etl_snapshot_delete_immutable();
+REVOKE ALL ON control.etl_snapshot_delete_operation,control.etl_snapshot_delete_effect FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE OR REPLACE FUNCTION control.etl_snapshot_delete_candidate_current_d3(
+  p_tenant_key text,p_source_id text,p_candidate_id uuid,p_allow_completed boolean DEFAULT false)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
+AS $body$
+DECLARE c control.etl_snapshot_delete_candidate%ROWTYPE; r control.etl_run%ROWTYPE; d control.etl_snapshot_delete_run%ROWTYPE;
+  n bigint; fp bytea; member record; seen_count bigint:=0; digest_value bytea; live_count bigint; own_count bigint;
+BEGIN
+  SELECT * INTO c FROM control.etl_snapshot_delete_candidate
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND candidate_id=p_candidate_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=c.run_id;
+  SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=c.run_id;
+  IF NOT FOUND OR NOT (d.status='APPLYING' OR (p_allow_completed AND d.status='COMPLETE')
+       OR (NOT p_allow_completed AND d.status IN ('PENDING','AWAITING_OWNER')))
+     OR c.stable_scope_json->'proof' IS DISTINCT FROM d.stable_scope_json
+     OR c.scope_digest IS DISTINCT FROM public.digest(convert_to(jsonb_build_object('proof',c.stable_scope_json->'proof','entity',c.entity)::text,'UTF8'),'sha256')
+     OR NOT control.etl_snapshot_delete_proof_current(p_tenant_key,p_source_id,c.run_id)
+     OR EXISTS(SELECT 1 FROM control.etl_snapshot_delete_run x WHERE x.tenant_key=p_tenant_key AND x.source_id=p_source_id
+       AND x.reservation_ordinal>d.reservation_ordinal)
+     OR EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=r.tenant_key AND b.effective_fence>r.security_barrier_fence
+       AND (b.source_id IS NULL OR b.source_id=r.source_id) AND (b.credential_id IS NULL OR b.credential_id=r.credential_id)
+       AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')
+       AND ((b.entity IS NULL AND b.channel_id IS NULL) OR EXISTS(SELECT 1 FROM jsonb_each(r.entity_channel_proof) cp
+         WHERE (b.entity IS NULL OR cp.key=b.entity) AND (b.channel_id IS NULL OR cp.value->>'channel_id'=b.channel_id::text)))) THEN
+    RETURN false;
+  END IF;
+  IF control.etl_snapshot_delete_candidate_recomputed_digest(c.candidate_id) IS DISTINCT FROM c.candidate_digest THEN RETURN false; END IF;
+
+  -- Rebuild the original live-only denominator using exactly the D2 serializer.
+  SELECT count(*) INTO n FROM (
+    SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
+      FROM control.canonical_source_identity i JOIN hub.canonical_customer x ON (x.tenant_id,x.id)=(i.tenant_key,i.customer_id)
+      WHERE c.entity='customer' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+    UNION
+    SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
+      FROM control.canonical_source_identity i JOIN hub.canonical_order x ON (x.tenant_id,x.id)=(i.tenant_key,i.order_id)
+      WHERE c.entity='order' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+    UNION
+    SELECT m.tenant_key,m.source_id,m.entity,m.source_pk,m.canonical_object_id
+      FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate_member m
+        USING(candidate_id,entity,source_pk)
+      JOIN control.canonical_source_identity i ON (i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id)=
+        (m.tenant_key,m.source_id,m.entity,m.source_pk,m.canonical_object_id)
+      JOIN control.source_version_receipt vr ON (vr.tenant_key,vr.source_id,vr.entity,vr.source_pk,vr.canonical_object_id,vr.channel_id,vr.source_version,vr.deleted,vr.source_content_digest)=
+        (e.tenant_key,e.source_id,e.entity,e.source_pk,e.canonical_object_id,e.channel_id,e.sequence_value,true,e.source_content_digest)
+      JOIN control.canonical_apply_outbox ob ON (ob.id,ob.tenant_key,ob.source_id,ob.entity,ob.canonical_object_id,ob.channel_id,ob.operation,ob.source_content_digest,ob.projection_digest,ob.hub_revision)=
+        (e.outbox_id,e.tenant_key,e.source_id,e.entity,e.canonical_object_id,e.channel_id,'DELETE',e.source_content_digest,e.projection_digest,e.hub_revision)
+      WHERE e.candidate_id=c.candidate_id AND m.candidate_id=c.candidate_id
+        AND ((c.entity='customer' AND EXISTS(SELECT 1 FROM hub.canonical_customer x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.customer_id) AND x.deleted_at IS NOT NULL))
+          OR (c.entity='order' AND EXISTS(SELECT 1 FROM hub.canonical_order x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.order_id) AND x.deleted_at IS NOT NULL)))
+  ) baseline;
+  IF n IS DISTINCT FROM c.baseline_count THEN RETURN false; END IF;
+  digest_value:=control.etl_snapshot_delete_baseline_digest_seed(c.stable_scope_json->'proof',c.entity,n);
+  FOR member IN SELECT * FROM (
+    SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
+      FROM control.canonical_source_identity i JOIN hub.canonical_customer x ON (x.tenant_id,x.id)=(i.tenant_key,i.customer_id)
+      WHERE c.entity='customer' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+    UNION
+    SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
+      FROM control.canonical_source_identity i JOIN hub.canonical_order x ON (x.tenant_id,x.id)=(i.tenant_key,i.order_id)
+      WHERE c.entity='order' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+    UNION
+    SELECT m.tenant_key,m.source_id,m.entity,m.source_pk,m.canonical_object_id
+      FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate_member m USING(candidate_id,entity,source_pk)
+      JOIN control.canonical_source_identity i ON (i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id)=
+        (m.tenant_key,m.source_id,m.entity,m.source_pk,m.canonical_object_id)
+      JOIN control.source_version_receipt vr ON (vr.tenant_key,vr.source_id,vr.entity,vr.source_pk,vr.canonical_object_id,vr.channel_id,vr.source_version,vr.deleted,vr.source_content_digest)=
+        (e.tenant_key,e.source_id,e.entity,e.source_pk,e.canonical_object_id,e.channel_id,e.sequence_value,true,e.source_content_digest)
+      JOIN control.canonical_apply_outbox ob ON (ob.id,ob.tenant_key,ob.source_id,ob.entity,ob.canonical_object_id,ob.channel_id,ob.operation,ob.source_content_digest,ob.projection_digest,ob.hub_revision)=
+        (e.outbox_id,e.tenant_key,e.source_id,e.entity,e.canonical_object_id,e.channel_id,'DELETE',e.source_content_digest,e.projection_digest,e.hub_revision)
+      WHERE e.candidate_id=c.candidate_id AND m.candidate_id=c.candidate_id
+        AND ((c.entity='customer' AND EXISTS(SELECT 1 FROM hub.canonical_customer x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.customer_id) AND x.deleted_at IS NOT NULL))
+          OR (c.entity='order' AND EXISTS(SELECT 1 FROM hub.canonical_order x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.order_id) AND x.deleted_at IS NOT NULL)))
+  ) all_members ORDER BY source_pk COLLATE "C" LOOP
+    digest_value:=control.etl_snapshot_delete_baseline_member_digest(digest_value,member.tenant_key,member.source_id,member.entity,member.source_pk,member.canonical_object_id);
+    seen_count:=seen_count+1;
+  END LOOP;
+  SELECT count(*) INTO own_count FROM control.etl_snapshot_delete_effect e WHERE e.candidate_id=c.candidate_id;
+  SELECT count(*) INTO live_count FROM (
+    SELECT i.canonical_object_id FROM control.canonical_source_identity i JOIN hub.canonical_customer x ON (x.tenant_id,x.id)=(i.tenant_key,i.customer_id)
+      WHERE c.entity='customer' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+    UNION ALL
+    SELECT i.canonical_object_id FROM control.canonical_source_identity i JOIN hub.canonical_order x ON (x.tenant_id,x.id)=(i.tenant_key,i.order_id)
+      WHERE c.entity='order' AND i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=c.entity AND x.deleted_at IS NULL
+  ) live_members;
+  IF seen_count IS DISTINCT FROM c.baseline_count OR digest_value IS DISTINCT FROM c.baseline_membership_digest
+     OR live_count IS DISTINCT FROM c.baseline_count-own_count THEN RETURN false; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate_member m
+    LEFT JOIN control.etl_snapshot_delete_effect e ON (e.candidate_id,e.entity,e.source_pk)=(m.candidate_id,m.entity,m.source_pk)
+    LEFT JOIN control.canonical_source_identity i ON (i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id)=
+      (m.tenant_key,m.source_id,m.entity,m.source_pk,m.canonical_object_id)
+    WHERE m.candidate_id=c.candidate_id AND (
+      (e.candidate_id IS NULL AND (i.canonical_object_id IS NULL OR
+        (m.entity='customer' AND NOT EXISTS(SELECT 1 FROM hub.canonical_customer x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.customer_id) AND x.deleted_at IS NULL)) OR
+        (m.entity='order' AND NOT EXISTS(SELECT 1 FROM hub.canonical_order x WHERE (x.tenant_id,x.id)=(i.tenant_key,i.order_id) AND x.deleted_at IS NULL)) OR
+        m.sequence_value<=coalesce((SELECT vr.source_version FROM control.source_version_receipt vr WHERE vr.tenant_key=m.tenant_key AND vr.source_id=m.source_id
+          AND vr.channel_id=(r.entity_channel_proof->m.entity->>'channel_id')::uuid AND vr.entity=m.entity AND vr.source_pk=m.source_pk),-1)))
+      OR (e.candidate_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM control.source_version_receipt vr JOIN control.canonical_apply_outbox ob
+        ON ob.id=e.outbox_id AND ob.operation='DELETE' AND ob.source_content_digest=e.source_content_digest
+        WHERE vr.tenant_key=e.tenant_key AND vr.source_id=e.source_id AND vr.entity=e.entity AND vr.source_pk=e.source_pk
+          AND vr.channel_id=e.channel_id AND vr.source_version=e.sequence_value AND vr.deleted AND vr.canonical_object_id=e.canonical_object_id
+          AND vr.source_content_digest=e.source_content_digest)))
+  ) THEN RETURN false; END IF;
+  RETURN true;
+END;
+$body$;
+ALTER FUNCTION control.etl_snapshot_delete_candidate_current_d3(text,text,uuid,boolean) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.etl_snapshot_delete_candidate_current_d3(text,text,uuid,boolean) FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE FUNCTION control.claim_etl_snapshot_delete_apply(p_tenant_key text,p_source_id text,p_claim_token uuid,p_lease_seconds integer DEFAULT 60)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; c control.etl_snapshot_delete_candidate%ROWTYPE; result jsonb;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_lease_seconds NOT BETWEEN 15 AND 300 THEN
+    RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501';
+  END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN NULL; END IF;
+  SELECT x.* INTO d FROM control.etl_snapshot_delete_run x
+    WHERE x.tenant_key=p_tenant_key AND x.source_id=p_source_id AND x.status IN ('PENDING','AWAITING_OWNER','APPLYING')
+      AND x.d_next_retry_at<=clock_timestamp()
+      AND (x.status<>'APPLYING' OR x.d_lease_expires_at<=clock_timestamp())
+      AND EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption cs WHERE cs.tenant_key=x.tenant_key AND cs.source_id=x.source_id AND cs.run_id=x.run_id)
+    ORDER BY x.reservation_ordinal DESC LIMIT 1 FOR UPDATE SKIP LOCKED;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_approval a
+      JOIN control.etl_snapshot_delete_candidate cd ON cd.candidate_id=a.candidate_id
+      JOIN control.source_registry sr ON (sr.tenant_key,sr.source_id)=(a.tenant_key,a.source_id)
+      LEFT JOIN control.identity_binding b ON (b.issuer,b.subject,b.tenant_key,b.user_id)=
+        (a.oidc_issuer,a.oidc_subject,a.approver_tenant_key,a.approver_user_id)
+      LEFT JOIN control.auth_subject s ON (s.tenant_key,s.user_id)=(b.tenant_key,b.user_id)
+      LEFT JOIN control.tenant t ON t.tenant_key=b.tenant_key
+      WHERE cd.tenant_key=p_tenant_key AND cd.source_id=p_source_id AND cd.run_id=d.run_id
+        AND control.etl_snapshot_delete_ratio_exceeds(cd.candidate_count,cd.baseline_count)
+        AND (a.run_id<>d.run_id OR a.candidate_revision<>cd.candidate_revision OR a.candidate_digest<>cd.candidate_digest
+          OR a.baseline_count<>cd.baseline_count OR a.baseline_membership_digest<>cd.baseline_membership_digest
+          OR a.owner_user_id<>sr.data_owner_user_id OR a.owner_revision<>sr.owner_revision OR a.required_scope<>'source:approve'
+          OR NOT coalesce(b.enabled,false) OR NOT coalesce(s.enabled,false) OR s.auth_epoch<>a.approver_auth_epoch
+          OR NOT coalesce(s.management_scopes @> ARRAY['source:approve']::text[],false) OR NOT coalesce(t.enabled,false))) THEN
+    UPDATE control.etl_snapshot_delete_run SET status='STALE',d_error_code='D_APPROVAL_AUTHORITY_STALE',updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+    RETURN NULL;
+  END IF;
+  IF d.above_threshold AND EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate cd
+      WHERE cd.tenant_key=p_tenant_key AND cd.source_id=p_source_id AND cd.run_id=d.run_id
+        AND control.etl_snapshot_delete_ratio_exceeds(cd.candidate_count,cd.baseline_count)
+        AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_approval a WHERE a.candidate_id=cd.candidate_id
+          AND a.candidate_revision=cd.candidate_revision AND a.candidate_digest=cd.candidate_digest)) THEN RETURN NULL; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_run r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
+      AND r.status IN ('QUEUED','SCANNING','VALIDATING','READY','APPLYING'))
+    OR EXISTS(SELECT 1 FROM control.etl_snapshot_delete_run older WHERE older.tenant_key=p_tenant_key AND older.source_id=p_source_id
+      AND older.reservation_ordinal<d.reservation_ordinal AND older.status='PENDING'
+      AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption cs WHERE cs.tenant_key=older.tenant_key AND cs.source_id=older.source_id AND cs.run_id=older.run_id))
+    OR EXISTS(SELECT 1 FROM control.etl_snapshot_delete_run newer WHERE newer.tenant_key=p_tenant_key AND newer.source_id=p_source_id
+      AND newer.reservation_ordinal>d.reservation_ordinal) THEN RETURN NULL; END IF;
+  SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id
+    ORDER BY entity COLLATE "C" LIMIT 1;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF NOT control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,c.candidate_id,false) THEN
+    UPDATE control.etl_snapshot_delete_run SET status='STALE',d_claim_token=NULL,d_lease_expires_at=NULL,d_error_code='D_CANDIDATE_STALE',updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+    RETURN NULL;
+  END IF;
+  INSERT INTO control.etl_snapshot_delete_operation(candidate_id,entity,source_pk)
+    SELECT m.candidate_id,m.entity,m.source_pk FROM control.etl_snapshot_delete_candidate_member m
+      JOIN control.etl_snapshot_delete_candidate cd ON cd.candidate_id=m.candidate_id
+      WHERE cd.tenant_key=p_tenant_key AND cd.source_id=p_source_id AND cd.run_id=d.run_id
+    ON CONFLICT(candidate_id,entity,source_pk) DO NOTHING;
+  UPDATE control.etl_snapshot_delete_run SET status='APPLYING',d_claim_token=p_claim_token,
+    d_lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds),d_heartbeat_at=clock_timestamp(),d_error_code=NULL,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+  SELECT jsonb_build_object('tenant_key',p_tenant_key,'source_id',p_source_id,'run_id',d.run_id,'attempt_id',d.attempt_id,
+      'claim_token',p_claim_token,'start_count',d.d_start_count,'lease_expires_at',to_char(clock_timestamp()+make_interval(secs=>p_lease_seconds),
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')) INTO result;
+  RETURN result;
+END;
+$body$;
+ALTER FUNCTION control.claim_etl_snapshot_delete_apply(text,text,uuid,integer) OWNER TO CURRENT_USER;
+
+CREATE FUNCTION control.begin_etl_snapshot_delete_start(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid)
+RETURNS smallint LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE starts smallint;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  UPDATE control.etl_snapshot_delete_run SET d_start_count=d_start_count+1,d_next_retry_at='-infinity',updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND status='APPLYING'
+      AND d_claim_token=p_claim_token AND d_lease_expires_at>clock_timestamp() AND d_start_count<4
+    RETURNING d_start_count INTO starts;
+  RETURN starts;
+END;
+$body$;
+
+CREATE FUNCTION control.heartbeat_etl_snapshot_delete_apply(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid,p_lease_seconds integer DEFAULT 60)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_lease_seconds NOT BETWEEN 15 AND 300 THEN RETURN false; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()+make_interval(secs=>p_lease_seconds),
+    d_heartbeat_at=clock_timestamp(),updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND status='APPLYING'
+      AND d_claim_token=p_claim_token AND d_lease_expires_at>clock_timestamp();
+  RETURN FOUND;
+END;
+$body$;
+
+CREATE FUNCTION control.load_etl_snapshot_delete_apply_proof(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE result jsonb;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker'
+    OR NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id
+      AND d.run_id=p_run_id AND d.attempt_id=p_attempt_id AND d.status='APPLYING' AND d.d_claim_token=p_claim_token AND d.d_lease_expires_at>clock_timestamp())
+    OR NOT EXISTS(SELECT 1 FROM control.etl_run r JOIN control.etl_snapshot_manifest sm
+      ON (sm.tenant_key,sm.source_id,sm.run_id,sm.attempt_id)=(r.tenant_key,r.source_id,r.run_id,p_attempt_id) AND sm.state='EXTRACTED'
+      JOIN control.etl_snapshot_validation v ON (v.tenant_key,v.source_id,v.run_id,v.attempt_id,v.manifest_digest)=
+        (sm.tenant_key,sm.source_id,sm.run_id,sm.attempt_id,sm.manifest_digest)
+      WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id AND r.status='COMPLETE') THEN RETURN NULL; END IF;
+  SELECT jsonb_build_object('tenant_key',r.tenant_key,'source_id',r.source_id,'run_id',r.run_id,'attempt_id',p_attempt_id,'status',r.status,
+    'expected_entities',r.expected_entities,'credential_id',r.credential_id,'credential_revision',r.credential_revision,
+    'credential_generation',r.credential_generation,'admission_source_epoch',r.admission_source_epoch,'entity_channel_proof',r.entity_channel_proof,
+    'config_revision',r.config_revision,'config_digest',encode(r.config_digest,'hex'),'config',c.config,'mapping_revision',r.mapping_revision,
+    'mapping_digest',encode(r.mapping_digest,'hex'),'mappings',m.mappings,'identity_mapping_revision',r.identity_mapping_revision,
+    'identity_mapping_digest',encode(r.identity_mapping_digest,'hex'),'identity_mappings',i.mappings,
+    'endpoint_profile_digest',encode(r.endpoint_profile_digest,'hex'),'test_report_id',r.test_report_id,'approval_id',r.approval_id,
+    'data_contract_ref',r.data_contract_ref,'delete_contract',r.delete_contract,'security_barrier_fence',r.security_barrier_fence,
+    'owner_user_id',r.owner_user_id,'owner_revision',r.owner_revision,
+    'manifest',jsonb_build_object('manifest',sm.manifest,'digest',encode(sm.manifest_digest,'hex')),
+    'completed_at',to_char(r.completed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+    'validation',jsonb_build_object('proof_scope_digest',encode(v.proof_scope_digest,'hex'),'semantic_digest',encode(v.semantic_digest,'hex'),'coverage',v.coverage))
+    INTO result FROM control.etl_run r JOIN control.source_config_revision c
+      ON (c.tenant_key,c.source_id,c.revision,c.config_digest)=(r.tenant_key,r.source_id,r.config_revision,r.config_digest)
+    JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision,m.mapping_digest)=(r.tenant_key,r.source_id,r.mapping_revision,r.mapping_digest)
+    JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision,i.mapping_digest)=(r.tenant_key,r.source_id,r.identity_mapping_revision,r.identity_mapping_digest)
+    JOIN control.source_owner_approval a ON (a.id,a.tenant_key,a.source_id,a.owner_user_id,a.owner_revision,a.config_revision,a.mapping_revision,
+      a.identity_mapping_revision,a.test_report_id)=(r.approval_id,r.tenant_key,r.source_id,r.owner_user_id,r.owner_revision,r.config_revision,
+      r.mapping_revision,r.identity_mapping_revision,r.test_report_id)
+    JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id,t.config_revision,t.mapping_revision,t.identity_mapping_revision)=
+      (r.test_report_id,r.tenant_key,r.source_id,r.config_revision,r.mapping_revision,r.identity_mapping_revision) AND t.status='PASS'
+    JOIN control.etl_snapshot_manifest sm ON (sm.tenant_key,sm.source_id,sm.run_id,sm.attempt_id)=(r.tenant_key,r.source_id,r.run_id,p_attempt_id) AND sm.state='EXTRACTED'
+    JOIN control.etl_snapshot_validation v ON (v.tenant_key,v.source_id,v.run_id,v.attempt_id)=(r.tenant_key,r.source_id,r.run_id,p_attempt_id)
+    WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id AND r.status='COMPLETE';
+  RETURN result;
+END;
+$body$;
+
+CREATE FUNCTION control.list_etl_snapshot_delete_apply_members(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE result jsonb;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker'
+    OR NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id
+      AND d.run_id=p_run_id AND d.status='APPLYING' AND d.d_claim_token=p_claim_token AND d.d_lease_expires_at>clock_timestamp()) THEN RETURN NULL; END IF;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('candidate_id',c.candidate_id,'entity',c.entity,'candidate_revision',c.candidate_revision,
+      'candidate_digest',encode(c.candidate_digest,'hex'),'baseline_count',c.baseline_count,'candidate_count',c.candidate_count,
+      'above_threshold',control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count),
+      'members',coalesce((SELECT jsonb_agg(jsonb_build_object('source_pk',m.source_pk,'canonical_object_id',m.canonical_object_id,
+        'sequence_value',m.sequence_value::text,'inferred_completed_at',to_char(m.inferred_completed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+        'operation_id',o.operation_id,'applied',e.candidate_id IS NOT NULL) ORDER BY m.source_pk COLLATE "C")
+        FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_operation o USING(candidate_id,entity,source_pk)
+        LEFT JOIN control.etl_snapshot_delete_effect e USING(candidate_id,entity,source_pk)
+        WHERE m.candidate_id=c.candidate_id),'[]'::jsonb)) ORDER BY c.entity),'[]'::jsonb) INTO result
+    FROM control.etl_snapshot_delete_candidate c WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id;
+  RETURN result;
+END;
+$body$;
+
+CREATE FUNCTION control.check_etl_snapshot_delete_apply_current(p_tenant_key text,p_source_id text,p_run_id uuid,p_candidate_id uuid,
+  p_claim_token uuid,p_require_approval boolean DEFAULT true)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; c control.etl_snapshot_delete_candidate%ROWTYPE; owner_row record; approval control.etl_snapshot_delete_approval%ROWTYPE;
+  subject_row record; tenant_row record; binding_row record;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' THEN RETURN false; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
+  SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT FOUND OR NOT control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,p_candidate_id,false) THEN RETURN false; END IF;
+  SELECT r.data_owner_user_id,r.owner_revision,r.lifecycle INTO owner_row FROM control.source_registry r
+    WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id FOR UPDATE;
+  IF NOT FOUND OR owner_row.data_owner_user_id IS DISTINCT FROM c.stable_scope_json->'proof'->>'owner_user_id'
+    OR owner_row.owner_revision::text IS DISTINCT FROM c.stable_scope_json->'proof'->>'owner_revision' THEN RETURN false; END IF;
+  IF NOT control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count) THEN RETURN true; END IF;
+  SELECT * INTO approval FROM control.etl_snapshot_delete_approval WHERE candidate_id=p_candidate_id AND candidate_revision=c.candidate_revision FOR UPDATE;
+  IF NOT FOUND THEN RETURN NOT p_require_approval; END IF;
+  IF approval.run_id<>p_run_id OR approval.candidate_digest<>c.candidate_digest OR approval.baseline_count<>c.baseline_count
+    OR approval.baseline_membership_digest<>c.baseline_membership_digest OR approval.owner_user_id<>owner_row.data_owner_user_id
+    OR approval.owner_revision<>owner_row.owner_revision OR approval.required_scope<>'source:approve' THEN RETURN false; END IF;
+  SELECT b.enabled,s.enabled AS subject_enabled,s.auth_epoch,s.management_scopes,t.enabled AS tenant_enabled
+    INTO binding_row FROM control.identity_binding b JOIN control.auth_subject s USING(tenant_key,user_id)
+    JOIN control.tenant t USING(tenant_key) WHERE b.issuer=approval.oidc_issuer AND b.subject=approval.oidc_subject
+      AND b.tenant_key=approval.approver_tenant_key AND b.user_id=approval.approver_user_id FOR UPDATE OF b,s,t;
+  IF NOT FOUND OR NOT binding_row.enabled OR NOT binding_row.subject_enabled OR NOT binding_row.tenant_enabled
+    OR binding_row.auth_epoch<>approval.approver_auth_epoch OR NOT (binding_row.management_scopes @> ARRAY['source:approve']::text[]) THEN RETURN false; END IF;
+  RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.preflight_etl_snapshot_delete_apply_candidate(p_tenant_key text,p_source_id text,p_run_id uuid,p_candidate_id uuid,
+  p_claim_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' THEN RETURN false; END IF;
+  RETURN control.check_etl_snapshot_delete_apply_current(p_tenant_key,p_source_id,p_run_id,p_candidate_id,p_claim_token,true);
+END;
+$body$;
+
+CREATE FUNCTION control.record_etl_snapshot_delete_effect(p_tenant_key text,p_source_id text,p_run_id uuid,p_candidate_id uuid,
+  p_entity text,p_source_pk text,p_claim_token uuid,p_apply_status text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
+AS $body$
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; m control.etl_snapshot_delete_candidate_member%ROWTYPE;
+  c control.etl_snapshot_delete_candidate%ROWTYPE; operation uuid; channel uuid; receipt record; effect_deleted_at timestamptz; outbox_id bigint;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_apply_status<>'APPLIED' THEN
+    RAISE EXCEPTION 'D_EFFECT_OUTCOME_REJECTED' USING ERRCODE='55000';
+  END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
+  SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  SELECT * INTO m FROM control.etl_snapshot_delete_candidate_member WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk FOR UPDATE;
+  SELECT operation_id INTO operation FROM control.etl_snapshot_delete_operation WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk;
+  IF NOT FOUND OR m.canonical_object_id IS NULL OR operation IS NULL THEN RETURN false; END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_effect WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk) THEN
+    RETURN EXISTS(SELECT 1 FROM control.etl_snapshot_delete_effect e WHERE e.candidate_id=p_candidate_id AND e.entity=p_entity AND e.source_pk=p_source_pk
+      AND e.operation_id=operation AND e.canonical_object_id=m.canonical_object_id AND e.sequence_value=m.sequence_value);
+  END IF;
+  channel:=(SELECT (r.entity_channel_proof->p_entity->>'channel_id')::uuid FROM control.etl_run r
+    WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id);
+  SELECT vr.canonical_object_id,vr.source_version,vr.source_content_digest,vr.projection_digest,vr.apply_xid,
+      ob.id AS outbox_id,ob.hub_revision
+    INTO receipt FROM control.source_version_receipt vr JOIN control.canonical_apply_outbox ob
+      ON (ob.tenant_key,ob.source_id,ob.channel_id,ob.entity,ob.canonical_object_id,ob.operation,ob.apply_xid,ob.source_content_digest,ob.projection_digest)=
+         (vr.tenant_key,vr.source_id,vr.channel_id,vr.entity,vr.canonical_object_id,'DELETE',vr.apply_xid,vr.source_content_digest,vr.projection_digest)
+    WHERE vr.tenant_key=p_tenant_key AND vr.source_id=p_source_id AND vr.channel_id=channel AND vr.entity=p_entity
+      AND vr.source_pk=p_source_pk AND vr.canonical_object_id=m.canonical_object_id AND vr.source_version=m.sequence_value AND vr.deleted
+    ORDER BY ob.id DESC LIMIT 1;
+  IF NOT FOUND THEN RETURN false; END IF;
+  SELECT r.completed_at INTO effect_deleted_at FROM control.etl_run r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id AND r.run_id=p_run_id;
+  IF (p_entity='customer' AND NOT EXISTS(SELECT 1 FROM hub.canonical_customer x WHERE (x.tenant_id,x.id)=(p_tenant_key,m.canonical_object_id) AND x.deleted_at=effect_deleted_at))
+    OR (p_entity='order' AND NOT EXISTS(SELECT 1 FROM hub.canonical_order x WHERE (x.tenant_id,x.id)=(p_tenant_key,m.canonical_object_id) AND x.deleted_at=effect_deleted_at)) THEN
+    RETURN false;
+  END IF;
+  INSERT INTO control.etl_snapshot_delete_effect(candidate_id,entity,source_pk,tenant_key,source_id,run_id,operation_id,canonical_object_id,
+    channel_id,sequence_value,inferred_deleted_at,source_content_digest,projection_digest,hub_revision,outbox_id,start_count,claim_token)
+  VALUES(p_candidate_id,p_entity,p_source_pk,p_tenant_key,p_source_id,p_run_id,operation,m.canonical_object_id,channel,m.sequence_value,effect_deleted_at,
+    receipt.source_content_digest,receipt.projection_digest,receipt.hub_revision,receipt.outbox_id,d.d_start_count,p_claim_token);
+  IF NOT control.check_etl_snapshot_delete_apply_current(p_tenant_key,p_source_id,p_run_id,p_candidate_id,p_claim_token,true) THEN RETURN false; END IF;
+  RETURN true;
+END;
+$body$;
+
+CREATE FUNCTION control.finish_etl_snapshot_delete_apply(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid,p_status text,p_error_code text DEFAULT NULL)
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; missing boolean;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_status NOT IN ('COMPLETE','STALE','FAILED') THEN RETURN 'STALE'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
+  SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF p_status='COMPLETE' THEN
+    SELECT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+      WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id
+        AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_effect e WHERE (e.candidate_id,e.entity,e.source_pk)=(m.candidate_id,m.entity,m.source_pk)))
+      INTO missing;
+    IF missing THEN RAISE EXCEPTION 'D_EFFECTS_INCOMPLETE' USING ERRCODE='55000'; END IF;
+  END IF;
+  IF p_status='COMPLETE' AND EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate c WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id
+      AND c.run_id=p_run_id AND NOT control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,c.candidate_id,true)) THEN
+    p_status:='STALE'; p_error_code:='D_CANDIDATE_STALE';
+  END IF;
+  UPDATE control.etl_snapshot_delete_run SET status=p_status,d_claim_token=NULL,d_lease_expires_at=NULL,d_error_code=p_error_code,
+    d_next_retry_at='-infinity'::timestamptz,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  RETURN p_status;
+END;
+$body$;
+
+CREATE FUNCTION control.retry_etl_snapshot_delete_apply(p_tenant_key text,p_source_id text,p_run_id uuid,p_claim_token uuid,p_error_code text)
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; delay_seconds integer;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_error_code !~ '^[A-Z0-9_]{1,80}$' THEN RETURN 'STALE'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
+  SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF d.d_start_count>=4 THEN
+    UPDATE control.etl_snapshot_delete_run SET status='FAILED',d_claim_token=NULL,d_lease_expires_at=NULL,d_error_code=p_error_code,updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+    RETURN 'FAILED';
+  END IF;
+  delay_seconds:=CASE d.d_start_count WHEN 1 THEN 5 WHEN 2 THEN 30 ELSE 120 END;
+  UPDATE control.etl_snapshot_delete_run SET d_claim_token=NULL,d_lease_expires_at=clock_timestamp(),d_next_retry_at=clock_timestamp()+make_interval(secs=>delay_seconds),
+    d_error_code=p_error_code,updated_at=clock_timestamp() WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  RETURN 'RETRY_PENDING';
+END;
+$body$;
+
+REVOKE ALL ON FUNCTION control.claim_etl_snapshot_delete_apply(text,text,uuid,integer),
+  control.begin_etl_snapshot_delete_start(text,text,uuid,uuid),control.heartbeat_etl_snapshot_delete_apply(text,text,uuid,uuid,integer),
+  control.load_etl_snapshot_delete_apply_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_delete_apply_members(text,text,uuid,uuid),
+  control.check_etl_snapshot_delete_apply_current(text,text,uuid,uuid,uuid,boolean),
+  control.preflight_etl_snapshot_delete_apply_candidate(text,text,uuid,uuid,uuid),
+  control.record_etl_snapshot_delete_effect(text,text,uuid,uuid,text,text,uuid,text),
+  control.finish_etl_snapshot_delete_apply(text,text,uuid,uuid,text,text),
+  control.retry_etl_snapshot_delete_apply(text,text,uuid,uuid,text) FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_delete_apply(text,text,uuid,integer),
+  control.begin_etl_snapshot_delete_start(text,text,uuid,uuid),control.heartbeat_etl_snapshot_delete_apply(text,text,uuid,uuid,integer),
+  control.load_etl_snapshot_delete_apply_proof(text,text,uuid,uuid,uuid),control.list_etl_snapshot_delete_apply_members(text,text,uuid,uuid),
+  control.preflight_etl_snapshot_delete_apply_candidate(text,text,uuid,uuid,uuid),
+  control.record_etl_snapshot_delete_effect(text,text,uuid,uuid,text,text,uuid,text),
+  control.finish_etl_snapshot_delete_apply(text,text,uuid,uuid,text,text),
+  control.retry_etl_snapshot_delete_apply(text,text,uuid,uuid,text) TO hub_worker;
