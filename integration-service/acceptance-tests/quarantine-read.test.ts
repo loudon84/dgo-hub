@@ -43,6 +43,7 @@ let sourceBearer: string;
 let privateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
 let controlledIssuer: string;
 let controlledAudience: string;
+let authenticator: ReturnType<typeof createOidcAuthenticator>;
 
 function descendingTuple(left: { created_at: string; quarantine_id: string }, right: { created_at: string; quarantine_id: string }): boolean {
   return left.created_at > right.created_at || (left.created_at === right.created_at && left.quarantine_id > right.quarantine_id);
@@ -562,7 +563,7 @@ describe('API-023 quarantine read', () => {
     controlledAudience = audience;
     const controlledAuth = createAuthService({ pool: fixture.pool });
     await auth.repository.bindIdentity({ issuer: controlledIssuer, subject, tenantId, userId: ownerId });
-    const authenticator = createOidcAuthenticator({ issuer: controlledIssuer, audience,
+    authenticator = createOidcAuthenticator({ issuer: controlledIssuer, audience,
       jwksUrl: `http://127.0.0.1:${jwksPort}/jwks`, environmentKind: 'local_lab', allowLoopbackHttp: true }, controlledAuth);
     token = await tokenFor(subject);
 
@@ -732,10 +733,11 @@ describe('API-023 quarantine read', () => {
     await auth.repository.provisionTenant({ tenantId: 'm1q_other_tenant', businessTimezone: 'UTC' });
     await auth.repository.provisionSubject({ tenantId: 'm1q_other_tenant', userId: 'other-owner', managementScopes: ['source:read'] });
     await auth.repository.bindIdentity({ issuer: controlledIssuer, subject: 'other-tenant', tenantId: 'm1q_other_tenant', userId: 'other-owner' });
-    for (const [bearerValue, requested] of [[sourceBearer, sourceId], [await tokenFor('other-tenant'), sourceId], [token, 'missing-source']]) {
+    for (const [bearerValue, requested, status, code] of [[sourceBearer, sourceId, 401, 'AUTH_INVALID'], [await tokenFor('other-tenant'), sourceId, 404, 'SOURCE_NOT_FOUND'], [token, 'missing-source', 404, 'SOURCE_NOT_FOUND']] as const) {
       const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${requested}`,
         headers: { authorization: `Bearer ${bearerValue}` } });
-      expect(response.statusCode).toBeGreaterThanOrEqual(400);
+      expect(response.statusCode).toBe(status);
+      expect(response.json().error.code).toBe(code);
       expect(response.json()).not.toHaveProperty('data.items');
     }
   });
@@ -749,7 +751,8 @@ describe('API-023 quarantine read', () => {
       try {
         const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}`,
           headers: { authorization: `Bearer ${token}` } });
-        expect(response.statusCode).toBeGreaterThanOrEqual(400);
+        expect(response.statusCode).toBe(401);
+        expect(response.json().error.code).toBe('AUTH_REVOKED');
         expect(response.json()).not.toHaveProperty('data.items');
       } finally { await fixture.pool.query(`UPDATE control.${table} SET enabled=true WHERE ${predicate}`, [...args]); }
     }
@@ -763,7 +766,8 @@ describe('API-023 quarantine read', () => {
     try {
       const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}&limit=2&cursor=${first.json().data.next_cursor}`,
         headers: { authorization: `Bearer ${token}` } });
-      expect(response.statusCode).toBeGreaterThanOrEqual(400);
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe('AUTH_REVOKED');
       expect(response.json()).not.toHaveProperty('data.items');
     } finally { await fixture.pool.query('UPDATE control.identity_binding SET enabled=true WHERE issuer=$1 AND subject=$2', [controlledIssuer, subject]); }
   });
@@ -783,6 +787,57 @@ describe('API-023 quarantine read', () => {
       expect((await probe.query('SELECT pg_try_advisory_xact_lock(1296905544,1) AS acquired')).rows[0].acquired).toBe(true);
       await probe.query('ROLLBACK');
     } finally { probe.release(); }
+  });
+
+  it('rolls back an acquired fence when the following source lock fails', async () => {
+    let seamReached = false;
+    let competingLockAcquired: boolean | undefined;
+    const instrumentedPool = new Proxy(apiPool, {
+      get(target, property, receiver) {
+        if (property !== 'connect') return Reflect.get(target, property, receiver);
+        return async () => {
+          const client = await apiPool.connect();
+          return new Proxy(client, {
+            get(clientTarget, clientProperty, clientReceiver) {
+              if (clientProperty !== 'query') return Reflect.get(clientTarget, clientProperty, clientReceiver);
+              return async (...args: unknown[]) => {
+                if (typeof args[0] === 'string' && args[0].includes('control.lock_source_credential')) {
+                  seamReached = true;
+                  const probe = await fixture.pool.connect();
+                  try {
+                    await probe.query('BEGIN');
+                    competingLockAcquired = (await probe.query('SELECT pg_try_advisory_xact_lock(1296905544,1) AS acquired')).rows[0].acquired;
+                    await probe.query('ROLLBACK');
+                  } finally { probe.release(); }
+                }
+                return (client.query as (...values: unknown[]) => Promise<unknown>)(...args);
+              };
+            },
+          });
+        };
+      },
+    });
+    const faultApp = await buildApp({ logger: false, strictIngestion: { pool: instrumentedPool,
+      authService: createAuthService({ pool: apiPool }), authenticator } });
+    await fixture.pool.query('REVOKE EXECUTE ON FUNCTION control.lock_source_credential(text,text) FROM hub_api');
+    try {
+      const response = await faultApp.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}`,
+        headers: { authorization: `Bearer ${token}` } });
+      expect(seamReached).toBe(true);
+      expect(competingLockAcquired).toBe(false);
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error.code).toBe('AUTH_UNAVAILABLE');
+      expect(response.json()).not.toHaveProperty('data.items');
+      const probe = await fixture.pool.connect();
+      try {
+        await probe.query('BEGIN');
+        expect((await probe.query('SELECT pg_try_advisory_xact_lock(1296905544,1) AS acquired')).rows[0].acquired).toBe(true);
+        await probe.query('ROLLBACK');
+      } finally { probe.release(); }
+    } finally {
+      await fixture.pool.query('GRANT EXECUTE ON FUNCTION control.lock_source_credential(text,text) TO hub_api');
+      await faultApp.close();
+    }
   });
 
   it('rejects a snapshot index row whose outcome ID belongs to another origin tuple', async () => {
