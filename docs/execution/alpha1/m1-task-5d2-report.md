@@ -30,6 +30,17 @@ The real API fixture has two customer candidate members. The default-limit HTTP 
 
 The final full-test `before.json` and `after.json` bind all six product-owned paths to actual HEAD `0871e857fe00b866fdf9a8b51a19641ebfb11d33`; manifests are identical across the gate. Exact per-file raw/LF SHA-256, byte size, and Git blob values are in those captured manifests. The explicit evidence inventory is `E:\m1t5-runtime\6c837d40-e80f-41f9-8142-81c106baac9f\evidence-index.json` (39 individually enumerated files; SHA-256 `1a31ea8bc6cf51102dec0cf962799a07af2d43762b380cf94a47515722381bbe`). It references captured artifacts in place and does not copy them.
 
+The committed source bindings in both final manifests are:
+
+| Path | Bytes | Raw SHA-256 | LF SHA-256 | Git blob |
+| --- | ---: | --- | --- | --- |
+| `integration-service/acceptance-tests/snapshot-runs.test.ts` | 196022 | `c70e20bc891b9e9879fb99ed3cabcca59b791f44b5d55271b87d935a1a98f019` | same | `4b1c841f216d96e48bccb6e9b68a8ec69dd4f763` |
+| `integration-service/etl-worker/snapshot-runs.ts` | 29801 | `894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806` | same | `a625ae853769330460f76b5d43483dc4ada0a5dc` |
+| `integration-service/etl-worker/snapshot-delete-api.ts` | 3469 | `db0f31de4c2e217c958522c26558c56c37f811ca460125cbb3eb2d800703f908` | same | `1bf807f7471e0e5d8fa8d9efa8e69d899ab0c529` |
+| `integration-service/ingestion-api/snapshot-routes.ts` | 8460 | `de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61` | same | `7c7028db9632b00c43c2bd890f6e94a14737a85b` |
+| `integration-service/migrations/009_snapshot_runs_and_recovery.sql` | 171386 | `d2d34ca473487fc303256f1fe7c1bb9659d7884d233f97f2dc049abd2bf2197a` | `42b3304e109460c205be25693fe0e86f2473ba6bc2a6e82f4e609b31cf81ee3f` | `6a174076e6e2629c66732c8882ad1f70b00964a7` |
+| `.superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5d2-schema-contract.md` | 7576 | `3a6d612359b345352f18d504a510f1f412999a9d2de79dca62bdb95d953fa313` | `11231c4c9300d9bfefedd5ed44034bdd1fb6a5f8d5b693a216bb88a62074a7f0` | `d9c829a581b82322b98cef4d68671d711a20d5ec` |
+
 The full-suite PostgreSQL lifecycle records identify three owned containers, all pinned to image `postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`: run labels `7051a0ac-522f-47aa-a518-8c7b23ae3afb` / container `bddbf9fea5c0126c074279de804a48b759034b9b9349b315cb6c454682ebf59a`, `839d0e54-b9be-4acb-8028-6d5a55477b8f` / `0615b49ae7fdf6348d57c3abd058bc5d612addd209a1470f29c229ad92e268ec`, and `9354fe7b-f529-4ce1-9023-0495231ffe68` / `667b5f3b35f035e2ed094172825b59f3f28d4c81b5d6655e6e103c5e86c109db`. Each lifecycle record reports ownership confirmed and exact container absence after removal. The Node lifecycle file records only test-created continuation children, their labels/PIDs, termination, and recovery observations.
 
 Earlier failed attempts remain preserved under their original external UUID roots, including migration SQLSTATE 42830 and native API SQL errors 42702, 42703, and 42P01; fixes were applied before the final green gates. The transient test-fixture C validation failure was traced to a scope update clearing the fixture Owner’s `sales-east` department and `sales` role; the fixture now preserves both while changing the auth epoch, and the full file passes.
