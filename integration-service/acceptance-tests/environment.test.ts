@@ -451,3 +451,59 @@ it('accepts the checked-in platform example only as a syntax example', async () 
   expect(result.exitCode).toBe(0);
   expect(JSON.parse(result.output)).toMatchObject({ status: 'BLOCKED', product_ready: false, example: true });
 });
+
+
+describe('platform placeholder protection', () => {
+  it('blocks the shipped example after its example flag is flipped', () => {
+    const path = new URL('../../docs/approvals/environment-inputs.platform.example.json', import.meta.url);
+    const input = { ...JSON.parse(readFileSync(path, 'utf8')), example: false };
+    const result = evaluateM0Entry(platformSignoffs(), input, { expectedKind: 'platform', allowExample: false });
+    expect(result.status).toBe('BLOCKED');
+    expect(result.missing).toContain('environment:placeholder_reference');
+  });
+
+  it('blocks each recognizable placeholder reference while allowing legitimate declared identities', () => {
+    const env = platformEnvironment();
+    const source = env.sources[0]!;
+    const variants: unknown[] = [
+      { ...env, identity_mapping_ref: 'REQUIRED_IDENTITY_MAPPING_REFERENCE' },
+      { ...env, backup_ref: 'required_backup_and_restore_evidence_reference' },
+      ...(['input_ref', 'data_contract_ref', 'mapping_ref', 'replica_authorization_ref', 'deletion_contract_ref'] as const).map(key => ({ ...env, sources: [{ ...source, [key]: 'ExAmPlE://placeholder' }] })),
+      { ...env, test_identities: [{ ...env.test_identities[0], actor_ref: 'idp://example-tenant/sales-1' }, ...env.test_identities.slice(1)] },
+      { ...env, test_identities: [{ ...env.test_identities[0], actor_ref: 'idp://example-tenant/sales-2' }, ...env.test_identities.slice(1)] },
+      { ...env, test_identities: [{ ...env.test_identities[0], actor_ref: 'idp://example-tenant/manager' }, ...env.test_identities.slice(1)] },
+    ];
+    for (const input of variants) expect(evaluateM0Entry(platformSignoffs(), input, { expectedKind: 'platform', allowExample: false }).missing).toContain('environment:placeholder_reference');
+    env.test_identities[0]!.actor_ref = 'idp://tenant-north/example-specialist';
+    expect(evaluateM0Entry(platformSignoffs(), env, { expectedKind: 'platform', allowExample: false }).status).toBe('PASS');
+  });
+});
+
+
+it('blocks a flag-flipped platform example through the formal CLI', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'alpha1-platform-placeholder-'));
+  try {
+    const sample = JSON.parse(readFileSync(new URL('../../docs/approvals/environment-inputs.platform.example.json', import.meta.url), 'utf8'));
+    const environmentPath = join(dir, 'environment.json');
+    const signoffsPath = join(dir, 'signoffs.json');
+    writeFileSync(environmentPath, JSON.stringify({ ...sample, example: false }));
+    writeFileSync(signoffsPath, JSON.stringify(platformSignoffs()));
+    const args = ['--signoffs', signoffsPath, '--environment', environmentPath, '--expected-kind', 'platform'];
+    const result = await runCheckM0Entry(args);
+    expect(result.exitCode).toBe(2);
+    expect(JSON.parse(result.output)).toMatchObject({ status: 'BLOCKED', product_ready: false, missing: expect.arrayContaining(['environment:placeholder_reference']) });
+    const syntax = await runCheckM0Entry([...args, '--validate-example']);
+    expect(syntax.exitCode).toBe(0);
+    expect(JSON.parse(syntax.output)).toMatchObject({ status: 'BLOCKED', product_ready: false });
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+
+it('rejects explicit placeholder approval identities for platform without changing site rules', () => {
+  const approvals = platformSignoffs();
+  approvals.approvals[0]!.actor_ref = 'example://approver';
+  expect(evaluateM0Entry(approvals, platformEnvironment(), { expectedKind: 'platform', allowExample: false }).missing).toContain('signoffs:placeholder_reference');
+  approvals.approvals[0]!.actor_ref = 'REQUIRED_APPROVER_REFERENCE';
+  expect(evaluateM0Entry(approvals, platformEnvironment(), { expectedKind: 'platform', allowExample: false }).missing).toContain('signoffs:placeholder_reference');
+  expect(evaluateM0Entry(approvals, validEnvironment(), { expectedKind: 'site', allowExample: false }).status).toBe('PASS');
+});

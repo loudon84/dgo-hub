@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { environmentInputSchema, identityReferenceSchema } from './environment.js';
+import { environmentInputSchema, identityReferenceSchema, type EnvironmentInput } from './environment.js';
 
 const approvalRoles = ['product', 'architecture', 'data_owner', 'security', 'test'] as const;
 
@@ -37,6 +37,27 @@ export const signoffRecordSchema = z.object({
 
 export type SignoffRecord = z.infer<typeof signoffRecordSchema>;
 
+// These markers are not proof that other references resolve or are authentic.
+function isPlaceholderReference(reference: string): boolean {
+  const value = reference.trim();
+  const exampleActors = new Set([
+    'idp://example-tenant/sales-1', 'idp://example-tenant/sales-2', 'idp://example-tenant/manager',
+  ]);
+  return /^(?:example:\/\/|required_)/i.test(value) || exampleActors.has(value.toLowerCase());
+}
+
+function hasPlatformPlaceholder(environment: EnvironmentInput): boolean {
+  const references = [
+    environment.identity_mapping_ref, environment.backup_ref,
+    ...environment.test_identities.map(identity => identity.actor_ref),
+    ...environment.sources.flatMap(source => [
+      source.mapping_ref, source.replica_authorization_ref, source.deletion_contract_ref,
+      ...(source.connection_mode === 'SIMULATED_IMPORT' ? [source.input_ref, source.data_contract_ref] : []),
+    ]),
+  ];
+  return references.some(isPlaceholderReference);
+}
+
 export type M0EntryResult = { status: 'PASS' | 'BLOCKED'; missing: string[]; example: boolean };
 
 export function evaluateM0Entry(
@@ -56,6 +77,8 @@ export function evaluateM0Entry(
     const actualKind = env.acceptance_level === 'platform' ? 'platform' : env.environment_kind;
     if (actualKind !== options.expectedKind) missing.push('environment:kind_mismatch');
     if (actualKind === 'platform' && signoffResult.success && !signoffResult.data.supplement_ref) missing.push('signoffs:supplement_ref_missing');
+    if (actualKind === 'platform' && hasPlatformPlaceholder(env)) missing.push('environment:placeholder_reference');
+    if (actualKind === 'platform' && signoffResult.success && signoffResult.data.approvals.some(approval => isPlaceholderReference(approval.actor_ref))) missing.push('signoffs:placeholder_reference');
   }
   if (example && !options.allowExample) missing.push('example:formal_readiness_rejected');
   if (example && options.allowExample) missing.push('example:syntax_only');
