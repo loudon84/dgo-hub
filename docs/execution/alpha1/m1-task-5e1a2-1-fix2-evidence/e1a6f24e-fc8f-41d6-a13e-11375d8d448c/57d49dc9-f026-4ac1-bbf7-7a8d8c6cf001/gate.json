@@ -1,0 +1,12 @@
+{
+  "command": [
+    "npm.cmd",
+    "run",
+    "build"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\57d49dc9-f026-4ac1-bbf7-7a8d8c6cf001",
+  "head_before": "28a64e50fa2b782e388410fd8bb3bf3129bc78e7",
+  "head_after": "28a64e50fa2b782e388410fd8bb3bf3129bc78e7",
+  "exit": 0
+}

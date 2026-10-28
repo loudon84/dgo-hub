@@ -1,0 +1,452 @@
+[
+  {
+    "path": "dist\\acceptance-tests\\canonical-apply.test.js",
+    "sha256": "d55c98b26ae6d8efb7cd5d9f35e3e4175bd4be64a20037ad1bb9e6946f3f778d",
+    "size": 121544
+  },
+  {
+    "path": "dist\\acceptance-tests\\canonicalization.test.js",
+    "sha256": "50453586a2973d400569ea88683227cc64a1ab82a0cd1594e9e7b0839076f407",
+    "size": 9571
+  },
+  {
+    "path": "dist\\acceptance-tests\\core.test.js",
+    "sha256": "074b87c38fcd0ff2eeb95c74570b87742d2ca402d1791d1a541e38f435824805",
+    "size": 1672
+  },
+  {
+    "path": "dist\\acceptance-tests\\d2-migration-diagnostic.test.js",
+    "sha256": "aaa839953097020d738264e710b416d1fb8483e17c1e7a84fd93d4634055db95",
+    "size": 1754
+  },
+  {
+    "path": "dist\\acceptance-tests\\deployment-lock.test.js",
+    "sha256": "8b1565059eaa65d6fe5970d510f44e6d77d5f9837029d0bb17e7eedcd8356d18",
+    "size": 15495
+  },
+  {
+    "path": "dist\\acceptance-tests\\diagnose-009.test.js",
+    "sha256": "51b0b175f7025f2f54c8915541d3adef1b08809feebcf355c991ac541f3b69b4",
+    "size": 1249
+  },
+  {
+    "path": "dist\\acceptance-tests\\environment.test.js",
+    "sha256": "4d27df71afe1b167f3a1725864f0f3501d8123dcf13c4d5b47125c08f9225582",
+    "size": 16712
+  },
+  {
+    "path": "dist\\acceptance-tests\\evidence\\gate.test.js",
+    "sha256": "00285464377f59700cf821dc4912693c0f5d4f2f7b773588a6351749a949d8dc",
+    "size": 35175
+  },
+  {
+    "path": "dist\\acceptance-tests\\evidence\\run-gate.js",
+    "sha256": "d2fc7547f9ad8987c227e1b6edf79942c2cb86cb0f42dcc1152e9436f1501753",
+    "size": 795
+  },
+  {
+    "path": "dist\\acceptance-tests\\helpers\\postgres.js",
+    "sha256": "b0d5e71df814a65ff4d09e6d7fa47851b013d3eb9dc7f887628b13a0130d1404",
+    "size": 11931
+  },
+  {
+    "path": "dist\\acceptance-tests\\helpers\\snapshot-recovery-http.js",
+    "sha256": "996c94e768ffa1f7b81561a1729a4bdfa99c2505c6725d66bad26c98bac36471",
+    "size": 15023
+  },
+  {
+    "path": "dist\\acceptance-tests\\identity-codec.test.js",
+    "sha256": "4a5c8095b0fba0ff79807b38b951428f3323ff357e3ccbff3050294770afe10d",
+    "size": 1941
+  },
+  {
+    "path": "dist\\acceptance-tests\\identity-http.test.js",
+    "sha256": "9c0b931aa883b2e291f67597b4f9ff2e8fc26a44bd815865484c2115285a6ee9",
+    "size": 28792
+  },
+  {
+    "path": "dist\\acceptance-tests\\identity-store.test.js",
+    "sha256": "32291e684aab62a8c2cacc01319f1a3a1d0aa305234134791fec33fe11503a71",
+    "size": 21423
+  },
+  {
+    "path": "dist\\acceptance-tests\\integration.test.js",
+    "sha256": "e0d7e3e5808f732c6d59195b9cff6d583a26b19ebc1da339d87330bc74e41b73",
+    "size": 1083
+  },
+  {
+    "path": "dist\\acceptance-tests\\live.js",
+    "sha256": "75c851780f6c8ca56958214bab10be862b65145c5ece7ffc11ea257f953a82de",
+    "size": 4564
+  },
+  {
+    "path": "dist\\acceptance-tests\\m1-task5d3-schema.test.js",
+    "sha256": "8c81622127d6283c3a41844d8754e47e7dfdc1218ef1788ec4b5b484c466a4c9",
+    "size": 4021
+  },
+  {
+    "path": "dist\\acceptance-tests\\mcp-auth.test.js",
+    "sha256": "d2c94d150f1ea9a69f52440503e65f9144a81b7bb3e5522f8eb5c29be972b6aa",
+    "size": 46440
+  },
+  {
+    "path": "dist\\acceptance-tests\\migration-boundary.test.js",
+    "sha256": "5f7bb89240145e772e68d5863a8a9ca0e71d526b8b8d25a4809d8251118d8e6c",
+    "size": 12815
+  },
+  {
+    "path": "dist\\acceptance-tests\\migrations.test.js",
+    "sha256": "06807cd29e339062d82bc4a732926c06d66231d5b32e44e64f3857f409be45de",
+    "size": 26777
+  },
+  {
+    "path": "dist\\acceptance-tests\\postgres-snapshot-connector.test.js",
+    "sha256": "343c0b0ce44b4feaee0c1c53c79ce1591a689df7f099ed5e0ffb78cfce0dc449",
+    "size": 5013
+  },
+  {
+    "path": "dist\\acceptance-tests\\postgres-snapshot-contract.test.js",
+    "sha256": "355c37387e1ecdb918549272c4e28a361e746dc61acdf8fdf14bd286744e3566",
+    "size": 3872
+  },
+  {
+    "path": "dist\\acceptance-tests\\postgres-snapshot-source.test.js",
+    "sha256": "672cbefd35a79f9f2ee807b15d1a92dbba387ef60e31d9e7ec309dc8b5a040f9",
+    "size": 14495
+  },
+  {
+    "path": "dist\\acceptance-tests\\quarantine-read.test.js",
+    "sha256": "77c4bb5fa38574be60061c8abc97bfbd35c645a4249c781f79fd32201388b7fb",
+    "size": 76291
+  },
+  {
+    "path": "dist\\acceptance-tests\\record-local-checks.test.js",
+    "sha256": "4900c4c02020fa344e0a67a6d78d2eb9372d67fa73724e62ac479033032ccb51",
+    "size": 1956
+  },
+  {
+    "path": "dist\\acceptance-tests\\snapshot-recovery.test.js",
+    "sha256": "655b892c88b9b7829cb7750ef71bb05742e6b6645c34169ab2aef5199084c050",
+    "size": 62958
+  },
+  {
+    "path": "dist\\acceptance-tests\\snapshot-runs.test.js",
+    "sha256": "2afe9da2c58ae6489119f4d93a5e18cfcecc37a9672a4d3dffb80e214428a4db",
+    "size": 305708
+  },
+  {
+    "path": "dist\\acceptance-tests\\snapshot-validation.test.js",
+    "sha256": "68f89d2ddd01616a15111df148a41b7e462a81c7ce8b04ed511a7a33b34ff7ed",
+    "size": 5780
+  },
+  {
+    "path": "dist\\acceptance-tests\\source-registry.test.js",
+    "sha256": "fa3622a47764e89eb523e6dbb6b3318068e421954b2ecbf1859cc1a9ed006867",
+    "size": 84374
+  },
+  {
+    "path": "dist\\acceptance-tests\\strict-ingestion.test.js",
+    "sha256": "3025177da8205bb1541fe5f74289b7e19b99341055b5d67285d7ceafdfb8fbf3",
+    "size": 76885
+  },
+  {
+    "path": "dist\\acceptance-tests\\worker-crash-driver.test.js",
+    "sha256": "21bb2031c761220534e172a07312f460f224963c66918aad9b0b2584f009dd18",
+    "size": 1081
+  },
+  {
+    "path": "dist\\app.js",
+    "sha256": "1e8072e12201451ae3193d70676b82037c3a696ea7c76f6eee938b6d7b4f06b8",
+    "size": 3275
+  },
+  {
+    "path": "dist\\auth\\credentials.js",
+    "sha256": "1e0422dd942d91d02e699a315620322b894cb3e474e9fa4b6ec9cc0ee74f7ac5",
+    "size": 1138
+  },
+  {
+    "path": "dist\\auth\\errors.js",
+    "sha256": "5f95242dae749720dac9925c44c4669bd57d23a5c1736fa76ff6ada470828d2c",
+    "size": 742
+  },
+  {
+    "path": "dist\\auth\\oidc.js",
+    "sha256": "df3abb51f3c7ce9ff8b42c7fac24f597cc4326e458f7cd3923fbd6c956f1f5cd",
+    "size": 5045
+  },
+  {
+    "path": "dist\\auth\\repository.js",
+    "sha256": "275f2fd4f0d1b1407dfb73cb42a83e573042d418c34c5bf777df72c637221b98",
+    "size": 1464
+  },
+  {
+    "path": "dist\\auth\\service.js",
+    "sha256": "aa33284415dca78ff4f85ae3eb50e8505b6c74e2e6f111baac81ef74da39c05d",
+    "size": 31158
+  },
+  {
+    "path": "dist\\auth\\types.js",
+    "sha256": "6294b50e6d986ded1b3343895e00b1798b6cb24f659c5f9cc3613cd55ae5df00",
+    "size": 438
+  },
+  {
+    "path": "dist\\bootstrap.js",
+    "sha256": "c3cd2e61356a68bfdba479acfc408f8ce5490b43feb2f4c10ee02bb2e05c43c6",
+    "size": 381
+  },
+  {
+    "path": "dist\\contracts\\deployment-lock.js",
+    "sha256": "4d016dc1843e4d9fe76b74f4cfbcf1c5c32e02d24cad6b78701b2b09f8776825",
+    "size": 10056
+  },
+  {
+    "path": "dist\\contracts\\environment.js",
+    "sha256": "4a49b01ce4b935c81ed99edbc68228b71116627817111899104c70684ef01dd2",
+    "size": 8336
+  },
+  {
+    "path": "dist\\contracts\\evidence.js",
+    "sha256": "1c304bc3111bcb5bb3fb84e954c565d8203c2a347ba104ba7854be53eee7f779",
+    "size": 29564
+  },
+  {
+    "path": "dist\\contracts\\runtime-config.js",
+    "sha256": "6e9a73fb137b24ef64299c271be67648130792226671b41cd90f53823165baf2",
+    "size": 1842
+  },
+  {
+    "path": "dist\\contracts\\signoff.js",
+    "sha256": "f0118135fbde393129bab5191963e9b0e9be1277228adce4f3de94f45d9dd714",
+    "size": 2681
+  },
+  {
+    "path": "dist\\db.js",
+    "sha256": "e72e8b8a3029f373dbf3ab53482c32269a06cd0adc0ab90d0981eca6b1347254",
+    "size": 486
+  },
+  {
+    "path": "dist\\etl-worker\\postgres-snapshot-connector.js",
+    "sha256": "de4271f1c43eb8818632b09f0d6d3de89f2f8283d292d52197747bb9468f6286",
+    "size": 15727
+  },
+  {
+    "path": "dist\\etl-worker\\retry.js",
+    "sha256": "ae81782064c1611be62b81318bfe682dffb485ca49c4e57c3cec7a913578384b",
+    "size": 402
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-apply-worker.js",
+    "sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+    "size": 15569
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-canonical.js",
+    "sha256": "960622e3eea562732f84234040d6f502042f3de094b000405a9fc4fc9aa8311d",
+    "size": 4396
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-continuation-store.js",
+    "sha256": "2e461e8b0c5bd779ee537b5a610981d3883305bf9b09df2982f7bc4d56dd93af",
+    "size": 16466
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-contract.js",
+    "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+    "size": 11
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-delete-api.js",
+    "sha256": "db1eaeb4a1e315e3f071840212b19e097c8aa5c38443e410669ab131fc83134e",
+    "size": 3199
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-delete-worker.js",
+    "sha256": "cb8ff507fb5361c0d57e559b41f6fed6141bd2dea0d75357e0d632c8c792ff70",
+    "size": 11251
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-recovery.js",
+    "sha256": "25777fde0ae969798ed230c2da1f084dfa393308ce3457df9846a808f853b440",
+    "size": 3195
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-runs.js",
+    "sha256": "e743025410aa4a1c7696c5ff2e95cf4b3f5b586348dfcbacf6ad26011636f424",
+    "size": 29616
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-stage-store.js",
+    "sha256": "65377344d652339c2aaf3224b298519090dfafeeeb8dc7dcf57700640f047bde",
+    "size": 11063
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-validation.js",
+    "sha256": "55b2c4ac0219e16fc4ba90926b8bb5b6718bf801dd66887c5da96418791c7fc9",
+    "size": 3541
+  },
+  {
+    "path": "dist\\etl-worker\\snapshot-worker.js",
+    "sha256": "7a3231e0621bbbd88d899988e08b92bbe14e1f79bb266145fe9fab1f6492d6bf",
+    "size": 8343
+  },
+  {
+    "path": "dist\\etl-worker\\worker.js",
+    "sha256": "9d3dbaf42bcbac20f61322b7f89b5cd7b06c428f6de18681d9853aaefcaba55f",
+    "size": 27987
+  },
+  {
+    "path": "dist\\ingestion-api\\identity-routes.js",
+    "sha256": "82665e01624a892321fd1e4c2dc18396e7d836e76042cc17d0378031aed78a37",
+    "size": 6581
+  },
+  {
+    "path": "dist\\ingestion-api\\logging.js",
+    "sha256": "f94919e66ba69b3fa414b8f30219c613bcf67b13792c5a758f48d919a2dfb9aa",
+    "size": 531
+  },
+  {
+    "path": "dist\\ingestion-api\\quarantine-read.js",
+    "sha256": "85cb6fc2195d5d46b734547da25e2c58d25c47882e5cf2496067ec5a4cc48e2f",
+    "size": 9346
+  },
+  {
+    "path": "dist\\ingestion-api\\routes.js",
+    "sha256": "d8271d657081f643955de97738250a3c4ac8f7c5246eb576de8ff42170d9edf2",
+    "size": 7836
+  },
+  {
+    "path": "dist\\ingestion-api\\snapshot-routes.js",
+    "sha256": "51e404867c09b65be1e48be032f9c6079c42f9816d25239107489bd61090ca0f",
+    "size": 9748
+  },
+  {
+    "path": "dist\\ingestion-api\\strict-contract.js",
+    "sha256": "651266469d7158938c361ca56ed1650ffe030c47a2796379abae06dd899d09e6",
+    "size": 16779
+  },
+  {
+    "path": "dist\\ingestion-api\\strict-contract.test.js",
+    "sha256": "961a40a8a6e738e7b35154f7c6c04abe5c613b389a21740ff455b4802466992c",
+    "size": 9876
+  },
+  {
+    "path": "dist\\ingestion-api\\strict-ingestion.js",
+    "sha256": "f6c917601515eafc3189a546dc4990dcf7040974382794ac4af5d3f9c6b60c0a",
+    "size": 21179
+  },
+  {
+    "path": "dist\\ingestion-api\\strict-intake.test.js",
+    "sha256": "e60aa0a22ed74defccefbb98245f770e27a44e2d56b3c6428e2ac5c02a044524",
+    "size": 2682
+  },
+  {
+    "path": "dist\\migrate.js",
+    "sha256": "5400b23efeee765895dee2adb134b4aef4d3b78cbaecf767a47819e13006ce74",
+    "size": 3606
+  },
+  {
+    "path": "dist\\migrations\\runner.js",
+    "sha256": "1a7acd65a6f06062c0499470c340c94785e7008afeb815b1d0bbb1944a6212be",
+    "size": 17650
+  },
+  {
+    "path": "dist\\normalization\\apply.js",
+    "sha256": "514583fd2a133f0fdb9a672716d3f4fe149fccbb32d99fb7ada7c4a481dcdea2",
+    "size": 30281
+  },
+  {
+    "path": "dist\\normalization\\canonical.js",
+    "sha256": "d14e29172c96e3355336215075f51d3540fd9d9dfba5502a9b078a769fdc5aeb",
+    "size": 3830
+  },
+  {
+    "path": "dist\\normalization\\models.js",
+    "sha256": "bf81697f5b75855e482fc8a03803f6ee601140671b4daf877edc058e13d9f24f",
+    "size": 3975
+  },
+  {
+    "path": "dist\\normalization\\store.js",
+    "sha256": "9a81021062b743de6dfc7e9a675b677c93e01f72a255ccc2bc1989bf79edeff6",
+    "size": 4480
+  },
+  {
+    "path": "dist\\ontology-binding\\binding.js",
+    "sha256": "4459deb3a55b0a0c04d70a5b16ddcec5689b428b631b6be848f4dbed18cb0763",
+    "size": 1695
+  },
+  {
+    "path": "dist\\permission-publish\\hasura.js",
+    "sha256": "407956f4f4df6edc171323a86c8dcd64b30015ee065411b3cb057c5c96b8d598",
+    "size": 6238
+  },
+  {
+    "path": "dist\\permission-publish\\policy.js",
+    "sha256": "15e1aa5fe8270918dc2990ef5ac6a78caeee01a945332ca54a415eeb0ae53e0d",
+    "size": 1770
+  },
+  {
+    "path": "dist\\permission-publish\\worker.js",
+    "sha256": "9eb22dadc4ebafd20e33610577ab1873c1e86bce6b4e361c9f31b749cd199469",
+    "size": 2328
+  },
+  {
+    "path": "dist\\sales-mcp\\legacy.js",
+    "sha256": "9d8fef75640cdc08656af5fdd5dbb451c3b24908ef560804d81182b11d84a4c1",
+    "size": 6235
+  },
+  {
+    "path": "dist\\sales-mcp\\main.js",
+    "sha256": "eb7e405f9b1826df251f54159fa7606997bb3b5b1be2c6932b9fe83a1c5dea1a",
+    "size": 234
+  },
+  {
+    "path": "dist\\sales-mcp\\queries.js",
+    "sha256": "902793677ffb1bdf983b7141d497c0d656146ff25b73c4769658ed0c13c7ef4a",
+    "size": 4547
+  },
+  {
+    "path": "dist\\sales-mcp\\server.js",
+    "sha256": "e6fd5064318ae48c5cb501beda60779b538a3bf5e14f64820bb20162d2ea8781",
+    "size": 16320
+  },
+  {
+    "path": "dist\\sales-mcp\\tools.js",
+    "sha256": "5d8d0c53031c3425d998ff60a6446f90c7a106939591d46641f77ef9513c22fa",
+    "size": 1500
+  },
+  {
+    "path": "dist\\scripts\\check-m0-entry.js",
+    "sha256": "b932860fb7d6c027985cffbf5c769f063714e6d90fe1b71773a2219c820fb04a",
+    "size": 3822
+  },
+  {
+    "path": "dist\\scripts\\generate-lock.js",
+    "sha256": "c2817527a91fd0f1d99481632971b48fecd7c77220ff0d6b11d8c5c2f06f05fe",
+    "size": 3353
+  },
+  {
+    "path": "dist\\scripts\\record-local-checks.js",
+    "sha256": "76c9bbf331c9c5ada2a1edda5bdf2e5b45e02d1aa9407d9aeb2e945f19c5683f",
+    "size": 9606
+  },
+  {
+    "path": "dist\\source-registry\\capability-probe.js",
+    "sha256": "f336d100d568a60987236e84fd1ff7d1b99239c7f5fe1b0f5b44ea4295545960",
+    "size": 16723
+  },
+  {
+    "path": "dist\\source-registry\\routes.js",
+    "sha256": "8e3be1b37a16e219b679c80bf39d3b1284e8edeb2f90256b343459d3b9f3e0b1",
+    "size": 10803
+  },
+  {
+    "path": "dist\\source-registry\\service.js",
+    "sha256": "71d477ab6779fe42696a253d7b67bbc4d67e7eb66c17ad5689284e7fe5198c4c",
+    "size": 54972
+  },
+  {
+    "path": "dist\\vitest.config.js",
+    "sha256": "f2886c7a7f68885a262a7b355433a53e6f81fdf5d2e9cf564cc80f8bfe58379d",
+    "size": 172
+  }
+]

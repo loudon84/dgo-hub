@@ -1,0 +1,41 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read > rejects source credentials and wrong-tenant or missing source requests
+AssertionError: expected 401 to be 503 // Object.is equality
+
+- Expected
++ Received
+
+- 503
++ 401
+
+ ❯ acceptance-tests/quarantine-read.test.ts:739:35
+    737|       const response = await app.inject({ method: 'GET', url: `/hub/v1…
+    738|         headers: { authorization: `Bearer ${bearerValue}` } });
+    739|       expect(response.statusCode).toBe(status);
+       |                                   ^
+    740|       expect(response.json().error.code).toBe(code);
+    741|       expect(response.json()).not.toHaveProperty('data.items');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  acceptance-tests/quarantine-read.test.ts > API-023 quarantine read > rolls back an acquired fence when the following source lock fails
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ acceptance-tests/quarantine-read.test.ts:828:37
+    826|         headers: { authorization: `Bearer ${token}` } });
+    827|       expect(seamReached).toBe(true);
+    828|       expect(competingLockAcquired).toBe(false);
+       |                                     ^
+    829|       expect(response.statusCode).toBe(503);
+    830|       expect(response.json().error.code).toBe('AUTH_UNAVAILABLE');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
