@@ -20,7 +20,7 @@ export type StrictIngestionOptions = Readonly<{
   authenticator?: OidcAuthenticator;
   rawStoragePolicy?: RawStoragePolicy;
 }>;
-type IntakeProof = {
+export type IntakeProof = {
   credential_id: string;
   source_epoch: string;
   credential_revision: string;
@@ -38,7 +38,7 @@ type IntakeProof = {
   mapping_digest: Buffer;
   identity_mapping_revision: string;
   identity_mapping_digest: Buffer;
-  endpoint_profile_digest: Buffer;
+  endpoint_profile_digest: Buffer | null;
   test_report_id: string;
 };
 type IntakeResult = { jobId: string; status: string; receivedCount: number; appliedCount: number; replayed: boolean };
@@ -51,7 +51,7 @@ function sourceInstant(value: string): { second: number; fraction: string } {
   return { second, fraction: (match[3] ?? '').padEnd(20, '0') };
 }
 
-function sourceTimeRange(batch: PublicBatch): { first: string; last: string } {
+export function sourceTimeRange(batch: PublicBatch): { first: string; last: string } {
   let first = batch.records[0]!.source_updated_at;
   let last = first;
   let minimum = sourceInstant(first);
@@ -70,7 +70,7 @@ function sourceTimeRange(batch: PublicBatch): { first: string; last: string } {
   return { first, last };
 }
 
-function success(request: FastifyRequest, data: unknown) { return { request_id: request.id, data }; }
+export function success(request: FastifyRequest, data: unknown) { return { request_id: request.id, data }; }
 function statusOf(error: unknown): number {
   if (error instanceof IngestInputError) return 422;
   if (error instanceof AuthError) return error.code === 'AUTH_INPUT_INVALID' ? 422 : error.status;
@@ -91,7 +91,7 @@ function errorCode(error: unknown): string {
   if (code.startsWith('FST_ERR_CTP_')) return 'INGEST_INPUT_INVALID';
   return 'INGEST_UNAVAILABLE';
 }
-function sendFailure(request: FastifyRequest, reply: FastifyReply, error: unknown) {
+export function sendFailure(request: FastifyRequest, reply: FastifyReply, error: unknown) {
   const status = statusOf(error);
   const code = errorCode(error);
   const details = error instanceof IngestInputError ? { path: error.path } : {};
@@ -108,15 +108,15 @@ function errorCodeFromPg(error: unknown): string | undefined {
 class RouteError extends Error {
   constructor(readonly code: string, readonly status: number) { super(code); this.name = 'RouteError'; }
 }
-function bearer(request: FastifyRequest): string {
+export function bearer(request: FastifyRequest): string {
   const authorization = request.headers.authorization;
   if (typeof authorization !== 'string') throw new AuthError('AUTH_INVALID');
   const match = /^Bearer ([A-Za-z0-9._~-]{1,16384})$/.exec(authorization);
   if (!match) throw new AuthError('AUTH_INVALID');
   return match[1]!;
 }
-function sourceToken(token: string): boolean { return /^[A-Za-z0-9_-]{43}$/.test(token); }
-function idempotencyKey(request: FastifyRequest): string {
+export function sourceToken(token: string): boolean { return /^[A-Za-z0-9_-]{43}$/.test(token); }
+export function idempotencyKey(request: FastifyRequest): string {
   const value = request.headers['idempotency-key'];
   if (typeof value !== 'string' || !/^[A-Za-z0-9._:-]{1,128}$/.test(value)) throw new AuthError('AUTH_INPUT_INVALID');
   return value;
@@ -153,7 +153,7 @@ function pageLimit(value: unknown): number {
   return Number(value);
 }
 
-async function findExisting(client: PoolClient, principal: SourcePrincipal, route: string, key: string) {
+export async function findExisting(client: PoolClient, principal: { tenantId: string; sourceId: string }, route: string, key: string) {
   return client.query<{ id: string; request_digest: Buffer; status: string; received_count: number; applied_count: number }>(
     `SELECT id,request_digest,status,received_count,applied_count FROM control.ingestion_job
       WHERE tenant_key=$1 AND source_id=$2 AND route=$3 AND idempotency_key=$4`,
@@ -161,7 +161,7 @@ async function findExisting(client: PoolClient, principal: SourcePrincipal, rout
   );
 }
 
-async function frozenProof(client: PoolClient, principal: SourcePrincipal, entity: SourceEntity): Promise<IntakeProof> {
+export async function frozenProof(client: PoolClient, principal: { tenantId: string; sourceId: string; credentialId: string }, entity: SourceEntity, importMode = false): Promise<IntakeProof> {
   const result = await client.query<IntakeProof>(`
     SELECT c.id AS credential_id,c.source_epoch::text,c.revision::text AS credential_revision,c.credential_generation::text,
       ch.id AS channel_id,ch.channel_epoch::text,ch.version_domain,a.id AS owner_approval_id,a.owner_user_id,
@@ -190,10 +190,10 @@ async function frozenProof(client: PoolClient, principal: SourcePrincipal, entit
       AND t.identity_mapping_revision=a.identity_mapping_revision AND t.config_digest=a.config_digest
       AND t.mapping_digest=a.mapping_digest AND t.identity_mapping_digest=a.identity_mapping_digest
       AND t.source_credential_revision=a.source_credential_revision AND t.credential_generation=a.credential_generation
-      AND t.endpoint_profile_digest=a.endpoint_profile_digest AND t.data_contract_ref=a.data_contract_ref
+      AND (($5::boolean AND cr.config->>'connector'='SIMULATED_IMPORT' AND t.endpoint_profile_digest IS NULL AND a.endpoint_profile_digest IS NULL AND t.sample_digest IS NOT NULL AND t.sample_digest=a.sample_digest) OR (NOT $5::boolean AND cr.config->>'connector'<>'SIMULATED_IMPORT' AND t.endpoint_profile_digest IS NOT NULL AND t.endpoint_profile_digest=a.endpoint_profile_digest)) AND t.data_contract_ref=a.data_contract_ref
       AND ch.connector=cr.config->>'connector' AND ch.mode=cr.config->>'mode' AND ch.version_domain=cr.config->>'version_domain'
       AND cr.config->'allowed_entities' ? $3`,
-  [principal.tenantId,principal.sourceId,entity,principal.credentialId]);
+  [principal.tenantId,principal.sourceId,entity,principal.credentialId,importMode]);
   if (!result.rowCount) throw new AuthError('SOURCE_CONFLICT');
   return result.rows[0]!;
 }
@@ -286,8 +286,15 @@ async function registerReadRoutes(app: FastifyInstance, options?: StrictIngestio
         [jobId,actor.principal.tenantId,actor.principal.sourceId,actor.principal.allowedEntities]);
       } else {
         if (!actor.principal.managementScopes.includes('source:read')) throw new AuthError('AUTH_FORBIDDEN');
-        result = await options.pool.query(`SELECT id,entity,status,received_count,applied_count,first_source_updated_at,last_source_updated_at
-          FROM control.ingestion_job WHERE id=$1 AND tenant_key=$2`, [jobId,actor.principal.tenantId]);
+        const client = await options.pool.connect();
+        try {
+          await client.query('BEGIN');
+          result = await client.query(`SELECT id,entity,route,status,received_count,applied_count,first_source_updated_at,last_source_updated_at
+            FROM control.ingestion_job WHERE id=$1 AND tenant_key=$2`, [jobId,actor.principal.tenantId]);
+          if (result.rowCount && result.rows[0]!.route.startsWith('/hub/v1/admin/sources/'))
+            await options.authService.assertCurrentPrincipal(actor.principal,'source:read',client);
+          await client.query('COMMIT');
+        } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; } finally { client.release(); }
       }
       if (!result.rowCount) return sendNotFound(request, reply);
       const row = result.rows[0]!;
@@ -313,7 +320,22 @@ async function registerReadRoutes(app: FastifyInstance, options?: StrictIngestio
           [jobId,actor.principal.tenantId,actor.principal.sourceId,actor.principal.allowedEntities]);
       } else {
         if (!actor.principal.managementScopes.includes('source:read')) throw new AuthError('AUTH_FORBIDDEN');
-        job = await options.pool.query(`SELECT id FROM control.ingestion_job WHERE id=$1 AND tenant_key=$2`, [jobId,actor.principal.tenantId]);
+        const client = await options.pool.connect();
+        try {
+          await client.query('BEGIN');
+          job = await client.query(`SELECT id,route FROM control.ingestion_job WHERE id=$1 AND tenant_key=$2`, [jobId,actor.principal.tenantId]);
+          if (!job.rowCount) { await client.query('COMMIT'); return sendNotFound(request, reply); }
+          if (job.rows[0]!.route.startsWith('/hub/v1/admin/sources/'))
+            await options.authService.assertCurrentPrincipal(actor.principal,'source:read',client);
+          const items = await client.query(`SELECT event_id,source_pk,status,error_code,ordinal FROM control.ingestion_job_item
+            WHERE job_id=$1 AND ($2::integer IS NULL OR ordinal>$2) ORDER BY ordinal ASC LIMIT $3`, [jobId,after ?? null,limit + 1]);
+          await client.query('COMMIT');
+          const hasMore = items.rows.length > limit;
+          const rows = hasMore ? items.rows.slice(0,limit) : items.rows;
+          const last = rows.at(-1);
+          return reply.send(success(request, { items: rows.map(({ event_id,source_pk,status,error_code }) => ({ event_id,source_pk,status,error_code })),
+            next_cursor: hasMore && last ? canonicalCursor(jobId,last.ordinal) : null }));
+        } catch (error) { await client.query('ROLLBACK').catch(() => undefined); throw error; } finally { client.release(); }
       }
       if (!job.rowCount) return sendNotFound(request, reply);
       const items = await options.pool.query(`SELECT event_id,source_pk,status,error_code,ordinal FROM control.ingestion_job_item

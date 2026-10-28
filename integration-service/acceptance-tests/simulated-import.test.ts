@@ -263,10 +263,11 @@ describe('simulated import source management',()=>{
       const secret=createCredential().secret;
       await auth.repository.provisionSourceCredential({sourceId:'ext',tenantId:'upgrade_i1',token:secret,secretRef:'vault:/old',allowedEntities:['customer'],revision:'1'});
       const before=await upgrade.pool.query("SELECT id,revision,source_epoch,credential_generation,secret_ref FROM control.source_credential WHERE tenant_key='upgrade_i1'");
-      expect((await runMigrations(upgrade.pool,{directory:migrations,environmentKind:'local_lab'})).applied).toEqual(['010_simulated_import']);
+      await copyFile(join(migrations,'010_simulated_import.sql'),join(dir,'010_simulated_import.sql'));
+      expect((await runMigrations(upgrade.pool,{directory:dir,environmentKind:'local_lab'})).applied).toEqual(['010_simulated_import']);
       const after=await upgrade.pool.query("SELECT id,revision,source_epoch,credential_generation,secret_ref FROM control.source_credential WHERE tenant_key='upgrade_i1'");
       expect(after.rows).toEqual(before.rows);
-      expect((await runMigrations(upgrade.pool,{directory:migrations,environmentKind:'local_lab'})).skipped).toContain('010_simulated_import');
+      expect((await runMigrations(upgrade.pool,{directory:dir,environmentKind:'local_lab'})).skipped).toContain('010_simulated_import');
       await expect(auth.authenticateSourceIdentity(secret)).resolves.toMatchObject({tenantId:'upgrade_i1',sourceId:'ext'});
     } finally {await upgrade.close();}
   },90000);
