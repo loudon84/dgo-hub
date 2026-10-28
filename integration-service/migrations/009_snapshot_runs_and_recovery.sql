@@ -3192,3 +3192,225 @@ $body$;
 ALTER FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) OWNER TO CURRENT_USER;
 REVOKE ALL ON FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
 GRANT EXECUTE ON FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) TO hub_worker;
+
+-- M1-5E1a2-1: narrow immutable identity and same-transaction quarantine capture.
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_job_item_quarantine_origin_key
+  ON control.ingestion_job_item(job_id,ordinal,event_id,source_pk);
+CREATE UNIQUE INDEX IF NOT EXISTS etl_snapshot_apply_outcome_quarantine_origin_key
+  ON control.etl_snapshot_apply_outcome(outcome_id,tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk);
+CREATE UNIQUE INDEX IF NOT EXISTS etl_snapshot_apply_range_quarantine_proof_key
+  ON control.etl_snapshot_apply_range(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,
+    outcome_id,aggregate_digest,proof_scope_digest);
+
+CREATE TABLE IF NOT EXISTS control.ingestion_quarantine_index (
+  quarantine_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  origin_kind text NOT NULL CHECK(origin_kind IN ('REST','SNAPSHOT')),
+  tenant_key text NOT NULL,
+  source_id text NOT NULL,
+  entity text NOT NULL CHECK(entity IN ('customer','order')),
+  job_id uuid,
+  ordinal integer,
+  event_id uuid,
+  source_pk text NOT NULL,
+  run_id uuid,
+  attempt_id uuid,
+  outcome_id uuid,
+  relation text,
+  parent_source_pk text,
+  status text NOT NULL CHECK(status='QUARANTINED'),
+  error_code text CHECK(error_code IS NULL OR (char_length(error_code)<=96 AND error_code ~ '^[A-Z0-9_:-]+$')),
+  created_at timestamptz NOT NULL,
+  owner_approval_id uuid,
+  owner_revision bigint,
+  channel_id uuid,
+  channel_epoch bigint,
+  config_revision bigint,
+  config_digest bytea,
+  mapping_revision bigint,
+  mapping_digest bytea,
+  identity_mapping_revision bigint,
+  identity_mapping_digest bytea,
+  endpoint_profile_digest bytea,
+  test_report_id uuid,
+  approval_security_fence bigint,
+  security_barrier_fence_at_admission bigint,
+  aggregate_digest bytea,
+  proof_scope_digest bytea,
+  dependency_status text NOT NULL DEFAULT 'UNKNOWN' CHECK(dependency_status IN ('UNKNOWN','AVAILABLE')),
+  dependency_code text,
+  CHECK((dependency_status='UNKNOWN' AND dependency_code IS NULL) OR
+    (dependency_status='AVAILABLE' AND dependency_code IS NOT NULL AND char_length(dependency_code)<=96 AND dependency_code ~ '^[A-Z0-9_:-]+$')),
+  CHECK(
+    (origin_kind='REST' AND job_id IS NOT NULL AND ordinal IS NOT NULL AND event_id IS NOT NULL AND
+      run_id IS NULL AND attempt_id IS NULL AND outcome_id IS NULL AND relation IS NULL AND parent_source_pk IS NULL AND
+      owner_approval_id IS NOT NULL AND owner_revision IS NOT NULL AND channel_id IS NOT NULL AND channel_epoch IS NOT NULL AND
+      config_revision IS NOT NULL AND config_digest IS NOT NULL AND mapping_revision IS NOT NULL AND mapping_digest IS NOT NULL AND
+      identity_mapping_revision IS NOT NULL AND identity_mapping_digest IS NOT NULL AND endpoint_profile_digest IS NOT NULL AND
+      test_report_id IS NOT NULL AND approval_security_fence IS NOT NULL AND security_barrier_fence_at_admission IS NOT NULL AND
+      aggregate_digest IS NULL AND proof_scope_digest IS NULL)
+    OR
+    (origin_kind='SNAPSHOT' AND job_id IS NULL AND ordinal IS NULL AND event_id IS NULL AND source_pk IS NOT NULL AND
+      run_id IS NOT NULL AND attempt_id IS NOT NULL AND outcome_id IS NOT NULL AND entity=relation AND
+      parent_source_pk IS NOT NULL AND owner_approval_id IS NULL AND owner_revision IS NULL AND channel_id IS NULL AND channel_epoch IS NULL AND
+      config_revision IS NULL AND config_digest IS NULL AND mapping_revision IS NULL AND mapping_digest IS NULL AND
+      identity_mapping_revision IS NULL AND identity_mapping_digest IS NULL AND endpoint_profile_digest IS NULL AND test_report_id IS NULL AND
+      approval_security_fence IS NULL AND security_barrier_fence_at_admission IS NULL AND
+      aggregate_digest IS NOT NULL AND octet_length(aggregate_digest)=32 AND proof_scope_digest IS NOT NULL AND octet_length(proof_scope_digest)=32)
+  ),
+  FOREIGN KEY(job_id,tenant_key,source_id,entity)
+    REFERENCES control.ingestion_job(id,tenant_key,source_id,entity) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(job_id,ordinal,event_id,source_pk)
+    REFERENCES control.ingestion_job_item(job_id,ordinal,event_id,source_pk) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(outcome_id,tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
+    REFERENCES control.etl_snapshot_apply_outcome(outcome_id,tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,
+      outcome_id,aggregate_digest,proof_scope_digest)
+    REFERENCES control.etl_snapshot_apply_range(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,
+      outcome_id,aggregate_digest,proof_scope_digest) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_quarantine_rest_origin_key
+  ON control.ingestion_quarantine_index(tenant_key,source_id,job_id,ordinal) WHERE origin_kind='REST';
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_quarantine_snapshot_origin_key
+  ON control.ingestion_quarantine_index(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)
+  WHERE origin_kind='SNAPSHOT';
+CREATE INDEX IF NOT EXISTS ingestion_quarantine_page_seek_idx
+  ON control.ingestion_quarantine_index(tenant_key,source_id,created_at DESC,quarantine_id DESC);
+
+CREATE OR REPLACE FUNCTION control.reject_ingestion_quarantine_index_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,control
+AS $body$
+BEGIN RAISE EXCEPTION 'ingestion quarantine identity is immutable' USING ERRCODE='55000'; END;
+$body$;
+DROP TRIGGER IF EXISTS ingestion_quarantine_index_immutable ON control.ingestion_quarantine_index;
+CREATE TRIGGER ingestion_quarantine_index_immutable BEFORE UPDATE OR DELETE ON control.ingestion_quarantine_index
+  FOR EACH ROW EXECUTE FUNCTION control.reject_ingestion_quarantine_index_mutation();
+
+CREATE OR REPLACE FUNCTION control.capture_rest_ingestion_quarantine_index() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF NEW.status IS DISTINCT FROM 'QUARANTINED' OR OLD.status IS NOT DISTINCT FROM 'QUARANTINED' THEN RETURN NEW; END IF;
+  INSERT INTO control.ingestion_quarantine_index(origin_kind,tenant_key,source_id,entity,job_id,ordinal,event_id,source_pk,
+    status,error_code,created_at,owner_approval_id,owner_revision,channel_id,channel_epoch,config_revision,config_digest,
+    mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,test_report_id,
+    approval_security_fence,security_barrier_fence_at_admission)
+  SELECT 'REST',j.tenant_key,j.source_id,j.entity,NEW.job_id,NEW.ordinal,NEW.event_id,NEW.source_pk,
+    'QUARANTINED',CASE WHEN NEW.error_code IS NOT NULL AND char_length(NEW.error_code)<=96 AND NEW.error_code ~ '^[A-Z0-9_:-]+$' THEN NEW.error_code ELSE NULL END,
+    NEW.updated_at,j.owner_approval_id,j.owner_revision,j.channel_id,j.channel_epoch,j.config_revision,j.config_digest,
+    j.mapping_revision,j.mapping_digest,j.identity_mapping_revision,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id,
+    j.approval_security_fence,j.security_barrier_fence_at_admission
+    FROM control.ingestion_job j WHERE j.id=NEW.job_id AND j.tenant_key IS NOT NULL;
+  RETURN NEW;
+END;
+$body$;
+ALTER FUNCTION control.capture_rest_ingestion_quarantine_index() OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.capture_rest_ingestion_quarantine_index() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+DROP TRIGGER IF EXISTS ingestion_job_item_quarantine_capture ON control.ingestion_job_item;
+CREATE TRIGGER ingestion_job_item_quarantine_capture AFTER UPDATE OF status ON control.ingestion_job_item
+  FOR EACH ROW EXECUTE FUNCTION control.capture_rest_ingestion_quarantine_index();
+
+CREATE OR REPLACE FUNCTION control.capture_snapshot_ingestion_quarantine_index() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  INSERT INTO control.ingestion_quarantine_index(origin_kind,tenant_key,source_id,entity,run_id,attempt_id,outcome_id,relation,
+    parent_source_pk,source_pk,status,error_code,created_at,aggregate_digest,proof_scope_digest)
+  SELECT 'SNAPSHOT',o.tenant_key,o.source_id,o.entity,o.run_id,o.attempt_id,o.outcome_id,o.relation,o.parent_source_pk,o.source_pk,
+    'QUARANTINED',CASE WHEN o.error_code IS NOT NULL AND char_length(o.error_code)<=96 AND o.error_code ~ '^[A-Z0-9_:-]+$' THEN o.error_code ELSE NULL END,
+    o.created_at,r.aggregate_digest,r.proof_scope_digest
+  FROM control.etl_snapshot_apply_outcome o
+  JOIN control.etl_snapshot_apply_range r ON (r.tenant_key,r.source_id,r.run_id,r.attempt_id,r.entity,r.relation,r.parent_source_pk,
+    r.source_pk,r.outcome_id)=(NEW.tenant_key,NEW.source_id,NEW.run_id,NEW.attempt_id,NEW.entity,NEW.relation,NEW.parent_source_pk,
+    NEW.source_pk,NEW.outcome_id)
+  WHERE o.status='QUARANTINED' AND (o.tenant_key,o.source_id,o.run_id,o.attempt_id,o.entity,o.relation,o.parent_source_pk,o.source_pk)
+    =(NEW.tenant_key,NEW.source_id,NEW.run_id,NEW.attempt_id,NEW.entity,NEW.relation,NEW.parent_source_pk,NEW.source_pk);
+  RETURN NEW;
+END;
+$body$;
+ALTER FUNCTION control.capture_snapshot_ingestion_quarantine_index() OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.capture_snapshot_ingestion_quarantine_index() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+DROP TRIGGER IF EXISTS etl_snapshot_range_quarantine_capture ON control.etl_snapshot_apply_range;
+CREATE TRIGGER etl_snapshot_range_quarantine_capture AFTER INSERT ON control.etl_snapshot_apply_range
+  FOR EACH ROW EXECUTE FUNCTION control.capture_snapshot_ingestion_quarantine_index();
+
+INSERT INTO control.ingestion_quarantine_index(origin_kind,tenant_key,source_id,entity,job_id,ordinal,event_id,source_pk,status,
+  error_code,created_at,owner_approval_id,owner_revision,channel_id,channel_epoch,config_revision,config_digest,mapping_revision,
+  mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,test_report_id,approval_security_fence,
+  security_barrier_fence_at_admission)
+SELECT 'REST',j.tenant_key,j.source_id,j.entity,i.job_id,i.ordinal,i.event_id,i.source_pk,'QUARANTINED',
+  CASE WHEN i.error_code IS NOT NULL AND char_length(i.error_code)<=96 AND i.error_code ~ '^[A-Z0-9_:-]+$' THEN i.error_code ELSE NULL END,
+  i.updated_at,j.owner_approval_id,j.owner_revision,j.channel_id,j.channel_epoch,j.config_revision,j.config_digest,j.mapping_revision,
+  j.mapping_digest,j.identity_mapping_revision,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id,
+  j.approval_security_fence,j.security_barrier_fence_at_admission
+FROM control.ingestion_job_item i JOIN control.ingestion_job j ON j.id=i.job_id
+WHERE i.status='QUARANTINED'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO control.ingestion_quarantine_index(origin_kind,tenant_key,source_id,entity,run_id,attempt_id,outcome_id,relation,
+  parent_source_pk,source_pk,status,error_code,created_at,aggregate_digest,proof_scope_digest)
+SELECT 'SNAPSHOT',o.tenant_key,o.source_id,o.entity,o.run_id,o.attempt_id,o.outcome_id,o.relation,o.parent_source_pk,o.source_pk,
+  'QUARANTINED',CASE WHEN o.error_code IS NOT NULL AND char_length(o.error_code)<=96 AND o.error_code ~ '^[A-Z0-9_:-]+$' THEN o.error_code ELSE NULL END,
+  o.created_at,r.aggregate_digest,r.proof_scope_digest
+FROM control.etl_snapshot_apply_outcome o
+JOIN control.etl_snapshot_apply_range r ON (r.tenant_key,r.source_id,r.run_id,r.attempt_id,r.entity,r.relation,r.parent_source_pk,
+  r.source_pk,r.outcome_id)=(o.tenant_key,o.source_id,o.run_id,o.attempt_id,o.entity,o.relation,o.parent_source_pk,o.source_pk,o.outcome_id)
+WHERE o.status='QUARANTINED'
+ON CONFLICT DO NOTHING;
+
+REVOKE ALL ON control.ingestion_quarantine_index FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.reject_ingestion_quarantine_index_mutation(),control.capture_rest_ingestion_quarantine_index(),
+  control.capture_snapshot_ingestion_quarantine_index() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE OR REPLACE FUNCTION control.list_ingestion_quarantine_current_owner(
+  p_tenant_key text,p_source_id text,p_user_id text,p_issuer text,p_subject text,p_auth_epoch bigint,p_owner_revision bigint,
+  p_origin_kind text,p_error_code text,p_after_created_at timestamptz,p_after_quarantine_id uuid,p_limit integer)
+RETURNS TABLE(quarantine_id uuid,origin_kind text,source_id text,entity text,relation text,parent_source_pk text,job_id uuid,ordinal integer,
+  event_id uuid,run_id uuid,attempt_id uuid,outcome_id uuid,source_pk text,status text,error_code text,created_at text,proof jsonb,
+  dependency_status text,dependency_code text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE source_row control.source_registry%ROWTYPE; current_epoch bigint; scopes text[];
+BEGIN
+  IF p_tenant_key IS NULL OR p_source_id IS NULL OR p_user_id IS NULL OR p_issuer IS NULL OR p_subject IS NULL OR
+     p_auth_epoch IS NULL OR p_owner_revision IS NULL OR p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 OR
+     (p_origin_kind IS NOT NULL AND p_origin_kind NOT IN ('REST','SNAPSHOT')) OR
+     (p_error_code IS NOT NULL AND (char_length(p_error_code) NOT BETWEEN 1 AND 96 OR p_error_code !~ '^[A-Z0-9_:-]+$')) OR
+     ((p_after_created_at IS NULL) <> (p_after_quarantine_id IS NULL)) THEN RETURN; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM * FROM control.lock_source_credential(p_tenant_key,p_source_id);
+  SELECT * INTO source_row FROM control.source_registry r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id FOR UPDATE;
+  IF NOT FOUND OR source_row.data_owner_user_id IS DISTINCT FROM p_user_id OR source_row.owner_revision IS DISTINCT FROM p_owner_revision THEN RETURN; END IF;
+  SELECT s.auth_epoch,s.management_scopes INTO current_epoch,scopes
+    FROM control.auth_subject s JOIN control.tenant t ON t.tenant_key=s.tenant_key
+    JOIN control.identity_binding b ON (b.tenant_key,b.user_id)=(s.tenant_key,s.user_id)
+    WHERE s.tenant_key=p_tenant_key AND s.user_id=p_user_id AND b.issuer=p_issuer AND b.subject=p_subject
+      AND t.enabled AND s.enabled AND b.enabled FOR UPDATE OF t,s,b;
+  IF NOT FOUND OR current_epoch IS DISTINCT FROM p_auth_epoch OR NOT (scopes @> ARRAY['source:read']::text[]) THEN RETURN; END IF;
+  RETURN QUERY
+  SELECT i.quarantine_id,i.origin_kind,i.source_id,i.entity,i.relation,i.parent_source_pk,i.job_id,i.ordinal,i.event_id,
+    i.run_id,i.attempt_id,i.outcome_id,i.source_pk,i.status,i.error_code,
+    to_char(i.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+    CASE WHEN i.origin_kind='REST' THEN jsonb_build_object(
+      'owner_approval_id',i.owner_approval_id::text,'owner_revision',i.owner_revision::text,'channel_id',i.channel_id::text,
+      'channel_epoch',i.channel_epoch::text,'config_revision',i.config_revision::text,'config_digest',encode(i.config_digest,'hex'),
+      'mapping_revision',i.mapping_revision::text,'mapping_digest',encode(i.mapping_digest,'hex'),
+      'identity_mapping_revision',i.identity_mapping_revision::text,'identity_mapping_digest',encode(i.identity_mapping_digest,'hex'),
+      'endpoint_profile_digest',encode(i.endpoint_profile_digest,'hex'),'test_report_id',i.test_report_id::text,
+      'approval_security_fence',i.approval_security_fence::text,'security_barrier_fence_at_admission',i.security_barrier_fence_at_admission::text)
+    ELSE jsonb_build_object('aggregate_digest',encode(i.aggregate_digest,'hex'),'proof_scope_digest',encode(i.proof_scope_digest,'hex')) END,
+    i.dependency_status,i.dependency_code
+  FROM control.ingestion_quarantine_index i
+  WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND (p_origin_kind IS NULL OR i.origin_kind=p_origin_kind)
+    AND (p_error_code IS NULL OR i.error_code=p_error_code)
+    AND (p_after_created_at IS NULL OR i.created_at<p_after_created_at OR
+      (i.created_at=p_after_created_at AND i.quarantine_id<p_after_quarantine_id))
+  ORDER BY i.created_at DESC,i.quarantine_id DESC LIMIT p_limit+1;
+END;
+$body$;
+ALTER FUNCTION control.list_ingestion_quarantine_current_owner(text,text,text,text,text,bigint,bigint,text,text,timestamptz,uuid,integer)
+  OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.list_ingestion_quarantine_current_owner(text,text,text,text,text,bigint,bigint,text,text,timestamptz,uuid,integer)
+  FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.list_ingestion_quarantine_current_owner(text,text,text,text,text,bigint,bigint,text,text,timestamptz,uuid,integer)
+  TO hub_api;

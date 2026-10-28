@@ -5,13 +5,14 @@ import { AuthError, isAuthError } from '../auth/errors.js';
 import type { AuthService, SourceEntity, SourcePrincipal, UserPrincipal } from '../auth/types.js';
 import type { OidcAuthenticator } from '../auth/oidc.js';
 import { IngestInputError, parseStrictJson, requestDigest, STRICT_INGEST_BODY_LIMIT, validateHubBatch, type PublicBatch } from './strict-contract.js';
+import { registerQuarantineReadRoute } from './quarantine-read.js';
 
 const ROUTES = {
   customer: '/hub/v1/ingest/crm/customers',
   order: '/hub/v1/ingest/orders/orders',
 } as const;
 type RawStoragePolicy = 'local_lab_fixture' | 'deployment_managed';
-type StrictAuth = Pick<AuthService, 'authenticateSource' | 'authenticateSourceIdentity' | 'assertCurrentSource'>;
+type StrictAuth = Pick<AuthService, 'authenticateSource' | 'authenticateSourceIdentity' | 'assertCurrentSource' | 'assertCurrentPrincipal'>;
 export type StrictIngestionOptions = Readonly<{
   pool: Pool;
   authService: StrictAuth;
@@ -328,6 +329,11 @@ async function registerReadRoutes(app: FastifyInstance, options?: StrictIngestio
 
 export async function registerStrictIngestionRoutes(app: FastifyInstance, options?: StrictIngestionOptions): Promise<void> {
   await registerReadRoutes(app, options);
+  await registerQuarantineReadRoute(app, options?.authenticator ? {
+    pool: options.pool,
+    authService: options.authService,
+    authenticator: options.authenticator,
+  } : undefined);
   app.register(async intake => {
     intake.removeContentTypeParser('application/json');
     intake.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
