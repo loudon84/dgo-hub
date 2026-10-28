@@ -8,7 +8,7 @@ let fixture:SnapshotRecoveryHttpFixture;
 beforeAll(async()=>{fixture=await startSnapshotRecoveryHttpFixture();},90_000);
 afterAll(async()=>{if(fixture) await fixture.close();});
 
-async function frozenStageState(runId:string):Promise<string>{
+async function frozenStageState(runId:string,sourceId='pg_recovery'):Promise<string>{
   const result=await fixture.adminPool.query<{state:string}>(`
     SELECT jsonb_build_object('run_id',m.run_id,'attempt_id',m.attempt_id,'manifest_digest',encode(m.manifest_digest,'hex'),
       'manifest',m.manifest,'created_at',m.created_at,
@@ -26,8 +26,8 @@ async function frozenStageState(runId:string):Promise<string>{
       'outcomes',(SELECT coalesce(jsonb_agg(to_jsonb(o) ORDER BY o.entity,o.relation,o.parent_source_pk,o.source_pk),'[]'::jsonb)
         FROM control.etl_snapshot_apply_outcome o WHERE (o.tenant_key,o.source_id,o.run_id,o.attempt_id)=
           (m.tenant_key,m.source_id,m.run_id,m.attempt_id)))::text AS state
-    FROM control.etl_snapshot_manifest m WHERE m.tenant_key=$1 AND m.source_id='pg_recovery' AND m.run_id=$2::uuid`,
-    [fixture.owner.tenantId,runId]);
+    FROM control.etl_snapshot_manifest m WHERE m.tenant_key=$1 AND m.source_id=$2 AND m.run_id=$3::uuid`,
+    [fixture.owner.tenantId,sourceId,runId]);
   return result.rows[0]?.state??'';
 }
 
@@ -252,13 +252,27 @@ describe('API-022 immutable snapshot recovery',()=>{
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedRunId]);
     const beforeCrashPid=await killNodeAtAggregateBoundary(fixture.hostPort,sealedAccepted.json().data.run_id,'before');
     expect(beforeCrashPid).toBeGreaterThan(0);
-    const beforeCommitEffect=await fixture.adminPool.query<{identity_count:string;outcome_count:string}>(`
+    const beforeCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
+      receipt_count:string;outbox_count:string;checkpoint:string}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
         AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
+        (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
+          ON (i.tenant_key,i.canonical_object_id)=(c.tenant_id,c.id) WHERE i.tenant_key=$1 AND i.source_id='pg_recovery'
+            AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS canonical_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count`,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count,
+        (SELECT count(*) FROM control.etl_snapshot_apply_range WHERE tenant_key=$1 AND source_id='pg_recovery'
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS range_count,
+        (SELECT count(*) FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg_recovery'
+          AND entity='customer' AND source_pk='C-REC-2')::text AS receipt_count,
+        (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
+          ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
+          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
+        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)::text
+          FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
-    expect(beforeCommitEffect.rows[0]).toEqual({identity_count:'0',outcome_count:'0'});
+    expect(beforeCommitEffect.rows[0]).toEqual({identity_count:'0',canonical_count:'0',outcome_count:'0',range_count:'0',receipt_count:'0',outbox_count:'0',
+      checkpoint:'{"completed_count":1,"last_source_pk":"C-REC-1"}'});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
@@ -266,13 +280,27 @@ describe('API-022 immutable snapshot recovery',()=>{
     await new Promise(resolve=>setTimeout(resolve,5_100));
     const crashedChildPid=await killNodeAtAggregateBoundary(fixture.hostPort,sealedAccepted.json().data.run_id,'after');
     expect(crashedChildPid).toBeGreaterThan(0);
-    const afterCommitEffect=await fixture.adminPool.query<{identity_count:string;outcome_count:string}>(`
+    const afterCommitEffect=await fixture.adminPool.query<{identity_count:string;canonical_count:string;outcome_count:string;range_count:string;
+      receipt_count:string;outbox_count:string;checkpoint:string}>(`
       SELECT (SELECT count(*) FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id='pg_recovery'
         AND entity='customer' AND source_pk='C-REC-2')::text AS identity_count,
+        (SELECT count(*) FROM hub.canonical_customer c JOIN control.canonical_source_identity i
+          ON (i.tenant_key,i.canonical_object_id)=(c.tenant_id,c.id) WHERE i.tenant_key=$1 AND i.source_id='pg_recovery'
+            AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS canonical_count,
         (SELECT count(*) FROM control.etl_snapshot_apply_outcome WHERE tenant_key=$1 AND source_id='pg_recovery'
-          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count`,
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS outcome_count,
+        (SELECT count(*) FROM control.etl_snapshot_apply_range WHERE tenant_key=$1 AND source_id='pg_recovery'
+          AND run_id=$2::uuid AND entity='customer' AND source_pk='C-REC-2')::text AS range_count,
+        (SELECT count(*) FROM control.source_version_receipt WHERE tenant_key=$1 AND source_id='pg_recovery'
+          AND entity='customer' AND source_pk='C-REC-2')::text AS receipt_count,
+        (SELECT count(*) FROM control.canonical_apply_outbox o JOIN control.canonical_source_identity i
+          ON (i.tenant_key,i.source_id,i.entity,i.canonical_object_id)=(o.tenant_key,o.source_id,o.entity,o.canonical_object_id)
+          WHERE i.tenant_key=$1 AND i.source_id='pg_recovery' AND i.entity='customer' AND i.source_pk='C-REC-2')::text AS outbox_count,
+        (SELECT jsonb_build_object('completed_count',completed_count,'last_source_pk',last_source_pk)::text
+          FROM control.etl_snapshot_checkpoint WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid AND entity='customer') AS checkpoint`,
       [fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
-    expect(afterCommitEffect.rows[0]).toEqual({identity_count:'1',outcome_count:'1'});
+    expect(afterCommitEffect.rows[0]).toEqual({identity_count:'1',canonical_count:'1',outcome_count:'1',range_count:'1',receipt_count:'1',outbox_count:'1',
+      checkpoint:'{"completed_count":2,"last_source_pk":"C-REC-2"}'});
     await fixture.adminPool.query(`UPDATE control.etl_snapshot_continuation SET lease_until=clock_timestamp()-interval '1 second',
       next_retry_at=clock_timestamp()-interval '1 second'
       WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[fixture.owner.tenantId,sealedAccepted.json().data.run_id]);
@@ -342,6 +370,119 @@ describe('API-022 immutable snapshot recovery',()=>{
     const retiredReplay=await sendPartial(committedRun,'resume immutable sealed stage','1','snapshot-recovery-sealed');
     expect(retiredReplay.statusCode).toBe(409);
   },30_000);
+  it('copies the immutable SEALED order proof and applies two source lines as one aggregate',async()=>{
+    const customer=await fixture.adminPool.query<{canonical_object_id:string}>(`SELECT canonical_object_id::text FROM control.canonical_source_identity
+      WHERE tenant_key=$1 AND source_id='pg_recovery' AND entity='customer' AND source_pk='C-REC-1'`,[fixture.owner.tenantId]);
+    expect(customer.rows).toHaveLength(1);
+    const originalRunId=await fixture.createOrderRecoveryRun(customer.rows[0].canonical_object_id);
+    const sourceFactory=createOwnedPostgresSourceFactory(fixture.adminPool);
+    expect(await runSnapshotWorkerOnce(fixture.workerPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',
+      resolve:async()=> 'fixture-secret'},egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},
+      sourceConnectionFactory:sourceFactory})).toBe(1);
+    let committedOriginalOrder='';
+    expect(await runSnapshotContinuationWorkerOnce(fixture.workerPool,20,60,{afterAggregateCommit:async item=>{
+      if(item.run_id===originalRunId&&item.entity==='order'&&item.source_pk==='9007199254740993123') {
+        committedOriginalOrder=item.source_pk; throw new Error('controlled order aggregate failure after commit');
+      }
+    }})).toBe(1);
+    expect(committedOriginalOrder).toBe('9007199254740993123');
+    const originalStatus=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${originalRunId}`,
+      headers:{authorization:`Bearer ${fixture.token}`}});
+    expect(originalStatus.statusCode).toBe(200);
+    expect(originalStatus.json().data).toMatchObject({status:'FAILED',failure_version:'1',expected_entities:['order']});
+    const frozenBefore=await frozenStageState(originalRunId,'pg_order_recovery');
+    expect(frozenBefore).not.toBe('');
+    const originalRange=await fixture.adminPool.query<{outcome_id:string;status:string;aggregate_digest:string;proof_scope_digest:string}>(`
+      SELECT r.outcome_id::text,o.status,encode(r.aggregate_digest,'hex') AS aggregate_digest,encode(r.proof_scope_digest,'hex') AS proof_scope_digest
+      FROM control.etl_snapshot_apply_range r JOIN control.etl_snapshot_apply_outcome o USING(outcome_id)
+      WHERE r.tenant_key=$1 AND r.source_id='pg_order_recovery' AND r.run_id=$2::uuid AND r.entity='order'
+        AND r.source_pk='9007199254740993123'`,[fixture.owner.tenantId,originalRunId]);
+    expect(originalRange.rows).toHaveLength(1);
+    expect(originalRange.rows[0].status).toBe('APPLIED');
+    const originalOrderEffect=await fixture.adminPool.query<{line_count:string;receipt_outbox_count:string;unapplied_second_order:string}>(`
+      SELECT (SELECT count(*)::text FROM control.canonical_source_identity i JOIN hub.canonical_order o
+          ON o.tenant_id=i.tenant_key AND o.id=i.canonical_object_id JOIN hub.canonical_order_line l
+          ON l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.deleted_at IS NULL
+        WHERE i.tenant_key=$1 AND i.source_id='pg_order_recovery' AND i.entity='order' AND i.source_pk='9007199254740993123') AS line_count,
+        (SELECT count(*)::text FROM control.source_version_receipt r JOIN control.canonical_source_identity i
+          ON (i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id)=(r.tenant_key,r.source_id,r.entity,r.source_pk,r.canonical_object_id)
+          JOIN control.canonical_apply_outbox o ON (o.tenant_key,o.source_id,o.entity,o.canonical_object_id,o.apply_xid,
+            o.source_content_digest,o.projection_digest)=(r.tenant_key,r.source_id,r.entity,r.canonical_object_id,r.apply_xid,
+            r.source_content_digest,r.projection_digest)
+        WHERE r.tenant_key=$1 AND r.source_id='pg_order_recovery' AND r.entity='order' AND r.source_pk='9007199254740993123') AS receipt_outbox_count,
+        (SELECT count(*)::text FROM control.etl_snapshot_apply_range WHERE tenant_key=$1 AND source_id='pg_order_recovery'
+          AND run_id=$2::uuid AND entity='order' AND source_pk='9007199254740993124') AS unapplied_second_order`,
+      [fixture.owner.tenantId,originalRunId]);
+    expect(originalOrderEffect.rows[0]).toEqual({line_count:'2',receipt_outbox_count:'1',unapplied_second_order:'0'});
+    const originalObservation=await fixture.adminPool.query<{sequence_value:string;created_at:string}>(`SELECT sequence_value::text,created_at::text
+      FROM control.etl_snapshot_observation WHERE tenant_key=$1 AND source_id='pg_order_recovery' AND run_id=$2::uuid`,
+      [fixture.owner.tenantId,originalRunId]);
+    expect(originalObservation.rows).toHaveLength(1);
+    const outboxBefore=await fixture.adminPool.query<{count:string;max_id:string;prefix:string}>(`SELECT count(*)::text AS count,
+      max(id)::text AS max_id,coalesce(jsonb_agg(jsonb_build_object('id',id,'entity',entity,'source_content_digest',
+        encode(source_content_digest,'hex'),'projection_digest',encode(projection_digest,'hex')) ORDER BY id),'[]'::jsonb)::text AS prefix
+      FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id='pg_order_recovery'`,[fixture.owner.tenantId]);
+    const retry=await fixture.app.inject({method:'POST',url:`/hub/v1/admin/etl-runs/${originalRunId}/retry`,
+      headers:{authorization:`Bearer ${fixture.token}`,'content-type':'application/json','idempotency-key':'snapshot-order-recovery'},
+      payload:{failed_version:'1',reason:'resume exact two-line order snapshot'}});
+    expect(retry.statusCode,retry.body).toBe(202);
+    expect(retry.json().data).toMatchObject({recovery_mode:'SEALED_STAGE',status:'QUEUED'});
+    let sourceConnections=0;
+    expect(await runSnapshotWorkerOnce(fixture.workerPool,{secretResolver:{isConfiguredReference:reference=>reference==='vault:/snapshot/source',
+      resolve:async()=> 'fixture-secret'},egressPolicy:{environmentKind:'local_lab',policyId:'controlled-recovery-fixture'},sourceConnectionFactory:{
+        async connect(){sourceConnections+=1;throw new Error('SEALED order recovery must not open source IO');},
+      }})).toBe(1);
+    expect(sourceConnections).toBe(0);
+    const childRunId=retry.json().data.run_id as string;
+    expect(await frozenStageState(originalRunId,'pg_order_recovery')).toBe(frozenBefore);
+    expect(await runSnapshotContinuationWorkerOnce(fixture.workerPool)).toBe(1);
+    const childStatus=await fixture.app.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${childRunId}`,
+      headers:{authorization:`Bearer ${fixture.token}`}});
+    expect(childStatus.json().data).toMatchObject({status:'COMPLETE',expected_entities:['order']});
+    const recoveryRanges=await fixture.adminPool.query<{entity:string;source_pk:string;status:string;reused_original_outcome_id:string|null;outcome_id:string}>(`
+      SELECT r.entity,r.source_pk,o.status,x.reused_original_outcome_id::text,r.outcome_id::text
+      FROM control.etl_snapshot_apply_range r JOIN control.etl_snapshot_apply_outcome o USING(outcome_id)
+      LEFT JOIN control.etl_snapshot_apply_outcome x USING(outcome_id)
+      WHERE r.tenant_key=$1 AND r.source_id='pg_order_recovery' AND r.run_id=$2::uuid ORDER BY r.source_pk`,
+      [fixture.owner.tenantId,childRunId]);
+    expect(recoveryRanges.rows).toHaveLength(2);
+    expect(recoveryRanges.rows.find(row=>row.source_pk==='9007199254740993123')).toMatchObject({
+      status:'DUPLICATE',reused_original_outcome_id:originalRange.rows[0].outcome_id});
+    expect(recoveryRanges.rows.find(row=>row.source_pk==='9007199254740993124')).toMatchObject({status:'APPLIED',reused_original_outcome_id:null});
+    const canonicalOrder=await fixture.adminPool.query<{order_no:string;amount:string;line_count:string;receipt_outbox_count:string;lines:Array<Record<string,string>>}>(`
+      SELECT o.order_no,o.amount::text,(SELECT count(*)::text FROM hub.canonical_order_line l
+        WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.deleted_at IS NULL) AS line_count,
+        (SELECT count(*)::text FROM control.source_version_receipt r JOIN control.canonical_apply_outbox x
+          ON (x.tenant_key,x.source_id,x.entity,x.canonical_object_id,x.apply_xid,x.source_content_digest,x.projection_digest)=
+            (r.tenant_key,r.source_id,r.entity,r.canonical_object_id,r.apply_xid,r.source_content_digest,r.projection_digest)
+          WHERE r.tenant_key=i.tenant_key AND r.source_id=i.source_id AND r.entity='order' AND r.source_pk=i.source_pk) AS receipt_outbox_count,
+        (SELECT jsonb_agg(jsonb_build_object('line_id',l.source_line_id,'quantity',l.quantity::text,'unit_price',l.unit_price::text,
+          'line_amount',l.line_amount::text) ORDER BY l.source_line_id)::jsonb FROM hub.canonical_order_line l
+          WHERE l.tenant_id=o.tenant_id AND l.order_id=o.id AND l.deleted_at IS NULL) AS lines
+      FROM control.canonical_source_identity i JOIN hub.canonical_order o ON o.tenant_id=i.tenant_key AND o.id=i.canonical_object_id
+      WHERE i.tenant_key=$1 AND i.source_id='pg_order_recovery' AND i.entity='order' AND i.source_pk='9007199254740993124'`,
+      [fixture.owner.tenantId]);
+    expect(canonicalOrder.rows[0]).toEqual({order_no:'ORDER-REC-200',amount:'223456789012345678.12',line_count:'2',receipt_outbox_count:'1',lines:[
+      {line_id:'L-200-A',quantity:'3.123456',unit_price:'323456789012.123456',line_amount:'338636548569.22'},
+      {line_id:'L-200-B',quantity:'4.123456',unit_price:'423456789012.123456',line_amount:'438636548569.22'},
+    ]});
+    const observationAfter=await fixture.adminPool.query<{sequence_value:string;created_at:string;child_observation_count:string}>(`
+      SELECT (SELECT sequence_value::text FROM control.etl_snapshot_observation WHERE tenant_key=$1 AND source_id='pg_order_recovery'
+        AND run_id=$2::uuid) AS sequence_value,(SELECT created_at::text FROM control.etl_snapshot_observation WHERE tenant_key=$1
+        AND source_id='pg_order_recovery' AND run_id=$2::uuid) AS created_at,(SELECT count(*)::text FROM control.etl_snapshot_observation
+        WHERE tenant_key=$1 AND source_id='pg_order_recovery' AND run_id=$3::uuid) AS child_observation_count`,
+      [fixture.owner.tenantId,originalRunId,childRunId]);
+    expect(observationAfter.rows[0]).toMatchObject({...originalObservation.rows[0],child_observation_count:'0'});
+    expect(await frozenStageState(originalRunId,'pg_order_recovery')).toBe(frozenBefore);
+    const outboxAfter=await fixture.adminPool.query<{count:string;prefix:string}>(`SELECT count(*)::text AS count,
+      coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'entity',entity,'source_content_digest',encode(source_content_digest,'hex'),
+        'projection_digest',encode(projection_digest,'hex')) ORDER BY id) FROM control.canonical_apply_outbox
+        WHERE tenant_key=$1 AND source_id='pg_order_recovery' AND id<=$2),'[]'::jsonb)::text AS prefix
+      FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id='pg_order_recovery'`,
+      [fixture.owner.tenantId,outboxBefore.rows[0].max_id]);
+    expect(Number(outboxAfter.rows[0].count)).toBe(Number(outboxBefore.rows[0].count)+1);
+    expect(outboxAfter.rows[0].prefix).toBe(outboxBefore.rows[0].prefix);
+  });
   it('runs HTTP as hub_api and keeps recovery proof loaders worker-only',async()=>{
     const api=await fixture.pool.query<{role:string;admission:boolean;proof:boolean}>(`SELECT current_user AS role,
       has_function_privilege(current_user,'control.create_etl_snapshot_manual_recovery(text,uuid,bigint,text,bytea,text,text,text,text,bigint,text[],uuid)','EXECUTE') AS admission,

@@ -24,6 +24,7 @@ export type SnapshotRecoveryHttpFixture=Readonly<{pool:Pool;workerPool:Pool;admi
   userId:string;tenantId:string;issuer:string;subject:string;managementScopes:readonly string[];authEpoch:string;
   businessTimezone:string;departmentId:string;businessRole:'sales';
 }>;token:string;hostPort:number;originalRunId:string;createInterruptedRun:()=>Promise<string>;
+createOrderRecoveryRun:(canonicalCustomerId:string)=>Promise<string>;
 pauseSource:(expectedRevision:string)=>Promise<unknown>;editSourceConfig:(expectedRevision:string)=>Promise<unknown>;close:()=>Promise<void>}>;
 
 export function createOwnedPostgresSourceFactory(pool:Pool,onConnect:()=>void=()=>undefined,onFetch:(rowCount:number)=>void=()=>undefined):PostgresSourceConnectionFactory {
@@ -75,9 +76,13 @@ export async function startSnapshotRecoveryHttpFixture():Promise<SnapshotRecover
     const endpointProfile:EndpointProfile={revision:'pg-v1',connector:'postgresql',protocol:'postgres:',host:'source.fixture.invalid',
       port:5432,database:'source_db',user:'source_reader',schema:'public',entities:{customer:{table:'customers',source_pk:'customer_id',
         updated_at_field:'updated_at',version_field:'source_version'}}};
+    const orderEndpointProfile:EndpointProfile={revision:'pg-order-v1',connector:'postgresql',protocol:'postgres:',host:'source.fixture.invalid',
+      port:5432,database:'source_db',user:'source_reader',schema:'public',entities:{order:{table:'snapshot_recovery_orders',source_pk:'order_id',
+        updated_at_field:'updated_at',lines:{table:'snapshot_recovery_order_lines',order_fk:'order_id'},customer_source_id:'pg_recovery'}}};
     const registry=createSourceRegistryService({pool:pg.pool,auth,environmentKind:'local_lab',
       secretResolver:{isConfiguredReference:value=>value==='vault:/snapshot/source',resolve:async()=>'fixture-secret'},
-      endpointAllowlist:{resolve:async reference=>{if(reference!=='pg-test') throw new Error('endpoint not approved');return endpointProfile;}},
+      endpointAllowlist:{resolve:async reference=>{if(reference==='pg-test') return endpointProfile;
+        if(reference==='pg-order-test') return orderEndpointProfile; throw new Error('endpoint not approved');}},
       capabilityProbe:{run:async()=>({passed:true,checks:['READ_ONLY','MAPPING_VALID','VERSION_DELETE_CONTRACT_VALID']})}});
     const config={name:'Snapshot recovery CRM',connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
       endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:['customer'],delete_contract:'hard_delete'};
@@ -114,7 +119,50 @@ export async function startSnapshotRecoveryHttpFixture():Promise<SnapshotRecover
         WHERE tenant_key=$1 AND source_id='pg_recovery' AND run_id=$2::uuid`,[owner.tenantId,run.run_id]);
       return run.run_id;
     };
+    const createOrderRecoveryRun=async(canonicalCustomerId:string)=>{
+      await pg.pool.query(`CREATE TABLE public.snapshot_recovery_orders(order_id bigint PRIMARY KEY,customer_id text NOT NULL,order_no text NOT NULL,
+        status text NOT NULL,order_at timestamptz NOT NULL,amount numeric(30,2) NOT NULL,currency text NOT NULL,updated_at timestamptz NOT NULL)`);
+      await pg.pool.query(`CREATE TABLE public.snapshot_recovery_order_lines(line_id text PRIMARY KEY,order_id bigint NOT NULL
+        REFERENCES public.snapshot_recovery_orders(order_id),product_code text NOT NULL,product_name text NOT NULL,quantity numeric(20,6) NOT NULL,
+        unit_price numeric(30,6) NOT NULL,line_amount numeric(30,2) NOT NULL)`);
+      await pg.pool.query(`INSERT INTO public.snapshot_recovery_orders VALUES
+        (9007199254740993123,'C-REC-1','ORDER-REC-100','COMPLETED','2026-10-28 13:00:00.123456+00',
+          123456789012345678.12,'USD','2026-10-28 13:01:00.123456+00'),
+        (9007199254740993124,'C-REC-1','ORDER-REC-200','COMPLETED','2026-10-28 13:02:00.123456+00',
+          223456789012345678.12,'USD','2026-10-28 13:03:00.123456+00')`);
+      await pg.pool.query(`INSERT INTO public.snapshot_recovery_order_lines VALUES
+        ('L-100-A',9007199254740993123,'SKU-A','Order line A',1.123456,123456789012.123456,138636548569.22),
+        ('L-100-B',9007199254740993123,'SKU-B','Order line B',2.123456,223456789012.123456,238636548569.22),
+        ('L-200-A',9007199254740993124,'SKU-C','Order line C',3.123456,323456789012.123456,338636548569.22),
+        ('L-200-B',9007199254740993124,'SKU-D','Order line D',4.123456,423456789012.123456,438636548569.22)`);
+      await auth.repository.provisionSourceCredential({sourceId:'pg_order_recovery',tenantId:owner.tenantId,
+        token:createCredential().secret,secretRef:'vault:/snapshot/source',allowedEntities:['order'],revision:'1'});
+      await registry.create(owner,{source_id:'pg_order_recovery',data_owner_user_id:owner.userId,config:{name:'Snapshot recovery orders',
+        connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',endpoint_allowlist_ref:'pg-order-test',
+        secret_ref:'vault:/snapshot/source',allowed_entities:['order'],delete_contract:'hard_delete'}});
+      await registry.writeMappings(owner,'pg_order_recovery','1',[
+        {entity:'order',source_field:'customer_id',target_field:'customer_id',transform:'source-id'},
+        {entity:'order',source_field:'order_no',target_field:'order_no',transform:'trim'},
+        {entity:'order',source_field:'status',target_field:'status',transform:'trim'},
+        {entity:'order',source_field:'order_at',target_field:'order_at',transform:'identity'},
+        {entity:'order',source_field:'amount',target_field:'amount',transform:'decimal-string'},
+        {entity:'order',source_field:'currency',target_field:'currency',transform:'trim'},
+        {entity:'order',source_field:'updated_at',target_field:'source_updated_at',transform:'identity'},
+        {entity:'order',source_field:'line_id',target_field:'lines.source_line_id',transform:'source-id'},
+        {entity:'order',source_field:'product_code',target_field:'lines.product_code',transform:'trim'},
+        {entity:'order',source_field:'product_name',target_field:'lines.product_name',transform:'trim'},
+        {entity:'order',source_field:'quantity',target_field:'lines.quantity',transform:'decimal-string'},
+        {entity:'order',source_field:'unit_price',target_field:'lines.unit_price',transform:'decimal-string'},
+        {entity:'order',source_field:'line_amount',target_field:'lines.line_amount',transform:'decimal-string'},
+      ]);
+      await registry.writeIdentityMappings(owner,'pg_order_recovery',[{kind:'customer',external_id:'C-REC-1',target_id:canonicalCustomerId}]);
+      const orderTest=await registry.test(owner,'pg_order_recovery','1');
+      const orderApproval=await registry.approve(owner,'pg_order_recovery','1',orderTest.test_report_id,orderTest.data_contract_ref);
+      await registry.activate(owner,'pg_order_recovery','1',orderApproval.approval_id);
+      return (await createSnapshotRun(pg.pool,auth,owner,'pg_order_recovery','1','snapshot-order-recovery-original')).run_id;
+    };
     return {pool:apiPool,workerPool,adminPool:pg.pool,app,owner,token,hostPort:pg.hostPort,originalRunId:original.run_id,createInterruptedRun,
+      createOrderRecoveryRun,
       pauseSource:(expectedRevision:string)=>registry.pause(owner,'pg_recovery',expectedRevision,'recovery fixture ordinary pause'),
       editSourceConfig:(expectedRevision:string)=>registry.update(owner,'pg_recovery',{expected_revision:expectedRevision,
         config:{...config,name:'Snapshot recovery CRM revised'}}),
