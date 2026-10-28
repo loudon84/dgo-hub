@@ -48,54 +48,129 @@
       "minItems": 1,
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "source_id": {
-            "type": "string",
-            "minLength": 1
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "connection_mode": {
+                "type": "string",
+                "enum": [
+                  "rest",
+                  "postgresql",
+                  "sqlserver"
+                ]
+              },
+              "endpoint": {
+                "type": "string",
+                "format": "uri"
+              },
+              "secret_ref": {
+                "type": "string",
+                "pattern": "^(env|secret|vault):\\/\\/(?:[A-Za-z0-9._-]+\\/)*[A-Za-z0-9._-]+$"
+              },
+              "mapping_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "replica_authorization_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "deletion_contract_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "read_only": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source_id",
+              "connection_mode",
+              "endpoint",
+              "secret_ref",
+              "mapping_ref",
+              "replica_authorization_ref",
+              "deletion_contract_ref"
+            ],
+            "additionalProperties": false
           },
-          "connection_mode": {
-            "type": "string",
-            "enum": [
-              "rest",
-              "postgresql",
-              "sqlserver"
-            ]
-          },
-          "endpoint": {
-            "type": "string",
-            "format": "uri"
-          },
-          "secret_ref": {
-            "type": "string",
-            "pattern": "^(env|secret|vault):\\/\\/(?:[A-Za-z0-9._-]+\\/)*[A-Za-z0-9._-]+$"
-          },
-          "mapping_ref": {
-            "type": "string",
-            "minLength": 1
-          },
-          "replica_authorization_ref": {
-            "type": "string",
-            "minLength": 1
-          },
-          "deletion_contract_ref": {
-            "type": "string",
-            "minLength": 1
-          },
-          "read_only": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "connection_mode": {
+                "const": "SIMULATED_IMPORT"
+              },
+              "mode": {
+                "const": "INCREMENTAL"
+              },
+              "version_domain": {
+                "const": "SOURCE_VERSION"
+              },
+              "allowed_entities": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "customer",
+                    "order"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "delete_contract": {
+                "const": "tombstone"
+              },
+              "input_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "data_contract_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mapping_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "replica_authorization_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "deletion_contract_ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "source_id",
+              "connection_mode",
+              "mode",
+              "version_domain",
+              "allowed_entities",
+              "delete_contract",
+              "input_ref",
+              "data_contract_ref",
+              "version",
+              "mapping_ref",
+              "replica_authorization_ref",
+              "deletion_contract_ref"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "source_id",
-          "connection_mode",
-          "endpoint",
-          "secret_ref",
-          "mapping_ref",
-          "replica_authorization_ref",
-          "deletion_contract_ref"
-        ],
-        "additionalProperties": false
+        ]
       }
     },
     "identity_mapping_ref": {
@@ -193,6 +268,13 @@
     },
     "example": {
       "type": "boolean"
+    },
+    "acceptance_level": {
+      "type": "string",
+      "enum": [
+        "platform",
+        "site"
+      ]
     }
   },
   "required": [
@@ -206,21 +288,190 @@
     "tls_hostname",
     "internal_services",
     "backup_ref",
-    "hermes",
     "test_identities",
     "example"
   ],
   "additionalProperties": false,
   "title": "Alpha1 EnvironmentInput",
-  "description": "Environment contract structure for alpha1.v1. Runtime Zod validation also checks protocols, credentials, tenant identity binding, IANA timezone, unique ids, and environment-kind rules.",
-  "$comment": "Generated from integration-service/contracts/environment.ts. Refinements that JSON Schema cannot fully express remain enforced by the runtime schema; a schema-valid example is not evidence of a live environment.",
+  "description": "Alpha1 environment structure. Runtime validation additionally enforces security, protocol, identity, timezone and reference rules; this schema does not establish readiness.",
+  "$comment": "Tracks integration-service/contracts/environment.ts. Runtime refinements remain authoritative; schema validity does not prove a live environment.",
   "x-runtime-validation": [
     "environment-kind-specific HTTPS and loopback rules",
     "endpoint protocols and credential or secret query rejection",
     "unique source_id and actor_ref values",
     "IANA timezone validation",
     "tenant-bound identities and site sales and sales_manager minimums",
-    "synthetic identities cannot satisfy site readiness",
-    "database source read_only requirement"
+    "synthetic identity references cannot satisfy site or platform readiness",
+    "database source read_only requirement",
+    "non-whitespace references and hostname validation"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "acceptance_level"
+        ],
+        "properties": {
+          "acceptance_level": {
+            "const": "platform"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "environment_kind": {
+            "const": "site"
+          },
+          "sources": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "connection_mode": {
+                  "const": "SIMULATED_IMPORT"
+                },
+                "mode": {
+                  "const": "INCREMENTAL"
+                },
+                "version_domain": {
+                  "const": "SOURCE_VERSION"
+                },
+                "allowed_entities": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "customer",
+                      "order"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "delete_contract": {
+                  "const": "tombstone"
+                },
+                "input_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "data_contract_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mapping_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "replica_authorization_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "deletion_contract_ref": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "source_id",
+                "connection_mode",
+                "mode",
+                "version_domain",
+                "allowed_entities",
+                "delete_contract",
+                "input_ref",
+                "data_contract_ref",
+                "version",
+                "mapping_ref",
+                "replica_authorization_ref",
+                "deletion_contract_ref"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "hermes"
+        ],
+        "properties": {
+          "sources": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "connection_mode": {
+                  "type": "string",
+                  "enum": [
+                    "rest",
+                    "postgresql",
+                    "sqlserver"
+                  ]
+                },
+                "endpoint": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "secret_ref": {
+                  "type": "string",
+                  "pattern": "^(env|secret|vault):\\/\\/(?:[A-Za-z0-9._-]+\\/)*[A-Za-z0-9._-]+$"
+                },
+                "mapping_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "replica_authorization_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "deletion_contract_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "read_only": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "source_id",
+                "connection_mode",
+                "endpoint",
+                "secret_ref",
+                "mapping_ref",
+                "replica_authorization_ref",
+                "deletion_contract_ref"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "environment_kind": {
+            "const": "local_lab"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "acceptance_level"
+          ]
+        }
+      }
+    }
   ]
 }

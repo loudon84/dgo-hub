@@ -266,7 +266,7 @@ async function validateBundle(runDir: string): Promise<EvidenceCheckResult & { d
   const requiredActors = env.environment_kind === 'site' ? env.test_identities.filter(i => i.role === 'sales').slice(0, 2).concat(env.test_identities.filter(i => i.role === 'sales_manager').slice(0, 1)) : [];
   const actualActors = new Set(golden.profiles.map(profile => profile.actor_ref));
   if (golden.input_kind !== sourceContracts.input_kind || golden.input_kind !== fixture.input_kind) issues.push('golden-consumer/manifest.json: input_kind mismatch');
-  if (golden.consumer.actual_version !== env.hermes.actual_version) issues.push('golden-consumer/manifest.json: Hermes version mismatch');
+  if (golden.consumer.actual_version !== env.hermes?.actual_version) issues.push('golden-consumer/manifest.json: Hermes version mismatch');
   if (golden.mcp.git_sha !== lock?.components?.['sales-mcp']?.source_sha || golden.mcp.manifest_digest !== lock?.components?.['sales-mcp']?.image?.manifest_digest) issues.push('golden-consumer/manifest.json: MCP identity mismatch');
   if (requiredActors.length !== 3 || actualActors.size !== golden.profiles.length || golden.calls.length !== 3) issues.push('golden-consumer/manifest.json: requires three distinct consumer actors and calls');
   const callActors = new Set(golden.calls.map(call => call.actor_ref));

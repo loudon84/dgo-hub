@@ -13,6 +13,7 @@ const approvalSchema = z.object({
 export const signoffRecordSchema = z.object({
   schema_version: z.literal('alpha1.v1'),
   contract_ref: z.literal('PRD-DGO-HUB-001:v1.0'),
+  supplement_ref: z.literal('PRD-DGO-HUB-001-FIXTURE:v1.0.fixture').optional(),
   status: z.enum(['REVIEW', 'APPROVED_FOR_PLAN']),
   example: z.boolean(),
   approvals: z.array(approvalSchema),
@@ -41,7 +42,7 @@ export type M0EntryResult = { status: 'PASS' | 'BLOCKED'; missing: string[]; exa
 export function evaluateM0Entry(
   signoffs: unknown,
   environment: unknown,
-  options: { expectedKind: 'local_lab' | 'site'; allowExample: boolean },
+  options: { expectedKind: 'local_lab' | 'site' | 'platform'; allowExample: boolean },
 ): M0EntryResult {
   const signoffResult = signoffRecordSchema.safeParse(signoffs);
   const environmentResult = environmentInputSchema.safeParse(environment);
@@ -50,7 +51,12 @@ export function evaluateM0Entry(
   if (!signoffResult.success) missing.push('signoffs:invalid_or_incomplete');
   if (!environmentResult.success) missing.push('environment:invalid_or_incomplete');
   if (signoffResult.success && signoffResult.data.status !== 'APPROVED_FOR_PLAN') missing.push('signoffs:status_not_approved_for_plan');
-  if (environmentResult.success && environmentResult.data.environment_kind !== options.expectedKind) missing.push('environment:kind_mismatch');
+  if (environmentResult.success) {
+    const env = environmentResult.data;
+    const actualKind = env.acceptance_level === 'platform' ? 'platform' : env.environment_kind;
+    if (actualKind !== options.expectedKind) missing.push('environment:kind_mismatch');
+    if (actualKind === 'platform' && signoffResult.success && !signoffResult.data.supplement_ref) missing.push('signoffs:supplement_ref_missing');
+  }
   if (example && !options.allowExample) missing.push('example:formal_readiness_rejected');
   if (example && options.allowExample) missing.push('example:syntax_only');
   return { status: missing.length === 0 ? 'PASS' : 'BLOCKED', missing, example };

@@ -1,0 +1,60 @@
+{
+  "schema_version": "alpha1.v1",
+  "environment_kind": "site",
+  "tenant_key": "example-tenant",
+  "business_timezone": "Asia/Shanghai",
+  "idp": {
+    "issuer": "https://id.example.test/realm",
+    "audience": "sales-mcp-example",
+    "jwks_uri": "https://id.example.test/jwks"
+  },
+  "sources": [
+    {
+      "source_id": "import-example",
+      "connection_mode": "SIMULATED_IMPORT",
+      "mode": "INCREMENTAL",
+      "version_domain": "SOURCE_VERSION",
+      "allowed_entities": [
+        "customer",
+        "order"
+      ],
+      "delete_contract": "tombstone",
+      "input_ref": "example://controlled-input",
+      "data_contract_ref": "example://hub-contract",
+      "version": "1",
+      "mapping_ref": "example://mapping",
+      "replica_authorization_ref": "example://authorization",
+      "deletion_contract_ref": "example://deletion"
+    }
+  ],
+  "identity_mapping_ref": "REQUIRED_IDENTITY_MAPPING_REFERENCE",
+  "tls_hostname": "localhost",
+  "internal_services": {
+    "hub_api": "http://127.0.0.1:3100",
+    "sales_mcp": "http://127.0.0.1:3101",
+    "hasura": "http://127.0.0.1:8088",
+    "postgres": "postgresql://127.0.0.1:5432/hub",
+    "openmetadata": "http://127.0.0.1:8585",
+    "helix": "http://127.0.0.1:6969"
+  },
+  "backup_ref": "REQUIRED_BACKUP_AND_RESTORE_EVIDENCE_REFERENCE",
+  "test_identities": [
+    {
+      "actor_ref": "idp://example-tenant/sales-1",
+      "role": "sales",
+      "tenant_key": "example-tenant"
+    },
+    {
+      "actor_ref": "idp://example-tenant/sales-2",
+      "role": "sales",
+      "tenant_key": "example-tenant"
+    },
+    {
+      "actor_ref": "idp://example-tenant/manager",
+      "role": "sales_manager",
+      "tenant_key": "example-tenant"
+    }
+  ],
+  "example": true,
+  "acceptance_level": "platform"
+}

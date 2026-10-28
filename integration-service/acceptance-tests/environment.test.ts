@@ -3,9 +3,10 @@ import { environmentInputSchema } from '../contracts/environment.js';
 import { signoffRecordSchema } from '../contracts/signoff.js';
 import { evaluateM0Entry } from '../contracts/signoff.js';
 import { runCheckM0Entry } from '../scripts/check-m0-entry.js';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const validEnvironment = () => ({
   schema_version: 'alpha1.v1',
@@ -345,4 +346,108 @@ describe('M0 entry CLI', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
+
+
+const platformEnvironment = () => {
+  const { hermes: _hermes, ...base } = validEnvironment();
+  return { ...base, acceptance_level: 'platform', sources: [{
+    source_id: 'import-one', connection_mode: 'SIMULATED_IMPORT', mode: 'INCREMENTAL',
+    version_domain: 'SOURCE_VERSION', allowed_entities: ['customer', 'order'], delete_contract: 'tombstone',
+    input_ref: 'controlled://batch', data_contract_ref: 'contract://hub/v1', version: '1',
+    mapping_ref: 'mapping://import', replica_authorization_ref: 'approval://replica', deletion_contract_ref: 'contract://deletion',
+  }] };
+};
+const platformSignoffs = () => ({ ...validSignoffs(), supplement_ref: 'PRD-DGO-HUB-001-FIXTURE:v1.0.fixture' });
+
+describe('platform entry', () => {
+  it('accepts complete platform declarations without site source credentials or Hermes', () => {
+    const env = platformEnvironment();
+    expect(environmentInputSchema.safeParse(env).success).toBe(true);
+    expect(evaluateM0Entry(platformSignoffs(), env, { expectedKind: 'platform', allowExample: false }).status).toBe('PASS');
+    expect(evaluateM0Entry(platformSignoffs(), env, { expectedKind: 'site', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry(validSignoffs(), env, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry(platformSignoffs(), validEnvironment(), { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+  });
+});
+
+
+describe('platform entry boundaries', () => {
+  it('rejects missing platform inputs, invalid source variants and mismatched identities', () => {
+    const base = platformEnvironment();
+    const source = base.sources[0]!;
+    const badEnvironments: unknown[] = [
+      { ...base, environment_kind: 'local_lab' },
+      { ...base, acceptance_level: 'site' },
+      { ...base, sources: validEnvironment().sources },
+      { ...base, sources: [{ ...source, endpoint: 'https://example.test' }] },
+      { ...base, sources: [{ ...source, secret_ref: 'env://EXAMPLE' }] },
+      { ...base, sources: [{ ...source, input_ref: '' }] },
+      { ...base, sources: [{ ...source, data_contract_ref: '' }] },
+      { ...base, sources: [{ ...source, mapping_ref: '' }] },
+      { ...base, sources: [{ ...source, deletion_contract_ref: '' }] },
+      { ...base, sources: [{ ...source, replica_authorization_ref: '' }] },
+      { ...base, sources: [{ ...source, version: '' }] },
+      { ...base, sources: [{ ...source, allowed_entities: ['customer', 'customer'] }] },
+      { ...base, sources: [{ ...source, mode: 'SNAPSHOT' }] },
+      { ...base, sources: [{ ...source, delete_contract: 'missing' }] },
+      { ...base, idp: { ...base.idp, issuer: 'http://id.example.test' } },
+      { ...base, internal_services: { ...base.internal_services, hub_api: 'https://user:pass@host.test' } },
+      { ...base, backup_ref: '' },
+      { ...base, tls_hostname: '' },
+      { ...base, identity_mapping_ref: '' },
+      { ...base, test_identities: base.test_identities.slice(0, 2) },
+      { ...base, test_identities: [base.test_identities[0], base.test_identities[0], base.test_identities[2]] },
+      { ...base, test_identities: [{ ...base.test_identities[0], tenant_key: 'other' }, ...base.test_identities.slice(1)] },
+      { ...base, test_identities: [{ ...base.test_identities[0], actor_ref: 'synthetic://example/user' }, ...base.test_identities.slice(1)] },
+      { ...validEnvironment(), hermes: undefined },
+      { ...validEnvironment(), sources: [source] },
+    ];
+    for (const input of badEnvironments) expect(environmentInputSchema.safeParse(input).success, JSON.stringify(input)).toBe(false);
+  });
+
+  it('keeps all approval roles and examples blocking formal platform entry', () => {
+    const env = platformEnvironment();
+    const missing = platformSignoffs();
+    missing.approvals.pop();
+    expect(evaluateM0Entry(missing, env, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry({ ...platformSignoffs(), status: 'REVIEW' }, env, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry({ ...platformSignoffs(), example: true }, env, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry(platformSignoffs(), { ...env, example: true }, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+    expect(evaluateM0Entry(platformSignoffs(), { ...validEnvironment(), environment_kind: 'local_lab' }, { expectedKind: 'platform', allowExample: false }).status).toBe('BLOCKED');
+  });
+
+  it('distinguishes platform CLI readiness from example syntax checking', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'alpha1-platform-'));
+    try {
+      const environmentPath = join(dir, 'environment.json');
+      const signoffsPath = join(dir, 'signoffs.json');
+      writeFileSync(environmentPath, JSON.stringify(platformEnvironment()));
+      writeFileSync(signoffsPath, JSON.stringify(platformSignoffs()));
+      const args = ['--signoffs', signoffsPath, '--environment', environmentPath, '--expected-kind'];
+      const platform = await runCheckM0Entry([...args, 'platform']);
+      expect(platform.exitCode).toBe(0);
+      expect(JSON.parse(platform.output)).toMatchObject({ status: 'PASS', product_ready: true, scope: 'entry-input-validation' });
+      const site = await runCheckM0Entry([...args, 'site']);
+      expect(site.exitCode).toBe(2);
+      expect(JSON.parse(site.output)).toMatchObject({ status: 'BLOCKED', product_ready: false });
+      writeFileSync(environmentPath, JSON.stringify({ ...platformEnvironment(), example: true }));
+      const formal = await runCheckM0Entry([...args, 'platform']);
+      expect(formal.exitCode).toBe(2);
+      const syntax = await runCheckM0Entry([...args, 'platform', '--validate-example']);
+      expect(syntax.exitCode).toBe(0);
+      expect(JSON.parse(syntax.output)).toMatchObject({ status: 'BLOCKED', product_ready: false });
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+});
+
+
+it('accepts the checked-in platform example only as a syntax example', async () => {
+  const environmentPath = new URL('../../docs/approvals/environment-inputs.platform.example.json', import.meta.url);
+  const signoffsPath = new URL('../../docs/approvals/alpha1-signoffs.example.json', import.meta.url);
+  const example = JSON.parse(readFileSync(environmentPath, 'utf8'));
+  expect(environmentInputSchema.safeParse(example).success).toBe(true);
+  const result = await runCheckM0Entry(['--signoffs', fileURLToPath(signoffsPath), '--environment', fileURLToPath(environmentPath), '--expected-kind', 'platform', '--validate-example']);
+  expect(result.exitCode).toBe(0);
+  expect(JSON.parse(result.output)).toMatchObject({ status: 'BLOCKED', product_ready: false, example: true });
 });

@@ -81,6 +81,21 @@ const sourceSchema = z.object({
   }
 });
 
+const importSourceSchema = z.object({
+  source_id: nonEmpty,
+  connection_mode: z.literal('SIMULATED_IMPORT'),
+  mode: z.literal('INCREMENTAL'),
+  version_domain: z.literal('SOURCE_VERSION'),
+  allowed_entities: z.array(z.enum(['customer', 'order'])).min(1).refine(values => new Set(values).size === values.length, 'Entities must be unique'),
+  delete_contract: z.literal('tombstone'),
+  input_ref: nonEmpty,
+  data_contract_ref: nonEmpty,
+  version: nonEmpty,
+  mapping_ref: nonEmpty,
+  replica_authorization_ref: nonEmpty,
+  deletion_contract_ref: nonEmpty,
+}).strict();
+
 const internalServiceProtocols: Record<string, string[]> = {
   hub_api: ['http:', 'https:'],
   sales_mcp: ['http:', 'https:'],
@@ -114,15 +129,16 @@ const testIdentitySchema = z.object({
 export const environmentInputSchema = z.object({
   schema_version: z.literal('alpha1.v1'),
   environment_kind: z.enum(['local_lab', 'site']),
+  acceptance_level: z.enum(['platform', 'site']).optional(),
   tenant_key: nonEmpty,
   business_timezone: nonEmpty,
   idp: z.object({ issuer: safeUrl, audience: nonEmpty, jwks_uri: safeUrl }).strict(),
-  sources: z.array(sourceSchema).min(1),
+  sources: z.array(z.union([sourceSchema, importSourceSchema])).min(1),
   identity_mapping_ref: nonEmpty,
   tls_hostname: hostname,
   internal_services: internalServicesSchema,
   backup_ref: nonEmpty,
-  hermes: z.object({ actual_version: nonEmpty }).strict(),
+  hermes: z.object({ actual_version: nonEmpty }).strict().optional(),
   test_identities: z.array(testIdentitySchema).min(1),
   example: z.boolean(),
 }).strict().superRefine((environment, ctx) => {
@@ -131,6 +147,19 @@ export const environmentInputSchema = z.object({
   } catch {
     ctx.addIssue({ code: 'custom', path: ['business_timezone'], message: 'business_timezone must be a valid IANA timezone' });
   }
+
+  const platform = environment.acceptance_level === 'platform';
+  if (environment.environment_kind === 'local_lab' && environment.acceptance_level !== undefined) {
+    ctx.addIssue({ code: 'custom', path: ['acceptance_level'], message: 'Acceptance levels require a site environment' });
+  }
+  if (!platform && !environment.hermes) {
+    ctx.addIssue({ code: 'custom', path: ['hermes'], message: 'Hermes version is required for legacy and site inputs' });
+  }
+  environment.sources.forEach((source, index) => {
+    if (platform !== (source.connection_mode === 'SIMULATED_IMPORT')) {
+      ctx.addIssue({ code: 'custom', path: ['sources', index, 'connection_mode'], message: 'Source type does not match acceptance level' });
+    }
+  });
 
   const ids = environment.sources.map(source => source.source_id);
   if (new Set(ids).size !== ids.length) {

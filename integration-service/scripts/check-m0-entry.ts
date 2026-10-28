@@ -7,7 +7,7 @@ import { evaluateM0Entry, signoffRecordSchema } from '../contracts/signoff.js';
 type Options = {
   signoffs?: string;
   environment?: string;
-  expectedKind?: 'local_lab' | 'site';
+  expectedKind?: 'local_lab' | 'site' | 'platform';
   validateExample: boolean;
 };
 
@@ -31,7 +31,7 @@ function parseArgs(argv: string[]): Options | undefined {
     if (arg === '--signoffs') options.signoffs = value;
     if (arg === '--environment') options.environment = value;
     if (arg === '--expected-kind') {
-      if (value !== 'local_lab' && value !== 'site') return undefined;
+      if (value !== 'local_lab' && value !== 'site' && value !== 'platform') return undefined;
       options.expectedKind = value;
     }
   }
@@ -51,7 +51,7 @@ export async function runCheckM0Entry(argv: string[]): Promise<{ exitCode: numbe
   if (!options) {
     return {
       exitCode: 1,
-      output: jsonResult({ error: 'usage', message: 'Required: --signoffs <file> --environment <file> --expected-kind <local_lab|site>; optional: --validate-example', product_ready: false }),
+      output: jsonResult({ error: 'usage', message: 'Required: --signoffs <file> --environment <file> --expected-kind <local_lab|site|platform>; optional: --validate-example', product_ready: false }),
     };
   }
 
