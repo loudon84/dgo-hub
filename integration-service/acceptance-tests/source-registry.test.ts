@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import { createAuthService } from '../auth/service.js';
 import { createCredential, digestCredential } from '../auth/credentials.js';
 import { buildApp } from '../app.js';
@@ -82,9 +82,9 @@ describe('M1 source admission authorization', () => {
   });
 
   it('applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat', async () => {
-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'],skipped:[]});
+    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import'],skipped:[]});
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery'] });
+    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import'] });
     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
     );
@@ -660,6 +660,20 @@ describe('M1 source admission authorization', () => {
       const oversized=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',
         headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:oversizedBody});
       expect(oversized.statusCode).toBe(413);
+      const chunked=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',
+        headers:{authorization:'Bearer owner-token','content-type':'application/json','transfer-encoding':'chunked'},
+        payload:JSON.stringify({expected_revision:'1',samples:{customer:'x'.repeat(2*1024*1024)}})});
+      expect(chunked.statusCode).toBe(413);
+      const address=await app.listen({host:'127.0.0.1',port:0});
+      const wireStatus=await new Promise<number>((resolve,reject)=>{
+        const req=httpRequest(`${address}/hub/v1/admin/sources/crm-new/test`,{method:'POST',headers:{authorization:'Bearer owner-token','content-type':'application/json','transfer-encoding':'chunked'}},res=>{res.resume();res.once('end',()=>resolve(res.statusCode??0));});
+        req.once('error',reject); req.write('{"expected_revision":"1","samples":{"customer":"'); req.write('x'.repeat(2*1024*1024)); req.end('"}}');
+      });
+      expect(wireStatus).toBe(413);
+      const prefix='{"expected_revision":"1","padding":"',suffix='"}';
+      const exact=prefix+'x'.repeat(2*1024*1024-Buffer.byteLength(prefix+suffix))+suffix;
+      const exactResult=await app.inject({method:'POST',url:'/hub/v1/admin/sources/crm-new/test',headers:{authorization:'Bearer owner-token','content-type':'application/json'},payload:exact});
+      expect(exactResult.statusCode).toBe(400);
       expect(oversized.json()).toMatchObject({request_id:expect.any(String),error:{code:'AUTH_INPUT_INVALID'}});
       const fetched=await app.inject({method:'GET',url:'/hub/v1/admin/sources/crm-new',headers:{authorization:'Bearer owner-token'}});
       expect(fetched.statusCode).toBe(200);

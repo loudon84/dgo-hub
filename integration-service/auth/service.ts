@@ -258,6 +258,8 @@ async function bindIdentity(pool: Pool, rawInput: IdentityBindingInput, supplied
   const input = validateBinding(rawInput);
   const enabled = input.enabled ?? true;
   await withAuthTransaction(pool, supplied, async client => {
+    const guard=await client.query<{installed:boolean}>("SELECT to_regprocedure('control.lock_security_barrier_fence()') IS NOT NULL AS installed");
+    if(guard.rows[0]?.installed) await client.query('SELECT control.lock_security_barrier_fence()');
     const target = await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 FOR UPDATE', [input.tenantId, input.userId]);
     if (target.rowCount !== 1) throw new AuthError('AUTH_INPUT_INVALID');
     const prior = await client.query<{ tenant_key: string; user_id: string; enabled: boolean }>(
@@ -375,6 +377,12 @@ export function createAuthService(options: { pool: Pool; clock?: () => Date }): 
     updateSubject: (input, client) => writeSubject(pool, input, client, true),
     setIdentityBinding: (issuer, subject, enabled, client) => setIdentityBinding(pool, issuer, subject, enabled, client),
     setTenantEnabled: (tenantId, enabled, client) => setTenantEnabled(pool, tenantId, enabled, client),
+    provisionImportAuthority: async (sourceId, tenantId, entities, client) => {
+      assertTenantKey(tenantId);
+      if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(sourceId)) throw new AuthError('AUTH_INPUT_INVALID');
+      const credential = createCredential();
+      await client.query('SELECT control.provision_import_authority($1,$2,$3,$4)', [sourceId,tenantId,credential.digest,sourceEntities(entities)]);
+    },
     provisionSourceCredential: (input, client) => provisionSourceCredential(pool, input, client),
     updateSourceCredential: (sourceId, tenantId, enabled, revisionValue, entities, client, secretRef) =>
       updateSourceCredential(pool, sourceId, tenantId, enabled, revisionValue, entities, client, secretRef),

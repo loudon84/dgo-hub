@@ -95,6 +95,7 @@ export type AuthService = Readonly<{
     updateSubject(input: SubjectProvisionInput, client?: PoolClient): Promise<void>;
     setIdentityBinding(issuer: string, subject: string, enabled: boolean, client?: PoolClient): Promise<void>;
     setTenantEnabled(tenantId: string, enabled: boolean, client?: PoolClient): Promise<void>;
+    provisionImportAuthority(sourceId: string, tenantId: string, entities: readonly SourceEntity[], client: PoolClient): Promise<void>;
     provisionSourceCredential(input: SourceCredentialProvisionInput, client?: PoolClient): Promise<void>;
     updateSourceCredential(sourceId: string, tenantId: string, enabled: boolean, revision: string, allowedEntities: readonly SourceEntity[], client?: PoolClient, secretRef?: string): Promise<void>;
     advanceSourceEpoch(sourceId: string, tenantId: string, client?: PoolClient): Promise<void>;

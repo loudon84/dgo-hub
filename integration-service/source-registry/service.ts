@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
+import { customerReferenceMappingKey, importSamplesDigest, mapImportSample } from './import-sample.js';
 import type { Pool, PoolClient } from 'pg';
 import { AuthError } from '../auth/errors.js';
 import type { AuthService, SourceEntity, UserPrincipal } from '../auth/types.js';
 import { validateEndpointProfile, type EndpointProfile, type ProbeEnvironment } from './capability-probe.js';
 
-export type Connector = 'rest' | 'postgresql' | 'sqlserver';
+export type Connector = 'rest' | 'postgresql' | 'sqlserver' | 'SIMULATED_IMPORT';
 export type SyncMode = 'FULL_SNAPSHOT' | 'INCREMENTAL';
 export type VersionDomain = 'SOURCE_VERSION' | 'SNAPSHOT_OBSERVATION';
 export type SourceConfig = Readonly<{
@@ -12,8 +13,8 @@ export type SourceConfig = Readonly<{
   connector: Connector;
   mode: SyncMode;
   version_domain: VersionDomain;
-  endpoint_allowlist_ref: string;
-  secret_ref: string;
+  endpoint_allowlist_ref?: string;
+  secret_ref?: string;
   allowed_entities: readonly SourceEntity[];
   delete_contract: 'tombstone' | 'hard_delete';
   endpoint_profile?: EndpointProfile;
@@ -96,6 +97,12 @@ function parseConfig(input: unknown, stored = false): SourceConfig {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('AUTH_INPUT_INVALID');
   const value = input as Record<string, unknown>;
   const allowed = ['name','connector','mode','version_domain','endpoint_allowlist_ref','secret_ref','allowed_entities','delete_contract'];
+  if (value.connector === 'SIMULATED_IMPORT') {
+    if (Object.keys(value).some(k => !['name','connector','mode','version_domain','allowed_entities','delete_contract'].includes(k)) ||
+      typeof value.name !== 'string' || !value.name.trim() || value.name.length>128 || value.mode!=='INCREMENTAL' || value.version_domain!=='SOURCE_VERSION' || value.delete_contract!=='tombstone' ||
+      !Array.isArray(value.allowed_entities) || !value.allowed_entities.length || value.allowed_entities.some(e=>!ENTITY.has(e as SourceEntity)) || new Set(value.allowed_entities).size!==value.allowed_entities.length) fail('AUTH_INPUT_INVALID');
+    return Object.freeze({name:value.name.trim(),connector:'SIMULATED_IMPORT',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',allowed_entities:Object.freeze([...(value.allowed_entities as SourceEntity[])]),delete_contract:'tombstone'});
+  }
   if (Object.keys(value).some(key => !allowed.includes(key) && !(stored && key === 'endpoint_profile')) || typeof value.name !== 'string' || value.name.trim().length < 1 || value.name.length > 128 ||
       !['rest','postgresql','sqlserver'].includes(String(value.connector)) || !['FULL_SNAPSHOT','INCREMENTAL'].includes(String(value.mode)) ||
       !['SOURCE_VERSION','SNAPSHOT_OBSERVATION'].includes(String(value.version_domain)) ||
@@ -234,27 +241,30 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
 
   async function configuredConfig(input: unknown): Promise<SourceConfig> {
     const config = parseConfig(input);
-    const profile = await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref);
+    if (config.connector === 'SIMULATED_IMPORT') return config;
+    const profile = await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref!);
     validateEndpointProfile(config, profile, probeEnvironment);
     return Object.freeze({ ...config, endpoint_profile: profile });
   }
 
   async function list(principal: UserPrincipal) {
     requireScope(principal,'source:read');
-    const result = await pool.query<Record<string, unknown>>(
-      `SELECT r.source_id,cr.config->>'name' AS name,cr.config->>'connector' AS connector,cr.config->>'mode' AS mode,
+    return transaction(pool,async client=>{
+      await client.query('SELECT control.lock_security_barrier_fence()');
+      const result=await client.query<Record<string,unknown>>(`SELECT r.source_id,cr.config->>'name' AS name,cr.config->>'connector' AS connector,cr.config->>'mode' AS mode,
         cr.config->>'version_domain' AS version_domain,c.allowed_entities,r.lifecycle,r.current_config_revision,
         r.mapping_revision,r.identity_mapping_revision,r.data_owner_user_id,r.owner_revision,r.updated_at
        FROM control.source_registry r JOIN control.source_credential c USING(tenant_key,source_id)
        JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
-       WHERE r.tenant_key=$1 ORDER BY r.source_id`, [principal.tenantId],
-    );
-    return result.rows.map(safeSource);
+       WHERE r.tenant_key=$1 ORDER BY r.source_id`,[principal.tenantId]);
+      if(result.rows.some(row=>row.connector==='SIMULATED_IMPORT')) await auth.assertCurrentPrincipal(principal,'source:read',client);
+      return result.rows.map(safeSource);
+    });
   }
 
   async function get(principal: UserPrincipal, sourceId: string) {
     requireScope(principal,'source:read');
-    return transaction(pool, async client => safeSource(await sourceRow(client, principal.tenantId, sourceId)));
+    return transaction(pool, async client => { const row=await sourceRow(client,principal.tenantId,sourceId,true); if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:read',client); return safeSource(row); });
   }
 
   async function create(principal: UserPrincipal, input: unknown) {
@@ -264,10 +274,14 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     if (Object.keys(body).some(key => !['source_id','data_owner_user_id','config'].includes(key)) || typeof body.source_id !== 'string' ||
         !SOURCE_ID.test(body.source_id) || typeof body.data_owner_user_id !== 'string') fail('AUTH_INPUT_INVALID');
     const config = await configuredConfig(body.config);
-    if (!await deps.secretResolver.isConfiguredReference(config.secret_ref)) fail('AUTH_INPUT_INVALID');
+    if (config.connector !== 'SIMULATED_IMPORT' && !await deps.secretResolver.isConfiguredReference(config.secret_ref!)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       await client.query('SELECT control.lock_security_barrier_fence()');
+      if (config.connector === 'SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
       await currentOwner(client, principal.tenantId, body.data_owner_user_id as string);
+      if (config.connector === 'SIMULATED_IMPORT') {
+        await auth.repository.provisionImportAuthority(body.source_id as string,principal.tenantId,config.allowed_entities,client);
+      }
       const credential = await client.query<{ revision: string | number; enabled: boolean }>(
         'SELECT revision,enabled FROM control.lock_source_credential($1,$2)', [principal.tenantId,body.source_id],
       );
@@ -310,9 +324,10 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
         typeof body.expected_revision !== 'string' || !/^[1-9][0-9]*$/.test(body.expected_revision) ||
         (body.data_owner_user_id !== undefined && typeof body.data_owner_user_id !== 'string')) fail('AUTH_INPUT_INVALID');
     const config = await configuredConfig(body.config);
-    if (!await deps.secretResolver.isConfiguredReference(config.secret_ref)) fail('AUTH_INPUT_INVALID');
+    if (config.connector !== 'SIMULATED_IMPORT' && !await deps.secretResolver.isConfiguredReference(config.secret_ref!)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
       const currentRevision = decimal(row.current_config_revision);
       if (currentRevision !== body.expected_revision) fail('SOURCE_CONFLICT');
       const sameConfig = Buffer.from(row.config_digest as Buffer).equals(digest(config));
@@ -320,6 +335,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       const ownerChanged = nextOwner !== row.data_owner_user_id;
       if (ownerChanged) await currentOwner(client,principal.tenantId,nextOwner);
       const oldConfig = row.config as SourceConfig;
+      if ((oldConfig.connector === 'SIMULATED_IMPORT') !== (config.connector === 'SIMULATED_IMPORT')) fail('SOURCE_SWITCH_UNAVAILABLE');
       const channelChanged = oldConfig.connector !== config.connector || oldConfig.mode !== config.mode || oldConfig.version_domain !== config.version_domain;
       if (channelChanged) {
         const active = await client.query(
@@ -355,6 +371,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     requireScope(principal,'source:read');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:read',client);
       const data = await loadMappings(client,principal.tenantId,sourceId,decimal(row.mapping_revision),decimal(row.identity_mapping_revision));
       return { revision: decimal(row.mapping_revision), identity_mapping_revision: decimal(row.identity_mapping_revision),
         mappings: data.fieldMappings, identity_mappings: data.identityMappings };
@@ -367,6 +384,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     const values = parseMappings(input);
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'mapping:write',client);
       const revision = decimal(row.mapping_revision);
       if (revision !== expected) fail('SOURCE_CONFLICT');
       const next = (BigInt(revision) + 1n).toString();
@@ -385,6 +403,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     if (typeof revisionInput !== 'string' || !/^[1-9][0-9]*$/.test(revisionInput)) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
       if (decimal(row.mapping_revision) !== revisionInput) fail('SOURCE_CONFLICT');
       const maps = await loadMappings(client,principal.tenantId,sourceId,revisionInput,decimal(row.identity_mapping_revision));
       const configuredEntities = row.allowed_entities as SourceEntity[];
@@ -398,6 +417,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     const values = parseIdentityMappings(input);
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:approve',client);
       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
       await currentOwner(client,principal.tenantId,principal.userId);
       const revision = (BigInt(decimal(row.identity_mapping_revision)) + 1n).toString();
@@ -411,9 +431,19 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  async function test(principal: UserPrincipal, sourceId: string, expected: unknown) {
+  async function testBodyLimit(principal:UserPrincipal,sourceId:string):Promise<number> {
+    requireScope(principal,'source:write');
+    return transaction(pool,async client=>{
+      const row=await sourceRow(client,principal.tenantId,sourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
+      return row.connector==='SIMULATED_IMPORT'?4*1024*1024:2*1024*1024;
+    });
+  }
+
+  async function test(principal: UserPrincipal, sourceId: string, expected: unknown, samples?: unknown) {
     requireScope(principal,'source:write');
     if (typeof expected !== 'string' || !/^[1-9][0-9]*$/.test(expected)) fail('AUTH_INPUT_INVALID');
+    if (samples !== undefined) return testImport(principal,sourceId,expected,samples);
     const snapshot = await transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
       if (decimal(row.current_config_revision) !== expected) fail('SOURCE_CONFLICT');
@@ -450,17 +480,17 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       try {
         if (snapshot.config.connector === 'sqlserver') fail('SOURCE_PROBE_UNAVAILABLE');
         if (!snapshot.credential.enabled || decimal(snapshot.credential.revision) !== expected ||
-            !await deps.secretResolver.isConfiguredReference(snapshot.config.secret_ref) ||
+            !await deps.secretResolver.isConfiguredReference(snapshot.config.secret_ref!) ||
             !snapshot.config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
-        const endpoint = await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref);
+        const endpoint = await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref!);
         if (!digest(endpoint).equals(digest(snapshot.config.endpoint_profile))) fail('SOURCE_CONFLICT');
-        const secret = await deps.secretResolver.resolve(snapshot.config.secret_ref);
+        const secret = await deps.secretResolver.resolve(snapshot.config.secret_ref!);
         const result = await deps.capabilityProbe.run({ config: snapshot.config, endpoint, secret,
           mappings: snapshot.maps.fieldMappings, identityMappings: snapshot.maps.identityMappings });
         passed = result.passed;
         safeChecks.push(...result.checks.filter(value => /^[A-Z0-9_:-]{1,96}$/.test(value)).slice(0,32));
         reportCode = result.passed ? 'CAPABILITY_TEST_PASSED' : 'CAPABILITY_TEST_FAILED';
-        const afterProbe=await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref);
+        const afterProbe=await deps.endpointAllowlist.resolve(snapshot.config.endpoint_allowlist_ref!);
         if (!digest(afterProbe).equals(snapshot.endpointDigest)) fail('SOURCE_CONFLICT');
       } catch (error) {
         if (error instanceof AuthError && error.code === 'SOURCE_CONFLICT') throw error;
@@ -504,33 +534,104 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
+  async function testImport(principal: UserPrincipal, sourceId: string, expected: string, input: unknown) {
+    if (!input || typeof input!=='object' || Array.isArray(input)) fail('AUTH_INPUT_INVALID');
+    const samples=input as Record<string,unknown>;
+    return transaction(pool,async client=>{
+      const row=await sourceRow(client,principal.tenantId,sourceId,true);
+      await auth.assertCurrentPrincipal(principal,'source:write',client);
+      await currentOwner(client,principal.tenantId,String(row.data_owner_user_id));
+      const config=parseConfig(row.config,true);
+      if(config.connector!=='SIMULATED_IMPORT' || decimal(row.current_config_revision)!==expected) fail('SOURCE_CONFLICT');
+      const keys=Object.keys(samples).sort(), entities=[...config.allowed_entities].sort();
+      if(keys.length!==entities.length || keys.some((key,i)=>key!==entities[i] || typeof samples[key]!=='string')) fail('AUTH_INPUT_INVALID');
+      const maps=await loadMappings(client,principal.tenantId,sourceId,decimal(row.mapping_revision),decimal(row.identity_mapping_revision));
+      const errors=mappingContractErrors(entities,maps.fieldMappings,true);
+      let passed=errors.length===0;
+      const consumedCustomers:Array<{source_id:string;source_pk:string;target_id:string}>=[];
+      if(passed) {
+        try {
+          const customerKeys=new Set<string>();
+          if(entities.includes('customer')) {
+            const customerBatch=mapImportSample(samples.customer as string,'customer',sourceId,maps.fieldMappings);
+            for(const record of customerBatch.records) if(record.operation==='UPSERT') customerKeys.add(record.source_pk);
+          }
+          for(const entity of entities) {
+            const batch=mapImportSample(samples[entity] as string,entity,sourceId,maps.fieldMappings);
+            if(entity==='order') for(const record of batch.records) if(record.operation==='UPSERT' && record.data && 'customer_ref' in record.data) {
+              const ref=record.data.customer_ref;
+              if(ref.source_id!==sourceId || !customerKeys.has(ref.source_pk)) {
+                const key=customerReferenceMappingKey(ref.source_id,ref.source_pk);
+                const mapping=maps.identityMappings.find(m=>m.kind==='customer' && m.external_id===key && m.target_id);
+                if(!mapping) throw new Error('MISSING_CUSTOMER_MAPPING');
+                const target=await client.query<{ok:boolean}>('SELECT control.lock_import_customer($1,$2,$3,$4) AS ok',[principal.tenantId,ref.source_id,ref.source_pk,mapping.target_id]);
+                if(!target.rows[0]?.ok) throw new Error('MISSING_CUSTOMER_MAPPING');
+                consumedCustomers.push({source_id:ref.source_id,source_pk:ref.source_pk,target_id:mapping.target_id!});
+              }
+            }
+            if(entity==='customer') for(const record of batch.records) if(record.operation==='UPSERT' && record.data && 'owner_external_id' in record.data) {
+              for(const [kind,external] of [['user',record.data.owner_external_id],['department',record.data.department_external_id]] as const) {
+                const mapping=maps.identityMappings.find(m=>m.kind===kind && m.external_id===external && m.target_id);
+                if(!mapping) throw new Error('MISSING_IDENTITY');
+                const target=kind==='user' ? await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 AND enabled FOR UPDATE',[principal.tenantId,mapping.target_id]) :
+                  await client.query('SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND department_id=$2 AND enabled LIMIT 1 FOR UPDATE',[principal.tenantId,mapping.target_id]);
+                if(!target.rowCount) throw new Error('MISSING_IDENTITY');
+              }
+            }
+          }
+        } catch { passed=false; errors.push('SAMPLE_INVALID'); }
+      }
+      const sampleDigest=importSamplesDigest(samples as Record<string,string>);
+      const contractRef=`${sourceId}/config/${expected}/contract`;
+      const inserted=await client.query<{id:string}>(`INSERT INTO control.source_test_report(tenant_key,source_id,config_revision,mapping_revision,identity_mapping_revision,
+        config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,endpoint_profile_digest,sample_digest,data_contract_ref,report,status,created_by,sample_customer_refs)
+        SELECT r.tenant_key,r.source_id,r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,cr.config_digest,m.mapping_digest,i.mapping_digest,c.revision,c.credential_generation,NULL,$3,$4,$5,$6,$7,$8::jsonb
+        FROM control.source_registry r JOIN control.source_credential c USING(tenant_key,source_id)
+        JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
+        JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(r.tenant_key,r.source_id,r.mapping_revision)
+        JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
+        WHERE r.tenant_key=$1 AND r.source_id=$2 AND c.enabled RETURNING id`,[principal.tenantId,sourceId,sampleDigest,contractRef,JSON.stringify({code:passed?'SAMPLE_VALID':'SAMPLE_INVALID',checks:errors}),passed?'PASS':'FAIL',principal.userId,JSON.stringify(passed?consumedCustomers:[])]);
+      if(!inserted.rowCount) fail('SOURCE_CONFLICT');
+      await client.query(`UPDATE control.source_registry SET lifecycle=$3,updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,sourceId,passed?'TESTED':'DRAFT']);
+      if(row.lifecycle==='ACTIVE') await auth.repository.advanceSourceEpoch(sourceId,principal.tenantId,client);
+      await client.query(`INSERT INTO control.source_lifecycle_event(tenant_key,source_id,actor_user_id,action,prior_state,new_state,owner_revision,details)
+        VALUES($1,$2,$3,$4,$5,$6,$7,jsonb_build_object('test_report_id',$8::text))`,[principal.tenantId,sourceId,principal.userId,passed?'TEST_PASSED':'TEST_FAILED',row.lifecycle,passed?'TESTED':'DRAFT',row.owner_revision,inserted.rows[0].id]);
+      return {test_report_id:inserted.rows[0].id,data_contract_ref:contractRef,status:passed?'PASS':'FAIL',report:{code:passed?'SAMPLE_VALID':'SAMPLE_INVALID',checks:errors}};
+    });
+  }
+
   async function approve(principal: UserPrincipal, sourceId: string, expected: unknown, reportId: unknown, dataContractRef: unknown) {
     requireScope(principal,'source:approve');
     if (typeof expected !== 'string' || !/^[1-9][0-9]*$/.test(expected) || typeof reportId !== 'string' || !/^[0-9a-f-]{36}$/i.test(reportId) || typeof dataContractRef !== 'string' || dataContractRef.length < 1 || dataContractRef.length > 256) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
       if(decimal(row.current_config_revision)!==expected || row.lifecycle!=='TESTED') fail('SOURCE_CONFLICT');
+      if (row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:approve',client);
       await currentOwner(client,principal.tenantId,principal.userId);
       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
       const config=parseConfig(row.config,true);
-      if(!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
-      const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref);
-      validateEndpointProfile(config,profile,probeEnvironment);
-      const profileDigest=digest(profile);
-      if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
+      let profileDigest:Buffer|null=null;
+      if(config.connector!=='SIMULATED_IMPORT') {
+        if(!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
+        const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref!);
+        validateEndpointProfile(config,profile,probeEnvironment);
+        profileDigest=digest(profile);
+        if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
+      }
       const approval = await client.query<{ id: string }>(
         `INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,mapping_revision,
           identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,credential_generation,
-          endpoint_profile_digest,data_contract_ref,test_report_id)
+          endpoint_profile_digest${config.connector==='SIMULATED_IMPORT'?',sample_digest':''},data_contract_ref,test_report_id)
          SELECT r.tenant_key,r.source_id,$3,r.owner_revision,r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,
-           t.config_digest,t.mapping_digest,t.identity_mapping_digest,c.revision,c.credential_generation,t.endpoint_profile_digest,t.data_contract_ref,t.id
+           t.config_digest,t.mapping_digest,t.identity_mapping_digest,c.revision,c.credential_generation,t.endpoint_profile_digest${config.connector==='SIMULATED_IMPORT'?',t.sample_digest':''},t.data_contract_ref,t.id
           FROM control.source_registry r
           JOIN control.source_test_report t ON t.id=$4 AND t.tenant_key=r.tenant_key AND t.source_id=r.source_id
           JOIN control.source_credential c ON (c.tenant_key,c.source_id)=(r.tenant_key,r.source_id)
+          JOIN control.source_config_revision cr_import ON (cr_import.tenant_key,cr_import.source_id,cr_import.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
          WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.data_owner_user_id=$3 AND t.status='PASS' AND t.data_contract_ref=$5
            AND (t.config_revision,t.mapping_revision,t.identity_mapping_revision,t.source_credential_revision,t.credential_generation)=
                (r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,c.revision,c.credential_generation)
-           AND t.endpoint_profile_digest=$6
+           ${config.connector==='SIMULATED_IMPORT' ? 'AND t.endpoint_profile_digest IS NULL AND t.sample_digest IS NOT NULL AND $6::bytea IS NULL' : 'AND t.endpoint_profile_digest=$6'}
            AND NOT EXISTS(SELECT 1 FROM control.source_test_report newer WHERE newer.tenant_key=t.tenant_key AND newer.source_id=t.source_id
              AND (newer.created_at,newer.id)>(t.created_at,t.id))
            AND (t.config_digest,t.mapping_digest,t.identity_mapping_digest) = (
@@ -561,11 +662,15 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       }
       if (decimal(row.current_config_revision)!==expected || !['APPROVED','PAUSED'].includes(String(row.lifecycle))) fail('SOURCE_CONFLICT');
       const config = row.config as SourceConfig;
-      if (!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
-      const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref);
-      validateEndpointProfile(config,profile,probeEnvironment);
-      const profileDigest=digest(profile);
-      if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
+      let profileDigest:Buffer|null=null;
+      if(config.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
+      else {
+        if(!config.endpoint_profile) fail('SOURCE_PROBE_UNAVAILABLE');
+        const profile=await deps.endpointAllowlist.resolve(config.endpoint_allowlist_ref!);
+        validateEndpointProfile(config,profile,probeEnvironment);
+        profileDigest=digest(profile);
+        if(!profileDigest.equals(digest(config.endpoint_profile))) fail('SOURCE_CONFLICT');
+      }
       const owner = await client.query('SELECT enabled FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 FOR UPDATE',
         [principal.tenantId,row.data_owner_user_id]);
       if (!owner.rowCount || !owner.rows[0].enabled) fail('AUTH_FORBIDDEN');
@@ -584,11 +689,34 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
                 (SELECT identity_mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),c.revision,c.credential_generation)
            AND t.status='PASS' AND (t.created_at,t.id)=(SELECT newest.created_at,newest.id FROM control.source_test_report newest
              WHERE newest.tenant_key=$1 AND newest.source_id=$2 ORDER BY newest.created_at DESC,newest.id DESC LIMIT 1)
-           AND t.endpoint_profile_digest=$5 AND a.endpoint_profile_digest=$5
+           ${config.connector==='SIMULATED_IMPORT' ? 'AND t.endpoint_profile_digest IS NULL AND a.endpoint_profile_digest IS NULL AND t.sample_digest=a.sample_digest AND a.sample_digest IS NOT NULL AND $5::bytea IS NULL' : 'AND t.endpoint_profile_digest=$5 AND a.endpoint_profile_digest=$5'}
            AND (a.config_digest,a.mapping_digest,a.identity_mapping_digest)=(cr.config_digest,m.mapping_digest,i.mapping_digest)
           AND c.enabled`,[principal.tenantId,sourceId,approvalId,row.data_owner_user_id,profileDigest],
       );
       if (!approved.rowCount) fail('SOURCE_CONFLICT');
+      if (config.connector === 'SIMULATED_IMPORT') {
+        const identity=await loadMappings(client,principal.tenantId,sourceId,decimal(row.mapping_revision),decimal(row.identity_mapping_revision));
+        const proof=await client.query<{sample_customer_refs:Array<{source_id:string;source_pk:string;target_id:string}>}>(
+          'SELECT t.sample_customer_refs FROM control.source_owner_approval a JOIN control.source_test_report t ON t.id=a.test_report_id WHERE a.id=$1 AND a.tenant_key=$2 AND a.source_id=$3',
+          [approvalId,principal.tenantId,sourceId]);
+        if(!proof.rowCount) fail('SOURCE_CONFLICT');
+        for(const ref of proof.rows[0].sample_customer_refs) {
+          const mapping=identity.identityMappings.find(m=>m.kind==='customer' && m.external_id===customerReferenceMappingKey(ref.source_id,ref.source_pk) && m.target_id===ref.target_id);
+          if(!mapping) fail('SOURCE_CONFLICT');
+          const target=await client.query<{ok:boolean}>('SELECT control.lock_import_customer($1,$2,$3,$4) AS ok',[principal.tenantId,ref.source_id,ref.source_pk,ref.target_id]);
+          if(!target.rows[0]?.ok) fail('SOURCE_CONFLICT');
+        }
+        for(const mapping of identity.identityMappings) {
+          if (!mapping.target_id) fail('SOURCE_CONFLICT');
+          if(mapping.kind==='user' || mapping.kind==='department') {
+            const target=await client.query(mapping.kind==='user'
+              ? 'SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND user_id=$2 AND enabled FOR UPDATE'
+              : 'SELECT 1 FROM control.auth_subject WHERE tenant_key=$1 AND department_id=$2 AND enabled LIMIT 1 FOR UPDATE',
+              [principal.tenantId,mapping.target_id]);
+            if(!target.rowCount) fail('SOURCE_CONFLICT');
+          }
+        }
+      }
       if (config.connector === 'sqlserver') fail('SOURCE_PROBE_UNAVAILABLE');
       for (const entity of config.allowed_entities) {
         const current = await client.query<{ id: string; connector: string; mode: string; version_domain: string; channel_epoch: string | number }>(
@@ -625,6 +753,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     if (typeof expectedRevision !== 'string' || !/^[1-9][0-9]*$/.test(expectedRevision) || typeof reason !== 'string' || reason.trim().length < 1 || reason.length > 256) fail('AUTH_INPUT_INVALID');
     return transaction(pool, async client => {
       const row = await sourceRow(client,principal.tenantId,sourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:write',client);
       if (decimal(row.current_config_revision) !== expectedRevision) fail('SOURCE_CONFLICT');
       if (row.lifecycle !== 'PAUSED') {
         await client.query(`UPDATE control.source_registry SET lifecycle='PAUSED',updated_at=now() WHERE tenant_key=$1 AND source_id=$2`,[principal.tenantId,sourceId]);
@@ -640,32 +769,32 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
 
   async function identityMappings(principal: UserPrincipal, sourceId?: string, kind?: string, externalId?: string) {
     requireScope(principal,'source:approve');
-    if(kind!==undefined || externalId!==undefined) {
-      if(!sourceId || !['user','department','customer'].includes(String(kind)) || typeof externalId!=='string' ||
-        externalId.length<1 || externalId.length>128 || /[\u0000-\u001f\u007f]/.test(externalId)) fail('AUTH_INPUT_INVALID');
-      const source=await transaction(pool,async client=>sourceRow(client,principal.tenantId,sourceId));
-      if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
-      await currentOwnerForRead(principal);
-      const candidates=kind==='user'
-        ? await pool.query<{target_id:string;label:string}>(`SELECT user_id AS target_id,user_id AS label FROM control.auth_subject
-            WHERE tenant_key=$1 AND enabled ORDER BY user_id LIMIT 50`,[principal.tenantId])
-        : kind==='department'
-          ? await pool.query<{target_id:string;label:string}>(`SELECT DISTINCT department_id AS target_id,department_id AS label FROM control.auth_subject
-              WHERE tenant_key=$1 AND enabled AND department_id IS NOT NULL ORDER BY department_id LIMIT 50`,[principal.tenantId])
-          : await pool.query<{target_id:string;label:string}>(`SELECT id::text AS target_id,customer_name AS label FROM api.canonical_customer_identity
-              WHERE tenant_id=$1 ORDER BY customer_name,id LIMIT 50`,[principal.tenantId]);
-      return {source_id:sourceId,kind,external_id:externalId,id:Buffer.from(`${sourceId}\0${kind}\0${externalId}`,'utf8').toString('base64url'),
-        resolved:kind!=='customer' || candidates.rows.length>0,candidates:candidates.rows};
-    }
-    const result = await pool.query<{ source_id:string;revision:string|number;mappings:IdentityMapping[];data_owner_user_id:string }>(
-      `SELECT r.source_id,r.identity_mapping_revision AS revision,i.mappings,r.data_owner_user_id
+    if((kind!==undefined || externalId!==undefined) && (!sourceId || !['user','department','customer'].includes(String(kind)) || typeof externalId!=='string' || externalId.length<1 || externalId.length>128 || /[\u0000-\u001f\u007f]/.test(externalId))) fail('AUTH_INPUT_INVALID');
+    return transaction(pool,async client=>{
+      if(sourceId) {
+        const source=await sourceRow(client,principal.tenantId,sourceId,true);
+        if(source.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:approve',client);
+        if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
+        await currentOwner(client,principal.tenantId,principal.userId);
+      } else {
+        await client.query('SELECT control.lock_security_barrier_fence()');
+        await auth.assertCurrentPrincipal(principal,'source:approve',client);
+      }
+      if(kind!==undefined && externalId!==undefined && sourceId) {
+        const candidates=kind==='user'
+          ? await client.query<{target_id:string;label:string}>(`SELECT user_id AS target_id,user_id AS label FROM control.auth_subject WHERE tenant_key=$1 AND enabled ORDER BY user_id LIMIT 50`,[principal.tenantId])
+          : kind==='department'
+            ? await client.query<{target_id:string;label:string}>(`SELECT DISTINCT department_id AS target_id,department_id AS label FROM control.auth_subject WHERE tenant_key=$1 AND enabled AND department_id IS NOT NULL ORDER BY department_id LIMIT 50`,[principal.tenantId])
+            : await client.query<{target_id:string;label:string}>(`SELECT id::text AS target_id,customer_name AS label FROM api.canonical_customer_identity WHERE tenant_id=$1 ORDER BY customer_name,id LIMIT 50`,[principal.tenantId]);
+        return {source_id:sourceId,kind,external_id:externalId,id:Buffer.from(`${sourceId}\0${kind}\0${externalId}`,'utf8').toString('base64url'),resolved:kind!=='customer' || candidates.rows.length>0,candidates:candidates.rows};
+      }
+      const result=await client.query<{source_id:string;revision:string|number;mappings:IdentityMapping[]}>(`SELECT r.source_id,r.identity_mapping_revision AS revision,i.mappings
        FROM control.source_registry r JOIN control.source_identity_mapping_revision i
        ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
-       WHERE r.tenant_key=$1 AND ($2::text IS NULL OR r.source_id=$2) AND r.data_owner_user_id=$3 ORDER BY r.source_id`,
-      [principal.tenantId,sourceId ?? null,principal.userId]);
-    return result.rows.map(row => ({ source_id:row.source_id,revision:(BigInt(decimal(row.revision))-1n).toString(),identity_mappings:row.mappings.map(mapping => ({
-      ...mapping,id:Buffer.from(`${row.source_id}\0${mapping.kind}\0${mapping.external_id}`,'utf8').toString('base64url'),
-    })) }));
+       WHERE r.tenant_key=$1 AND ($2::text IS NULL OR r.source_id=$2) AND r.data_owner_user_id=$3 ORDER BY r.source_id`,[principal.tenantId,sourceId??null,principal.userId]);
+      return result.rows.map(row=>({source_id:row.source_id,revision:(BigInt(decimal(row.revision))-1n).toString(),identity_mappings:row.mappings.map(mapping=>({
+        ...mapping,id:Buffer.from(`${row.source_id}\0${mapping.kind}\0${mapping.external_id}`,'utf8').toString('base64url')}))}));
+    });
   }
 
   async function sourceCustomerCandidates(principal:UserPrincipal,sourceId:string,limitInput:unknown=20,cursorInput?:unknown) {
@@ -677,8 +806,8 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     return transaction(pool,async client=>{
       const source=await sourceRow(client,principal.tenantId,sourceId,true);
       if(source.data_owner_user_id!==principal.userId) fail('AUTH_FORBIDDEN');
-      await currentOwner(client,principal.tenantId,principal.userId);
       await auth.assertCurrentPrincipal(principal,'source:approve',client);
+      await currentOwner(client,principal.tenantId,principal.userId);
       const result=await client.query<{source_pk:string;target_id:string}>(`SELECT source_pk,target_id
         FROM api.source_customer_identity_candidates WHERE tenant_key=$1 AND source_id=$2
           AND ($3::text IS NULL OR source_pk COLLATE "C">$3 COLLATE "C")
@@ -687,11 +816,6 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       return Object.freeze({source_id:sourceId,items:Object.freeze(rows.map(row=>Object.freeze({source_pk:row.source_pk,target_id:row.target_id}))),
         next_cursor:hasMore&&rows.length?encodeSourceCustomerCursor(sourceId,rows.at(-1)!.source_pk):null});
     });
-  }
-
-  async function currentOwnerForRead(principal:UserPrincipal) {
-    const result=await pool.query('SELECT 1 FROM control.tenant t JOIN control.auth_subject s USING(tenant_key) WHERE t.tenant_key=$1 AND s.user_id=$2 AND t.enabled AND s.enabled',[principal.tenantId,principal.userId]);
-    if(!result.rowCount) fail('AUTH_FORBIDDEN');
   }
 
   async function updateIdentityMapping(principal: UserPrincipal, opaqueId: string, expected: string, targetId: string, reason: string) {
@@ -703,7 +827,9 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       if (decoded.length !== 3 || !SOURCE_ID.test(decoded[0]) || !['user','department','customer'].includes(decoded[1]) ||
         Buffer.from(opaqueId,'base64url').toString('base64url')!==opaqueId) fail('AUTH_INPUT_INVALID');
       const [mappingSourceId, kind, externalId] = decoded;
+      if(externalId.length<1 || externalId.length>128 || /[\u0000-\u001f\u007f]/.test(externalId)) fail('AUTH_INPUT_INVALID');
       const row = await sourceRow(client,principal.tenantId,mappingSourceId,true);
+      if(row.connector==='SIMULATED_IMPORT') await auth.assertCurrentPrincipal(principal,'source:approve',client);
       if (row.data_owner_user_id !== principal.userId) fail('AUTH_FORBIDDEN');
       await currentOwner(client,principal.tenantId,principal.userId);
       const currentDbRevision=(BigInt(expected)+1n).toString();
@@ -740,7 +866,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
     });
   }
 
-  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,test,approve,activate,pause,
+  return Object.freeze({ list,get,create,update,mappings,writeMappings,validateMappings,writeIdentityMappings,testBodyLimit,test,approve,activate,pause,
     identityMappings,sourceCustomerCandidates,updateIdentityMapping });
 }
 

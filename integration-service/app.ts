@@ -21,7 +21,7 @@ export type BuildAppOptions = Readonly<{
 /** Build an injectable Fastify app; importing this module does not listen or access runtime configuration. */
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const logger = options.logger ?? createHubLoggerOptions();
-  const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, requestIdHeader: false, genReqId: () => randomUUID() });
+  const app = Fastify({ logger, bodyLimit: 2 * 1024 * 1024, routerOptions:{maxParamLength:2048}, requestIdHeader: false, genReqId: () => randomUUID() });
   const { registerRoutes } = await import('./ingestion-api/routes.js');
   await registerRoutes(app, { identity: options.identity, sourceRegistry: options.sourceRegistry,
     strictIngestion: options.strictIngestion, snapshotRuns: options.snapshotRuns, runtime: options.runtime });

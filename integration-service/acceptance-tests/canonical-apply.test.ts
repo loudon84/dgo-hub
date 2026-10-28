@@ -162,7 +162,7 @@ describe('canonical migration 006', () => {
     const history = await database.query<{ version: number; name: string }>(
       'SELECT version,name FROM control.schema_migration ORDER BY version',
     );
-    expect(history.rows.slice(-3)).toEqual([
+    expect(history.rows.filter(row => row.version >= 6 && row.version <= 8)).toEqual([
       { version: 6, name: 'canonical_data_and_receipts' },
       { version: 7, name: 'durable_ingestion_jobs' },
       { version: 8, name: 'durable_worker_leases_and_retries' },

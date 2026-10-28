@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { AuthError } from '../auth/errors.js';
+import { parseStrictJson } from '../ingestion-api/strict-contract.js';
 import type { AuthService, UserPrincipal } from '../auth/types.js';
 import type { OidcAuthenticator } from '../auth/oidc.js';
 import type { SourceRegistryService } from './service.js';
@@ -87,13 +88,24 @@ export async function registerSourceRegistryRoutes(app: FastifyInstance, options
       } catch (error) { return failure(request, reply, error); }
     });
 
-    admin.post<{ Params: { id: string } }>('/hub/v1/admin/sources/:id/test', async (request, reply) => {
-      try {
-        const principal = await currentUser(request, options.authenticator);
-        const value = body(request, ['expected_revision']);
-        const result = await options.sourceService.test(principal, request.params.id, value.expected_revision);
-        return reply.code(202).send(envelope(request, { operation_id: result.test_report_id, ...result }));
-      } catch (error) { return failure(request, reply, error); }
+    admin.register(async testScope=>{
+      testScope.removeContentTypeParser('application/json');
+      testScope.addContentTypeParser('application/json',{parseAs:'buffer'},(_request,raw,done)=>done(null,raw));
+      testScope.post<{ Params: { id: string } }>('/hub/v1/admin/sources/:id/test', {bodyLimit: 4 * 1024 * 1024}, async (request, reply) => {
+        try {
+          const principal = await currentUser(request, options.authenticator);
+          if(request.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json') throw Object.assign(new Error('UNSUPPORTED_MEDIA_TYPE'),{statusCode:415});
+          if (!Buffer.isBuffer(request.body)) throw new AuthError('AUTH_INPUT_INVALID');
+          const limit=await options.sourceService.testBodyLimit(principal,request.params.id);
+          if(request.body.length>limit) return reply.code(413).send({request_id:request.id,error:{code:'AUTH_INPUT_INVALID',message:'AUTH_INPUT_INVALID',retryable:false,details:{}}});
+          let parsed:unknown;
+          try { parsed=parseStrictJson(request.body); } catch { throw new AuthError('AUTH_INPUT_INVALID'); }
+          if(!parsed || typeof parsed!=='object' || Array.isArray(parsed) || Object.keys(parsed).some(k=>!['expected_revision','samples'].includes(k))) throw new AuthError('AUTH_INPUT_INVALID');
+          const value=parsed as Record<string,unknown>;
+          const result=await options.sourceService.test(principal,request.params.id,value.expected_revision,value.samples);
+          return reply.code(202).send(envelope(request,{operation_id:result.test_report_id,...result}));
+        } catch(error) { return failure(request,reply,error); }
+      });
     });
 
     admin.post<{ Params: { id: string } }>('/hub/v1/admin/sources/:id/approve', async (request, reply) => {

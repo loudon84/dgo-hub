@@ -112,6 +112,7 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
       }
       const profile = proof.endpoint_profile;
       validateEndpointProfile(proof.config, profile, { environmentKind: dependencies.egressPolicy.environmentKind });
+      if (!proof.config.secret_ref) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
       const password = await dependencies.secretResolver.resolve(proof.config.secret_ref);
       if (typeof password !== 'string' || password.length < 1) throw new SnapshotSourceError('SNAPSHOT_PROFILE_INVALID');
       const pages: SnapshotPageReceipt[] = [];
