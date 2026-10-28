@@ -1,0 +1,25 @@
+# M1-5E1a2-2 independent review
+
+- Spec: **FAIL** (required full-origin recovery acceptance evidence is incomplete).
+- Quality: **Needs fixes** (verification gap below; no separate product defect established by this review).
+- Reviewed base `29fa5608f1e0eca13df04e00c0a79404a9c9a716`, source `528f2fa28864d61aa9b894dc36c0d3182f1e4dba`, report/evidence commit `ed8b90cfdc2de8c71a80ae171c59652cb8a867b5`. Controller binding decisions override draft labels. No tests were rerun and no product files were changed.
+
+## Finding
+
+### P1 — Same-target acceptance does not establish recovery of a real full-origin REST receipt
+
+`integration-service/acceptance-tests/quarantine-read.test.ts:1163` copies a previously admitted job's raw batch, batch ID and proof into a newly inserted job, then `:1173` inserts a newly generated, unrelated event and record. The order case is even more explicit: `:1402` inserts raw bytes `{}`, while `:1416` inserts a different order record. Both cases do run the ordinary worker and exercise child quarantine and subsequent same-target application, but neither demonstrates that the original item being recovered came from its associated original raw REST receipt. A separate HTTP-intake worker regression does not connect its receipt to these recovery chains. Comparing these synthetic originals before and after recovery cannot prove preservation and correct use of a real original full-origin receipt. This is a gap in the brief's required full-origin REST recovery evidence, not evidence that production code necessarily corrupts the receipt.
+
+Create original customer and order quarantines from actual REST intake containing the exact records subsequently recovered, retain and compare raw bytes, original job/item/index and frozen proof, and exercise unavailable target → real child quarantine → reenable same target → newly authorized child apply. Preserve fixed-HEAD build and evidence requirements. The report correctly discloses the fixture limitation, but disclosure alone does not establish the required end-to-end chain.
+
+## Reviewed evidence and implementation
+
+- API-024 strict parsing, scoped digest and current authority are implemented in `integration-service/ingestion-api/quarantine-recovery.ts`; SQL rechecks authority and digest before insertion or replay. Composite origin/child FKs, unique keys and immutable trigger are in `integration-service/migrations/009_snapshot_runs_and_recovery.sql:3420`; the helper inserts job, item, link and processing outbox in one transaction at `:3646`.
+- `recovery_binding_internal` checks original proof, original credential identity, channel state/epoch, applicable typed barriers, own identity and typed frozen dependencies. Global transaction fence is shared by worker apply and remap; worker checks binding under the same transaction before canonical apply (`integration-service/etl-worker/worker.ts:300`). Scope, target and remap checks occur again on identical replay. These observations do not independently prove every competing writer or race beyond the reviewed paths.
+- API-023 retains original ordering/cursor and adds scoped retry state in `integration-service/ingestion-api/quarantine-read.ts:214`; no private binding is returned. The original raw/item/job are not reset by the recovery insertion path. Child digest and API digest use distinct documented domains and length prefixes; unique constraints and transaction rollback handle collisions.
+- `verification.json` records four fixed-HEAD gates, 001–008 matching blob IDs, 85 copied artifacts, build-to-child worker hash match, PID absence and ten owned PostgreSQL lifecycle records. The controller separately verified individual original/copy hashes and paths; this review did not repeat them. The report qualifies prior failures and genuine preimplementation snapshot RED. It records actual role tests, insertion failure and post-commit child crash/replay, plus customer/order worker runs. These claims have the fixture limitation above.
+- Populated 008 → final 009 checksum-runner reentry and accepted 009 → additive suffix reapply are distinct gates. The suffix replay link is synthetic (`quarantine-read.test.ts:538`), so it demonstrates link constraint/reentry stability but does not itself prove a real API-created link survives that exact upgrade path. Real API links are separately exercised. This qualification is not an additional blocker under the stated suffix gate.
+
+## Remaining limits
+
+A separate credential-compromise recovery case was not exercised; source code includes `CREDENTIAL_COMPROMISE` in the same typed barrier predicate as the exercised scope barrier (`009_snapshot_runs_and_recovery.sql:3518`), but that is not an executed credential-compromise proof. Owner revision race is tested; subject and binding races are not exhaustively tested. The global guard and locked authority rows support the reviewed ordering, but these limits should remain explicit. Snapshot recovery, formal 48-case, site and whole-phase acceptance remain outside this review.
