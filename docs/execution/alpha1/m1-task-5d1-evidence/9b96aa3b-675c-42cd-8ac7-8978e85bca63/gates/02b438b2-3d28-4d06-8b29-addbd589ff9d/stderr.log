@@ -1,0 +1,29 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected [ { status: 'PENDING', …(2) } ] to deeply equal [ { status: 'COMPLETE', …(2) } ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "consumed": true,
++     "consumed": false,
+      "reservation_ordinal": "1",
+-     "status": "COMPLETE",
++     "status": "PENDING",
+    },
+  ]
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:378:38
+    376|         LEFT JOIN control.etl_snapshot_delete_consumption c USING(tena…
+    377|         WHERE d.tenant_key=$1 AND d.source_id='pg-e2e' AND d.run_id=$2…
+    378|       expect(deleteReservation.rows).toEqual([{status:'COMPLETE',reser…
+       |                                      ^
+    379|       const candidates=await service.sourceCustomerCandidates(owner,'p…
+    380|       expect(candidates.items.map(item=>item.source_pk)).toEqual(['C-1…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

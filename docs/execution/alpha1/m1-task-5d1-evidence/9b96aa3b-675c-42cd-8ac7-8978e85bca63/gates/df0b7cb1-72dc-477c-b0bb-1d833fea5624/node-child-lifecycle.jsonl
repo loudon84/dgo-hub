@@ -1,0 +1,6 @@
+{"event":"spawned","phase":"before","pid":27508,"run_id":"122531a6-45d3-42db-a593-ddd933eac7eb"}
+{"event":"killed","phase":"before","pid":27508,"signal":"SIGKILL","run_id":"122531a6-45d3-42db-a593-ddd933eac7eb"}
+{"event":"recovered","phase":"before","pid":27508,"signal":"SIGKILL","run_id":"122531a6-45d3-42db-a593-ddd933eac7eb","observation":"11","range_count":3}
+{"event":"spawned","phase":"after","pid":44200,"run_id":"bed8d01b-514f-4f2d-8042-e60a45c33c63"}
+{"event":"killed","phase":"after","pid":44200,"signal":"SIGKILL","run_id":"bed8d01b-514f-4f2d-8042-e60a45c33c63"}
+{"event":"recovered","phase":"after","pid":44200,"signal":"SIGKILL","run_id":"bed8d01b-514f-4f2d-8042-e60a45c33c63","observation":"12","range_count":3}

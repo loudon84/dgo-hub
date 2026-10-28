@@ -1,0 +1,45 @@
+stderr | acceptance-tests/d1-migration-diagnostic.test.ts > temporary D1 migration diagnostic > prints the first native PostgreSQL error from 009
+NATIVE_POSTGRES_ERROR error: mismatched parentheses at or near ";"
+    at E:\git\dgo-hub\integration-service\node_modules\pg\lib\client.js:694:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at applyMigration (E:/git/dgo-hub/integration-service/migrations/runner.ts:313:5)
+    at runMigrations (E:/git/dgo-hub/integration-service/migrations/runner.ts:400:7)
+    at E:/git/dgo-hub/integration-service/acceptance-tests/d1-migration-diagnostic.test.ts:34:8
+    at async file:///E:/git/dgo-hub/integration-service/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42601',
+  detail: undefined,
+  hint: undefined,
+  position: '120379',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_scanner.c',
+  line: '538',
+  routine: 'plpgsql_yyerror'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/d1-migration-diagnostic.test.ts > temporary D1 migration diagnostic > prints the first native PostgreSQL error from 009
+MigrationRunnerError: MIGRATION_APPLY_FAILED 009 snapshot_runs_and_recovery
+ ❯ invalid migrations/runner.ts:198:10
+    196|
+    197| function invalid(code: string, migration?: Migration): MigrationRunner…
+    198|   return new MigrationRunnerError(code, migration?.versionText, migrat…
+       |          ^
+    199| }
+    200|
+ ❯ applyMigration migrations/runner.ts:325:11
+ ❯ runMigrations migrations/runner.ts:400:7
+ ❯ acceptance-tests/d1-migration-diagnostic.test.ts:34:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,24 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: promise rejected "error: function digest(bytea, unknown) do… { …(15) }" instead of resolving
+ ❯ acceptance-tests/snapshot-runs.test.ts:367:98
+    365|       await expect(strictWorkerTick({...workerDependencies,sourceConne…
+    366|       await fixture.pool.query(`UPDATE control.etl_run SET snapshot_av…
+    367|       await expect(strictWorkerTick({...workerDependencies,sourceConne…
+       |                                                                                                  ^
+    368|       const staged=await fixture.pool.query(`SELECT r.status,r.extract…
+    369|         array_agg(DISTINCT s.relation ORDER BY s.relation) AS relation…
+
+Caused by: error: function digest(bytea, unknown) does not exist
+ ❯ node_modules/pg/lib/client.js:694:17
+ ❯ Proxy.<anonymous> acceptance-tests/snapshot-runs.test.ts:1705:60
+ ❯ runSnapshotDeleteWorkerOnce etl-worker/snapshot-delete-worker.ts:10:20
+ ❯ runDurableWorkerLoop etl-worker/worker.ts:388:5
+ ❯ acceptance-tests/snapshot-runs.test.ts:367:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { length: 365, severity: 'ERROR', code: '42883', detail: undefined, hint: 'No function matches the given name and argument types. You might need to add explicit type casts.', position: undefined, internalPosition: '13', internalQuery: 'scope_hash:=digest(convert_to(scope_json::text,\'UTF8\'),\'sha256\')', where: 'PL/pgSQL function consume_etl_snapshot_delete_run(text,text) line 45 at assignment', schema: undefined, table: undefined, dataType: undefined, constraint: undefined, file: 'parse_func.c', routine: 'ParseFuncOrColumn' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

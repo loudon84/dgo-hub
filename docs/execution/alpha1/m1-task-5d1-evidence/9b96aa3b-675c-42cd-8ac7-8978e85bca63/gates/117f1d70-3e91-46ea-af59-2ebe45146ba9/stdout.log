@@ -1,0 +1,5 @@
+
+> data-governance-integration-service@1.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+acceptance-tests/snapshot-runs.test.ts(1127,14): error TS2339: Property 'delete_field' does not exist on type 'Readonly<{ table?: string | undefined; source_pk?: string | undefined; updated_at_field?: string | undefined; version_field?: string | undefined; aggregate_version_covers_lines?: boolean | undefined; ... 4 more ...; delete_type?: "boolean" | ... 1 more ... | undefined; }> | undefined'.

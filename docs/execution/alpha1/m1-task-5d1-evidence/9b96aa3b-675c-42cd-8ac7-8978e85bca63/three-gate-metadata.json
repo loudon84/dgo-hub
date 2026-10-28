@@ -1,0 +1,23 @@
+{
+  "schema": "m1-task-5d1-gate-metadata-v1",
+  "gates": [
+    {
+      "gate": "snapshot-runs-26",
+      "root": "E:/m1t5-runtime/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f",
+      "exit_code": 0,
+      "metadata": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/capture-metadata.json"
+    },
+    {
+      "gate": "typecheck",
+      "root": "E:/m1t5-runtime/91663241-93d1-4fd8-84be-72b993717fbc",
+      "exit_code": 0,
+      "metadata": "gates/91663241-93d1-4fd8-84be-72b993717fbc/capture-metadata.json"
+    },
+    {
+      "gate": "build",
+      "root": "E:/m1t5-runtime/33e1f484-8aeb-4413-9256-3cc70a12006c",
+      "exit_code": 0,
+      "metadata": "gates/33e1f484-8aeb-4413-9256-3cc70a12006c/capture-metadata.json"
+    }
+  ]
+}

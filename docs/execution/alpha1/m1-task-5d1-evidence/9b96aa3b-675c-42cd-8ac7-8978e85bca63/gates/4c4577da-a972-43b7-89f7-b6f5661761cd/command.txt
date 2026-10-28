@@ -1,0 +1,1 @@
+npx vitest run acceptance-tests/d1-migration-diagnostic.test.ts

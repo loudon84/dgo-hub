@@ -1,0 +1,1 @@
+npm test -- --run acceptance-tests/snapshot-runs.test.ts -t "upgrades populated 001-008|applies and repeats migration 009|uses exact integer arithmetic|preserves same-key API-019 replay"

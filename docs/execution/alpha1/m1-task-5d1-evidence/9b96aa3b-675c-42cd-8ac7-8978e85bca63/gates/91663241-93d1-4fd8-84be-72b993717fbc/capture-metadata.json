@@ -1,0 +1,42 @@
+{
+  "gate": "typecheck",
+  "command": "npm run typecheck",
+  "working_directory": "E:/git/dgo-hub/integration-service",
+  "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/91663241-93d1-4fd8-84be-72b993717fbc",
+  "external_capture_root": "E:/m1t5-runtime/91663241-93d1-4fd8-84be-72b993717fbc",
+  "actual_HEAD_at_gate": "854df4cfb2492a5cd70da7343131e49d58f8e407",
+  "later_product_commit": "68bfa36203be6446c47e0927ab9d982b5a380343",
+  "exit_code": 0,
+  "files": {
+    "command.txt": {
+      "source": "E:\\m1t5-runtime\\91663241-93d1-4fd8-84be-72b993717fbc\\command.txt",
+      "copied": "gates/91663241-93d1-4fd8-84be-72b993717fbc/command.txt",
+      "size_bytes": 17,
+      "sha256": "982c1455e5e73c8ccab2d70a550c972e2841a0582596e26a7fcc53b80e14aa14"
+    },
+    "stdout.log": {
+      "source": "E:\\m1t5-runtime\\91663241-93d1-4fd8-84be-72b993717fbc\\stdout.log",
+      "copied": "gates/91663241-93d1-4fd8-84be-72b993717fbc/stdout.log",
+      "size_bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    "stderr.log": {
+      "source": "E:\\m1t5-runtime\\91663241-93d1-4fd8-84be-72b993717fbc\\stderr.log",
+      "copied": "gates/91663241-93d1-4fd8-84be-72b993717fbc/stderr.log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "exit-code.txt": {
+      "source": "E:\\m1t5-runtime\\91663241-93d1-4fd8-84be-72b993717fbc\\exit-code.txt",
+      "copied": "gates/91663241-93d1-4fd8-84be-72b993717fbc/exit-code.txt",
+      "size_bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    "evidence-root.txt": {
+      "source": "E:\\m1t5-runtime\\91663241-93d1-4fd8-84be-72b993717fbc\\evidence-root.txt",
+      "copied": "gates/91663241-93d1-4fd8-84be-72b993717fbc/evidence-root.txt",
+      "size_bytes": 54,
+      "sha256": "d25dbc009b0bb032cb18af2b28c4de58b92a7c54899638ae3822e46dc35fd16a"
+    }
+  }
+}

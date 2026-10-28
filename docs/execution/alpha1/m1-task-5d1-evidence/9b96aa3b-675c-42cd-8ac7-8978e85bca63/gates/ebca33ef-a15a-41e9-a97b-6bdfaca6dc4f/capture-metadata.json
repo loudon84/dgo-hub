@@ -1,0 +1,42 @@
+{
+  "gate": "snapshot-runs-26",
+  "command": "npm test -- --run acceptance-tests/snapshot-runs.test.ts",
+  "working_directory": "E:/git/dgo-hub/integration-service",
+  "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f",
+  "external_capture_root": "E:/m1t5-runtime/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f",
+  "actual_HEAD_at_gate": "854df4cfb2492a5cd70da7343131e49d58f8e407",
+  "later_product_commit": "68bfa36203be6446c47e0927ab9d982b5a380343",
+  "exit_code": 0,
+  "files": {
+    "command.txt": {
+      "source": "E:\\m1t5-runtime\\ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f\\command.txt",
+      "copied": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/command.txt",
+      "size_bytes": 56,
+      "sha256": "bf0673c4a13d7f985bb0f41eafa8620483ef9228594dea6ae818e5ae5b67c349"
+    },
+    "stdout.log": {
+      "source": "E:\\m1t5-runtime\\ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f\\stdout.log",
+      "copied": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/stdout.log",
+      "size_bytes": 345,
+      "sha256": "43f8b93318d82864d5b89a50da512798fb372d37e1227d2f68e3e608f568e714"
+    },
+    "stderr.log": {
+      "source": "E:\\m1t5-runtime\\ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f\\stderr.log",
+      "copied": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/stderr.log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "exit-code.txt": {
+      "source": "E:\\m1t5-runtime\\ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f\\exit-code.txt",
+      "copied": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/exit-code.txt",
+      "size_bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    "evidence-root.txt": {
+      "source": "E:\\m1t5-runtime\\ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f\\evidence-root.txt",
+      "copied": "gates/ebca33ef-a15a-41e9-a97b-6bdfaca6dc4f/evidence-root.txt",
+      "size_bytes": 54,
+      "sha256": "4c957a5e21aa1c507ac4d55387592648ca62d9f30210e2af6cd4f81197ed1f90"
+    }
+  }
+}

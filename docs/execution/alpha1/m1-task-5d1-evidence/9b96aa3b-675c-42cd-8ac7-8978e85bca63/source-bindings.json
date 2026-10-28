@@ -1,0 +1,201 @@
+{
+  "schema": "m1-task-5d1-source-bindings-v1",
+  "base_commit": "3040666fa9da2de19ba7b8bf632c4765f278b455",
+  "product_commit": "68bfa36203be6446c47e0927ab9d982b5a380343",
+  "gate_worktree_state": "No product source edits after final captured test/typecheck/build; gate outputs copied as fixed artifacts.",
+  "files": [
+    {
+      "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5d1-schema-contract.md",
+      "before": {
+        "absent_at_base": true
+      },
+      "after_worktree": {
+        "git_blob": "b34865c438d2d7e74abcd642e302328319dc3648",
+        "size_bytes": 13315,
+        "sha256_raw": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16",
+        "lf_count": 55,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16"
+      },
+      "after_commit_blob": {
+        "git_blob": "b34865c438d2d7e74abcd642e302328319dc3648",
+        "size_bytes": 13315,
+        "sha256_raw": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16",
+        "lf_count": 55,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "before": {
+        "git_blob": "acc7cbc1215f638eab3ba560cc2ba9c4dbc08013",
+        "size_bytes": 143338,
+        "sha256_raw": "3c623b2cad87786a11e6137b212dfcb94e0e02a74188560a8e15a1d1009ea263",
+        "lf_count": 1669,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "3c623b2cad87786a11e6137b212dfcb94e0e02a74188560a8e15a1d1009ea263"
+      },
+      "after_worktree": {
+        "git_blob": "6a1e55a6f77e3d2449a3f7b9f51104b0af19b2d1",
+        "size_bytes": 162017,
+        "sha256_raw": "65f7455e9d39e695a1eeba65c48213a68fe2ee3e7880f7fe7acbb10f088fee46",
+        "lf_count": 1865,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "65f7455e9d39e695a1eeba65c48213a68fe2ee3e7880f7fe7acbb10f088fee46"
+      },
+      "after_commit_blob": {
+        "git_blob": "6a1e55a6f77e3d2449a3f7b9f51104b0af19b2d1",
+        "size_bytes": 162017,
+        "sha256_raw": "65f7455e9d39e695a1eeba65c48213a68fe2ee3e7880f7fe7acbb10f088fee46",
+        "lf_count": 1865,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "65f7455e9d39e695a1eeba65c48213a68fe2ee3e7880f7fe7acbb10f088fee46"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "before": {
+        "absent_at_base": true
+      },
+      "after_worktree": {
+        "git_blob": "5465d434513a972601f4b1f8593032e66c730de7",
+        "size_bytes": 980,
+        "sha256_raw": "324f2f2c4cca00e0be7e3a24b82e926202cd3fde3d0d7758d9f40e823f14eefe",
+        "lf_count": 18,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "324f2f2c4cca00e0be7e3a24b82e926202cd3fde3d0d7758d9f40e823f14eefe"
+      },
+      "after_commit_blob": {
+        "git_blob": "5465d434513a972601f4b1f8593032e66c730de7",
+        "size_bytes": 980,
+        "sha256_raw": "324f2f2c4cca00e0be7e3a24b82e926202cd3fde3d0d7758d9f40e823f14eefe",
+        "lf_count": 18,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "324f2f2c4cca00e0be7e3a24b82e926202cd3fde3d0d7758d9f40e823f14eefe"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "before": {
+        "git_blob": "0dcb044bb3af631a25d84d6c6b3878d9402f8f49",
+        "size_bytes": 24596,
+        "sha256_raw": "e733516fd345bfb9679589d1a3ca12c0e942fc236bcf89e7c26a31e87d97c944",
+        "lf_count": 331,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "e733516fd345bfb9679589d1a3ca12c0e942fc236bcf89e7c26a31e87d97c944"
+      },
+      "after_worktree": {
+        "git_blob": "757a1949c806f1759231ffdb43a36f4a58ed2bd3",
+        "size_bytes": 24992,
+        "sha256_raw": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db",
+        "lf_count": 337,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db"
+      },
+      "after_commit_blob": {
+        "git_blob": "757a1949c806f1759231ffdb43a36f4a58ed2bd3",
+        "size_bytes": 24992,
+        "sha256_raw": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db",
+        "lf_count": 337,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "before": {
+        "git_blob": "936d68ba5980330dbb565f8e9f5f8b7612a336d1",
+        "size_bytes": 30237,
+        "sha256_raw": "8d746e8fa55b980559222cab35240bd1d04a041717b7f4689c8ddb7f45bd192b",
+        "lf_count": 467,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "8d746e8fa55b980559222cab35240bd1d04a041717b7f4689c8ddb7f45bd192b"
+      },
+      "after_worktree": {
+        "git_blob": "832773de94354c1c76c3440fa322bdb5550742da",
+        "size_bytes": 30357,
+        "sha256_raw": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+        "lf_count": 469,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613"
+      },
+      "after_commit_blob": {
+        "git_blob": "832773de94354c1c76c3440fa322bdb5550742da",
+        "size_bytes": 30357,
+        "sha256_raw": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+        "lf_count": 469,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "before": {
+        "git_blob": "c8cf39c94d7df1908fdce63c6fff7139aa27b88c",
+        "size_bytes": 93010,
+        "sha256_raw": "1e63bb7211116f07615d281cf2b306851a86d3a291a3b8329fca3f7b80aff777",
+        "lf_count": 1181,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "1e63bb7211116f07615d281cf2b306851a86d3a291a3b8329fca3f7b80aff777"
+      },
+      "after_worktree": {
+        "git_blob": "b3624c66ac451fe5a180f2c6b32c4d9f9a7ede68",
+        "size_bytes": 136040,
+        "sha256_raw": "075d21ee7b9f0cac053bdc2855e40ad3bd8989efc99d2b372c8d4f5556b7a2b2",
+        "lf_count": 1711,
+        "crlf_count": 3,
+        "sha256_lf_normalized": "26e7e9a817a97839a3071bb21fe8c8e85e196180115bff8ab520c002f4ea23e2"
+      },
+      "after_commit_blob": {
+        "git_blob": "b3624c66ac451fe5a180f2c6b32c4d9f9a7ede68",
+        "size_bytes": 136037,
+        "sha256_raw": "26e7e9a817a97839a3071bb21fe8c8e85e196180115bff8ab520c002f4ea23e2",
+        "lf_count": 1711,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "26e7e9a817a97839a3071bb21fe8c8e85e196180115bff8ab520c002f4ea23e2"
+      },
+      "worktree_raw_matches_commit_blob": false,
+      "lf_normalized_matches_commit_blob": true
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "before": {
+        "git_blob": "e414b7a811a0b6b0197d4a84995777cb341d4d89",
+        "size_bytes": 55546,
+        "sha256_raw": "f46476603a13c4701182fe7854d388944826bc66feaae2ceceb1e1e1c0fb4d02",
+        "lf_count": 744,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "f46476603a13c4701182fe7854d388944826bc66feaae2ceceb1e1e1c0fb4d02"
+      },
+      "after_worktree": {
+        "git_blob": "33a73a3b2da9f1dda38a65de56cef68667bd9c40",
+        "size_bytes": 56016,
+        "sha256_raw": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce",
+        "lf_count": 751,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce"
+      },
+      "after_commit_blob": {
+        "git_blob": "33a73a3b2da9f1dda38a65de56cef68667bd9c40",
+        "size_bytes": 56016,
+        "sha256_raw": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce",
+        "lf_count": 751,
+        "crlf_count": 0,
+        "sha256_lf_normalized": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce"
+      },
+      "worktree_raw_matches_commit_blob": true,
+      "lf_normalized_matches_commit_blob": true
+    }
+  ]
+}
