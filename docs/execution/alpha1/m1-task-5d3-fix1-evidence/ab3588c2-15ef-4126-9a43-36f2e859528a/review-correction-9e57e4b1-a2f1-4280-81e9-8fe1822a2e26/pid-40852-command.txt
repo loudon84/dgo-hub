@@ -1,0 +1,1 @@
+Get-CimInstance Win32_Process -Filter "ProcessId = 40852"; record only exact-PID process metadata, never stop/kill

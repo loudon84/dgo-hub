@@ -1,0 +1,55 @@
+{
+  "package": "M1-5D3 Fix1 review correction supplemental evidence",
+  "created_utc": "2026-10-28T04:55:48.8740305Z",
+  "runtime_root": "E:/m1t5-runtime/10a293cb-8ac9-451d-a16b-f9665aac5ba0",
+  "pid_query": "Get-CimInstance Win32_Process -Filter ProcessId = 40852",
+  "pid_result": "absent at observation; exact historical process identity cannot be inferred from PID alone",
+  "postgres_lifecycle_gate": "final unfiltered snapshot runtime d7e31684-0132-4d14-9da2-996e82ee93f2",
+  "files": [
+    {
+      "size": 1048,
+      "sha256": "df92eefcb2a686dd1c337a45e4dc300ea875420f1b0847b229dfba35f3e974f9",
+      "run_id": "06b88d28-ec3b-4f46-820f-395397f11871",
+      "source": "E:/m1t5-runtime/d7e31684-0132-4d14-9da2-996e82ee93f2/m1task5/06b88d28-ec3b-4f46-820f-395397f11871/postgres-lifecycle.jsonl",
+      "destination": "postgres-lifecycle-06b88d28-ec3b-4f46-820f-395397f11871.jsonl"
+    },
+    {
+      "size": 1048,
+      "sha256": "a656eed52e8b03ff1bb7bfffe8af7d96a5249ab838cc7c9b862254f80ccfd593",
+      "run_id": "10a2fb38-5bb5-4526-ac6a-f50ba74da395",
+      "source": "E:/m1t5-runtime/d7e31684-0132-4d14-9da2-996e82ee93f2/m1task5/10a2fb38-5bb5-4526-ac6a-f50ba74da395/postgres-lifecycle.jsonl",
+      "destination": "postgres-lifecycle-10a2fb38-5bb5-4526-ac6a-f50ba74da395.jsonl"
+    },
+    {
+      "size": 1048,
+      "sha256": "f0cbbd55547455941c2b5528e01a6d1f94cbc0c318923aaad1485fe9630bdd02",
+      "run_id": "f9edc001-eb3a-43d4-97f2-896c20f92683",
+      "source": "E:/m1t5-runtime/d7e31684-0132-4d14-9da2-996e82ee93f2/m1task5/f9edc001-eb3a-43d4-97f2-896c20f92683/postgres-lifecycle.jsonl",
+      "destination": "postgres-lifecycle-f9edc001-eb3a-43d4-97f2-896c20f92683.jsonl"
+    },
+    {
+      "size": 114,
+      "sha256": "5e052655a4d0d818d90df0bee353b98f598d06fb39fd2be0f9cce12403cf2fbd",
+      "source": "E:\\m1t5-runtime\\10a293cb-8ac9-451d-a16b-f9665aac5ba0\\command.txt",
+      "destination": "pid-40852-command.txt"
+    },
+    {
+      "size": 143,
+      "sha256": "2a77d18a0cf69aab9ae909187aa9e0073916ce70d0a1e228246b7aff5095eb6f",
+      "source": "E:\\m1t5-runtime\\10a293cb-8ac9-451d-a16b-f9665aac5ba0\\stdout.txt",
+      "destination": "pid-40852-stdout.txt"
+    },
+    {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "E:\\m1t5-runtime\\10a293cb-8ac9-451d-a16b-f9665aac5ba0\\stderr.txt",
+      "destination": "pid-40852-stderr.txt"
+    },
+    {
+      "size": 1,
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "source": "E:\\m1t5-runtime\\10a293cb-8ac9-451d-a16b-f9665aac5ba0\\exit.txt",
+      "destination": "pid-40852-exit.txt"
+    }
+  ]
+}
