@@ -11,3 +11,9 @@ The original Luna implementer reported two attempts rejected before process crea
 The valid reviewed package is `docs/execution/alpha1/m1-task-2-fix2-evidence-b7f3213d-4e57-4c39-95ee-fd59e20ff853/`, with an explicit safe file whitelist. Normal source review/implementation continues without the scratch directory.
 
 The older M0 guard remains independently binding at `../../2026-10-23-alpha1-m0-identity-isolation-implementation-plan/context/policy-blocked-host-artifacts.md`. Its seven generated host paths and W0 temp target must also not be retried or included in archives. This note does not authorize new resource or filesystem cleanup.
+
+## Separate partial Fix 1 evidence-package attempt — do not retry cleanup
+
+`E:\git\dgo-hub\docs\execution\alpha1\m1-task-5d2-evidence\e7ec769d-155f-47f4-aae3-be349e2d7931`
+
+This is a separate, incomplete, untracked directory from a failed partial packaging attempt. It is not the valid Fix 1 evidence package (`docs/execution/alpha1/m1-task-5d2-evidence/08be4383-e3c1-4c0b-86f3-232a55bca1af`) and is not referenced by the reports. The prior execution summary records that a recursive cleanup action targeting this directory was rejected by policy. The exact command text, rejection reason, and pre-execution status are not retained; these details are unknown and are not inferred from the separate task-2 entry above. No cleanup retry was reported. Do not read, enumerate, copy, move, or delete this path. Its untracked state does not affect read-only review of the valid package.
