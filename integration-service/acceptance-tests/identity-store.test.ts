@@ -73,7 +73,7 @@ beforeEach(async () => {
 describe('Task1 identity and credential persistence', () => {
   it('applies the current migrations and skips them on repeat while keeping migration 001 bytes intact', async () => {
     await expect(runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' }))
-      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries', '009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema'] });
+      .resolves.toEqual({ applied: [], skipped: ['001_init', '002_identity_auth', '003_mcp_audit_boundary', '004_alpha1_runtime_security', '005_source_registry', '006_canonical_data_and_receipts', '007_durable_ingestion_jobs', '008_durable_worker_leases_and_retries', '009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission'] });
     const tables = await fixture.pool.query<{ name: string }>(
       `SELECT table_name AS name FROM information_schema.tables
         WHERE table_schema='control' AND table_name IN ('tenant','auth_subject','identity_binding','agent_credential','source_credential','credential_digest_registry','agent_credential_idempotency')`,

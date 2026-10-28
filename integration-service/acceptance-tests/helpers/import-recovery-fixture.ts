@@ -32,7 +32,7 @@ export async function setupImportRecoveryFixture(suite:'candidate'|'binding'|'sc
  fixture=await startOwnedPostgres({evidenceRoot:root,evidenceFile:'unused',taskLabel:'m1task1'});
  const migrations=fileURLToPath(new URL('../../migrations/',import.meta.url)), dir=join(root,'migrations');
  await mkdir(dir,{recursive:true});
- for(const name of await readdir(migrations)) if(/^\d{3}_.+\.sql$/.test(name) && !name.startsWith('013_') && !name.startsWith('014_') && !name.startsWith('015_')) await copyFile(join(migrations,name),join(dir,name));
+ for(const name of await readdir(migrations)) if(/^\d{3}_.+\.sql$/.test(name) && !name.startsWith('013_') && !name.startsWith('014_') && !name.startsWith('015_') && !name.startsWith('016_')) await copyFile(join(migrations,name),join(dir,name));
  await writeFile(join(dir,'009_snapshot_runs_and_recovery.sql'),execFileSync('git',['show','HEAD:integration-service/migrations/009_snapshot_runs_and_recovery.sql']));
  await runMigrations(fixture.pool,{directory:dir,environmentKind:'local_lab'});
  auth=createAuthService({pool:fixture.pool});
@@ -93,7 +93,8 @@ export async function setupImportRecoveryFixture(suite:'candidate'|'binding'|'sc
  expect(reapplied.applied).toEqual([]);expect(reapplied.skipped.at(-1)).toBe('014_import_recovery_binding');
  const fresh014=await startOwnedPostgres({evidenceRoot:root,evidenceFile:'unused',taskLabel:'m1task1'});
  try {const first=await runMigrations(fresh014.pool,{directory:dir,environmentKind:'local_lab'});expect(first.applied.at(-1)).toBe('014_import_recovery_binding');const again=await runMigrations(fresh014.pool,{directory:dir,environmentKind:'local_lab'});expect(again.applied).toEqual([]);expect(again.skipped.at(-1)).toBe('014_import_recovery_binding');} finally {await fresh014.close();}
- return {fixture,app,jwks,auth,principal,viewer,other,token,authenticator,sourceService,partialId,quarantineId,raceIds,migrationDirectory:dir};
+ const issueToken=(subject:string)=>new SignJWT({}).setProtectedHeader({alg:'RS256',kid:'i3p1'}).setIssuer(issuer).setAudience(audience).setSubject(subject).setIssuedAt().setExpirationTime('5m').sign(keys.privateKey);
+ return {fixture,app,jwks,auth,principal,viewer,other,token,issueToken,authenticator,sourceService,partialId,quarantineId,raceIds,migrationDirectory:dir};
  } catch (error) {
   if(app) await app.close();
   if(jwks) await new Promise<void>(resolve=>jwks.close(()=>resolve()));
@@ -105,7 +106,7 @@ export async function setupImportRecoveryFixture(suite:'candidate'|'binding'|'sc
 /** Establish referenced customers and a real quarantined order before recovery construction. */
 export async function setupOrderRecoveryFixture(
  context:Pick<Awaited<ReturnType<typeof setupImportRecoveryFixture>>,'fixture'|'app'|'principal'|'sourceService'|'token'>,
- label:string,missingPk:string,
+ label:string,missingPk:string,resolvedOriginally=false,
 ) {
  const {fixture,app,principal,sourceService,token}=context;
  const samplePk=`sample-ref-${label}`,src=`order-binding-${label}`,headers={authorization:`Bearer ${token}`};
@@ -118,7 +119,8 @@ export async function setupOrderRecoveryFixture(
   await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id) VALUES($1,$2,'customer',$3,$4,$4)`,[tenant,source,pk,ids.at(-1)]);
  }
  const key=(pk:string)=>customerReferenceMappingKey(source,pk);
- await sourceService.writeIdentityMappings(principal,src,[{kind:'customer',external_id:key(samplePk),target_id:ids[0]}]);
+ await sourceService.writeIdentityMappings(principal,src,[{kind:'customer',external_id:key(samplePk),target_id:ids[0]},
+  ...(resolvedOriginally?[{kind:'customer' as const,external_id:key(missingPk),target_id:ids[0]}]:[])]);
  const record=(pk:string,event:string)=>({event_id:event,source_pk:`order-${pk}`,source_version:'1',operation:'UPSERT',source_updated_at:'2026-10-29T00:00:00Z',data:{buyer:{source_id:source,source_pk:pk},number:'O1',state:'CONFIRMED',at:'2026-10-29T00:00:00Z',total:'12.00',ccy:'CNY',lines:[{source_line_id:'l1',product_code:'p',product_name:'item',quantity:'1.000000',unit_price:'12.000000',line_amount:'12.00'}]}});
  const body={schema_version:'hub.v1',batch_id:'73000000-0000-4000-8000-000000000010',records:[record(samplePk,'73000000-0000-4000-8000-000000000001')]};
  async function approve() {const tested=await call('POST',`/hub/v1/admin/sources/${src}/test`,{expected_revision:'1',samples:{order:JSON.stringify(body)}});expect(tested.json().data.status).toBe('PASS');const report=tested.json().data;const approved=await call('POST',`/hub/v1/admin/sources/${src}/approve`,{revision:'1',test_report_id:report.test_report_id,data_contract_ref:report.data_contract_ref});expect(approved.statusCode).toBe(200);expect((await call('POST',`/hub/v1/admin/sources/${src}/activate`,{revision:'1',approval_id:approved.json().data.approval_id})).statusCode).toBe(200);return approved.json().data.approval_id as string;}

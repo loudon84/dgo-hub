@@ -28,6 +28,10 @@ beforeAll(async () => {
   const repeat=await runMigrations(fresh.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'});
   expect(repeat.applied).toEqual([]);expect(repeat.skipped).toHaveLength(15);
  } finally {await fresh.close();}
+ // Current runtime fails closed on 015 without the bounded 016 ordinary lookup.
+ // Stage it only after the populated, reapply, and fresh 015 assertions above.
+ await copyFile(join(migrations,'016_import_recovery_admission.sql'),join(context.migrationDirectory,'016_import_recovery_admission.sql'));
+ expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['016_import_recovery_admission']);
  const headers={authorization:`Bearer ${context.token}`};
  const mapping=await context.app.inject({method:'GET',url:`/hub/v1/admin/identity-mappings?source_id=${source}&kind=department&external_id=team-missing`,headers});
  expect(mapping.statusCode).toBe(200);
@@ -359,7 +363,7 @@ it('does not use a flagged child as a recursive original even if it becomes quar
  } finally {await client.query('ROLLBACK');client.release();}
 });
 
-it('retains ordinary hub_api management admission audits after 015',async()=>{
+it('retains ordinary hub_api management admission audits after the 016 runtime stage',async()=>{
  const batch=structuredClone(sample);
  batch.batch_id=randomUUID();batch.records[0]!.event_id=randomUUID();batch.records[0]!.source_pk='ordinary-after-015';
  const admitted=await context.app.inject({method:'POST',url:`/hub/v1/admin/sources/${source}/import/customer`,

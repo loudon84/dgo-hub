@@ -154,6 +154,19 @@ function pageLimit(value: unknown): number {
 }
 
 export async function findExisting(client: PoolClient, principal: { tenantId: string; sourceId: string }, route: string, key: string) {
+  const available=await client.query<{available:boolean;discriminator:boolean}>(`SELECT
+    to_regprocedure('control.find_ordinary_ingestion_job(text,text,text,text)') IS NOT NULL AS available,
+    EXISTS(SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid='control.ingestion_job'::regclass
+      AND attname='import_recovery_operation_id' AND NOT attisdropped) AS discriminator`);
+  if(available.rows[0]?.available) {
+    try {return await client.query<{ id: string; request_digest: Buffer; status: string; received_count: number; applied_count: number }>(
+      `SELECT * FROM control.find_ordinary_ingestion_job($1,$2,$3,$4)`,[principal.tenantId,principal.sourceId,route,key]);}
+    catch(error) {
+      if(typeof error==='object' && error!==null && 'code' in error && error.code==='P0001' && 'message' in error && error.message==='IDEMPOTENCY_CONFLICT') throw new AuthError('IDEMPOTENCY_CONFLICT');
+      throw error;
+    }
+  }
+  if(available.rows[0]?.discriminator) throw new AuthError('AUTH_UNAVAILABLE');
   return client.query<{ id: string; request_digest: Buffer; status: string; received_count: number; applied_count: number }>(
     `SELECT id,request_digest,status,received_count,applied_count FROM control.ingestion_job
       WHERE tenant_key=$1 AND source_id=$2 AND route=$3 AND idempotency_key=$4`,
