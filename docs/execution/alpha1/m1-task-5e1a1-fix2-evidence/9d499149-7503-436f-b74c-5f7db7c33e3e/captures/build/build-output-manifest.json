@@ -1,0 +1,27 @@
+{
+  "format": "Fix1 build output manifest v1",
+  "capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+  "manifest_created_utc": "2026-10-28T09:33:03.9578141Z",
+  "actual_head_before": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "actual_head_after": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "command": "npm.cmd run build",
+  "started_utc": "2026-10-28T09:32:58.9366221Z",
+  "build_finished_utc": "2026-10-28T09:33:03.9561048Z",
+  "exit_code": 0,
+  "output": {
+    "path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\snapshot-apply-worker.js",
+    "size": 15569,
+    "sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc"
+  },
+  "source_files": [
+    "etl-worker/snapshot-runs.ts",
+    "etl-worker/snapshot-worker.ts",
+    "etl-worker/snapshot-apply-worker.ts",
+    "migrations/009_snapshot_runs_and_recovery.sql",
+    "acceptance-tests/snapshot-recovery.test.ts",
+    "acceptance-tests/helpers/snapshot-recovery-http.ts"
+  ],
+  "before_source_file": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\before-source.json",
+  "after_source_file": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\after-source.json"
+}
