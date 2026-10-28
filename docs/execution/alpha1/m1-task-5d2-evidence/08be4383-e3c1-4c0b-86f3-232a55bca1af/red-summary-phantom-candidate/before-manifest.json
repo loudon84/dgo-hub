@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "bytes": 199187,
+      "raw_sha256": "f300d3ff29a876c406d601dfee1d3c8dc4934965e613db91abb263844bbe6b06",
+      "lf_sha256": "f300d3ff29a876c406d601dfee1d3c8dc4934965e613db91abb263844bbe6b06",
+      "git_blob": "44d554df277bc67b805b0a165d49e090d869bc22"
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "bytes": 29801,
+      "raw_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+      "lf_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+      "git_blob": "a625ae853769330460f76b5d43483dc4ada0a5dc"
+    },
+    {
+      "path": "integration-service/ingestion-api/snapshot-routes.ts",
+      "bytes": 8460,
+      "raw_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+      "lf_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+      "git_blob": "7c7028db9632b00c43c2bd890f6e94a14737a85b"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "bytes": 171386,
+      "raw_sha256": "d2d34ca473487fc303256f1fe7c1bb9659d7884d233f97f2dc049abd2bf2197a",
+      "lf_sha256": "42b3304e109460c205be25693fe0e86f2473ba6bc2a6e82f4e609b31cf81ee3f",
+      "git_blob": "6a174076e6e2629c66732c8882ad1f70b00964a7"
+    }
+  ],
+  "head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+  "tag": "before"
+}

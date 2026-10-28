@@ -1,0 +1,758 @@
+{
+  "schema": "m1-task-5d2-fix1-evidence-v1",
+  "source_commit": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+  "gates": [
+    {
+      "name": "red-summary-phantom-candidate",
+      "description": "RED: actual HTTP skipped-summary response contains null candidate object",
+      "external_root": "E:/m1t5-runtime/4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c",
+      "captured_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "after_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "exit_code": "1",
+      "command": "npm test -- acceptance-tests/snapshot-runs.test.ts",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 199187,
+            "raw_sha256": "f300d3ff29a876c406d601dfee1d3c8dc4934965e613db91abb263844bbe6b06",
+            "lf_sha256": "f300d3ff29a876c406d601dfee1d3c8dc4934965e613db91abb263844bbe6b06",
+            "git_blob": "44d554df277bc67b805b0a165d49e090d869bc22"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 29801,
+            "raw_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "lf_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "git_blob": "a625ae853769330460f76b5d43483dc4ada0a5dc"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8460,
+            "raw_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "lf_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "git_blob": "7c7028db9632b00c43c2bd890f6e94a14737a85b"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 171386,
+            "raw_sha256": "d2d34ca473487fc303256f1fe7c1bb9659d7884d233f97f2dc049abd2bf2197a",
+            "lf_sha256": "42b3304e109460c205be25693fe0e86f2473ba6bc2a6e82f4e609b31cf81ee3f",
+            "git_blob": "6a174076e6e2629c66732c8882ad1f70b00964a7"
+          }
+        ],
+        "head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+        "tag": "before"
+      }
+    },
+    {
+      "name": "red-cursor-roundtrip",
+      "description": "RED: full-key cursor exceeds 1024 and next actual HTTP page returns 400",
+      "external_root": "E:/m1t5-runtime/cfc084cb-d86a-4163-ad3e-1bcb6fe12800",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/cfc084cb-d86a-4163-ad3e-1bcb6fe12800",
+      "captured_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "after_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "exit_code": "1",
+      "command": "npm test -- acceptance-tests/snapshot-runs.test.ts",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 199710,
+            "raw_sha256": "9873570cf27c8cfb55efecbb5122a8c52a693506f7c8f90715d1d90d7101ea6e",
+            "lf_sha256": "9873570cf27c8cfb55efecbb5122a8c52a693506f7c8f90715d1d90d7101ea6e",
+            "git_blob": "9a2364bd287265577e9b6411a86c676735070961"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 29801,
+            "raw_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "lf_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "git_blob": "a625ae853769330460f76b5d43483dc4ada0a5dc"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8460,
+            "raw_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "lf_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "git_blob": "7c7028db9632b00c43c2bd890f6e94a14737a85b"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 171428,
+            "raw_sha256": "e4619985b35a58ef2e576435c2c3df1798ae0fc11e73f5d7a49e25ed81f87c6a",
+            "lf_sha256": "b9067be8d1c2f495eec53f6dc5aadcb14a31aefe5eed49d8505d564539974dd0",
+            "git_blob": "0cdddff37bce7666b3533fba013f832f12bcdb8c"
+          }
+        ],
+        "tag": "before"
+      }
+    },
+    {
+      "name": "red-source-id-api-limit",
+      "description": "Diagnostic RED: API-019 rejects source IDs above its existing 160-character bound",
+      "external_root": "E:/m1t5-runtime/35e22478-cb7f-411a-9e92-8a8cf4aafdfd",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/35e22478-cb7f-411a-9e92-8a8cf4aafdfd",
+      "captured_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "after_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "exit_code": "1",
+      "command": "npm test -- acceptance-tests/snapshot-runs.test.ts",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+        "tag": "before",
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 199219,
+            "raw_sha256": "22ceefab7608777956903deb39a4495057ae6839c3185cdf8e90b3de298951a2",
+            "lf_sha256": "22ceefab7608777956903deb39a4495057ae6839c3185cdf8e90b3de298951a2",
+            "git_blob": "715f2dba034972733daae34cfe681423d65906e8"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 29801,
+            "raw_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "lf_sha256": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+            "git_blob": "a625ae853769330460f76b5d43483dc4ada0a5dc"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8460,
+            "raw_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "lf_sha256": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+            "git_blob": "7c7028db9632b00c43c2bd890f6e94a14737a85b"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 171428,
+            "raw_sha256": "e4619985b35a58ef2e576435c2c3df1798ae0fc11e73f5d7a49e25ed81f87c6a",
+            "lf_sha256": "b9067be8d1c2f495eec53f6dc5aadcb14a31aefe5eed49d8505d564539974dd0",
+            "git_blob": "0cdddff37bce7666b3533fba013f832f12bcdb8c"
+          }
+        ]
+      }
+    },
+    {
+      "name": "red-digest-signature",
+      "description": "RED diagnostic: initial shared digest helper signature did not match numeric sequence type",
+      "external_root": "E:/m1t5-runtime/2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd",
+      "captured_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "after_head": "97463138699e3ef9421ef94a7442b6084f0df08a",
+      "exit_code": "1",
+      "command": "npm test -- acceptance-tests/snapshot-runs.test.ts",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 200644,
+            "raw_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "lf_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "git_blob": "b13da42077531392fa099b667cd445334754972c"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 30502,
+            "raw_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "lf_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "git_blob": "ec5db90945d151b600d1e2374b894b9141854f24"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8526,
+            "raw_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "lf_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "git_blob": "b0be25acbaf7bede07617871e2c7515f0b568c40"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 170943,
+            "raw_sha256": "e0f7bcde92dfbf8aaf9b3e8b1da9588e8c75836e500da59c3ec69e7fca159a25",
+            "lf_sha256": "7c6fcdc39d800514ab81c36f02f50474ee1f4c2dad4ef0949f7ed72aa3b78692",
+            "git_blob": "ff1fa08cbde4a38d85cf06bcfc5e2d40d0ea1e2c"
+          }
+        ],
+        "tag": "before",
+        "head": "97463138699e3ef9421ef94a7442b6084f0df08a"
+      }
+    },
+    {
+      "name": "green-postcommit-snapshot",
+      "description": "GREEN: committed focused acceptance file, 26 tests passed",
+      "external_root": "E:/m1t5-runtime/ad060ad5-081f-4484-bd79-fd68e8b62542",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/ad060ad5-081f-4484-bd79-fd68e8b62542",
+      "captured_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "after_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "exit_code": "0",
+      "command": "npm test -- acceptance-tests/snapshot-runs.test.ts",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "tag": "before",
+        "head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 200644,
+            "raw_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "lf_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "git_blob": "b13da42077531392fa099b667cd445334754972c"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 30502,
+            "raw_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "lf_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "git_blob": "ec5db90945d151b600d1e2374b894b9141854f24"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8526,
+            "raw_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "lf_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "git_blob": "b0be25acbaf7bede07617871e2c7515f0b568c40"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 170921,
+            "raw_sha256": "8832afa756f4776d3ab7f9b14cbb20c6f90d425ce503f16a5b8d7a3d380efa7d",
+            "lf_sha256": "db492677121a7f46ef381683641ab95a2eae15235620b7e8762ba82f6843647a",
+            "git_blob": "c0cffc5c01818815c869ccbe46f14166977a9136"
+          }
+        ]
+      }
+    },
+    {
+      "name": "green-postcommit-typecheck",
+      "description": "GREEN: npm run typecheck",
+      "external_root": "E:/m1t5-runtime/966932d7-aadf-499d-8d24-2ac79427aa57",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/966932d7-aadf-499d-8d24-2ac79427aa57",
+      "captured_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "after_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "exit_code": "0",
+      "command": "npm run typecheck",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 200644,
+            "raw_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "lf_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "git_blob": "b13da42077531392fa099b667cd445334754972c"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 30502,
+            "raw_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "lf_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "git_blob": "ec5db90945d151b600d1e2374b894b9141854f24"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8526,
+            "raw_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "lf_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "git_blob": "b0be25acbaf7bede07617871e2c7515f0b568c40"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 170921,
+            "raw_sha256": "8832afa756f4776d3ab7f9b14cbb20c6f90d425ce503f16a5b8d7a3d380efa7d",
+            "lf_sha256": "db492677121a7f46ef381683641ab95a2eae15235620b7e8762ba82f6843647a",
+            "git_blob": "c0cffc5c01818815c869ccbe46f14166977a9136"
+          }
+        ],
+        "head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+        "tag": "before"
+      }
+    },
+    {
+      "name": "green-postcommit-build",
+      "description": "GREEN: npm run build",
+      "external_root": "E:/m1t5-runtime/37db7bda-e8da-42df-8312-f36c970ffbc2",
+      "M0_RUN_EVIDENCE_ROOT": "E:/m1t5-runtime/37db7bda-e8da-42df-8312-f36c970ffbc2",
+      "captured_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "after_head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+      "exit_code": "0",
+      "command": "npm run build",
+      "source_before_after_identical": true,
+      "source_manifest": {
+        "tag": "before",
+        "head": "23cac1b6a3f00b595ecff085dc59f14dd771bc73",
+        "files": [
+          {
+            "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+            "bytes": 200644,
+            "raw_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "lf_sha256": "d0cd1b9b85a8ae65c6387fa8833f75eb3e1b9c7d9f05a7447b696eb9fb064d0d",
+            "git_blob": "b13da42077531392fa099b667cd445334754972c"
+          },
+          {
+            "path": "integration-service/etl-worker/snapshot-runs.ts",
+            "bytes": 30502,
+            "raw_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "lf_sha256": "9f9ffb92875abd6ed4b25d1b88a098e206e50c5d53eb4ae70696de5a4463819b",
+            "git_blob": "ec5db90945d151b600d1e2374b894b9141854f24"
+          },
+          {
+            "path": "integration-service/ingestion-api/snapshot-routes.ts",
+            "bytes": 8526,
+            "raw_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "lf_sha256": "c6a4a7b59f56cee4ee9c4d7427f44a707484483f5c245ce96b361384c2d8f68b",
+            "git_blob": "b0be25acbaf7bede07617871e2c7515f0b568c40"
+          },
+          {
+            "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+            "bytes": 170921,
+            "raw_sha256": "8832afa756f4776d3ab7f9b14cbb20c6f90d425ce503f16a5b8d7a3d380efa7d",
+            "lf_sha256": "db492677121a7f46ef381683641ab95a2eae15235620b7e8762ba82f6843647a",
+            "git_blob": "c0cffc5c01818815c869ccbe46f14166977a9136"
+          }
+        ]
+      }
+    }
+  ],
+  "artifact_count": 62,
+  "artifacts": [
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\command.txt",
+      "path": "red-summary-phantom-candidate/command.txt",
+      "bytes": 52,
+      "sha256": "6d7676023f894a4805545c13b3efbf5a3f8f7e5778326d2f5fe917ae3d3a5650"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\stdout.txt",
+      "path": "red-summary-phantom-candidate/stdout.txt",
+      "bytes": 529,
+      "sha256": "a48c2d3effc9b743f9ff2da0b013a8aa8cac1c654d86276ac80e22a89fbcd45f"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\stderr.txt",
+      "path": "red-summary-phantom-candidate/stderr.txt",
+      "bytes": 6931,
+      "sha256": "43818f4a1a43efaa435591f8149c4f232da60475bd5d7b5afe3d62e406080b42"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\exit-code.txt",
+      "path": "red-summary-phantom-candidate/exit-code.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\before-manifest.json",
+      "path": "red-summary-phantom-candidate/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "3a9d3d1ac0a840b254d6533dea990d8feb5c5ee8d574f22c297a668a54bbd7b0"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\after-manifest.json",
+      "path": "red-summary-phantom-candidate/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "51bf2d6ea71a13a4ee2bbe0105aad107ed8402372ff95cc03a4a27d4372b7fb4"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\node-child-lifecycle.jsonl",
+      "path": "red-summary-phantom-candidate/node-child-lifecycle.jsonl",
+      "bytes": 1516,
+      "sha256": "2909801264e7f7eda77042abe94f3d5104c6888df41f3f4a4cdb0c18dd047c92"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\m1task5\\208ddf81-31a3-4b07-80c3-3486f11301fe\\postgres-lifecycle.jsonl",
+      "path": "red-summary-phantom-candidate/208ddf81-31a3-4b07-80c3-3486f11301fe-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "f6d7f996c0be9e0579fbec983acaf3357ab6e5e8d80004b54b55ec81920927de"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\m1task5\\bb2f5d00-740d-40cc-8067-aad7a0a7b146\\postgres-lifecycle.jsonl",
+      "path": "red-summary-phantom-candidate/bb2f5d00-740d-40cc-8067-aad7a0a7b146-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "a89cb159673aac718abdc5893870c7f2d2b12c91797c7417016052795ed2d9a5"
+    },
+    {
+      "gate": "red-summary-phantom-candidate",
+      "source": "E:\\m1t5-runtime\\4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c\\m1task5\\d1f1692d-cd7f-44aa-b09e-08483dad7f0e\\postgres-lifecycle.jsonl",
+      "path": "red-summary-phantom-candidate/d1f1692d-cd7f-44aa-b09e-08483dad7f0e-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "993fa839d3846e265c60556a0f1d32ac72c4853c3088585ee3167bfea463f659"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\command.txt",
+      "path": "red-cursor-roundtrip/command.txt",
+      "bytes": 52,
+      "sha256": "6d7676023f894a4805545c13b3efbf5a3f8f7e5778326d2f5fe917ae3d3a5650"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\stdout.txt",
+      "path": "red-cursor-roundtrip/stdout.txt",
+      "bytes": 529,
+      "sha256": "c5ad759fd8a65528f8d94a9549975bcb9a196751067dbce233510d10f683fdf8"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\stderr.txt",
+      "path": "red-cursor-roundtrip/stderr.txt",
+      "bytes": 6682,
+      "sha256": "31b1f96bc24b4172feda9b23e4794cd07608c344f62ac5f380ea905998bb8ed0"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\exit-code.txt",
+      "path": "red-cursor-roundtrip/exit-code.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\before-manifest.json",
+      "path": "red-cursor-roundtrip/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "817d6c17034624687aa26ce1f4195c1635babfa226804f081e2cbda95344a079"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\after-manifest.json",
+      "path": "red-cursor-roundtrip/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "4634a752295320dd880207c43fd35dc9c0396fd8872fbd3db6308fd6d67aae00"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\node-child-lifecycle.jsonl",
+      "path": "red-cursor-roundtrip/node-child-lifecycle.jsonl",
+      "bytes": 1516,
+      "sha256": "8d5d902f6255c0c9d05c391c74c0ad56202c0e3e64c9e6c7ff60d6c278c46225"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\m1task5\\33adf7ef-cea9-49d8-a00e-dedc29d70090\\postgres-lifecycle.jsonl",
+      "path": "red-cursor-roundtrip/33adf7ef-cea9-49d8-a00e-dedc29d70090-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "c5f8114b79d12b04d20965479810068e969d464c3ab359e8fbe2fa5eea08e49d"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\m1task5\\79e5712d-c3a3-4132-974b-0d7cec93cf4c\\postgres-lifecycle.jsonl",
+      "path": "red-cursor-roundtrip/79e5712d-c3a3-4132-974b-0d7cec93cf4c-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "c1e2ec26037f314fb59f3d76bd810d8820502c1098ef10309b3785cb168c307a"
+    },
+    {
+      "gate": "red-cursor-roundtrip",
+      "source": "E:\\m1t5-runtime\\cfc084cb-d86a-4163-ad3e-1bcb6fe12800\\m1task5\\bb9793fb-73be-4520-afd6-86c5cdfb8a77\\postgres-lifecycle.jsonl",
+      "path": "red-cursor-roundtrip/bb9793fb-73be-4520-afd6-86c5cdfb8a77-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "9ef0e7b2bff25bcc9c575e1130ab3181091ca1e09a3a46462deb41b03b975491"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\command.txt",
+      "path": "red-source-id-api-limit/command.txt",
+      "bytes": 52,
+      "sha256": "6d7676023f894a4805545c13b3efbf5a3f8f7e5778326d2f5fe917ae3d3a5650"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\stdout.txt",
+      "path": "red-source-id-api-limit/stdout.txt",
+      "bytes": 529,
+      "sha256": "077f32ec47a6d4245ae0501c4da020c0df2deb4d41f08d906ac61981fcd28418"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\stderr.txt",
+      "path": "red-source-id-api-limit/stderr.txt",
+      "bytes": 6803,
+      "sha256": "ee2ebfcd2022d73a1f63f445ac058dd7cd78768585e9892728a4cf9b9f24319e"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\exit-code.txt",
+      "path": "red-source-id-api-limit/exit-code.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\before-manifest.json",
+      "path": "red-source-id-api-limit/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "a01911db93d24aba3ee5f06df1231e20c36be3e9d8919f261b61deeabf5686ca"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\after-manifest.json",
+      "path": "red-source-id-api-limit/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "0f7cb42ba2c106fbcbe288a645b5f3884d4b4f0eb1256474f99ad60d0abcd996"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\node-child-lifecycle.jsonl",
+      "path": "red-source-id-api-limit/node-child-lifecycle.jsonl",
+      "bytes": 1513,
+      "sha256": "5e0cdd00e7c1947977a3dc8ef995b7b45f48321ff4daa3c066ce6899bd3d29e7"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\m1task5\\4766de46-30e3-419e-b2cc-c40f01beed73\\postgres-lifecycle.jsonl",
+      "path": "red-source-id-api-limit/4766de46-30e3-419e-b2cc-c40f01beed73-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "c6b0251a4bb4ed233b9c863216fc5334e803947116f696efd91d1afe75eb7617"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\m1task5\\5814499f-f73e-49e9-99fe-66011c42363b\\postgres-lifecycle.jsonl",
+      "path": "red-source-id-api-limit/5814499f-f73e-49e9-99fe-66011c42363b-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "36bb052ab40bd55f9f20593f321efd7e98e7e721bafef8dbe96f227e04eeac18"
+    },
+    {
+      "gate": "red-source-id-api-limit",
+      "source": "E:\\m1t5-runtime\\35e22478-cb7f-411a-9e92-8a8cf4aafdfd\\m1task5\\6d7996c6-6c7d-4fdd-a4fd-b2c06e25ee96\\postgres-lifecycle.jsonl",
+      "path": "red-source-id-api-limit/6d7996c6-6c7d-4fdd-a4fd-b2c06e25ee96-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "688c7e4ce19e87ddc114dbc55f1650002b0c9eea70a8c69422844733712d2ceb"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\command.txt",
+      "path": "red-digest-signature/command.txt",
+      "bytes": 52,
+      "sha256": "6d7676023f894a4805545c13b3efbf5a3f8f7e5778326d2f5fe917ae3d3a5650"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\stdout.txt",
+      "path": "red-digest-signature/stdout.txt",
+      "bytes": 529,
+      "sha256": "81b885162adb00835512987ab661180f574b1a64c633827d6995eefbcf9afb7a"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\stderr.txt",
+      "path": "red-digest-signature/stderr.txt",
+      "bytes": 8204,
+      "sha256": "9ef3352a7421ee5d3a44a6d8bfa08807e4f753b06d327bd726bb5e2680a6e47c"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\exit-code.txt",
+      "path": "red-digest-signature/exit-code.txt",
+      "bytes": 3,
+      "sha256": "f1b2f662800122bed0ff255693df89c4487fbdcf453d3524a42d4ec20c3d9c04"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\before-manifest.json",
+      "path": "red-digest-signature/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "9363265dcf679b7a1a9b312625f2dbbb81358f181af41eab2599bdd72a01acf3"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\after-manifest.json",
+      "path": "red-digest-signature/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "5a929962a54040d7821cd9a7be6c2f2e90444b745990acdb249ed0d6d7abe343"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\node-child-lifecycle.jsonl",
+      "path": "red-digest-signature/node-child-lifecycle.jsonl",
+      "bytes": 1516,
+      "sha256": "5659dfcce96f142f7b0dd8968eaefe75c0c504800fb229cb32b369b72b53117c"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\m1task5\\585e32d5-e6e7-487e-b5ae-b5b6d1607f28\\postgres-lifecycle.jsonl",
+      "path": "red-digest-signature/585e32d5-e6e7-487e-b5ae-b5b6d1607f28-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "cd19c6b735b2db8756a596616864cfeee214ccd4aa097f75c70ba3b0def9be8b"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\m1task5\\896d02f5-ac2f-4a50-90d2-e8d61dabb2a9\\postgres-lifecycle.jsonl",
+      "path": "red-digest-signature/896d02f5-ac2f-4a50-90d2-e8d61dabb2a9-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "8eece65f64781d2b7108a0a0cc7279b5c8bf0f2e76cd80c60877de66d3d54113"
+    },
+    {
+      "gate": "red-digest-signature",
+      "source": "E:\\m1t5-runtime\\2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd\\m1task5\\e53f81e8-6fb1-470b-a387-82dee4f648d7\\postgres-lifecycle.jsonl",
+      "path": "red-digest-signature/e53f81e8-6fb1-470b-a387-82dee4f648d7-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "fc2dcd803b31102ab8148efbc9d19300089e38fbb3acc831bfc36ec38b126852"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\command.txt",
+      "path": "green-postcommit-snapshot/command.txt",
+      "bytes": 52,
+      "sha256": "6d7676023f894a4805545c13b3efbf5a3f8f7e5778326d2f5fe917ae3d3a5650"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\stdout.txt",
+      "path": "green-postcommit-snapshot/stdout.txt",
+      "bytes": 339,
+      "sha256": "36e273fe9b32017c2a67d0f3627810b9f14a93d17f4d225db39aec94c4b579e6"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\stderr.txt",
+      "path": "green-postcommit-snapshot/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\exit-code.txt",
+      "path": "green-postcommit-snapshot/exit-code.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\before-manifest.json",
+      "path": "green-postcommit-snapshot/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "3e1e877ea7c7e34ccede8d07450511b6d3c5d2c4d9d0b90214f1d44d14dccce7"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\after-manifest.json",
+      "path": "green-postcommit-snapshot/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "8397091e811fb89f4cb62717d7c13a65ef03f4752ce720b349c019de84cdf08e"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\node-child-lifecycle.jsonl",
+      "path": "green-postcommit-snapshot/node-child-lifecycle.jsonl",
+      "bytes": 1516,
+      "sha256": "9eeee5063042bbb98bdc76db0571d6d0866261bdaac1d2740cf2cf4e3b4f6f63"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\m1task5\\22ebf61f-757e-4117-b5d3-f36c3495f3c9\\postgres-lifecycle.jsonl",
+      "path": "green-postcommit-snapshot/22ebf61f-757e-4117-b5d3-f36c3495f3c9-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "fee850f068093be6134cd444442daf74707fd5405b018a078a816c2d5fe5de56"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\m1task5\\68d7751d-2926-49f0-9e78-1186d3dcf56f\\postgres-lifecycle.jsonl",
+      "path": "green-postcommit-snapshot/68d7751d-2926-49f0-9e78-1186d3dcf56f-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "046bb2606e03c53f599fa19f888cf9ed8cea2e829a348059d93b95be41b49478"
+    },
+    {
+      "gate": "green-postcommit-snapshot",
+      "source": "E:\\m1t5-runtime\\ad060ad5-081f-4484-bd79-fd68e8b62542\\m1task5\\f10f3a99-7cea-46d1-9bc1-642efcb9f3ea\\postgres-lifecycle.jsonl",
+      "path": "green-postcommit-snapshot/f10f3a99-7cea-46d1-9bc1-642efcb9f3ea-postgres-lifecycle.jsonl",
+      "bytes": 1048,
+      "sha256": "821a94e4a723e31cf9c668050946ca8037db6831da1a15f51aad88d15e5dae8f"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\command.txt",
+      "path": "green-postcommit-typecheck/command.txt",
+      "bytes": 19,
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\stdout.txt",
+      "path": "green-postcommit-typecheck/stdout.txt",
+      "bytes": 92,
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\stderr.txt",
+      "path": "green-postcommit-typecheck/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\exit-code.txt",
+      "path": "green-postcommit-typecheck/exit-code.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\before-manifest.json",
+      "path": "green-postcommit-typecheck/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "3666d5a0c9bacc738422d83bd2d3b96b8ff1bb47d4bd7a0ea502581d1b3cc31a"
+    },
+    {
+      "gate": "green-postcommit-typecheck",
+      "source": "E:\\m1t5-runtime\\966932d7-aadf-499d-8d24-2ac79427aa57\\after-manifest.json",
+      "path": "green-postcommit-typecheck/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "359003ec54a59b62db28fc955f58eec0ed8a31a3c62853dcd0983fe6b58c3ae3"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\command.txt",
+      "path": "green-postcommit-build/command.txt",
+      "bytes": 15,
+      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\stdout.txt",
+      "path": "green-postcommit-build/stdout.txt",
+      "bytes": 79,
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\stderr.txt",
+      "path": "green-postcommit-build/stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\exit-code.txt",
+      "path": "green-postcommit-build/exit-code.txt",
+      "bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\before-manifest.json",
+      "path": "green-postcommit-build/before-manifest.json",
+      "bytes": 1506,
+      "sha256": "3e1e877ea7c7e34ccede8d07450511b6d3c5d2c4d9d0b90214f1d44d14dccce7"
+    },
+    {
+      "gate": "green-postcommit-build",
+      "source": "E:\\m1t5-runtime\\37db7bda-e8da-42df-8312-f36c970ffbc2\\after-manifest.json",
+      "path": "green-postcommit-build/after-manifest.json",
+      "bytes": 1505,
+      "sha256": "8397091e811fb89f4cb62717d7c13a65ef03f4752ce720b349c019de84cdf08e"
+    }
+  ]
+}
