@@ -27,6 +27,7 @@ type DurableJob = {
   owner_approval_id: string; owner_user_id: string; owner_revision: string; config_revision: string; config_digest: Buffer;
   mapping_revision: string; mapping_digest: Buffer; identity_mapping_revision: string; identity_mapping_digest: Buffer;
   endpoint_profile_digest: Buffer | null; test_report_id: string; security_barrier_fence_at_admission: string;
+  import_recovery_operation_id: string | null;
 };
 type DurableItem = { ordinal: number; event_id: string; source_pk: string; source_version: string; operation: string;
   public_record: unknown; status: string; attempts_started: number; retries_used: number; next_retry_at: Date | null; operation_id: string };
@@ -50,7 +51,7 @@ function adaptRecord(job: DurableJob, item: DurableItem): PublicRecord {
   if (job.version_domain !== 'SOURCE_VERSION') throw new Error('DURABLE_FACTS_INVALID');
   const batch = validateHubBatch({ schema_version: 'hub.v1', batch_id: job.batch_id, records: [item.public_record] }, job.entity);
   const record = batch.records[0];
-  if (!record || record.event_id !== item.event_id || record.source_pk !== item.source_pk ||
+  if (!record || record.event_id.toLowerCase() !== item.event_id.toLowerCase() || record.source_pk !== item.source_pk ||
       BigInt(record.source_version) !== BigInt(item.source_version) || record.operation !== item.operation) {
     throw new Error('DURABLE_FACTS_INVALID');
   }
@@ -115,7 +116,8 @@ async function claimJobs(pool: Pool, limit: number, leaseMs: number): Promise<Du
   return transaction(pool, async client => {
     const candidates = await client.query<{ job_id: string; tenant_key: string; source_id: string }>(`SELECT o.job_id,j.tenant_key,j.source_id
       FROM control.ingestion_processing_outbox o JOIN control.ingestion_job j ON j.id=o.job_id
-      WHERE o.acknowledged_at IS NULL AND o.available_at<=clock_timestamp()
+      WHERE (to_jsonb(j)->>'import_recovery_operation_id') IS NULL
+        AND o.acknowledged_at IS NULL AND o.available_at<=clock_timestamp()
         AND (o.claim_token IS NULL OR o.lease_expires_at<=clock_timestamp())
       ORDER BY o.available_at,o.id LIMIT $1 FOR UPDATE OF o SKIP LOCKED`, [limit]);
     const claims: DurableClaim[] = [];
@@ -137,8 +139,9 @@ async function loadJob(pool: Pool, claim: DurableClaim): Promise<DurableJob> {
     source_epoch_at_admission::text,credential_revision_at_admission::text,credential_generation_at_admission::text,
     channel_id::text,channel_epoch::text,version_domain,owner_approval_id::text,owner_user_id,owner_revision::text,
     config_revision::text,config_digest,mapping_revision::text,mapping_digest,identity_mapping_revision::text,identity_mapping_digest,
-    endpoint_profile_digest,test_report_id::text,security_barrier_fence_at_admission::text
-    FROM control.ingestion_job WHERE id=$1 AND tenant_key=$2 AND source_id=$3`, [claim.jobId,claim.tenantId,claim.sourceId]);
+    endpoint_profile_digest,test_report_id::text,security_barrier_fence_at_admission::text,
+    to_jsonb(j)->>'import_recovery_operation_id' AS import_recovery_operation_id
+    FROM control.ingestion_job j WHERE id=$1 AND tenant_key=$2 AND source_id=$3`, [claim.jobId,claim.tenantId,claim.sourceId]);
   if (!result.rowCount) throw new Error('DURABLE_JOB_SCOPE_INVALID');
   return result.rows[0];
 }
@@ -152,6 +155,7 @@ async function loadItems(pool: Pool, job: DurableJob): Promise<DurableItem[]> {
 }
 
 async function setInvalidFacts(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, errorCode: string): Promise<void> {
+  if (job.import_recovery_operation_id !== null) return;
   await transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if (!await lockClaim(client, claim)) return;
@@ -255,6 +259,7 @@ async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: Dura
 
 async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, record: PublicRecord,
   leaseMs: number, hooks: DurableWorkerHooks): Promise<void> {
+  if (job.import_recovery_operation_id !== null) return;
   const started = await startAttempt(pool,claim,job,item,leaseMs);
   if (!started) return;
   const hookItem = { jobId:job.id,ordinal:item.ordinal,operationId:started.operation_id };
@@ -305,6 +310,7 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
 }
 
 async function finishClaim(pool: Pool, claim: DurableClaim, job: DurableJob): Promise<void> {
+  if (job.import_recovery_operation_id !== null) return;
   await transaction(pool, async client => {
     const locked=await client.query(`SELECT o.id FROM control.ingestion_processing_outbox o
       JOIN control.ingestion_job j ON j.id=o.job_id WHERE o.job_id=$1 AND j.tenant_key=$2 AND j.source_id=$3
@@ -334,6 +340,9 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
   const claims=await claimJobs(pool,limit,leaseMs);
   for (const claim of claims) {
     const job=await loadJob(pool,claim);
+    // Recovery application is intentionally unavailable until W1/W2. A stale
+    // or direct claim must never enter ordinary processing or acknowledge it.
+    if (job.import_recovery_operation_id !== null) continue;
     await options.hooks?.afterClaim?.(claim);
     const items=await loadItems(pool,job);
     for (const item of items) {
