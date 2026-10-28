@@ -6,10 +6,8 @@ import type { createAuthService } from '../auth/service.js';
 import type { createOidcAuthenticator } from '../auth/oidc.js';
 import type { createSourceRegistryService } from '../source-registry/service.js';
 import { createCredential } from '../auth/credentials.js';
-import { customerReferenceMappingKey } from '../source-registry/import-sample.js';
-import { runDurableWorkerOnce } from '../etl-worker/worker.js';
 import type { OwnedPostgres } from './helpers/postgres.js';
-import { setupImportRecoveryFixture, tenant, source, sample } from './helpers/import-recovery-fixture.js';
+import { setupImportRecoveryFixture, setupOrderRecoveryFixture, tenant, source, sample } from './helpers/import-recovery-fixture.js';
 import type { UserPrincipal } from '../auth/types.js';
 
 let fixture:OwnedPostgres, app:Awaited<ReturnType<typeof buildApp>>, jwks:Server;
@@ -109,27 +107,7 @@ it('keeps P1 readable after a real source edit but refuses an untested current p
 });
 
 it.each([['ordinary','missing-ref'],['escaped-unicode','ref\"\\\u4e2d\ud83d\ude00\u2028\u2029end']])('binds an order with a %s foreign customer key after a new approval',async(label,missingPk)=>{
- const samplePk=`sample-ref-${label}`,src=`order-binding-${label}`,headers={authorization:`Bearer ${token}`};
- const call=(method:'POST'|'PUT',url:string,payload:Record<string,unknown>)=>app.inject({method,url,headers,payload});
- expect((await call('POST','/hub/v1/admin/sources',{source_id:src,data_owner_user_id:'owner',config:{name:'Orders',connector:'SIMULATED_IMPORT',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',allowed_entities:['order'],delete_contract:'tombstone'}})).statusCode).toBe(201);
- const fields=[['buyer','customer_id','identity'],['number','order_no','trim'],['state','status','identity'],['at','order_at','identity'],['total','amount','decimal-string'],['ccy','currency','identity'],...['source_line_id','product_code','product_name','quantity','unit_price','line_amount'].map(field=>[`lines.${field}`,`lines.${field}`,['quantity','unit_price','line_amount'].includes(field)?'decimal-string':'identity'])].map(([source_field,target_field,transform])=>({entity:'order',source_field,target_field,transform}));
- expect((await call('PUT',`/hub/v1/admin/sources/${src}/mappings`,{expected_revision:'1',mappings:fields})).statusCode).toBe(200);
- const ids:string[]=[];for(const pk of [samplePk,missingPk]) {
-  const customer=await fixture.pool.query<{id:string}>(`INSERT INTO hub.canonical_customer(tenant_id,customer_name,owner_user_id,dept_id,status,source_updated_at,source_version,version_domain,channel_epoch,hub_revision) VALUES($1,'Existing','owner','dept1','ACTIVE',now(),1,'SOURCE_VERSION',1,1) RETURNING id::text`,[tenant]);ids.push(customer.rows[0]!.id);
-  await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id) VALUES($1,$2,'customer',$3,$4,$4)`,[tenant,source,pk,ids.at(-1)]);
- }
- const key=(pk:string)=>customerReferenceMappingKey(source,pk);
- await sourceService.writeIdentityMappings(principal,src,[{kind:'customer',external_id:key(samplePk),target_id:ids[0]}]);
- const record=(pk:string,event:string)=>({event_id:event,source_pk:`order-${pk}`,source_version:'1',operation:'UPSERT',source_updated_at:'2026-10-29T00:00:00Z',data:{buyer:{source_id:source,source_pk:pk},number:'O1',state:'CONFIRMED',at:'2026-10-29T00:00:00Z',total:'12.00',ccy:'CNY',lines:[{source_line_id:'l1',product_code:'p',product_name:'item',quantity:'1.000000',unit_price:'12.000000',line_amount:'12.00'}]}});
- const body={schema_version:'hub.v1',batch_id:'73000000-0000-4000-8000-000000000010',records:[record(samplePk,'73000000-0000-4000-8000-000000000001')]};
- async function approve() {const tested=await call('POST',`/hub/v1/admin/sources/${src}/test`,{expected_revision:'1',samples:{order:JSON.stringify(body)}});expect(tested.json().data.status).toBe('PASS');const report=tested.json().data;const approved=await call('POST',`/hub/v1/admin/sources/${src}/approve`,{revision:'1',test_report_id:report.test_report_id,data_contract_ref:report.data_contract_ref});expect(approved.statusCode).toBe(200);expect((await call('POST',`/hub/v1/admin/sources/${src}/activate`,{revision:'1',approval_id:approved.json().data.approval_id})).statusCode).toBe(200);return approved.json().data.approval_id as string;}
- await approve();
- const admitted=await app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/import/order`,headers:{...headers,'content-type':'application/json','idempotency-key':'order-origin'},payload:JSON.stringify({...body,batch_id:'73000000-0000-4000-8000-000000000011',records:[record(missingPk,'73000000-0000-4000-8000-000000000002')]})});expect(admitted.statusCode).toBe(202);
- const worker=new pg.Pool({connectionString:`postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,options:'-c role=hub_worker'});try{await runDurableWorkerOnce(worker);}finally{await worker.end();}
- const q=(await fixture.pool.query<{id:string}>(`SELECT quarantine_id::text AS id FROM control.ingestion_quarantine_index WHERE job_id=$1`,[admitted.json().data.job_id])).rows[0]!.id;
- const get=await app.inject({method:'GET',url:`/hub/v1/admin/identity-mappings?source_id=${src}&kind=customer&external_id=${encodeURIComponent(key(missingPk))}`,headers});expect(get.statusCode).toBe(200);
- expect((await call('PUT',`/hub/v1/admin/identity-mappings/${get.json().data.id}`,{expected_revision:'1',target_id:ids[1],reason:'confirmed'})).statusCode).toBe(200);
- const approval=await approve();
+ const {src,q,ids,key,approval}=await setupOrderRecoveryFixture({fixture,app,principal,sourceService,token},label,missingPk);
  const mod=await import('../ingestion-api/import-recovery-plan.js');const client=await fixture.pool.connect();
  try {await client.query('BEGIN');await client.query('SET LOCAL ROLE hub_api');const original=await mod.readImportRecoveryCandidate(client,auth,principal,q);expect(original.kind).toBe('ELIGIBLE');if(original.kind!=='ELIGIBLE') return;
   const binding={kind:'customer' as const,sourceId:source,sourcePk:missingPk,externalId:key(missingPk),targetId:ids[1]!};const input={expectedSourceRevision:original.current.sourceRevision,identityMappingRevision:original.current.identityMappingRevision,identityMappingDigest:original.current.identityMappingDigest,bindings:[binding]};
