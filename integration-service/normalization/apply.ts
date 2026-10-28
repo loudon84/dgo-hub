@@ -46,7 +46,7 @@ export type ApplyResult =
   | { status: 'CHANNEL_EPOCH_RETIRED' };
 
 type IdentityMapping = Readonly<{ kind: 'user' | 'department' | 'customer'; external_id: string; target_id: string | null }>;
-type FrozenProof = {
+export type FrozenProof = {
   identity_mappings: IdentityMapping[];
   config: { allowed_entities?: unknown; connector?: unknown; mode?: unknown; version_domain?: unknown };
   data_contract_ref: string;
@@ -67,7 +67,9 @@ function mappingFor(mappings: readonly IdentityMapping[], kind: IdentityMapping[
   return mappings.find(item => item.kind === kind && item.external_id === externalId);
 }
 
-async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContext): Promise<ApplyResult | FrozenProof> {
+// Internal transaction-scoped validation: the caller owns the transaction and namespace authorization.
+// The returned proof is not standalone authority; locks remain held in the supplied transaction.
+export async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContext): Promise<ApplyResult | FrozenProof> {
   if (!['customer','order'].includes(context.entity) || !['SOURCE_VERSION','SNAPSHOT_OBSERVATION'].includes(context.versionDomain)) {
     throw new Error('CANONICAL_APPLY_PROOF_INVALID');
   }

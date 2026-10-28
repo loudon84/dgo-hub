@@ -1,0 +1,164 @@
+# M1-I3P0 report
+
+Base and verification HEAD: `c64094a06a8ea2a2c7da7e7be3ecce31b4e59578`.
+
+Exported existing `FrozenProof` and `verifyFrozenApplyContext` in `integration-service/normalization/apply.ts`, with a two-line internal transaction and namespace responsibility comment. The function signature, body, SQL, locks, errors and calls are unchanged. This is an internal validation seam, not recovery support. No migration, grants or test were added.
+
+Verification from `E:\git\dgo-hub\integration-service` used fresh literal `M0_RUN_EVIDENCE_ROOT=E:\m1t5-runtime\9f988bcc-e86f-4ef4-9ead-27ceddb421fe`:
+
+```text
+npx vitest run acceptance-tests/canonical-apply.test.ts
+exit 0
+ Test Files  1 passed (1)
+      Tests  32 passed (32)
+   Duration  5.40s (transform 109ms, setup 0ms, import 269ms, tests 4.95s, environment 0ms)
+
+npm run typecheck
+exit 0
+> tsc --noEmit -p tsconfig.json
+
+npm run build
+exit 0
+> tsc -p tsconfig.json
+```
+
+Full actual outputs and exits are in the runtime directory (`canonical-apply.log`, `typecheck.log`, `build.log`, `exits.txt`). The respective log SHA-256 values are `3667F01C42F656DA17FBBF1D2B1AC4CBF003CBF60C5B47535EA55EE518B59398`, `BFD1A5449C3EC49D872BF46D9AC527DBA63C7C201A2AC5AC1F4978929DC7EBBE`, and `A9C32976E2C37EDA1C02F06B567108E5D945FB32295731AC1F282D490C1083D0`. `git diff --check -- integration-service/normalization/apply.ts` exited 0 without output.
+
+Immediately before and after these checks, tracked and non-ignored untracked files were enumerated with `git ls-files --cached --others --exclude-standard`, filtered to existing `*.ts`, `*.sql`, and `contracts/` paths, sorted uniquely, and hashed as raw bytes with `Get-FileHash -Algorithm SHA256`. Both 130-entry manifests are byte-identical (SHA-256 `99E021D27B9D606C645473536E4667EFF171867727033F260E052D6093A28A8A`); `source-before.sha256` and `source-after.sha256` are in the runtime directory, and their identical entries follow below. Git emitted filename-too-long warnings for two unrelated nested `docs/execution/alpha1/m1-task-2-fix2-evidence-*` directories; the manifest covers files Git could enumerate. No product source files were created during the checks.
+
+The existing management worker test has two intentional failing parent cases pending W; it was preserved and not rerun. Prior broader suite limitations remain. I3 recovery requires subsequent implementation and review; this does not establish project completion. Independent root review remains pending; no commit, push, merge or deployment was performed.
+
+## Raw source SHA-256 manifest (before and after)
+
+```text
+600491B647D88DD2F282A425AFE1005E7FE2C4C87A67B30570DE52408A7F2251  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/001_init.sql
+1267FD0803AE543E73E701CCF277DE8A9D09CB6F1A601658B11F3AC1D926C062  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/002_identity_auth.sql
+E682D1F350CDE309E5C556904CE694EE3D8CFAFA58AE8FBAD0E610CE0EE7274E  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/003_mcp_audit_boundary.sql
+11549B816BD696841AB30BEB2B2B457617EFA929A9AD397976E1409D75FF7298  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/004_alpha1_runtime_security.sql
+7085104C2EF23033398ADE93441DEF385FC04B67BD3D39C73BF7E5CFE90A3F7F  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/005_source_registry.sql
+FB52F395BD0C0F1D29E5234788B39737A922BF0F9928F7E99BECFB6BE91F3065  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/006_canonical_data_and_receipts.sql
+4E2CCEFE6F34D3EF4AA043EE8FE54FC88C45C225D07FD80FB827FEF37B564159  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/007_durable_ingestion_jobs.sql
+4FCD01D104945A16102034B906D8DF5423BBC325F08B6105106B0383F5CD370A  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/008_durable_worker_leases_and_retries.sql
+40E2B46A9027FA69EA16B7826BD69F7C2D7CD9183ED76FCE5E9DBCACDD0C367F  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/migrations-008-4d00c3d4-6ced-4797-905d-bf35cd85a673/009_snapshot_runs_and_recovery.sql
+600491B647D88DD2F282A425AFE1005E7FE2C4C87A67B30570DE52408A7F2251  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/001_init.sql
+1267FD0803AE543E73E701CCF277DE8A9D09CB6F1A601658B11F3AC1D926C062  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/002_identity_auth.sql
+E682D1F350CDE309E5C556904CE694EE3D8CFAFA58AE8FBAD0E610CE0EE7274E  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/003_mcp_audit_boundary.sql
+11549B816BD696841AB30BEB2B2B457617EFA929A9AD397976E1409D75FF7298  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/004_alpha1_runtime_security.sql
+7085104C2EF23033398ADE93441DEF385FC04B67BD3D39C73BF7E5CFE90A3F7F  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/005_source_registry.sql
+FB52F395BD0C0F1D29E5234788B39737A922BF0F9928F7E99BECFB6BE91F3065  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/006_canonical_data_and_receipts.sql
+4E2CCEFE6F34D3EF4AA043EE8FE54FC88C45C225D07FD80FB827FEF37B564159  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/007_durable_ingestion_jobs.sql
+4FCD01D104945A16102034B906D8DF5423BBC325F08B6105106B0383F5CD370A  docs/execution/alpha1/m1-i1-evidence/full-20261029-01/snapshot-recovery/migrations-001-008/008_durable_worker_leases_and_retries.sql
+A8F558A02F20BA80F4C6681BF4771FAF97D0E41681887B62E7F6FA2C09140DFB  integration-service/acceptance-tests/canonical-apply.test.ts
+7D11AD194C2E830B7573E1BFE3242A33E0CE454F306104D32885C87A65AC921A  integration-service/acceptance-tests/canonicalization.test.ts
+31C94F6E58BEA7261CA22ACAAC03DC742FF6018E3A4D11EFC63EF83D9CDBE084  integration-service/acceptance-tests/core.test.ts
+DB446C13E549AED68E7D06D55DB837EBCC02713D84425D81CFB1861D86053472  integration-service/acceptance-tests/d2-migration-diagnostic.test.ts
+E72B3F3C8B81421B8AA73B7FCEA4BA2569D4627B478F4892A4AE5C4D24B1B773  integration-service/acceptance-tests/deployment-lock.test.ts
+77EEC2A79581A2EA91178DB765C8C0407DD4C69E8B8746F402281C4347B79EE8  integration-service/acceptance-tests/environment.test.ts
+7F5E29108B8EC1FDA9CC55D9BEDD10606CB82EE24010B71605D94BC52261DF5C  integration-service/acceptance-tests/evidence/gate.test.ts
+46F139D70C8A76AD92F18A3C55166273058B8F65A8F63E9804EA8DD37890EE70  integration-service/acceptance-tests/evidence/run-gate.ts
+D70B3620B8A9FEB50B9A02691E6BD58BC07A36CE760DDEA1E83FCDD2551CEDBF  integration-service/acceptance-tests/helpers/postgres.ts
+5CAF0A3DC2CCA8F036CB2D53B6E6FD0318542A3FBD49918723EEFCCE5E5CC158  integration-service/acceptance-tests/helpers/snapshot-recovery-http.ts
+BD63FF091D839F29CDF788339CB3EF4D3D5871E4B44DB977B26751F87BDEF649  integration-service/acceptance-tests/identity-codec.test.ts
+2F6ACFFE579F09A5B85C693F939BC32958A150218E99C3C8D8ABFBC43FC7DC5A  integration-service/acceptance-tests/identity-http.test.ts
+1C1FCC90F64B66C94B4A6E3957455A02ABFD19CE513BD3385BCBCC19C950DBA0  integration-service/acceptance-tests/identity-store.test.ts
+1D6B33EC4777E3F5D07317CA45045BB6CB8854378CC4136248BE405688469E54  integration-service/acceptance-tests/integration.test.ts
+0514DE437F099191BF6209A7CD74776FDB9D2EC8077F1549EF6407CCF97C3278  integration-service/acceptance-tests/live.ts
+2008EC21D2DA56D14991AAD85B13ACBC09EB637C8B8BDEB02C0986F6041B5ABE  integration-service/acceptance-tests/m1-task5d3-schema.test.ts
+C5B95D87BC59F94241A5AF0EC47E3DA0ED3760437A7FB7F8E9A478BE375DAD41  integration-service/acceptance-tests/management-import-worker.test.ts
+705860E952C7FCDF9BA9F71C20CC4C13378E09865ACB1FAF35B85504660F45ED  integration-service/acceptance-tests/management-import.test.ts
+8CE80287690D45F4ABAFCF173BB960FF3F06DA61664EB0FADD1D5B69B83B9786  integration-service/acceptance-tests/mcp-auth.test.ts
+848BFDB7E9FE8FBB83FD93BE81E17EFC2BD09AA4D16BCD334E452A91BE317138  integration-service/acceptance-tests/migration-boundary.test.ts
+549C805B5A5452EAEF71274323072CB5F06922AB77AC907F5C43102E6C285A89  integration-service/acceptance-tests/migrations.test.ts
+5C324263C9325B3DD73A5EA57002A3F8FACDE774669CE1352603F50BE6626480  integration-service/acceptance-tests/postgres-snapshot-connector.test.ts
+68DD9C9F9E68C37366D7C4C6587C6C72CC212D787961EFF3E8D8533149D9C3CB  integration-service/acceptance-tests/postgres-snapshot-contract.test.ts
+31819E77AC1456A3ECDC138E5353EFC7D0D950578F4031AF6B1401FBB8DFDF04  integration-service/acceptance-tests/postgres-snapshot-source.test.ts
+EBF0A384211B9C3EEB5FB0D745EBFCC17C3E94B9A777D3071F49A0E2A58E4AAF  integration-service/acceptance-tests/quarantine-read.test.ts
+BF8C537AE163C0C4BC5210CC77A7B8A5D27D6C73D11C02976F4151E9E8BE2F45  integration-service/acceptance-tests/record-local-checks.test.ts
+BC1919EE900BF381B198544BBCA5A6FD03A34179BEC8A26BEB850C384F8710CA  integration-service/acceptance-tests/simulated-import.test.ts
+C9725C7E2A71BE1FC834512B4D54E1F9809382DAE55C955BDE12001F66646119  integration-service/acceptance-tests/snapshot-recovery.test.ts
+B7E5ECF125B8B54593C5BFE635E8EEA380D8E4CE22B8D64D7B88C00EBD4AC5B0  integration-service/acceptance-tests/snapshot-runs.test.ts
+54562B48E70E6466394BE1CF3904C67B02A9D910A463D3501FEB89AD459F7435  integration-service/acceptance-tests/snapshot-validation.test.ts
+8D96925F79A3C320E3A4836533CD7E771DF50A1D82E60389D231407D5736B302  integration-service/acceptance-tests/source-registry.test.ts
+EBC99051C2A68FAB314F567C73BC6307193DAD92C870AA5849B9E9146A017BAC  integration-service/acceptance-tests/strict-external-proof.test.ts
+7EDE576273C7610CEC15D7710F8B2D7524D730DECC26B850C363F99C2126D705  integration-service/acceptance-tests/strict-ingestion.test.ts
+A04905003A2DA7970B1F3D153CF321CDFB94BE32BC119D61B8E9EE29CBC167A0  integration-service/acceptance-tests/worker-crash-driver.test.ts
+54B193379045B06F6A16B5C3CF340C08F6F73F7EE9326305EBFF95CC0FA97F0D  integration-service/app.ts
+992F8658016C77F91F0A9353F6690120AF03DAB19D4C692D9E4535D21BE57D1F  integration-service/auth/credentials.ts
+BCA5DEDCB067A27557A887E78B9CEB5B3A8E21B43C9DCC002BB41241F8F17296  integration-service/auth/errors.ts
+2EE2CE3757A1563902B5D95750FD2E183148ABB2988249B6EEF15F4A1E1AEE86  integration-service/auth/oidc.ts
+D599CE15AA428F5DDCA734F97C2AC9784AA4EA579A53C655DCAB2D3C2F78F40D  integration-service/auth/repository.ts
+25B8DAE3561787059204F70AB2F64DD03B802821DDEFEBF4CB697C8226740BC9  integration-service/auth/service.ts
+B10A0335664222AB76949890C78B1C8E93AC4AFAEB092A5E5B52CA9FACF77C9A  integration-service/auth/types.ts
+1C46182705EE7FADC1F44D008FBD676BAE90C192CB97E1D56C90175734C87EEF  integration-service/contracts/api-gap-matrix.md
+79B54A070E3C4942A3BC580D228387555A70690EBAAB370EB9EB4C559B880967  integration-service/contracts/deployment-lock.ts
+3865FEFDA339EE719ABF1A7AB9F29B8700D344E291AF6649B62A39D4B7D7366A  integration-service/contracts/environment.ts
+EA12954CA9D8EA24CA4AE7C426E1F3C5D262AA1612157EBE2F4C0874BA8079E6  integration-service/contracts/evidence.ts
+A314ACB961E4B9DB43FA60829F1A25E052ED7F338501419BC9FA22C754889A52  integration-service/contracts/runtime-config.ts
+B3E7DD05ABFC686884EF3B614B94F8EDB90831F3B44ED6ADB324AD51EB1CD563  integration-service/contracts/signoff.ts
+CCF7900B291716A98015553D171FB2EB920B39C9BDF0CCC2EF2D98DB90506576  integration-service/contracts/simulated-import.md
+EDFDB6C4408FD183DF6AFCB1CFCD130A6B8BC436BAC221696A85BE7119A6B389  integration-service/db.ts
+A0CFDD463E6CFB4B3147C004008753C9E49A5B325FF735C8AAE91BD1373A51E8  integration-service/etl-worker/postgres-snapshot-connector.ts
+B60E835BF39A1B0E350245DD8B586C8094949664E024F03068060E57BD7DA13A  integration-service/etl-worker/retry.ts
+8F3649E5963F91673DF694DFF1DCAFF009A72BA30C15EDE06849249DBECCBB8F  integration-service/etl-worker/snapshot-apply-worker.ts
+9FAD1270A6E18654DEC273671029AD98B4D9A81ED5BC127D86D4C6AD1BDFADA8  integration-service/etl-worker/snapshot-canonical.ts
+143DCAFBC8353C3145CA8C8EDD9D085996D58AB89FBB4437D1617339BA8B1E56  integration-service/etl-worker/snapshot-continuation-store.ts
+7C41747260451578718C3E1921F63AA5D0B9E56D0502687DB3C65F7BDDFB0524  integration-service/etl-worker/snapshot-contract.ts
+DB0F31DE4C2E217C958522C26558C56C37F811CA460125CBB3EB2D800703F908  integration-service/etl-worker/snapshot-delete-api.ts
+6266AC88193C97F3650F257B493BB894DD059370160F4ED6C6BA20A45C1D592D  integration-service/etl-worker/snapshot-delete-worker.ts
+682581CC063A73CE24DB3E122C6EDEAA5BC76E4014525E7CBA488088B25A6561  integration-service/etl-worker/snapshot-recovery.ts
+E91E681E49B8E0DB57CC44C8DEFC4C708E6436F030CCB4CB0BC1F704FE74342A  integration-service/etl-worker/snapshot-runs.ts
+1F6186AF6BA0EAD8AEAFE705B447C180006AFED79C59BFE28CDEABF42B36C8A4  integration-service/etl-worker/snapshot-stage-store.ts
+944A7F35F53BFD150DF8FF0DB0235F51BEFC8BBB5A0F64F5DFDB78D1BDC5B940  integration-service/etl-worker/snapshot-validation.ts
+704B158E071A60C9C27A09CBDD599CD3776E46315D5ADFDAD8FC1DD129F2384E  integration-service/etl-worker/snapshot-worker.ts
+A238FC52DE3AC3A8236D87F81AB4F4E231BFE18072FF420DFAB5F7ACE3EF9E28  integration-service/etl-worker/worker.ts
+355BFAB734104C206CA4CFEA37F945D7F97881828C49303F2D5A7EE88AB32C13  integration-service/examples/etl-seed.sql
+56461EA809549841D60A38D57547A5000E1422420AB183255E35217132DEAB51  integration-service/examples/init-db.sql
+9DC1974D49C5BA8F8E3CFEFC9ECC60E8A3E8E8FE2B7743013A59B6F13B8A32C6  integration-service/examples/source-schema.sql
+AC78F1B539CBB33D0FD812FFCD5399CA0ACEEF225CC26BCB46A87A8F0407A0C3  integration-service/ingestion-api/identity-routes.ts
+F6148BB2FAA7FFB04D1FC6D3B8CC170934FC1433342C2F0FB1F235B8CE42531F  integration-service/ingestion-api/logging.ts
+5412D726E1CE88C453C0EE39E74B359DD3A545F4A87354AF9746CB661D1940B4  integration-service/ingestion-api/management-import.ts
+FD28C4AA075C2A10D5237FDFA09B53D56B7C659BD7F95E886AFAA4F84B6B2CF9  integration-service/ingestion-api/quarantine-read.ts
+EB21436EE8CAB9ECA90AD04529187B7FC64DB1F964105F2E23D264963427C4E9  integration-service/ingestion-api/quarantine-recovery.ts
+73B1260FF818FF4DD3A989D3EC2218884CA42D11D71E4235D547C4B78D298573  integration-service/ingestion-api/routes.ts
+F7CB2ACFAB2CB3AAD7BFD29C26370B8CEC7AB435F71B486258CD3B37BD7BD06B  integration-service/ingestion-api/snapshot-routes.ts
+F76C0328A8B89AF295A9D11178BAC78BBBF5FFA32E260E0376FEAF53E6AEB97A  integration-service/ingestion-api/strict-contract.test.ts
+3C33A347E1F84F3EC7019D7B44642F5C13FB37DAFBFCBE038D3391E04DBAAFC5  integration-service/ingestion-api/strict-contract.ts
+DA0F618E31430550A26CFD35FD044FDE06FF63505AF4DF8EC3C7980A3DBE0FC0  integration-service/ingestion-api/strict-ingestion.ts
+E1546F9735C3048E8692546CB74A7FD1C6FEAE7F7F23BD840477F383CD90B525  integration-service/ingestion-api/strict-intake.test.ts
+56D4C4243586236B269499644562413170DF23E4933A4FAECCC81EBE634538A9  integration-service/migrate.ts
+600491B647D88DD2F282A425AFE1005E7FE2C4C87A67B30570DE52408A7F2251  integration-service/migrations/001_init.sql
+1267FD0803AE543E73E701CCF277DE8A9D09CB6F1A601658B11F3AC1D926C062  integration-service/migrations/002_identity_auth.sql
+E682D1F350CDE309E5C556904CE694EE3D8CFAFA58AE8FBAD0E610CE0EE7274E  integration-service/migrations/003_mcp_audit_boundary.sql
+11549B816BD696841AB30BEB2B2B457617EFA929A9AD397976E1409D75FF7298  integration-service/migrations/004_alpha1_runtime_security.sql
+7085104C2EF23033398ADE93441DEF385FC04B67BD3D39C73BF7E5CFE90A3F7F  integration-service/migrations/005_source_registry.sql
+FB52F395BD0C0F1D29E5234788B39737A922BF0F9928F7E99BECFB6BE91F3065  integration-service/migrations/006_canonical_data_and_receipts.sql
+4E2CCEFE6F34D3EF4AA043EE8FE54FC88C45C225D07FD80FB827FEF37B564159  integration-service/migrations/007_durable_ingestion_jobs.sql
+4FCD01D104945A16102034B906D8DF5423BBC325F08B6105106B0383F5CD370A  integration-service/migrations/008_durable_worker_leases_and_retries.sql
+40E2B46A9027FA69EA16B7826BD69F7C2D7CD9183ED76FCE5E9DBCACDD0C367F  integration-service/migrations/009_snapshot_runs_and_recovery.sql
+1E0ECAD5406B0829FB15318DC62D79193C47EB3808AB04DFE65B90B9A9368567  integration-service/migrations/010_simulated_import.sql
+AD5DEEE2DCBEFDC297CC5CE0931AE41298ABFA2BC5B061AF77051E32E144309E  integration-service/migrations/011_management_import_admission.sql
+2DBDB863D0D0C25420471943A0FE71AF3F2FC6D118FA8B3EFAE051AEBE16D906  integration-service/migrations/012_import_quarantine.sql
+7F35F014E8F6DD3E5C21E90A0C306361704BE401C2CC6F4279A97BB2E541BDCA  integration-service/migrations/runner.ts
+60D14366C0CB11D0E82C81427844FB09D5133559A939217594DBFB22BE4C05F1  integration-service/normalization/apply.ts
+15A1B95DC860F177F16594579CCA2EBFE9E744F062662B848564381107167A06  integration-service/normalization/canonical.ts
+2DB3CEF6C71B7DB3927C547727C924D27A46A5DBB27A55E5A3825B586212F47F  integration-service/normalization/models.ts
+B9302A79FA49A58DAD8D2694895180B6F3D87074CAB6127EFB917D47754102BA  integration-service/normalization/store.ts
+04EC3C508D7321E80956764FBBFE4FEDAD0CFB805F74ED32F160B5889DA74858  integration-service/ontology-binding/binding.ts
+480DB231AE9D0EB210BC14332599944EEC596F74932E74A18FEA532AFBCA83DB  integration-service/permission-publish/hasura.ts
+3519E750C7F100D64A062C5EE18FA363B57245CF08F163E8BB25AE9F4CF2B8A4  integration-service/permission-publish/policy.ts
+B32144C211487F88CAB283CA140C379F8C44023B828AA7F48E5A1295B5748CFD  integration-service/permission-publish/worker.ts
+280BF051E6E269478D684D310CCFF2F1F07DF2B5DE339C9C19A95B09DA0D78E6  integration-service/sales-mcp/legacy.ts
+6EF09BCE96E603CEEFADD0A732F287421F839881A9CF607FC4320BB0CFAF553C  integration-service/sales-mcp/main.ts
+D7C08FCA34DA8FA6EB0B08178469E844171D4DA2A0FE33BE16A73180F4F67D99  integration-service/sales-mcp/queries.ts
+08BFF7BB9FAF9FB969DDFA3B4C9AE2F6926E00D5E13FB6C77A8DDA0B992F858F  integration-service/sales-mcp/server.ts
+EEAB8BF2BCD081A81BDF8F5B603843372D6FB5B377883B527B29EEBEC89925C1  integration-service/sales-mcp/tools.ts
+89C1B5986213158CE13C5C2C71BE0DEE7363D75FEBAAF44DCA2492546B361AE1  integration-service/scripts/check-m0-entry.ts
+2E829B42E278927028A8451BF0B52F041C0E5427BBDC8F708C884896F9B5387A  integration-service/scripts/generate-lock.ts
+1CAEEC41E7AAD024923E9DC539B01D3D2EB7B1DD7EE87C28A75E072052D53870  integration-service/scripts/record-local-checks.ts
+7FE2ADBB9CBDAD486038A7CA70CD3A8FE6F1A819AF01420DDAA67CF98E232FA9  integration-service/source-registry/capability-probe.ts
+85C89D0A5379AFFD0EE9C493E02A3AA372910DDBB1D73F84512D91B60557F2DC  integration-service/source-registry/import-sample.test.ts
+8160B54F277364B9938400BD9C3E17D397FB98AA607BB9824B2DC7050C81EDD2  integration-service/source-registry/import-sample.ts
+64945E601A3835167AA9BD006E9A1FF5D219B11ED26F7C17FF3DFC1FDCBABF2C  integration-service/source-registry/routes.ts
+68102EF3B3518B9D5FDC8CB139A947D1204431279389742AE88467DD1274FA0F  integration-service/source-registry/service.ts
+DCC36EDE2E86149239866AF83E72560B20A86804E66E534FD8200BF8D17F30C7  integration-service/vitest.config.ts
+```
