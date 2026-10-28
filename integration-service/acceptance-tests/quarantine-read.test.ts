@@ -83,6 +83,54 @@ async function crashRecoveryAfterCommit(): Promise<void> {
 }
 function sha(value: string): Buffer { return createHash('sha256').update(value).digest(); }
 
+async function admitRecoveryOrigin(route: string, batchId: string, record: unknown, key: string): Promise<string> {
+  await fixture.pool.query('UPDATE control.source_credential SET enabled=true WHERE tenant_key=$1 AND source_id=$2',[tenantId,sourceId]);
+  await fixture.pool.query(`UPDATE control.source_registry SET lifecycle='ACTIVE',current_config_revision=1,mapping_revision=1,
+    identity_mapping_revision=1 WHERE tenant_key=$1 AND source_id=$2`,[tenantId,sourceId]);
+  await fixture.pool.query(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,config_revision,
+    mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,source_credential_revision,
+    credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
+    SELECT a.tenant_key,a.source_id,a.owner_user_id,r.owner_revision,a.config_revision,a.mapping_revision,a.identity_mapping_revision,
+      a.config_digest,a.mapping_digest,a.identity_mapping_digest,a.source_credential_revision,a.credential_generation,a.endpoint_profile_digest,
+      a.data_contract_ref,a.test_report_id FROM control.source_owner_approval a JOIN control.source_registry r USING(tenant_key,source_id)
+      WHERE a.tenant_key=$1 AND a.source_id=$2 AND a.config_revision=1 AND a.mapping_revision=1 AND a.identity_mapping_revision=1
+      ORDER BY a.created_at LIMIT 1`,[tenantId,sourceId]);
+  const intake=await buildApp({logger:false,strictIngestion:{pool:apiPool,authService:createAuthService({pool:apiPool}),
+    authenticator,rawStoragePolicy:'local_lab_fixture'}});
+  try {
+    const raw=Buffer.from(JSON.stringify({schema_version:'hub.v1',batch_id:batchId,records:[record]}),'utf8');
+    const response=await intake.inject({method:'POST',url:route,
+      headers:{authorization:`Bearer ${sourceBearer}`,'content-type':'application/json','idempotency-key':key},payload:raw});
+    expect(response.statusCode,response.body).toBe(202);
+    return response.json().data.job_id as string;
+  } finally { await intake.close(); }
+}
+async function assertRecoveryCopy(originalJobId:string,childJobId:string): Promise<void> {
+  const result=await fixture.pool.query(`SELECT
+    to_jsonb(o)-ARRAY['id','idempotency_key','request_digest','status','applied_count','created_at','updated_at'] AS original_job,
+    to_jsonb(c)-ARRAY['id','idempotency_key','request_digest','status','applied_count','created_at','updated_at'] AS child_job,
+    to_jsonb(oi)-ARRAY['job_id','ordinal','operation_id','status','error_code','updated_at','attempts_started','retries_used','next_retry_at'] AS original_item,
+    to_jsonb(ci)-ARRAY['job_id','ordinal','operation_id','status','error_code','updated_at','attempts_started','retries_used','next_retry_at'] AS child_item,
+    oi.operation_id::text AS original_operation,ci.operation_id::text AS child_operation,r.operation_id::text AS linked_operation,
+    r.quarantine_id::text AS original_quarantine,q.quarantine_id::text AS indexed_quarantine,
+    (SELECT count(*)::integer FROM control.ingestion_job_item x WHERE x.job_id=c.id) AS child_items,
+    (SELECT count(*)::integer FROM control.ingestion_processing_outbox x WHERE x.job_id=c.id AND x.acknowledged_at IS NULL
+      AND x.claim_token IS NULL AND x.lease_expires_at IS NULL AND x.available_at<=clock_timestamp()) AS due_outboxes
+    FROM control.ingestion_job o JOIN control.ingestion_job_item oi ON oi.job_id=o.id AND oi.ordinal=0
+    JOIN control.ingestion_quarantine_index q ON (q.job_id,q.ordinal)=(oi.job_id,oi.ordinal)
+    JOIN control.ingestion_recovery_operation r ON r.quarantine_id=q.quarantine_id
+    JOIN control.ingestion_job c ON c.id=r.child_job_id JOIN control.ingestion_job_item ci ON ci.job_id=c.id AND ci.ordinal=0
+    WHERE o.id=$1 AND c.id=$2`,[originalJobId,childJobId]);
+  expect(result.rowCount).toBe(1);
+  const row=result.rows[0]!;
+  expect(row.child_job).toEqual(row.original_job);
+  expect(row.child_item).toEqual(row.original_item);
+  expect(row.child_operation).not.toBe(row.original_operation);
+  expect(row.child_operation).toBe(row.linked_operation);
+  expect(row.original_quarantine).toBe(row.indexed_quarantine);
+  expect(row.child_items).toBe(1);
+  expect(row.due_outboxes).toBe(1);
+}
 async function seedMixedOrigins(): Promise<void> {
   const proof = await fixture.pool.query<{ owner_revision: string; credential_id: string; credential_revision: string;
     credential_generation: string; source_epoch: string }>(`SELECT r.owner_revision::text,c.id::text AS credential_id,
@@ -1152,7 +1200,8 @@ describe('API-023 quarantine read', () => {
     const auth=createAuthService({pool:fixture.pool});
     await auth.repository.provisionSubject({tenantId,userId:ownerId,managementScopes:['source:read','source:approve']});
     await auth.repository.provisionSubject({tenantId,userId:'recovery-sales',departmentId:'sales-east',businessRole:'sales',managementScopes:[]});
-    const objectId=randomUUID(), sourcePk=`recovery-${randomUUID()}`, jobId=randomUUID(), eventId=randomUUID();
+    const objectId=randomUUID(), sourcePk=`recovery-${randomUUID()}`, eventId=randomUUID();
+    const batchId=randomUUID();
     const record={event_id:eventId,source_pk:sourcePk,source_version:'2',operation:'UPSERT',source_updated_at:'2026-10-27T00:00:00Z',
       data:{customer_name:'Recovery Customer',owner_external_id:'owner',department_external_id:'dept',status:'ACTIVE'}};
     await fixture.pool.query(`INSERT INTO hub.canonical_customer(tenant_id,id,customer_name,owner_user_id,dept_id,status,source_updated_at,
@@ -1160,19 +1209,8 @@ describe('API-023 quarantine read', () => {
       '2026-10-26T00:00:00Z',1,'SOURCE_VERSION',1,1)`,[tenantId,objectId]);
     await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
       VALUES($1,$2,'customer',$3,$4,$4)`,[tenantId,sourceId,sourcePk,objectId]);
-    await fixture.pool.query(`INSERT INTO control.ingestion_job(id,tenant_key,source_id,entity,route,batch_id,raw_batch_id,idempotency_key,
-      request_digest,status,received_count,applied_count,credential_id,source_epoch_at_admission,credential_revision_at_admission,
-      credential_generation_at_admission,channel_id,channel_epoch,version_domain,owner_approval_id,owner_user_id,owner_revision,
-      approval_security_fence,config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,
-      endpoint_profile_digest,test_report_id,security_barrier_fence_at_admission,first_source_updated_at,last_source_updated_at)
-      SELECT $3,tenant_key,source_id,entity,route,batch_id,raw_batch_id,$4,$5,'RECEIVED',1,0,credential_id,source_epoch_at_admission,
-      credential_revision_at_admission,credential_generation_at_admission,channel_id,channel_epoch,version_domain,owner_approval_id,owner_user_id,
-      owner_revision,approval_security_fence,config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,
-      identity_mapping_digest,endpoint_profile_digest,test_report_id,security_barrier_fence_at_admission,first_source_updated_at,last_source_updated_at
-      FROM control.ingestion_job WHERE tenant_key=$1 AND source_id=$2 LIMIT 1`,[tenantId,sourceId,jobId,`test-${jobId}`,sha(jobId)]);
-    await fixture.pool.query(`INSERT INTO control.ingestion_job_item(job_id,ordinal,event_id,source_pk,source_version,operation,
-      source_updated_at,public_record,status) VALUES($1,0,$2,$3,2,'UPSERT','2026-10-27T00:00:00Z',$4,'RECEIVED')`,[jobId,eventId,sourcePk,record]);
-    await fixture.pool.query('INSERT INTO control.ingestion_processing_outbox(job_id) VALUES($1)',[jobId]);
+    const intakeKey=`rest-customer-${eventId}`;
+    const jobId=await admitRecoveryOrigin('/hub/v1/ingest/crm/customers',batchId,record,intakeKey);
     await fixture.pool.query("UPDATE control.auth_subject SET enabled=false WHERE tenant_key=$1 AND user_id='recovery-sales'",[tenantId]);
     const worker=new pg.Pool({connectionString:`postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,options:'-c role=hub_worker'});
     const recover=async (id:string,key:string,reason='retry')=>app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${id}/retry`,
@@ -1182,6 +1220,14 @@ describe('API-023 quarantine read', () => {
       await runDurableWorkerOnce(worker,{limit:100});
       const original=await fixture.pool.query<{quarantine_id:string}>(`SELECT quarantine_id::text FROM control.ingestion_quarantine_index WHERE job_id=$1`,[jobId]);
       expect(original.rowCount).toBe(1);
+      const receipt=await fixture.pool.query<{batch_id:string;body_bytes:Buffer;event_id:string;public_record:unknown}>(`SELECT j.batch_id::text,b.body_bytes,
+        i.event_id::text,i.public_record FROM control.ingestion_job j JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id
+        JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordinal=0 WHERE j.id=$1`,[jobId]);
+      const expectedRaw=Buffer.from(JSON.stringify({schema_version:'hub.v1',batch_id:batchId,records:[record]}),'utf8');
+      expect(receipt.rows[0]!.batch_id).toBe(batchId);
+      expect(receipt.rows[0]!.body_bytes).toEqual(expectedRaw);
+      expect(receipt.rows[0]!.event_id).toBe(eventId);
+      expect(receipt.rows[0]!.public_record).toEqual(record);
       await fixture.pool.query(`INSERT INTO control.source_config_revision(tenant_key,source_id,revision,config_digest,config,created_by)
         SELECT tenant_key,source_id,2,$3,config || '{"name":"ordinary drift"}'::jsonb,created_by FROM control.source_config_revision
         WHERE tenant_key=$1 AND source_id=$2 AND revision=1`,[tenantId,sourceId,sha('ordinary-config-drift')]);
@@ -1201,9 +1247,9 @@ describe('API-023 quarantine read', () => {
         WHERE s.tenant_key=$1 AND s.user_id=$2 AND r.source_id=$3`,[tenantId,ownerId,sourceId]);
       await expect(apiPool.query(`SELECT * FROM control.create_rest_recovery($1,$2,$3,$4,$5,$6::bigint,$7::bigint,$8,$9,$10,$11::bigint,$12,$13,$14,$15)`,
         [tenantId,originalId,ownerId,controlledIssuer,subject,current.rows[0]!.auth_epoch,current.rows[0]!.owner_revision,'collision-key',
-          digestHash.digest(),expectedToken,'1',JSON.stringify('retry'),randomUUID(),randomUUID(),`test-${jobId}`])).rejects.toMatchObject({code:'23505'});
+          digestHash.digest(),expectedToken,'1',JSON.stringify('retry'),randomUUID(),randomUUID(),intakeKey])).rejects.toMatchObject({code:'23505'});
       const originalFacts=await fixture.pool.query(`SELECT to_jsonb(j) AS job,to_jsonb(i) AS item,to_jsonb(q) AS quarantine,
-        encode(public.digest(b.body_bytes,'sha256'),'hex') AS raw_sha256 FROM control.ingestion_job j
+        encode(public.digest(b.body_bytes,'sha256'),'hex') AS raw_sha256,to_jsonb(b) AS raw_receipt FROM control.ingestion_job j
         JOIN control.ingestion_job_item i ON i.job_id=j.id JOIN control.ingestion_quarantine_index q ON q.job_id=j.id AND q.ordinal=i.ordinal
         JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id WHERE j.id=$1`,[jobId]);
       const countsBefore=await fixture.pool.query(`SELECT (SELECT count(*)::integer FROM control.ingestion_job) AS jobs,
@@ -1270,6 +1316,7 @@ describe('API-023 quarantine read', () => {
       const listed=listing.json().data.items.find((row:{quarantine_id:string})=>row.quarantine_id===original.rows[0]!.quarantine_id);
       expect(listed.retry).toEqual({state:'ACCEPTED',expected_state:null,operation_id:first.json().data.operation_id});
       const firstChild=first.json().data.child_job_id as string;
+      await assertRecoveryCopy(jobId,firstChild);
       await runDurableWorkerOnce(worker,{limit:100,hooks:{afterClaim:async claim=>{
         if (claim.jobId!==firstChild) return;
         await worker.query(`UPDATE control.ingestion_job_item SET status='APPLYING',attempts_started=1,retries_used=0 WHERE job_id=$1 AND ordinal=0`,[firstChild]);
@@ -1293,6 +1340,7 @@ describe('API-023 quarantine read', () => {
       const second=await recover(next.rows[0]!.quarantine_id,'recovery-second');
       expect(second.statusCode,second.body).toBe(202);
       const secondChild=second.json().data.child_job_id as string;
+      await assertRecoveryCopy(firstChild,secondChild);
       await runDurableWorkerOnce(worker,{limit:100,hooks:{afterCanonicalApply:async()=>{throw new Error('forced apply rollback');}}});
       const rollback=await fixture.pool.query(`SELECT i.status,c.customer_name,
         (SELECT count(*)::integer FROM control.source_version_receipt r WHERE r.tenant_key=$2 AND r.source_id=$3 AND r.source_pk=$4) AS receipts,
@@ -1314,7 +1362,7 @@ describe('API-023 quarantine read', () => {
         (j.tenant_key,j.source_id,j.entity,i.source_pk) WHERE i.job_id=$1`,[second.json().data.child_job_id]);
       expect(outcome.rows[0]).toEqual({status:'APPLIED',object_id:objectId});
       const originalAfter=await fixture.pool.query(`SELECT to_jsonb(j) AS job,to_jsonb(i) AS item,to_jsonb(q) AS quarantine,
-        encode(public.digest(b.body_bytes,'sha256'),'hex') AS raw_sha256 FROM control.ingestion_job j
+        encode(public.digest(b.body_bytes,'sha256'),'hex') AS raw_sha256,to_jsonb(b) AS raw_receipt FROM control.ingestion_job j
         JOIN control.ingestion_job_item i ON i.job_id=j.id JOIN control.ingestion_quarantine_index q ON q.job_id=j.id AND q.ordinal=i.ordinal
         JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id WHERE j.id=$1`,[jobId]);
       expect(originalAfter.rows).toEqual(originalFacts.rows);
@@ -1385,7 +1433,8 @@ describe('API-023 quarantine read', () => {
     const auth=createAuthService({pool:fixture.pool});
     await auth.repository.provisionSubject({tenantId,userId:ownerId,managementScopes:['source:read','source:approve']});
     await auth.repository.provisionSubject({tenantId,userId:'recovery-sales',departmentId:'sales-east',businessRole:'sales',managementScopes:[]});
-    const own=randomUUID(),sourcePk=`order-${randomUUID()}`,job=randomUUID(),raw=randomUUID(),event=randomUUID();
+    const own=randomUUID(),sourcePk=`order-${randomUUID()}`,event=randomUUID();
+    const batchId=randomUUID();
     const record={event_id:event,source_pk:sourcePk,source_version:'2',operation:'UPSERT',source_updated_at:'2026-10-27T00:00:00Z',
       data:{customer_ref:{source_id:sourceId,source_pk:'recovery-reference'},order_no:'ORDER-RECOVERY',status:'DRAFT',
         order_at:'2026-10-27T00:00:00Z',amount:'10.00',currency:'CNY',lines:[]}};
@@ -1399,23 +1448,7 @@ describe('API-023 quarantine read', () => {
       '2026-10-26T00:00:00Z',1,'SOURCE_VERSION',1,1)`,[tenantId,own,recoveryCustomerId]);
     await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,order_id)
       VALUES($1,$2,'order',$3,$4,$4)`,[tenantId,sourceId,sourcePk,own]);
-    await fixture.pool.query(`INSERT INTO raw.ingestion_batch(id,tenant_key,source_id,route,body_bytes)
-      VALUES($1,$2,$3,'/hub/v1/ingest/orders/orders',$4)`,[raw,tenantId,sourceId,Buffer.from('{}')]);
-    await fixture.pool.query(`INSERT INTO control.ingestion_job(id,tenant_key,source_id,entity,route,batch_id,raw_batch_id,idempotency_key,
-      request_digest,status,received_count,applied_count,credential_id,source_epoch_at_admission,credential_revision_at_admission,
-      credential_generation_at_admission,channel_id,channel_epoch,version_domain,owner_approval_id,owner_user_id,owner_revision,
-      approval_security_fence,config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,
-      endpoint_profile_digest,test_report_id,security_barrier_fence_at_admission,first_source_updated_at,last_source_updated_at)
-      SELECT $3,j.tenant_key,j.source_id,'order','/hub/v1/ingest/orders/orders',j.batch_id,$4,$5,$6,'RECEIVED',1,0,j.credential_id,
-      j.source_epoch_at_admission,j.credential_revision_at_admission,j.credential_generation_at_admission,ch.id,ch.channel_epoch,j.version_domain,
-      j.owner_approval_id,j.owner_user_id,j.owner_revision,j.approval_security_fence,j.config_revision,j.config_digest,j.mapping_revision,j.mapping_digest,
-      j.identity_mapping_revision,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id,j.security_barrier_fence_at_admission,
-      j.first_source_updated_at,j.last_source_updated_at FROM control.ingestion_job j JOIN control.source_channel ch
-      ON (ch.tenant_key,ch.source_id,ch.entity)=(j.tenant_key,j.source_id,'order') WHERE j.tenant_key=$1 AND j.source_id=$2 LIMIT 1`,
-      [tenantId,sourceId,job,raw,`order-${job}`,sha(job)]);
-    await fixture.pool.query(`INSERT INTO control.ingestion_job_item(job_id,ordinal,event_id,source_pk,source_version,operation,source_updated_at,public_record,status)
-      VALUES($1,0,$2,$3,2,'UPSERT','2026-10-27T00:00:00Z',$4,'RECEIVED')`,[job,event,sourcePk,record]);
-    await fixture.pool.query('INSERT INTO control.ingestion_processing_outbox(job_id) VALUES($1)',[job]);
+    const job=await admitRecoveryOrigin('/hub/v1/ingest/orders/orders',batchId,record,`rest-order-${event}`);
     const worker=new pg.Pool({connectionString:`postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,options:'-c role=hub_worker'});
     const recover=async(id:string,key:string)=>app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${id}/retry`,
       headers:{authorization:`Bearer ${await tokenFor(subject)}`,'idempotency-key':key,'content-type':'application/json'},
@@ -1424,9 +1457,23 @@ describe('API-023 quarantine read', () => {
       await runDurableWorkerOnce(worker,{limit:100});
       const q1=await fixture.pool.query<{quarantine_id:string}>('SELECT quarantine_id::text FROM control.ingestion_quarantine_index WHERE job_id=$1',[job]);
       expect(q1.rowCount).toBe(1);
+      const receipt=await fixture.pool.query<{batch_id:string;body_bytes:Buffer;event_id:string;public_record:unknown}>(`SELECT j.batch_id::text,b.body_bytes,
+        i.event_id::text,i.public_record FROM control.ingestion_job j JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id
+        JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordinal=0 WHERE j.id=$1`,[job]);
+      const expectedRaw=Buffer.from(JSON.stringify({schema_version:'hub.v1',batch_id:batchId,records:[record]}),'utf8');
+      expect(receipt.rows[0]!.batch_id).toBe(batchId);
+      expect(receipt.rows[0]!.body_bytes).toEqual(expectedRaw);
+      expect(receipt.rows[0]!.event_id).toBe(event);
+      expect(receipt.rows[0]!.public_record).toEqual(record);
+      const originalFacts=await fixture.pool.query(`SELECT to_jsonb(j) AS job,to_jsonb(i) AS item,to_jsonb(q) AS quarantine,to_jsonb(b) AS raw_receipt
+        FROM control.ingestion_job j JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordinal=0
+        JOIN control.ingestion_quarantine_index q ON (q.job_id,q.ordinal)=(i.job_id,i.ordinal)
+        JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id WHERE j.id=$1`,[job]);
+      expect(originalFacts.rowCount).toBe(1);
       const competing=await Promise.all([recover(q1.rows[0]!.quarantine_id,'order-retry-one'),recover(q1.rows[0]!.quarantine_id,'order-race')]);
       expect(competing.map(response=>response.statusCode).sort()).toEqual([202,409]);
       const one=competing.find(response=>response.statusCode===202)!;
+      await assertRecoveryCopy(job,one.json().data.child_job_id as string);
       expect(competing.find(response=>response.statusCode===409)!.json().error.code).toBe('SOURCE_CONFLICT');
       await runDurableWorkerOnce(worker,{limit:100});
       const q2=await fixture.pool.query<{quarantine_id:string}>('SELECT quarantine_id::text FROM control.ingestion_quarantine_index WHERE job_id=$1',[one.json().data.child_job_id]);
@@ -1434,6 +1481,7 @@ describe('API-023 quarantine read', () => {
       await fixture.pool.query('UPDATE hub.canonical_customer SET deleted_at=NULL WHERE tenant_id=$1 AND id=$2',[tenantId,recoveryCustomerId]);
       const two=await recover(q2.rows[0]!.quarantine_id,'order-retry-two');
       expect(two.statusCode,two.body).toBe(202);
+      await assertRecoveryCopy(one.json().data.child_job_id as string,two.json().data.child_job_id as string);
       await runDurableWorkerOnce(worker,{limit:100});
       const result=await fixture.pool.query(`SELECT i.status,s.canonical_object_id::text AS object_id,o.customer_id::text AS customer_id
         FROM control.ingestion_job_item i JOIN control.ingestion_job j ON j.id=i.job_id JOIN control.canonical_source_identity s
@@ -1517,6 +1565,11 @@ describe('API-023 quarantine read', () => {
       await runDurableWorkerOnce(worker,{limit:100});
       const retired=await fixture.pool.query('SELECT status,error_code FROM control.ingestion_job_item WHERE job_id=$1',[acceptedBeforeRetire.json().data.child_job_id]);
       expect(retired.rows[0]).toEqual({status:'QUARANTINED',error_code:'RECOVERY_TARGET_CONFLICT'});
+      const originalAfter=await fixture.pool.query(`SELECT to_jsonb(j) AS job,to_jsonb(i) AS item,to_jsonb(q) AS quarantine,to_jsonb(b) AS raw_receipt
+        FROM control.ingestion_job j JOIN control.ingestion_job_item i ON i.job_id=j.id AND i.ordinal=0
+        JOIN control.ingestion_quarantine_index q ON (q.job_id,q.ordinal)=(i.job_id,i.ordinal)
+        JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id WHERE j.id=$1`,[job]);
+      expect(originalAfter.rows).toEqual(originalFacts.rows);
     } finally { await worker.end(); await auth.repository.provisionSubject({tenantId,userId:ownerId,managementScopes:['source:read']}); token=await tokenFor(subject); }
   });
   it('enforces recovery JSON, key, token, revision, and reason grammar', async () => {
