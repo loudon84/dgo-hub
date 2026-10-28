@@ -3372,6 +3372,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
 AS $body$
 DECLARE source_row control.source_registry%ROWTYPE; current_epoch bigint; scopes text[];
 BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_api' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
   IF p_tenant_key IS NULL OR p_source_id IS NULL OR p_user_id IS NULL OR p_issuer IS NULL OR p_subject IS NULL OR
      p_auth_epoch IS NULL OR p_owner_revision IS NULL OR p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 100 OR
      (p_origin_kind IS NOT NULL AND p_origin_kind NOT IN ('REST','SNAPSHOT')) OR

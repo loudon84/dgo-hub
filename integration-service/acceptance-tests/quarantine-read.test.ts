@@ -39,9 +39,14 @@ let apiPool: pg.Pool;
 let app: Awaited<ReturnType<typeof buildApp>>;
 let jwksServer: Server;
 let token: string;
+let sourceBearer: string;
 let privateKey: Awaited<ReturnType<typeof generateKeyPair>>['privateKey'];
 let controlledIssuer: string;
 let controlledAudience: string;
+
+function descendingTuple(left: { created_at: string; quarantine_id: string }, right: { created_at: string; quarantine_id: string }): boolean {
+  return left.created_at > right.created_at || (left.created_at === right.created_at && left.quarantine_id > right.quarantine_id);
+}
 
 function sha(value: string): Buffer { return createHash('sha256').update(value).digest(); }
 
@@ -537,7 +542,8 @@ describe('API-023 quarantine read', () => {
     const auth = createAuthService({ pool: fixture.pool });
     await auth.repository.provisionTenant({ tenantId, businessTimezone: 'UTC' });
     await auth.repository.provisionSubject({ tenantId, userId: ownerId, managementScopes: ['source:read'] });
-    await auth.repository.provisionSourceCredential({ sourceId, tenantId, token: createCredential().secret,
+    sourceBearer = createCredential().secret;
+    await auth.repository.provisionSourceCredential({ sourceId, tenantId, token: sourceBearer,
       secretRef: 'vault:/fixture/quarantine-read', allowedEntities: ['customer', 'order'], revision: '1', enabled: false });
     await fixture.pool.query(`INSERT INTO control.source_registry(tenant_key,source_id,lifecycle,data_owner_user_id)
       VALUES($1,$2,'DRAFT',$3)`, [tenantId, sourceId, ownerId]);
@@ -574,6 +580,32 @@ describe('API-023 quarantine read', () => {
     if (fixture) await fixture.close();
   });
 
+  it('rejects an inherited non-exact loader invoker while allowing hub_api', async () => {
+    await fixture.pool.query('CREATE ROLE m1q_inherited INHERIT');
+    await fixture.pool.query('GRANT hub_api TO m1q_inherited');
+    const identity = await fixture.pool.query<{ auth_epoch: string; owner_revision: string }>(`SELECT s.auth_epoch::text,r.owner_revision::text
+      FROM control.auth_subject s JOIN control.source_registry r ON r.tenant_key=s.tenant_key
+      WHERE s.tenant_key=$1 AND s.user_id=$2 AND r.source_id=$3`, [tenantId, ownerId, sourceId]);
+    const args = [tenantId,sourceId,ownerId,controlledIssuer,subject,identity.rows[0]!.auth_epoch,identity.rows[0]!.owner_revision,null,null,null,null,1];
+    const sql = 'SELECT * FROM control.list_ingestion_quarantine_current_owner($1,$2,$3,$4,$5,$6::bigint,$7::bigint,$8,$9,$10::timestamptz,$11::uuid,$12::integer)';
+    expect((await apiPool.query(sql,args)).rowCount).toBeGreaterThan(0);
+    const client = await fixture.pool.connect();
+    try {
+      await client.query('SET ROLE m1q_inherited');
+      await expect(client.query(sql,args)).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await client.query('RESET ROLE');
+      client.release();
+      await fixture.pool.query('DROP ROLE m1q_inherited');
+    }
+  });
+
+  it('rejects ascending UUIDs on a tied timestamp in the paging oracle', () => {
+    const left = { created_at: '2026-10-26T10:00:00.123456Z', quarantine_id: '00000000-0000-0000-0000-000000000001' };
+    const right = { created_at: left.created_at, quarantine_id: '00000000-0000-0000-0000-000000000002' };
+    expect(descendingTuple(left, right)).toBe(false);
+  });
+
   it('lets a valid current Owner list retained quarantine records while source admission is disabled', async () => {
     const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}`,
       headers: { authorization: `Bearer ${token}` } });
@@ -589,6 +621,11 @@ describe('API-023 quarantine read', () => {
   });
 
   it('pages 24 mixed REST and supported parentless snapshot origins in stable microsecond order', async () => {
+    const expected = await fixture.pool.query<{ quarantine_id: string; origin_kind: string; source_pk: string }>(`SELECT quarantine_id::text,origin_kind,source_pk
+      FROM control.ingestion_quarantine_index WHERE tenant_key=$1 AND source_id=$2 ORDER BY created_at DESC,quarantine_id DESC`, [tenantId,sourceId]);
+    const expectedKeys = [...Array.from({length: 12}, (_, n) => `REST-C-${String(n).padStart(2, '0')}`),
+      ...['customer','order'].flatMap(entity => Array.from({length: 6}, (_, n) => `${entity}-${String(n).padStart(2, '0')}`))].sort();
+    expect(expected.rows.map(row => row.source_pk).sort()).toEqual(expectedKeys);
     const all: Array<Record<string, unknown>> = [];
     let cursor: string | null = null;
     do {
@@ -598,6 +635,7 @@ describe('API-023 quarantine read', () => {
       all.push(...pageResponse.json().data.items);
       cursor = pageResponse.json().data.next_cursor;
     } while (cursor);
+    expect(all.map(item => ({ quarantine_id: item.quarantine_id, origin_kind: item.origin_kind, source_pk: item.source_pk }))).toEqual(expected.rows);
     expect(all).toHaveLength(24);
     expect(new Set(all.map(item => item.quarantine_id)).size).toBe(24);
     expect(all.filter(item => item.origin_kind === 'REST')).toHaveLength(12);
@@ -606,9 +644,25 @@ describe('API-023 quarantine read', () => {
     expect(snapshots.every(item => item.parent_source_pk === '' && ['customer', 'order'].includes(String(item.relation)))).toBe(true);
     for (let i = 0; i < all.length - 1; i++) {
       const left = all[i]!; const right = all[i + 1]!;
-      expect(String(left.created_at) >= String(right.created_at) ||
-        (left.created_at === right.created_at && String(left.quarantine_id) > String(right.quarantine_id))).toBe(true);
+      expect(descendingTuple({ created_at: String(left.created_at), quarantine_id: String(left.quarantine_id) },
+        { created_at: String(right.created_at), quarantine_id: String(right.quarantine_id) })).toBe(true);
     }
+  });
+
+  it('pages the default limit through the final null cursor without omission', async () => {
+    const expected = await fixture.pool.query<{ quarantine_id: string }>(`SELECT quarantine_id::text FROM control.ingestion_quarantine_index
+      WHERE tenant_key=$1 AND source_id=$2 ORDER BY created_at DESC,quarantine_id DESC`, [tenantId,sourceId]);
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const response: Awaited<ReturnType<typeof app.inject>> = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}${cursor ? `&cursor=${cursor}` : ''}`,
+        headers: { authorization: `Bearer ${token}` } });
+      expect(response.statusCode).toBe(200);
+      seen.push(...response.json().data.items.map((item: { quarantine_id: string }) => item.quarantine_id));
+      cursor = response.json().data.next_cursor;
+    } while (cursor !== null);
+    expect(seen).toEqual(expected.rows.map(row => row.quarantine_id));
+    expect(seen).toHaveLength(24);
   });
 
   it('accepts the maximum page size and returns the complete bounded source set', async () => {
@@ -648,6 +702,87 @@ describe('API-023 quarantine read', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().data.items[0]).not.toHaveProperty('public_record');
     expect(response.json().data.items[0]).not.toHaveProperty('facts');
+  });
+
+  it('denies runtime roles direct private facts and index mutation or synthesis', async () => {
+    for (const role of ['hub_api', 'hub_worker']) {
+      const client = await fixture.pool.connect();
+      try {
+        await client.query(`SET ROLE ${role}`);
+        if (role === 'hub_worker') {
+          expect((await client.query('SELECT body_bytes FROM raw.ingestion_batch LIMIT 1')).rowCount).toBeGreaterThan(0);
+          expect((await client.query('SELECT public_record FROM control.ingestion_job_item LIMIT 1')).rowCount).toBeGreaterThan(0);
+          expect((await client.query('SELECT proof_scope_digest FROM control.etl_snapshot_validation LIMIT 1')).rowCount).toBeGreaterThan(0);
+        }
+        for (const sql of [
+          ...(role === 'hub_api' ? ['SELECT body_bytes FROM raw.ingestion_batch LIMIT 1', 'SELECT public_record FROM control.ingestion_job_item LIMIT 1'] : []),
+          'SELECT facts FROM control.etl_snapshot_stage_record LIMIT 1',
+          ...(role === 'hub_api' ? ['SELECT proof_scope_digest FROM control.etl_snapshot_validation LIMIT 1'] : []),
+          'SELECT proof_scope_digest FROM control.ingestion_quarantine_index LIMIT 1',
+          'UPDATE control.ingestion_quarantine_index SET source_id=source_id',
+          'DELETE FROM control.ingestion_quarantine_index',
+          `INSERT INTO control.ingestion_quarantine_index(origin_kind,tenant_key,source_id,status) VALUES('REST','foreign','foreign','QUARANTINED')`,
+        ]) await expect(client.query(sql), `${role}: ${sql}`).rejects.toMatchObject({ code: '42501' });
+      } finally { await client.query('RESET ROLE'); client.release(); }
+    }
+  });
+
+  it('rejects source credentials and wrong-tenant or missing source requests', async () => {
+    const auth = createAuthService({ pool: fixture.pool });
+    await auth.repository.provisionTenant({ tenantId: 'm1q_other_tenant', businessTimezone: 'UTC' });
+    await auth.repository.provisionSubject({ tenantId: 'm1q_other_tenant', userId: 'other-owner', managementScopes: ['source:read'] });
+    await auth.repository.bindIdentity({ issuer: controlledIssuer, subject: 'other-tenant', tenantId: 'm1q_other_tenant', userId: 'other-owner' });
+    for (const [bearerValue, requested] of [[sourceBearer, sourceId], [await tokenFor('other-tenant'), sourceId], [token, 'missing-source']]) {
+      const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${requested}`,
+        headers: { authorization: `Bearer ${bearerValue}` } });
+      expect(response.statusCode).toBeGreaterThanOrEqual(400);
+      expect(response.json()).not.toHaveProperty('data.items');
+    }
+  });
+
+  it('denies a disabled owner and a disabled OIDC binding on fresh reads', async () => {
+    for (const [table, predicate, args] of [
+      ['auth_subject', 'tenant_key=$1 AND user_id=$2', [tenantId,ownerId]],
+      ['identity_binding', 'issuer=$1 AND subject=$2', [controlledIssuer,subject]],
+    ] as const) {
+      await fixture.pool.query(`UPDATE control.${table} SET enabled=false WHERE ${predicate}`, [...args]);
+      try {
+        const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}`,
+          headers: { authorization: `Bearer ${token}` } });
+        expect(response.statusCode).toBeGreaterThanOrEqual(400);
+        expect(response.json()).not.toHaveProperty('data.items');
+      } finally { await fixture.pool.query(`UPDATE control.${table} SET enabled=true WHERE ${predicate}`, [...args]); }
+    }
+  });
+
+  it('rechecks an OIDC binding changed after the first page', async () => {
+    const first = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}&limit=2`,
+      headers: { authorization: `Bearer ${token}` } });
+    expect(first.statusCode).toBe(200);
+    await fixture.pool.query('UPDATE control.identity_binding SET enabled=false WHERE issuer=$1 AND subject=$2', [controlledIssuer, subject]);
+    try {
+      const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}&limit=2&cursor=${first.json().data.next_cursor}`,
+        headers: { authorization: `Bearer ${token}` } });
+      expect(response.statusCode).toBeGreaterThanOrEqual(400);
+      expect(response.json()).not.toHaveProperty('data.items');
+    } finally { await fixture.pool.query('UPDATE control.identity_binding SET enabled=true WHERE issuer=$1 AND subject=$2', [controlledIssuer, subject]); }
+  });
+
+  it('fails closed and releases transaction locks when the security fence fails', async () => {
+    await fixture.pool.query('REVOKE EXECUTE ON FUNCTION control.lock_security_barrier_fence() FROM hub_api');
+    try {
+      const response = await app.inject({ method: 'GET', url: `/hub/v1/admin/quarantine?source_id=${sourceId}`,
+        headers: { authorization: `Bearer ${token}` } });
+      expect(response.statusCode).toBe(503);
+      expect(response.json().error.code).toBe('AUTH_UNAVAILABLE');
+      expect(response.json()).not.toHaveProperty('data.items');
+    } finally { await fixture.pool.query('GRANT EXECUTE ON FUNCTION control.lock_security_barrier_fence() TO hub_api'); }
+    const probe = await fixture.pool.connect();
+    try {
+      await probe.query('BEGIN');
+      expect((await probe.query('SELECT pg_try_advisory_xact_lock(1296905544,1) AS acquired')).rows[0].acquired).toBe(true);
+      await probe.query('ROLLBACK');
+    } finally { probe.release(); }
   });
 
   it('rejects a snapshot index row whose outcome ID belongs to another origin tuple', async () => {
