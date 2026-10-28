@@ -151,3 +151,7 @@ C local implementation and source-finding review are complete. Latest product e4
 ## M1-5D1 checkpoint — 2026-10-28
 
 D1 candidate accounting/threshold/source reservation is locally complete at product634e0c84/evidence4a67e6cc. Independent Sol scoped review closes I1–I5 with Spec PASS / Quality Approved. Latest snapshot gate26/26/typecheck/build0; prior evidence defects are qualified and corrected. D2 safe review/Owner060 approval proceeds from refreshed accepted interfaces; D3 effects, E, whole-phase integrated verification remain. 009 remains unreleased phase-owned; formal48/site tests NOT_RUN.
+
+## M1-5D2 checkpoint — 2026-10-28
+
+D2 Owner review/API060 local implementation and source review are complete at product23cac1b6; paired reports353951e5/evidencea8d8a607. Independent Sol Spec PASS / Quality Approved; final26 snapshot tests plus typecheck/build0. D3 worker effects/recovery proceeds from refreshed23 interfaces and shared digest helpers. D1/D2 alone do not complete D or M1-5; D3/E/integrated verification remain. 009 unreleased phase-owned, formal48/site NOT_RUN.

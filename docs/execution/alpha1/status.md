@@ -124,3 +124,9 @@ Source `634e0c84` closes all five D1 findings. GPT-6.1 Sol [scoped rereview](rev
 D2 source `0871e857` adds safe API-021 candidate summaries and exact-Owner member paging, plus API-060 immutable exact-set approval, audit and idempotency. It also adds freeze-time full baseline fingerprints and selective reservation guards. Latest local gates passed 26/26 snapshot tests, typecheck/build; the full file includes populated 001–008 upgrade and identical009 reapply. Root checked all 39 packaged artifacts and 18 source-manifest pairs without mismatch. Independent Sol review is pending. [D2 report](m1-task-5d2-report.md) records the two-member pagination limit and local-only scope.
 
 D3 logical deletion and recovery remain unimplemented; D2 API approval performs no business deletion. E and integrated whole-phase verification remain pending.
+
+### D2 repair review closed; D3 next
+
+Source `23cac1b6` closes all three D2 findings. GPT-6.1 Sol [scoped rereview](reviews/m1-task-5d2-rereview-1.md) records Spec PASS / Quality Approved. Final gates: 26/26 snapshot tests, typecheck/build; 62 repair artifacts and all 12 final source-manifest pairs verified. API-021 long-key cursor roundtrip, empty summary and shared digest authority are corrected. The documented larger-page and existing maximum-source admission limits remain whole-phase assurance gaps.
+
+D3 is next: worker logical tombstones, immutable per-member effect receipts, current-approval enforcement and process crash recovery. No D3 effects have been implemented at this checkpoint. E remains outside this request.

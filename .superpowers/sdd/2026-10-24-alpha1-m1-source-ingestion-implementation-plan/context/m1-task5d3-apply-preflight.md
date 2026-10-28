@@ -1,6 +1,6 @@
 # M1-5D3 apply preflight — fixed-pin seams and gaps
 
-**Status:** Read-only D3 interface preflight, not implementation authorization. Verified fixed source pin: `0871e857fe00b866fdf9a8b51a19641ebfb11d33`. D2 remains under independent Sol review; refresh this map if its accepted pin changes. Product facts below were inspected only with `git show <fixed-pin>:<path>`. No mutable product files, tests, resources, Git mutation, secrets/environment, or external systems were used. Requirements read: `task-5d3-brief.md` including its controller append and `context/m1-task5d3-delete-semantics.md`.
+**Status:** Read-only D3 interface preflight, not implementation authorization. Current refresh pin verified: `23cac1b6a3f00b595ecff085dc59f14dd771bc73`; prior comparison pin: `0871e857fe00b866fdf9a8b51a19641ebfb11d33`. D2 Fix 1 is present but pending independent Sol review, so this remains a provisional seam map and must be refreshed if review changes the source. Product facts below were inspected only with `git show <fixed-pin>:<path>`. No mutable product files, tests, resources, Git mutation, secrets/environment, or external systems were used. Requirements read: `task-5d3-brief.md` including its controller append and `context/m1-task5d3-delete-semantics.md`.
 
 ## D1/D2 authority at this pin
 
@@ -49,3 +49,34 @@ The existing `runSnapshotDeleteWorkerOnce` scans source groups in `PENDING/AWAIT
 - Existing canonical helpers may return DUPLICATE/IGNORED_STALE/quarantine. Only the matching previously committed D effect is a resumable success; do not convert an unrelated helper replay or stale result into a D success receipt.
 
 No implementation, tests, migration execution, database, source edits, or Git state changes were made for this preflight.
+
+## D2 Fix 1 fixed-pin refresh (23cac1b6)
+
+The only bounded product changes since `0871e857fe00b866fdf9a8b51a19641ebfb11d33` are the D2 pagination route/decoder and migration 009 candidate/baseline digest serialization. No change was found to canonical delete parsers, `ApplyContext`, C proof loader, D1/D2 approval authority, source lock order or C completion timestamp storage. D2's API-021 cursor now permits at most 4096 base64url characters (with matching route validation), validates tenant/source key syntax and exact cursor key set, and counts source key length by Unicode code points. The migration filters out the null left-join candidate when building an empty D summary. These are D2 review/interface fixes; no D3 endpoint or canonical-writer change is needed.
+
+### Shared digest serialization now available to D3
+
+Migration 009 factors D1 freeze, D2 currentness recomputation and baseline calculation through the same private immutable SQL serializer functions:
+
+- `etl_snapshot_delete_baseline_digest_seed(jsonb,text,bigint) -> bytea` initializes the live-baseline fingerprint with `{proof, entity, baseline, kind="live-baseline-v1"}`.
+- `etl_snapshot_delete_baseline_member_digest(bytea,text,text,text,text,uuid) -> bytea` folds one `(tenant_key,source_id,entity,source_pk,canonical_object_id)` tuple into that fingerprint. Feed members in `source_pk COLLATE "C"` order.
+- `etl_snapshot_delete_candidate_digest_seed(jsonb,text,uuid,integer,bigint,bigint,bytea) -> bytea` initializes the candidate digest with proof, entity, run, revision, baseline/count and the baseline membership digest.
+- `etl_snapshot_delete_candidate_member_digest(bytea,text,uuid,uuid,uuid,numeric,timestamptz) -> bytea` folds candidate key, canonical UUID, origin/second run, OBS sequence and inferred completion time.
+
+All four are immutable SQL helpers with fixed `pg_catalog` search path and execution revoked from PUBLIC, `hub_api`, `hub_worker`, MCP, publisher and Hasura reader. `etl_snapshot_delete_baseline_fingerprint(text,text,text,jsonb)` now reuses the first two; `etl_snapshot_delete_candidate_recomputed_digest(uuid)` and D1 freeze reuse the latter two. D3's own-effect-aware baseline reconstruction should call the **same baseline seed and member serializers** from a narrow security-definer worker procedure: union current-live members with only exact candidate members having a committed matching D effect, deduplicate by full identity tuple, sort by C collation, then fold. This preserves the frozen `baseline_membership_digest` byte-for-byte and catches equal-count substitutions. Do not invent a second Node/SQL serializer.
+
+Candidate digest timestamps now serialize explicitly as UTC RFC3339-like text with six fractional digits (`YYYY-MM-DDTHH:MM:SS.USZ`) inside the digest member JSON, rather than relying on PostgreSQL JSON rendering of `timestamptz`. This is a UTC instant representation, preserving microseconds. D3's operation input must still pass exact second-run `completed_at` losslessly to the canonical Zod parser as an offset-bearing RFC3339 timestamp; candidate member `inferred_completed_at` is frozen in `timestamptz`, and the shared candidate serializer normalizes it to the same UTC microsecond string. SQL `to_char(... AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')` is the serialization seam to match. Keep exact effect operation timestamp text stable across retries; JS `Date` truncation remains unsafe.
+
+The helper functions are private at the application-role boundary, but remain available to a suitably owned D3 security-definer routine; verify its owner and fixed search path in implementation. No extra API grant is warranted for these serializer helpers.
+
+## D3 brief execution-detail carry-forward
+
+The refreshed brief now requires **four durable starts total** (initial plus at most three automatic retries), with DB-clock delays of 5/30/120 seconds; lease inspection/acquisition is not a start, and processing multiple members within one live lease does not spend one start per member. D3 needs an explicit attempt/start procedure and bounded backoff fields, plus heartbeat and must await any in-flight heartbeat failure before finalization. Claim/token/lease checks, row locks, currentness and outcome write must remain held through each canonical helper transaction.
+
+Each member's operation identity is persisted once. A retry cannot regenerate the OBS, inferred timestamp or operation ID. A failed/empty D outcome write must throw before transaction commit so canonical writes roll back. For an unrecorded member, helper `DUPLICATE`, `IGNORED_STALE`, quarantine or changed identity/version is not success; only an exact matching prior committed D outcome is a resumable success.
+
+The acceptance oracle specifically requires actual owned Node-process termination (not only PostgreSQL backend termination) before and after aggregate COMMIT, with a real changed tombstone. Before COMMIT, canonical state, identity/receipt, outbox, D effect and progress must all be absent; after COMMIT, all must be present together and restart must observe/apply once with the same OBS, microsecond timestamp and operation. Also cover partial multi-member resume, own-effect baseline reconstruction, equal-count unrelated replacement, epoch/Owner/barrier/newer-cohort invalidation and stale claim fencing. Keep the existing no-source-network/no-physical-delete constraints. This is test planning only; no test was run in this preflight.
+
+D2 Fix 1 introduces no additional D3 API dependency. This pin is pending D2 review, not a dispatch/implementation authorization.
+
+
