@@ -1,0 +1,63 @@
+{
+  "phase": "after",
+  "captured_at_utc": "2026-10-28T00:55:46.8130458+00:00",
+  "actual_HEAD": "634e0c84cf2cf3d7953feb1e03d35f3387b27dfd",
+  "files": [
+    {
+      "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5d1-schema-contract.md",
+      "size_bytes": 13315,
+      "sha256_raw": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16",
+      "sha256_lf_normalized": "c30cac03d87c5daff381431247f3b2ebbc5b69e215cde961517e39cbece77b16",
+      "git_blob": "b34865c438d2d7e74abcd642e302328319dc3648",
+      "raw_matches_git_blob": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "size_bytes": 173089,
+      "sha256_raw": "e038c2e3fd0f21099eb11680da4c9f26f1e581417509c2ace224e76d928ff4ad",
+      "sha256_lf_normalized": "e038c2e3fd0f21099eb11680da4c9f26f1e581417509c2ace224e76d928ff4ad",
+      "git_blob": "4f4595977778f3f48cd19ae1ffe97def497f53ad",
+      "raw_matches_git_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "size_bytes": 1120,
+      "sha256_raw": "f377fa47a52247ba4d3a14e2079d9e9435e29e7c77457b3f02a4e851bf8b4e73",
+      "sha256_lf_normalized": "f377fa47a52247ba4d3a14e2079d9e9435e29e7c77457b3f02a4e851bf8b4e73",
+      "git_blob": "b90071cb8a61ea05d83004b8d78419802931fd7c",
+      "raw_matches_git_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "size_bytes": 24992,
+      "sha256_raw": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db",
+      "sha256_lf_normalized": "b19a69db7a88a6b666b0308cf02f04eb156d1787ad3900b75170849cdac715db",
+      "git_blob": "757a1949c806f1759231ffdb43a36f4a58ed2bd3",
+      "raw_matches_git_blob": true
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "size_bytes": 30357,
+      "sha256_raw": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+      "sha256_lf_normalized": "d6b2298fd5389609f169aeb169b872e2bc2e01084a3a0f813d826304fe7ce613",
+      "git_blob": "832773de94354c1c76c3440fa322bdb5550742da",
+      "raw_matches_git_blob": true
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "size_bytes": 139285,
+      "sha256_raw": "d569deb28a4b19b2aca4fbeeecb3c3f1eeec2ab6c4429f39ca65d1560377c8e5",
+      "sha256_lf_normalized": "745cf620e0e49586e1b0cfb4efcc80830cbc8111400921c2b8bc6232eed6c50c",
+      "git_blob": "3d9226241a1f2641a43c11bdc1b1da435c3804ee",
+      "raw_matches_git_blob": false
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "size_bytes": 56016,
+      "sha256_raw": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce",
+      "sha256_lf_normalized": "277d9b476585a0057183444f6954e541a6a9cefa01eb2f183f00a5308ca2cdce",
+      "git_blob": "33a73a3b2da9f1dda38a65de56cef68667bd9c40",
+      "raw_matches_git_blob": true
+    }
+  ]
+}

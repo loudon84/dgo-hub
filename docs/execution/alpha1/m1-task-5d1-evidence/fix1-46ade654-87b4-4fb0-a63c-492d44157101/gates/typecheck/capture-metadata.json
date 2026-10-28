@@ -1,0 +1,30 @@
+{
+  "gate": "typecheck",
+  "command": "npm run typecheck",
+  "working_directory": "E:\\git\\dgo-hub\\integration-service",
+  "M0_RUN_EVIDENCE_ROOT": "E:\\m1t5-runtime\\9203944f-c555-40cd-a3a1-0f6833bd183d",
+  "external_capture_root": "E:\\m1t5-runtime\\9203944f-c555-40cd-a3a1-0f6833bd183d",
+  "actual_HEAD_before": "634e0c84cf2cf3d7953feb1e03d35f3387b27dfd",
+  "actual_HEAD_after": "634e0c84cf2cf3d7953feb1e03d35f3387b27dfd",
+  "exit_code": 0,
+  "source_before": "source-before.json",
+  "source_after": "source-after.json",
+  "files": {
+    "stderr.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "command.txt": {
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6",
+      "size_bytes": 19
+    },
+    "exit-code.txt": {
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354",
+      "size_bytes": 3
+    },
+    "stdout.log": {
+      "sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "size_bytes": 88
+    }
+  }
+}

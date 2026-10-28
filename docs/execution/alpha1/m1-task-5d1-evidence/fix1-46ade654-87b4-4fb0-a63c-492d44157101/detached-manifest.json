@@ -1,0 +1,173 @@
+{
+  "bundle_id": "46ade654-87b4-4fb0-a63c-492d44157101",
+  "product_commit": "634e0c84cf2cf3d7953feb1e03d35f3387b27dfd",
+  "created_at_utc": "2026-10-28T00:56:49.6501728+00:00",
+  "allowed_artifact_policy": "explicit file whitelist",
+  "gates": [
+    {
+      "name": "acceptance",
+      "external_root": "E:\\m1t5-runtime\\de0f17b2-f53c-42ae-b56b-eeefbdf0eda4",
+      "copied_path": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5d1-evidence\\fix1-46ade654-87b4-4fb0-a63c-492d44157101\\gates\\acceptance",
+      "exit_code": "0"
+    },
+    {
+      "name": "typecheck",
+      "external_root": "E:\\m1t5-runtime\\9203944f-c555-40cd-a3a1-0f6833bd183d",
+      "copied_path": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5d1-evidence\\fix1-46ade654-87b4-4fb0-a63c-492d44157101\\gates\\typecheck",
+      "exit_code": "0"
+    },
+    {
+      "name": "build",
+      "external_root": "E:\\m1t5-runtime\\910b55ad-6d92-4f2c-8b79-627b92ab10f9",
+      "copied_path": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5d1-evidence\\fix1-46ade654-87b4-4fb0-a63c-492d44157101\\gates\\build",
+      "exit_code": "0"
+    }
+  ],
+  "files": [
+    {
+      "path": "capture-index.md",
+      "size_bytes": 1842,
+      "sha256": "6fdfd62b70cc34e6087510338cda6d226fc01f977fa3f5ca4cf97f7bd29b0861"
+    },
+    {
+      "path": "gates/acceptance/capture-metadata.json",
+      "size_bytes": 1146,
+      "sha256": "b32f879d3e3a15ab0c5b605de47b33ebfea80ff020301669a2ea3aca88341467"
+    },
+    {
+      "path": "gates/acceptance/command.txt",
+      "size_bytes": 58,
+      "sha256": "7cd676b16d8d7f6305745fd23cfd7c30216401d209b44ab29c230cda2f3430af"
+    },
+    {
+      "path": "gates/acceptance/evidence-root.txt",
+      "size_bytes": 54,
+      "sha256": "58ddcf85576a73f46e6cc2c4896c38ebec73082089511314f7231e6ded643811"
+    },
+    {
+      "path": "gates/acceptance/exit-code.txt",
+      "size_bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "gates/acceptance/source-after.json",
+      "size_bytes": 3035,
+      "sha256": "b73382f2771f84ce7b20b01ed8ca0cc3aa91ca1d47955ac85e0b770aa9773f85"
+    },
+    {
+      "path": "gates/acceptance/source-before.json",
+      "size_bytes": 3036,
+      "sha256": "48b53f564a98336ad42e8e7ea54276fa1075cd3414db2d908aa1b5c279299299"
+    },
+    {
+      "path": "gates/acceptance/stderr.log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "gates/acceptance/stdout.log",
+      "size_bytes": 332,
+      "sha256": "04717fd0b31149b7fbfcd5e83083226d9c46e22ab62f68a8c2e5db5d25dc59b5"
+    },
+    {
+      "path": "gates/build/capture-metadata.json",
+      "size_bytes": 1103,
+      "sha256": "0bea530947a9287dc9b26777c62cd71867fdc4920d376e31a03128f1bb4756a7"
+    },
+    {
+      "path": "gates/build/command.txt",
+      "size_bytes": 15,
+      "sha256": "851e90e1797d2efec106ab0200cd1bb0c034620a7cf6a67b49c051c07a3a5e26"
+    },
+    {
+      "path": "gates/build/evidence-root.txt",
+      "size_bytes": 54,
+      "sha256": "ca9e37beb7233c994a2cef84458e67df01a9ae882a1802fffd7a24a1f7d68e57"
+    },
+    {
+      "path": "gates/build/exit-code.txt",
+      "size_bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "gates/build/source-after.json",
+      "size_bytes": 3035,
+      "sha256": "4626fb6423a6c7e04eb4b8ffdf718fd05d2a6e395d6a1116fab7d4b4562b0ba1"
+    },
+    {
+      "path": "gates/build/source-before.json",
+      "size_bytes": 3036,
+      "sha256": "f454769a1bb8f83b77676b88f8acd18c8931b283d39d15b54656f41cdcdef598"
+    },
+    {
+      "path": "gates/build/stderr.log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "gates/build/stdout.log",
+      "size_bytes": 75,
+      "sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a"
+    },
+    {
+      "path": "gates/typecheck/capture-metadata.json",
+      "size_bytes": 1111,
+      "sha256": "33ba4a5ec135437dae002cd3fab58ab2bbc9cf101c4bb30d350fd7bd6dae14bb"
+    },
+    {
+      "path": "gates/typecheck/command.txt",
+      "size_bytes": 19,
+      "sha256": "25085752d8ee1fe677fcd8e90c6e24f9bdf7bddc7e8296bab73343c08952f1a6"
+    },
+    {
+      "path": "gates/typecheck/evidence-root.txt",
+      "size_bytes": 54,
+      "sha256": "a29207ab103e1025a3b86ff6ae559b67669d1b753ebca1a171062fb05b7d2e52"
+    },
+    {
+      "path": "gates/typecheck/exit-code.txt",
+      "size_bytes": 3,
+      "sha256": "13bf7b3039c63bf5a50491fa3cfd8eb4e699d1ba1436315aef9cbe5711530354"
+    },
+    {
+      "path": "gates/typecheck/source-after.json",
+      "size_bytes": 3035,
+      "sha256": "d7330915975eb803031f55b982e6ca229fb6ede1d74890b241f6cc0b8fd1c137"
+    },
+    {
+      "path": "gates/typecheck/source-before.json",
+      "size_bytes": 3036,
+      "sha256": "18b9117b861468d78e88a10df57aa88055a4e68d69123782875979e9c07d3674"
+    },
+    {
+      "path": "gates/typecheck/stderr.log",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "gates/typecheck/stdout.log",
+      "size_bytes": 88,
+      "sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e"
+    },
+    {
+      "path": "owned-lifecycle/node-child-lifecycle.jsonl",
+      "size_bytes": 1513,
+      "sha256": "910ef5bc28e059e2c088379ad4d90e52995d5d723c812a8aa295b9fcc33b9d04"
+    },
+    {
+      "path": "owned-lifecycle/postgres-12a1646b-ced8-44d6-b254-351cf50f8671.jsonl",
+      "size_bytes": 1048,
+      "sha256": "bca1621e62faba4ea7cee2975266cae57d23eb89e0c0d0cd08e4a18d84ab8966"
+    },
+    {
+      "path": "owned-lifecycle/postgres-ac3bb39f-1ecc-4099-9a48-fbb5e58ef2a0.jsonl",
+      "size_bytes": 1048,
+      "sha256": "ec74fd6492e784bc36e431669f7e779729cb22ee4053ddfff9fb8da2cdadf44a"
+    },
+    {
+      "path": "owned-lifecycle/postgres-c6f47008-7b2b-478b-94af-6b7fa4a41289.jsonl",
+      "size_bytes": 1048,
+      "sha256": "7e8cc683d7a83455d67c1e588d0f23c4144283ad0b58f7a46001032eb33244b9"
+    }
+  ]
+}

@@ -90,3 +90,27 @@ Three fresh gates were run against the committed D1 source with actual HEAD `416
 - Build: passed, exit 0, `E:\m1t5-runtime\cbaef082-b59c-4b7c-a23c-34000369b8dc`; package metadata and source manifests: `docs/execution/alpha1/m1-task-5d1-evidence/9b96aa3b-675c-42cd-8ac7-8978e85bca63/fresh-gates-4163984f-20261028/gates/cbaef082-b59c-4b7c-a23c-34000369b8dc/`.
 
 The corrected fresh-gate capture index is `docs/execution/alpha1/m1-task-5d1-evidence/9b96aa3b-675c-42cd-8ac7-8978e85bca63/fresh-gates-4163984f-20261028/capture-index.md`; its source-to-product commit comparison is `source-binding-summary.json`. The focused suite’s fresh owned PostgreSQL and Node lifecycle files are included under that bundle’s `owned-lifecycle/`. Earlier capture-wrapper setup failures were retained as external attempts and were not counted as npm gates.
+
+## Fix1: round-one D1 review repairs
+
+Product source/test commit: 634e0c84cf2cf3d7953feb1e03d35f3387b27dfd (parent 52732c6084ec91c7d94235ff6ac66e25e18198f8).
+
+The five Important findings were addressed in migration 009, the serial D worker queue, and the owned-Postgres snapshot acceptance fixture:
+
+- **I1 scope seeding:** a newly consumed scope seeds a first-absence fact for an existing live canonical identity only when a matching source/channel/epoch SNAPSHOT_OBSERVATION receipt binds the same full source key and canonical UUID. The current run is stamped on the seed, so the subsequent missing-key update cannot count the same run twice. Exact 1/20 remains at the allowed 5% boundary.
+- **I2 delete contract:** the C-finish reservation admits only FULL_SNAPSHOT + SNAPSHOT_OBSERVATION + hard_delete. The worker defensively changes any ineligible reservation to SKIPPED before consumption; the tombstone fixture confirms no consumption and no busy state.
+- **I3 bounded fairness:** the worker reads only its existing D reservation queue and orders sources by the DB-owned last_worker_checked_at, reservation ordinal, and stable keys. This is scheduling metadata only; immutable C source/run/proof facts do not change. The one-slot test creates a later actual C reservation and confirms its consumption while an earlier prepared candidate remains.
+- **I4 latest test currentness:** D proof validity requires its frozen PASS test report to remain the newest report under the same source revision tuple using (created_at,id) ordering. Same-revision newer PASS and FAIL reports both stale the old reservation before consumption.
+- **I5 prepared freshness:** bounded worker checks include both prepared PENDING and AWAITING_OWNER candidate cohorts. Config drift marks them STALE and clears the D busy guard; the AWAITING_OWNER case retains the policy pause and disabled schedule.
+
+The TDD RED gate at base 52732c6084ec91c7d94235ff6ac66e25e18198f8 failed at the expected I1 assertion (new-scope first absence was 0, expected 1). Subsequent fixture/setup failures were retained as failed attempts and corrected before the passing gate; no failed attempt is represented as a successful gate.
+
+Final fresh gates ran at exact HEAD 634e0c84cf2cf3d7953feb1e03d35f3387b27dfd; all seven whitelisted source files have independent before/after manifests for each gate. The migration raw checkout is CRLF while its LF-normalized SHA-256 matches the Git blob.
+
+- Focused actual-C/owned-PostgreSQL acceptance file: **26/26 passed**, exit 0; external root E:\m1t5-runtime\de0f17b2-f53c-42ae-b56b-eeefbdf0eda4; copied capture docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/gates/acceptance/.
+- Typecheck: **passed**, exit 0; external root E:\m1t5-runtime\9203944f-c555-40cd-a3a1-0f6833bd183d; copied capture docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/gates/typecheck/.
+- Build: **passed**, exit 0; external root E:\m1t5-runtime\910b55ad-6d92-4f2c-8b79-627b92ab10f9; copied capture docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/gates/build/.
+
+The owned lifecycle whitelist is docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/owned-lifecycle/; it records three exact owned PostgreSQL container create/image/remove/absence records and the test-created Node child IDs, kill/recovery events. The detached SHA/size manifest is docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/detached-manifest.json with checksum a0f95810b295e58b1a65b82fbeac5149e57c9372af856bcc0e70662c7b6f4ac8; the capture index is docs/execution/alpha1/m1-task-5d1-evidence/fix1-46ade654-87b4-4fb0-a63c-492d44157101/capture-index.md. Only explicit whitelist artifacts were copied.
+
+Formal 48-gate remains **NOT RUN**. This is D1 only; D2 and D3 remain reserved for their authorized phases.
