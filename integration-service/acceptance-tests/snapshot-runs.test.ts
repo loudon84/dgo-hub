@@ -1945,6 +1945,19 @@ describe('durable snapshot run admission', () => {
             d_next_retry_at=clock_timestamp() WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
             [owner.tenantId,crashSource,crashRun.run_id]);
           await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+          const crashFallback=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_claim_token,d.d_lease_expires_at,
+              CASE WHEN isfinite(d.d_next_retry_at) THEN extract(epoch FROM (d.d_next_retry_at-clock_timestamp()))::numeric END AS retry_seconds,
+              (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                WHERE c.run_id=d.run_id) AS effects
+            FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+            [owner.tenantId,crashSource,crashRun.run_id]);
+          expect(crashFallback.rows[0]).toMatchObject({status:'APPLYING',d_start_count:1,d_claim_token:null,d_lease_expires_at:null,
+            effects:phase==='after'?1:0});
+          expect(Number(crashFallback.rows[0]?.retry_seconds)).toBeGreaterThan(4.5);
+          expect(Number(crashFallback.rows[0]?.retry_seconds)).toBeLessThan(5.5);
+          await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_next_retry_at=clock_timestamp()-interval '1 second'
+            WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,crashSource,crashRun.run_id]);
+          await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
           const recovered=await fixture.pool.query(`SELECT d.status,d.d_start_count,
             (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
               WHERE c.run_id=d.run_id) AS effects,
@@ -2027,8 +2040,8 @@ describe('durable snapshot run admission', () => {
         let retryOperationId:string|undefined;
         try {
           for(let expectedStart=1;expectedStart<=4;expectedStart+=1) {
-            if(expectedStart>1) await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second',
-              d_next_retry_at=clock_timestamp() WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
+            if(expectedStart>1) await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_next_retry_at=clock_timestamp()-interval '1 second'
+              WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,
               [owner.tenantId,retrySource,retryCohort.run.run_id]);
             const faultHitBefore=await fixture.pool.query<{last_value:string;is_called:boolean}>(
               'SELECT last_value::text,is_called FROM control.test_skip_d3_order_effect_hits');
@@ -2228,6 +2241,266 @@ describe('durable snapshot run admission', () => {
           JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id) WHERE sr.tenant_key=$1 AND sr.source_id=ANY($2::text[])
           ORDER BY sr.source_id COLLATE "C"`,[owner.tenantId,Object.values(crashSources)]);
         expect(pausedCrashSources.rows).toEqual(Object.values(crashSources).sort().map(source_id=>({source_id,lifecycle:'PAUSED',enabled:false})));
+
+        const prepareSingleCustomerCandidate=async(sourceId:string)=>{
+          await createDSource(sourceId,false);
+          const baseline=await completeCWithoutD(sourceId,'1',`d3-${sourceId}-baseline`);
+          await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+          await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id='C-19'`);
+          const first=await completeCWithoutD(sourceId,'1',`d3-${sourceId}-first-absence`);
+          await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+          const second=await completeCWithoutD(sourceId,'1',`d3-${sourceId}-second-absence`);
+          const frozen=await roleScopedPool('hub_worker').query<{consume_etl_snapshot_delete_run:boolean}>(
+            'SELECT control.consume_etl_snapshot_delete_run($1,$2)',[owner.tenantId,sourceId]);
+          expect(frozen.rows).toEqual([{consume_etl_snapshot_delete_run:true}]);
+          const candidate=await fixture.pool.query<{candidate_id:string;candidate_revision:number;candidate_digest:string;
+            candidate_count:string;baseline_count:string}>(`SELECT candidate_id::text,candidate_revision,encode(candidate_digest,'hex') AS candidate_digest,
+              candidate_count::text,baseline_count::text FROM control.etl_snapshot_delete_candidate
+            WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3 AND entity='customer'`,[owner.tenantId,sourceId,second.run_id]);
+          expect(candidate.rows).toHaveLength(1);
+          expect(candidate.rows[0]).toMatchObject({candidate_count:'1',baseline_count:'22'});
+          return {baseline,first,second,candidate:candidate.rows[0]!};
+        };
+
+        // Expired started D leases use C's durable recovery contract: charge
+        // the dead start, persist the database-clock 5/30/120 schedule, and
+        // fail a fourth expired start even when its final effect committed.
+        const lifecycleSuffix=randomUUID().replaceAll('-','').slice(0,10);
+        const expiredSource=`pg-e2e-d-expired-${lifecycleSuffix}`;
+        const expiredCohort=await prepareSingleCustomerCandidate(expiredSource);
+        await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+          VALUES('C-19','Customer 19 restored','owner-ext','dept-ext','ACTIVE','2026-10-28 03:40:19.123456+00')
+          ON CONFLICT(customer_id) DO UPDATE SET customer_name=EXCLUDED.customer_name,updated_at=EXCLUDED.updated_at`);
+        const expirationTokens:string[]=[];
+        for(let expiredStart=1;expiredStart<=3;expiredStart+=1) {
+          const token=randomUUID();
+          const claim=await roleScopedPool('hub_worker').query<{claim_etl_snapshot_delete_apply:Record<string,unknown>|null}>(
+            'SELECT control.claim_etl_snapshot_delete_apply($1,$2,$3::uuid,60) AS claim_etl_snapshot_delete_apply',
+            [owner.tenantId,expiredSource,token]);
+          expect(claim.rows[0]?.claim_etl_snapshot_delete_apply).toMatchObject({run_id:expiredCohort.second.run_id,claim_token:token});
+          const start=await roleScopedPool('hub_worker').query<{begin_etl_snapshot_delete_start:number}>(
+            'SELECT control.begin_etl_snapshot_delete_start($1,$2,$3::uuid,$4::uuid)',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          expect(start.rows[0]?.begin_etl_snapshot_delete_start).toBe(expiredStart);
+          expirationTokens.push(token);
+          if(expiredStart>1) {
+            const replacedToken=expirationTokens[expiredStart-2]!;
+            const replacedBegin=await roleScopedPool('hub_worker').query(
+              'SELECT control.begin_etl_snapshot_delete_start($1,$2,$3::uuid,$4::uuid) AS started',
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,replacedToken]);
+            const replacedHeartbeat=await roleScopedPool('hub_worker').query(
+              'SELECT control.heartbeat_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,60) AS renewed',
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,replacedToken]);
+            const replacedRetry=await roleScopedPool('hub_worker').query(
+              "SELECT control.retry_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,'REPLACED_CLAIM') AS result",
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,replacedToken]);
+            const replacedPreflight=await roleScopedPool('hub_worker').query(
+              'SELECT control.preflight_etl_snapshot_delete_apply_candidate($1,$2,$3::uuid,$4::uuid,$5::uuid) AS current',
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id,replacedToken]);
+            const replacedEffect=await roleScopedPool('hub_worker').query(
+              "SELECT control.record_etl_snapshot_delete_effect($1,$2,$3::uuid,$4::uuid,'customer','C-19',$5::uuid,'APPLIED') AS recorded",
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id,replacedToken]);
+            const replacedFinish=await roleScopedPool('hub_worker').query(
+              "SELECT control.finish_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,'COMPLETE',NULL) AS result",
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id,replacedToken]);
+            const replacedState=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_claim_token::text,d.d_lease_expires_at,
+                d.d_lease_expires_at>clock_timestamp() AS lease_live,
+                (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                  WHERE c.run_id=d.run_id) AS effects
+              FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+              [owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+            expect(replacedBegin.rows).toEqual([{started:null}]);
+            expect(replacedHeartbeat.rows).toEqual([{renewed:false}]);
+            expect(replacedRetry.rows).toEqual([{result:'STALE'}]);
+            expect(replacedPreflight.rows).toEqual([{current:false}]);
+            expect(replacedEffect.rows).toEqual([{recorded:false}]);
+            expect(replacedFinish.rows).toEqual([{result:'STALE'}]);
+            expect(replacedState.rows).toEqual([{status:'APPLYING',d_start_count:expiredStart,d_claim_token:token,
+              d_lease_expires_at:expect.any(Date),lease_live:true,effects:0}]);
+          }
+          await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second'
+            WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+          await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+          const recovered=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_claim_token::text,d.d_lease_expires_at,
+              d.d_next_retry_at,clock_timestamp() AS db_now,
+              CASE WHEN isfinite(d.d_next_retry_at) THEN extract(epoch FROM (d.d_next_retry_at-clock_timestamp()))::numeric END AS retry_seconds,
+              (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                WHERE c.run_id=d.run_id) AS effects
+            FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+          const state=recovered.rows[0]!;
+          expect(state).toMatchObject({status:'APPLYING',d_start_count:expiredStart,d_claim_token:null,d_lease_expires_at:null,effects:0});
+          const delay=[5,30,120][expiredStart-1]!;
+          expect(Number(state.retry_seconds)).toBeGreaterThan(delay-0.5);
+          expect(Number(state.retry_seconds)).toBeLessThan(delay+0.5);
+          const oldBegin=await roleScopedPool('hub_worker').query(
+            'SELECT control.begin_etl_snapshot_delete_start($1,$2,$3::uuid,$4::uuid) AS started',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          const oldHeartbeat=await roleScopedPool('hub_worker').query(
+            'SELECT control.heartbeat_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,60) AS renewed',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          const oldRetry=await roleScopedPool('hub_worker').query(
+            "SELECT control.retry_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,'OLD_CLAIM') AS result",
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          const attemptBinding=await fixture.pool.query<{attempt_id:string}>(
+            'SELECT attempt_id::text FROM control.etl_snapshot_delete_run WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+          const oldLoad=await roleScopedPool('hub_worker').query(
+            'SELECT control.load_etl_snapshot_delete_apply_proof($1,$2,$3::uuid,$4::uuid,$5::uuid) AS proof',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,attemptBinding.rows[0]!.attempt_id,token]);
+          const oldMembers=await roleScopedPool('hub_worker').query(
+            'SELECT control.list_etl_snapshot_delete_apply_members($1,$2,$3::uuid,$4::uuid) AS members',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          const oldPreflight=await roleScopedPool('hub_worker').query(
+            'SELECT control.preflight_etl_snapshot_delete_apply_candidate($1,$2,$3::uuid,$4::uuid,$5::uuid) AS current',
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id,token]);
+          const oldEffect=await roleScopedPool('hub_worker').query(
+            "SELECT control.record_etl_snapshot_delete_effect($1,$2,$3::uuid,$4::uuid,'customer','C-19',$5::uuid,'APPLIED') AS recorded",
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,expiredCohort.candidate.candidate_id,token]);
+          const oldFinish=await roleScopedPool('hub_worker').query(
+            "SELECT control.finish_etl_snapshot_delete_apply($1,$2,$3::uuid,$4::uuid,'COMPLETE',NULL) AS result",
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id,token]);
+          expect(oldBegin.rows).toEqual([{started:null}]);
+          expect(oldHeartbeat.rows).toEqual([{renewed:false}]);
+          expect(oldRetry.rows).toEqual([{result:'STALE'}]);
+          expect(oldLoad.rows).toEqual([{proof:null}]);
+          expect(oldMembers.rows).toEqual([{members:null}]);
+          expect(oldPreflight.rows).toEqual([{current:false}]);
+          expect(oldEffect.rows).toEqual([{recorded:false}]);
+          expect(oldFinish.rows).toEqual([{result:'STALE'}]);
+          const afterOldToken=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_claim_token,d.d_lease_expires_at,
+              (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+                WHERE c.run_id=d.run_id) AS effects
+            FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+            [owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+          expect(afterOldToken.rows[0]).toMatchObject({status:'APPLYING',d_start_count:expiredStart,d_claim_token:null,d_lease_expires_at:null,effects:0});
+          await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'expired_d_started_claim_fallback',
+            run_id:expiredCohort.second.run_id,source_id:expiredSource,expired_start:expiredStart,delay_seconds:delay,
+            old_claim_token:token,recovered_state:state,old_token_operations:{begin:oldBegin.rows[0],heartbeat:oldHeartbeat.rows[0],retry:oldRetry.rows[0],
+              load:oldLoad.rows[0],members:oldMembers.rows[0],preflight:oldPreflight.rows[0],effect:oldEffect.rows[0],finish:oldFinish.rows[0]},
+            after_old_token:afterOldToken.rows[0]})+'\n','utf8');
+          if(expiredStart<3) await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_next_retry_at=clock_timestamp()-interval '1 second'
+            WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+          else await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_next_retry_at=clock_timestamp()-interval '1 second'
+            WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+        }
+        const fourthChildEntry='acceptance-tests/fixtures/snapshot-delete-child.mjs';
+        const fourthChild=fork(fourthChildEntry,[],{cwd:process.cwd(),stdio:['ignore','pipe','pipe','ipc'],env:{
+          SNAPSHOT_D_TEST_PG_PORT:String(fixture.hostPort),SNAPSHOT_D_TEST_PHASE:'after',SNAPSHOT_D_TEST_RUN_ID:expiredCohort.second.run_id}});
+        if(!fourthChild.pid) throw new Error('D_FOURTH_CRASH_CHILD_PID_MISSING');
+        const fourthPid=fourthChild.pid;
+        let fourthStderr='';
+        fourthChild.stderr?.on('data',chunk=>{fourthStderr+=String(chunk);void appendFile(join(crashEvidenceRoot,'d-fourth-crash.stderr.txt'),String(chunk),'utf8');});
+        fourthChild.stdout?.on('data',chunk=>{void appendFile(join(crashEvidenceRoot,'d-fourth-crash.stdout.txt'),String(chunk),'utf8');});
+        const fourthLoaded=await new Promise<{type:string;pid:number;worker_sha256:string;worker_path:string;hasWorker:boolean}>((resolve,reject)=>{
+          const timer=setTimeout(()=>{fourthChild.kill('SIGKILL');reject(new Error('D_FOURTH_CHILD_IMPORT_TIMEOUT'));},10_000);
+          fourthChild.on('message',message=>{const value=message as {type:string;pid:number;worker_sha256:string;worker_path:string;hasWorker:boolean};
+            if(value.type==='worker-loaded'){clearTimeout(timer);resolve(value);}});
+          fourthChild.once('error',error=>{clearTimeout(timer);reject(error);});
+          fourthChild.once('exit',(code,signal)=>{clearTimeout(timer);reject(new Error(`D_FOURTH_CHILD_EXITED_BEFORE_IMPORT:${code}:${signal}:${fourthStderr}`));});
+        });
+        expect(fourthLoaded).toMatchObject({pid:fourthPid,hasWorker:true,worker_sha256:expect.any(String)});
+        const fourthBoundary=await new Promise<{type:string;phase:string;run_id:string;source_pk:string;operation_id:string;pid:number}>((resolve,reject)=>{
+          const timer=setTimeout(()=>{fourthChild.kill('SIGKILL');reject(new Error('D_FOURTH_EFFECT_COMMIT_TIMEOUT'));},30_000);
+          fourthChild.on('message',message=>{const value=message as {type:string;phase:string;run_id:string;source_pk:string;operation_id:string;pid:number};
+            if(value.type==='aggregate-boundary'){clearTimeout(timer);resolve(value);}});
+          fourthChild.once('error',error=>{clearTimeout(timer);reject(error);});
+          fourthChild.once('exit',(code,signal)=>{clearTimeout(timer);reject(new Error(`D_FOURTH_CHILD_EXITED:${code}:${signal}:${fourthStderr}`));});
+        });
+        expect(fourthBoundary).toMatchObject({run_id:expiredCohort.second.run_id,source_pk:'C-19',pid:fourthPid});
+        const fourthBeforeKill=await fixture.pool.query(`SELECT d.status,d.d_start_count,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_operation o JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS operations,
+            (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2
+              AND vr.entity='customer' AND vr.source_pk='C-19' AND vr.deleted) AS receipts,
+            (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2
+              AND ob.entity='customer' AND ob.operation='DELETE') AS outbox
+          FROM control.etl_snapshot_delete_run d WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,
+          [owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+        expect(fourthBeforeKill.rows).toEqual([{status:'APPLYING',d_start_count:4,effects:1,operations:1,receipts:1,outbox:1}]);
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'fourth_started_effect_committed_before_finalize',
+          pid:fourthPid,run_id:expiredCohort.second.run_id,source_id:expiredSource,boundary:fourthBoundary,state:fourthBeforeKill.rows[0]})+'\n','utf8');
+        expect(fourthChild.kill('SIGKILL')).toBe(true);
+        const fourthExit=await new Promise<{code:number|null;signal:NodeJS.Signals|null}>(resolve=>fourthChild.once('close',(code,signal)=>resolve({code,signal})));
+        expect(fourthExit).toEqual({code:null,signal:'SIGKILL'});
+        await fixture.pool.query(`UPDATE control.etl_snapshot_delete_run SET d_lease_expires_at=clock_timestamp()-interval '1 second'
+          WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+        await deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+        const fourthTerminal=await fixture.pool.query(`SELECT d.status,d.d_start_count,d.d_error_code,d.d_claim_token::text,d.d_lease_expires_at,
+            control.etl_snapshot_source_delete_busy(d.tenant_key,d.source_id) AS busy,sr.lifecycle,s.enabled,
+            (SELECT status FROM control.etl_run WHERE run_id=d.run_id) AS c_status,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects,
+            (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2
+              AND vr.entity='customer' AND vr.source_pk='C-19' AND vr.deleted) AS receipts,
+            (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2
+              AND ob.entity='customer' AND ob.operation='DELETE') AS outbox
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,[owner.tenantId,expiredSource,expiredCohort.second.run_id]);
+        expect(fourthTerminal.rows).toEqual([{status:'FAILED',d_start_count:4,d_error_code:'D_START_BUDGET_EXHAUSTED',d_claim_token:null,
+          d_lease_expires_at:null,busy:false,lifecycle:'ACTIVE',enabled:true,c_status:'COMPLETE',effects:1,receipts:1,outbox:1}]);
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'fourth_expired_start_exhausted',
+          pid:fourthPid,run_id:expiredCohort.second.run_id,source_id:expiredSource,exit_signal:fourthExit.signal,state:fourthTerminal.rows[0]})+'\n','utf8');
+
+        const ownerRaceSource=`pg-e2e-d-owner-lock-${lifecycleSuffix}`;
+        const ownerRaceCohort=await prepareSingleCustomerCandidate(ownerRaceSource);
+        await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+          VALUES('C-19','Customer 19 restored','owner-ext','dept-ext','ACTIVE','2026-10-28 03:40:19.123456+00')
+          ON CONFLICT(customer_id) DO UPDATE SET customer_name=EXCLUDED.customer_name,updated_at=EXCLUDED.updated_at`);
+        let signalAggregateReached!:()=>void;
+        let releaseAggregate!:()=>void;
+        const aggregateReached=new Promise<void>(resolve=>{signalAggregateReached=resolve;});
+        const aggregateRelease=new Promise<void>(resolve=>{releaseAggregate=resolve;});
+        const ownerRaceWorker=deleteWorker.runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'),20,{
+          beforeAggregateCommit:async item=>{if(item.run_id===ownerRaceCohort.second.run_id){signalAggregateReached();await aggregateRelease;}}
+        });
+        let ownerDisableClient:import('pg').PoolClient|undefined;
+        let ownerDisablePromise:Promise<unknown>|undefined;
+        try {
+          await aggregateReached;
+          ownerDisableClient=await fixture.pool.connect();
+          const disablePid=(await ownerDisableClient.query<{pid:number}>('SELECT pg_backend_pid()::int AS pid')).rows[0]!.pid;
+          let disableCommitted=false;
+          ownerDisablePromise=(async()=>{await ownerDisableClient!.query(`UPDATE control.auth_subject SET enabled=false
+            WHERE tenant_key=$1 AND user_id=$2`,[owner.tenantId,owner.userId]);disableCommitted=true;})();
+          const lockDeadline=Date.now()+5_000;
+          let lockWait:Record<string,unknown>|undefined;
+          while(Date.now()<lockDeadline) {
+            const activity=await fixture.pool.query(`SELECT wait_event_type,wait_event,query FROM pg_stat_activity WHERE pid=$1`,[disablePid]);
+            if(activity.rows[0]?.wait_event_type==='Lock'){lockWait=activity.rows[0];break;}
+            if(disableCommitted) break;
+            await new Promise(resolve=>setTimeout(resolve,25));
+          }
+          expect(lockWait).toMatchObject({wait_event_type:'Lock'});
+          expect(disableCommitted).toBe(false);
+          await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'below_threshold_owner_disable_waits_for_authorized_effect_commit',
+            run_id:ownerRaceCohort.second.run_id,source_id:ownerRaceSource,disable_pid:disablePid,lock_wait:lockWait,disable_committed_before_effect_commit:disableCommitted})+'\n','utf8');
+        } finally {
+          releaseAggregate();
+          await ownerRaceWorker;
+          if(ownerDisablePromise) await ownerDisablePromise;
+          ownerDisableClient?.release();
+          await fixture.pool.query(`UPDATE control.auth_subject SET enabled=true WHERE tenant_key=$1 AND user_id=$2`,[owner.tenantId,owner.userId]);
+        }
+        const ownerRaceState=await fixture.pool.query(`SELECT d.status,d.d_start_count,sr.lifecycle,s.enabled,owner.enabled AS owner_enabled,
+            (SELECT status FROM control.etl_run WHERE run_id=d.run_id) AS c_status,
+            (SELECT count(*)::int FROM control.etl_snapshot_delete_effect e JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
+              WHERE c.run_id=d.run_id) AS effects,
+            (SELECT count(*)::int FROM control.source_version_receipt vr WHERE vr.tenant_key=$1 AND vr.source_id=$2
+              AND vr.entity='customer' AND vr.source_pk='C-19' AND vr.deleted) AS receipts,
+            (SELECT count(*)::int FROM control.canonical_apply_outbox ob WHERE ob.tenant_key=$1 AND ob.source_id=$2
+              AND ob.entity='customer' AND ob.operation='DELETE') AS outbox
+          FROM control.etl_snapshot_delete_run d JOIN control.source_registry sr USING(tenant_key,source_id)
+          JOIN control.etl_snapshot_schedule s USING(tenant_key,source_id)
+          JOIN control.auth_subject owner ON (owner.tenant_key,owner.user_id)=(d.tenant_key,sr.data_owner_user_id)
+          WHERE d.tenant_key=$1 AND d.source_id=$2 AND d.run_id=$3`,[owner.tenantId,ownerRaceSource,ownerRaceCohort.second.run_id]);
+        expect(ownerRaceState.rows).toEqual([{status:'STALE',d_start_count:1,lifecycle:'ACTIVE',enabled:true,owner_enabled:true,
+          c_status:'COMPLETE',effects:1,receipts:1,outbox:1}]);
+        await appendFile(join(crashEvidenceRoot,'d-node-crash-lifecycle.jsonl'),JSON.stringify({event:'below_threshold_owner_disable_commits_after_effect',
+          run_id:ownerRaceCohort.second.run_id,source_id:ownerRaceSource,state:ownerRaceState.rows[0]})+'\n','utf8');
       } finally { await crashApi.close(); }
 
     } finally {

@@ -2340,7 +2340,7 @@ REVOKE ALL ON FUNCTION control.etl_snapshot_delete_candidate_current_d3(text,tex
 CREATE FUNCTION control.claim_etl_snapshot_delete_apply(p_tenant_key text,p_source_id text,p_claim_token uuid,p_lease_seconds integer DEFAULT 60)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
 AS $body$
-DECLARE d control.etl_snapshot_delete_run%ROWTYPE; c control.etl_snapshot_delete_candidate%ROWTYPE; result jsonb;
+DECLARE d control.etl_snapshot_delete_run%ROWTYPE; c control.etl_snapshot_delete_candidate%ROWTYPE; result jsonb; delay_seconds integer;
 BEGIN
   IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' OR p_lease_seconds NOT BETWEEN 15 AND 300 THEN
     RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501';
@@ -2350,10 +2350,23 @@ BEGIN
   SELECT x.* INTO d FROM control.etl_snapshot_delete_run x
     WHERE x.tenant_key=p_tenant_key AND x.source_id=p_source_id AND x.status IN ('PENDING','AWAITING_OWNER','APPLYING')
       AND x.d_next_retry_at<=clock_timestamp()
-      AND (x.status<>'APPLYING' OR x.d_lease_expires_at<=clock_timestamp())
+      AND (x.status<>'APPLYING' OR x.d_lease_expires_at IS NULL OR x.d_lease_expires_at<=clock_timestamp())
       AND EXISTS(SELECT 1 FROM control.etl_snapshot_delete_consumption cs WHERE cs.tenant_key=x.tenant_key AND cs.source_id=x.source_id AND cs.run_id=x.run_id)
     ORDER BY x.reservation_ordinal DESC LIMIT 1 FOR UPDATE SKIP LOCKED;
   IF NOT FOUND THEN RETURN NULL; END IF;
+  IF d.status='APPLYING' AND d.d_claim_token IS NOT NULL AND d.d_lease_expires_at<=clock_timestamp() AND d.d_start_count>0 THEN
+    IF d.d_start_count>=4 THEN
+      UPDATE control.etl_snapshot_delete_run SET status='FAILED',d_claim_token=NULL,d_lease_expires_at=NULL,
+        d_next_retry_at='-infinity'::timestamptz,d_error_code='D_START_BUDGET_EXHAUSTED',updated_at=clock_timestamp()
+        WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+      RETURN NULL;
+    END IF;
+    delay_seconds:=CASE d.d_start_count WHEN 1 THEN 5 WHEN 2 THEN 30 ELSE 120 END;
+    UPDATE control.etl_snapshot_delete_run SET d_claim_token=NULL,d_lease_expires_at=NULL,
+      d_next_retry_at=clock_timestamp()+make_interval(secs=>delay_seconds),d_error_code='D_WORKER_LEASE_EXPIRED',updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=d.run_id;
+    RETURN NULL;
+  END IF;
   IF EXISTS(SELECT 1 FROM control.etl_snapshot_delete_approval a
       JOIN control.etl_snapshot_delete_candidate cd ON cd.candidate_id=a.candidate_id
       JOIN control.source_registry sr ON (sr.tenant_key,sr.source_id)=(a.tenant_key,a.source_id)
@@ -2507,19 +2520,22 @@ CREATE FUNCTION control.check_etl_snapshot_delete_apply_current(p_tenant_key tex
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
 AS $body$
 DECLARE d control.etl_snapshot_delete_run%ROWTYPE; c control.etl_snapshot_delete_candidate%ROWTYPE; owner_row record; approval control.etl_snapshot_delete_approval%ROWTYPE;
-  subject_row record; tenant_row record; binding_row record;
+  subject_row record; tenant_row record; binding_row record; owner_subject_enabled boolean;
 BEGIN
   IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' THEN RETURN false; END IF;
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
   SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   IF NOT FOUND OR NOT control.etl_snapshot_delete_candidate_current_d3(p_tenant_key,p_source_id,p_candidate_id,false) THEN RETURN false; END IF;
   SELECT r.data_owner_user_id,r.owner_revision,r.lifecycle INTO owner_row FROM control.source_registry r
     WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id FOR UPDATE;
   IF NOT FOUND OR owner_row.data_owner_user_id IS DISTINCT FROM c.stable_scope_json->'proof'->>'owner_user_id'
     OR owner_row.owner_revision::text IS DISTINCT FROM c.stable_scope_json->'proof'->>'owner_revision' THEN RETURN false; END IF;
+  SELECT s.enabled INTO owner_subject_enabled FROM control.auth_subject s
+    WHERE s.tenant_key=p_tenant_key AND s.user_id=owner_row.data_owner_user_id FOR UPDATE;
+  IF NOT FOUND OR NOT owner_subject_enabled THEN RETURN false; END IF;
   IF NOT control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count) THEN RETURN true; END IF;
   SELECT * INTO approval FROM control.etl_snapshot_delete_approval WHERE candidate_id=p_candidate_id AND candidate_revision=c.candidate_revision FOR UPDATE;
   IF NOT FOUND THEN RETURN NOT p_require_approval; END IF;
@@ -2559,7 +2575,7 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN false; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN false; END IF;
   SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id AND tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
   SELECT * INTO m FROM control.etl_snapshot_delete_candidate_member WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk FOR UPDATE;
   SELECT operation_id INTO operation FROM control.etl_snapshot_delete_operation WHERE candidate_id=p_candidate_id AND entity=p_entity AND source_pk=p_source_pk;
@@ -2602,7 +2618,7 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
   IF p_status='COMPLETE' THEN
     SELECT EXISTS(SELECT 1 FROM control.etl_snapshot_delete_candidate_member m JOIN control.etl_snapshot_delete_candidate c USING(candidate_id)
       WHERE c.tenant_key=p_tenant_key AND c.source_id=p_source_id AND c.run_id=p_run_id
@@ -2630,7 +2646,7 @@ BEGIN
   PERFORM control.lock_security_barrier_fence();
   IF NOT control.lock_etl_snapshot_source(p_tenant_key,p_source_id) THEN RETURN 'STALE'; END IF;
   SELECT * INTO d FROM control.etl_snapshot_delete_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
-  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token<>p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
+  IF NOT FOUND OR d.status<>'APPLYING' OR d.d_claim_token IS DISTINCT FROM p_claim_token OR d.d_lease_expires_at<=clock_timestamp() THEN RETURN 'STALE'; END IF;
   IF d.d_start_count>=4 THEN
     UPDATE control.etl_snapshot_delete_run SET status='FAILED',d_claim_token=NULL,d_lease_expires_at=NULL,d_error_code=p_error_code,updated_at=clock_timestamp()
       WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
