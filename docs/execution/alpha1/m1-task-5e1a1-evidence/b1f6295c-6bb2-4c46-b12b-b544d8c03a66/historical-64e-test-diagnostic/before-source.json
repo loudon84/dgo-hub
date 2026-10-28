@@ -1,0 +1,100 @@
+[
+  {
+    "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a1-schema-contract.md",
+    "size": 15808,
+    "sha256": "469107372d1bc999ee9242a38efb8b5e69f554d96746174ebf09b2c9836e5651",
+    "lf_sha256": "34bd52ad2e28355a21abf2ff15d4c175b8c8f7035bcc0de3faadb9e3ce72c68a",
+    "git_blob": "37c9e2151ff26efb3fe1e5cc80106026251536d5"
+  },
+  {
+    "path": "integration-service/acceptance-tests/helpers/snapshot-recovery-http.ts",
+    "size": 14820,
+    "sha256": "df67ee3ce1100ceee15c0aca9327feab5bf79d2e2431d52a690eebb4c373fe93",
+    "lf_sha256": "df67ee3ce1100ceee15c0aca9327feab5bf79d2e2431d52a690eebb4c373fe93",
+    "git_blob": "51bf49def04f7d3bb637116f3bc8709177593979"
+  },
+  {
+    "path": "integration-service/acceptance-tests/snapshot-recovery.test.ts",
+    "size": 47986,
+    "sha256": "aac6f743f20098e0183bc00c235133f93da9b60a3832ed5e6e69d05170bed773",
+    "lf_sha256": "aac6f743f20098e0183bc00c235133f93da9b60a3832ed5e6e69d05170bed773",
+    "git_blob": "e46dcb8809f96b76fee992ed8ba5251ec41d1d3b"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-apply-worker.ts",
+    "size": 15677,
+    "sha256": "ce87f8972ab84dae7fd7e6d5499c7b9c84092cb55bf653f45cc30d2d659574c1",
+    "lf_sha256": "ce87f8972ab84dae7fd7e6d5499c7b9c84092cb55bf653f45cc30d2d659574c1",
+    "git_blob": "414cef6c9fe37a900e35d1f5f6a45d919a9cafa6"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-continuation-store.ts",
+    "size": 19456,
+    "sha256": "143dcafbc8353c3145ca8c8edd9d085996d58ab89fbb4437d1617339ba8b1e56",
+    "lf_sha256": "143dcafbc8353c3145ca8c8edd9d085996d58ab89fbb4437d1617339ba8b1e56",
+    "git_blob": "3ac9299f9aaba3adb5b4d11c7b6c5c76277f3a52"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-contract.ts",
+    "size": 2059,
+    "sha256": "7c41747260451578718c3e1921f63aa5d0b9e56d0502687db3c65f7bddfb0524",
+    "lf_sha256": "7c41747260451578718c3e1921f63aa5d0b9e56d0502687db3c65f7bddfb0524",
+    "git_blob": "28aa3b64422a74956817c2a4a6dfb28f594b16f2"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-recovery.ts",
+    "size": 3359,
+    "sha256": "682581cc063a73ce24db3e122c6edeaa5bc76e4014525e7cba488088b25a6561",
+    "lf_sha256": "682581cc063a73ce24db3e122c6edeaa5bc76e4014525e7cba488088b25a6561",
+    "git_blob": "eab1aa475fe426cb67495d4ebed259f39af61cc6"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-runs.ts",
+    "size": 30586,
+    "sha256": "7db8cf855dffdc21c11b8ab28b24f85df8bb449e815afe0f86f94fc6f01770a8",
+    "lf_sha256": "7db8cf855dffdc21c11b8ab28b24f85df8bb449e815afe0f86f94fc6f01770a8",
+    "git_blob": "bd62e885a949cef4cd41c99eee8bc539d6655e71"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-stage-store.ts",
+    "size": 12285,
+    "sha256": "1f6186af6ba0ead8aeafe705b447c180006afed79c59bfe28cdeabf42b36c8a4",
+    "lf_sha256": "1f6186af6ba0ead8aeafe705b447c180006afed79c59bfe28cdeabf42b36c8a4",
+    "git_blob": "5687cf44fc6410c19d9e59e554c64ecaf502f636"
+  },
+  {
+    "path": "integration-service/etl-worker/snapshot-worker.ts",
+    "size": 8413,
+    "sha256": "ba1161d67d84677d349731214520748dda9961cdfcdf8f4e5ac8568645fe56fd",
+    "lf_sha256": "ba1161d67d84677d349731214520748dda9961cdfcdf8f4e5ac8568645fe56fd",
+    "git_blob": "bd3fceaf3373d4ee863be10fd822af2325a6004b"
+  },
+  {
+    "path": "integration-service/ingestion-api/snapshot-routes.ts",
+    "size": 9991,
+    "sha256": "f7cb2acfab2cb3aad7bfd29c26370b8cec7ab435f71b486258cd3b37bd7bd06b",
+    "lf_sha256": "f7cb2acfab2cb3aad7bfd29c26370b8cec7ab435f71b486258cd3b37bd7bd06b",
+    "git_blob": "b7428d3ad0a9a080aaa4cf011080033d0f7a2a70"
+  },
+  {
+    "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+    "size": 256594,
+    "sha256": "aa4eb29b3cf0ce73759ac500cdc4f3a7a958355f27178728700f112fae5a1bbc",
+    "lf_sha256": "073ab36ee219c86124e59becfaad900b76c62ef1d67360b75cb461f28bd198c2",
+    "git_blob": "551dd4d68932143a716eda75a664aa85215ba807"
+  },
+  {
+    "path": "integration-service/contracts/api-gap-matrix.md",
+    "size": 22398,
+    "sha256": "7a9b55eef86bf7125a2126dfe83f398739399bdd8354c61fc3a2d36be5e00323",
+    "lf_sha256": "886bcdd2c5e613a8bdd07cdbbbb88db27c01bf9d3a980468883b6b7fa6810f47",
+    "git_blob": "9f0526dbf7233b61fc81acb1c762a84b0e357ab8"
+  },
+  {
+    "path": "docs/数据治理与本体集成中台_产品架构与二开说明_v1.0.md",
+    "size": 165319,
+    "sha256": "552020bbfd73ce98789e946e4e465e8e565658f28add2a895cbf68cda6561cc8",
+    "lf_sha256": "552020bbfd73ce98789e946e4e465e8e565658f28add2a895cbf68cda6561cc8",
+    "git_blob": "60c1dc9d3f85b57c578fb90ba5202fba5f1f7d73"
+  }
+]

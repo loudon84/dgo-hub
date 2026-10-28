@@ -1,0 +1,18 @@
+{
+  "label": "final-snapshot-recovery",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd --prefix integration-service test -- acceptance-tests/snapshot-recovery.test.ts"
+  ],
+  "cwd": "E:\\git\\dgo-hub",
+  "evidence_root": "E:\\m1t5-runtime\\ef2d8618-ad0f-4b81-9bde-15b31261a8a4",
+  "actual_head_before": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "actual_head_after": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "started_utc": "2026-10-28T08:25:21.2748694Z",
+  "finished_utc": "2026-10-28T08:25:33.7650930Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\ef2d8618-ad0f-4b81-9bde-15b31261a8a4\\final-snapshot-recovery\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\ef2d8618-ad0f-4b81-9bde-15b31261a8a4\\final-snapshot-recovery\\stderr.txt"
+}

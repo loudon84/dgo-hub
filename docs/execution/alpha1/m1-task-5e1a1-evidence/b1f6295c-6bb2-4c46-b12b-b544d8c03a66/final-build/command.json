@@ -1,0 +1,18 @@
+{
+  "label": "final-build",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd --prefix integration-service run build"
+  ],
+  "cwd": "E:\\git\\dgo-hub",
+  "evidence_root": "E:\\m1t5-runtime\\2d38489d-1b00-4c77-9fe0-d23182dcfb29",
+  "actual_head_before": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "actual_head_after": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "started_utc": "2026-10-28T08:24:56.1510608Z",
+  "finished_utc": "2026-10-28T08:25:01.3017511Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\2d38489d-1b00-4c77-9fe0-d23182dcfb29\\final-build\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\2d38489d-1b00-4c77-9fe0-d23182dcfb29\\final-build\\stderr.txt"
+}

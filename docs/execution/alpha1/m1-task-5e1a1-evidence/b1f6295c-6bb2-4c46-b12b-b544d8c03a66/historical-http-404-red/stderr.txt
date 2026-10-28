@@ -1,0 +1,22 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > accepts a strict retry for a terminal incomplete run over authenticated HTTP
+AssertionError: expected 404 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 404
+
+ ❯ acceptance-tests/snapshot-recovery.test.ts:13:33
+     11|       headers:{authorization:`Bearer ${fixture.token}`,'content-type':…
+     12|       payload:{failed_version:'1',reason:'recover controlled incomplet…
+     13|     expect(response.statusCode).toBe(202);
+       |                                 ^
+     14|     expect(response.json().data).toMatchObject({recovery_mode:'FRESH_S…
+     15|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

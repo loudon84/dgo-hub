@@ -1,0 +1,18 @@
+{
+  "label": "final-typecheck",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd --prefix integration-service run typecheck"
+  ],
+  "cwd": "E:\\git\\dgo-hub",
+  "evidence_root": "E:\\m1t5-runtime\\0d334fbb-2a2f-4918-8ff1-72d843f38ad7",
+  "actual_head_before": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "actual_head_after": "a724c25fee95669bdeb2ceb9d88ec065cf0a4234",
+  "started_utc": "2026-10-28T08:25:07.9803890Z",
+  "finished_utc": "2026-10-28T08:25:12.7711718Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\0d334fbb-2a2f-4918-8ff1-72d843f38ad7\\final-typecheck\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\0d334fbb-2a2f-4918-8ff1-72d843f38ad7\\final-typecheck\\stderr.txt"
+}

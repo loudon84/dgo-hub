@@ -1,0 +1,17 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-recovery.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+NODE_CHILD_CRASH pid=34992 phase=before-aggregate-commit run_id=5fa24fb6-31bb-423e-9450-3763cf743132 source_pk=C-REC-2 signal=SIGKILL
+ ❯ acceptance-tests/snapshot-recovery.test.ts (4 tests | 1 failed) 5340ms
+     × accepts a strict retry for a terminal incomplete run over authenticated HTTP 1196ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  16:22:13
+   Duration  6.04s (transform 260ms, setup 0ms, import 521ms, tests 5.34s, environment 0ms)
+
+
