@@ -1,0 +1,18 @@
+{
+  "label": "fix1-55bc0ea-final-focused",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd test -- --reporter=verbose acceptance-tests/snapshot-recovery.test.ts"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\1ce86f6c-971f-4120-b9a6-5db25924a97a",
+  "actual_head_before": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "actual_head_after": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "started_utc": "2026-10-28T09:17:18.7012125Z",
+  "finished_utc": "2026-10-28T09:17:42.7607127Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\1ce86f6c-971f-4120-b9a6-5db25924a97a\\fix1-55bc0ea-final-focused\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\1ce86f6c-971f-4120-b9a6-5db25924a97a\\fix1-55bc0ea-final-focused\\stderr.txt"
+}

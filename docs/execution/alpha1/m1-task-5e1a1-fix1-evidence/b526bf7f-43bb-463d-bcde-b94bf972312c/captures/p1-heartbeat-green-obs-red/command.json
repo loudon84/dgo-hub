@@ -1,0 +1,18 @@
+{
+  "label": "fix1-heartbeat-green-obs-red",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd test -- acceptance-tests/snapshot-recovery.test.ts"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\de581982-6d66-453f-9d01-d50739f7f779",
+  "actual_head_before": "707771d8c8ea80ce9b9b0a8b4e039b006beba5eb",
+  "actual_head_after": "707771d8c8ea80ce9b9b0a8b4e039b006beba5eb",
+  "started_utc": "2026-10-28T09:03:44.1591019Z",
+  "finished_utc": "2026-10-28T09:04:01.9904021Z",
+  "exit_code": 1,
+  "stdout": "E:\\m1t5-runtime\\de581982-6d66-453f-9d01-d50739f7f779\\fix1-heartbeat-green-obs-red\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\de581982-6d66-453f-9d01-d50739f7f779\\fix1-heartbeat-green-obs-red\\stderr.txt"
+}

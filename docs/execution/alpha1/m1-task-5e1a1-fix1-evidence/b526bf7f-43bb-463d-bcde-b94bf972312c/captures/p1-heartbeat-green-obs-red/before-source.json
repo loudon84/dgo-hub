@@ -1,0 +1,30 @@
+[
+  {
+    "path": "acceptance-tests/snapshot-recovery.test.ts",
+    "size": 60151,
+    "sha256": "be1958ff627d93c21bc5d3a8b1a51ed7d55ca74c2c8a351df81d04a33e7e150f",
+    "lf_sha256": "be1958ff627d93c21bc5d3a8b1a51ed7d55ca74c2c8a351df81d04a33e7e150f",
+    "git_blob": "ed1e771fa4bb184dafea3b1cc113d148eb0ae5b7"
+  },
+  {
+    "path": "acceptance-tests/helpers/snapshot-recovery-http.ts",
+    "size": 14597,
+    "sha256": "5caf0a3dc2cca8f036cb2d53b6e6fd0318542a3fbd49918723eefcce5e5cc158",
+    "lf_sha256": "5caf0a3dc2cca8f036cb2d53b6e6fd0318542a3fbd49918723eefcce5e5cc158",
+    "git_blob": "6af716361291de83fda68972990445289184e6db"
+  },
+  {
+    "path": "etl-worker/snapshot-runs.ts",
+    "size": 30602,
+    "sha256": "e91e681e49b8e0db57cc44c8defc4c708e6436f030ccb4cb0bc1f704fe74342a",
+    "lf_sha256": "e91e681e49b8e0db57cc44c8defc4c708e6436f030ccb4cb0bc1f704fe74342a",
+    "git_blob": "cd8dffb17219b84f169041fb7e26d3631990fd3e"
+  },
+  {
+    "path": "etl-worker/snapshot-worker.ts",
+    "size": 8591,
+    "sha256": "8fe70c09b2cc7adb8f9ad2beb6710e65c9dcfae727a68f4f2bb77fb850596df0",
+    "lf_sha256": "8fe70c09b2cc7adb8f9ad2beb6710e65c9dcfae727a68f4f2bb77fb850596df0",
+    "git_blob": "838a87a22152bf60e511d6f9f5ff8c3dcbf15bcf"
+  }
+]

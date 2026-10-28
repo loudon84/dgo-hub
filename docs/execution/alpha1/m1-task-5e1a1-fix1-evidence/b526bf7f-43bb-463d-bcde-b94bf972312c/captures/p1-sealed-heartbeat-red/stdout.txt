@@ -1,0 +1,17 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/snapshot-recovery.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+FIX1_SEALED_LEASE_OBSERVATION [{"beforeExpiry":"2026-10-28 09:02:44.745197+00","beforeObserved":"2026-10-28 09:02:34.761133+00","afterExpiry":"2026-10-28 09:02:44.745197+00","afterObserved":"2026-10-28 09:02:46.279265+00"}]
+ ❯ acceptance-tests/snapshot-recovery.test.ts (4 tests | 1 failed) 16254ms
+     × accepts a strict retry for a terminal incomplete run over authenticated HTTP 12519ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  17:02:30
+   Duration  16.95s (transform 259ms, setup 0ms, import 522ms, tests 16.25s, environment 0ms)
+
+

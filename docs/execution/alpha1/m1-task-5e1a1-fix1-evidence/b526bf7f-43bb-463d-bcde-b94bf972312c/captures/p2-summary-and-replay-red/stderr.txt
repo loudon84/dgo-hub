@@ -1,0 +1,51 @@
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > accepts a strict retry for a terminal incomplete run over authenticated HTTP
+AssertionError: expected 'undefined' to be '1' // Object.is equality
+
+Expected: "1"
+Received: "undefined"
+
+ ❯ acceptance-tests/snapshot-recovery.test.ts:73:125
+     71|       headers:{authorization:`Bearer ${fixture.token}`}});
+     72|     expect(failedList.statusCode).toBe(200);
+     73|     expect(failedList.json().data.items.find((item:{run_id:string})=>i…
+       |                                                                                                                             ^
+     74|     const send=(reason='recover controlled incomplete extraction',fail…
+     75|       method:'POST',url:`/hub/v1/admin/etl-runs/${fixture.originalRunI…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > copies the immutable SEALED order proof and applies two source lines as one aggregate
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ acceptance-tests/snapshot-recovery.test.ts:382:27
+    380|     const customer=await fixture.adminPool.query<{canonical_object_id:…
+    381|       WHERE tenant_key=$1 AND source_id='pg_recovery' AND entity='cust…
+    382|     expect(customer.rows).toHaveLength(1);
+       |                           ^
+    383|     const originalRunId=await fixture.createOrderRecoveryRun(customer.…
+    384|     const sourceFactory=createOwnedPostgresSourceFactory(fixture.admin…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > does not replay an accepted operation after caller disablement
+AssertionError: expected undefined to be defined
+ ❯ acceptance-tests/snapshot-recovery.test.ts:503:30
+    501|   });
+    502|   it('does not replay an accepted operation after caller disablement',…
+    503|     expect(acceptedRecovery).toBeDefined();
+       |                              ^
+    504|     const accepted=acceptedRecovery!;
+    505|     const stored=await fixture.adminPool.query<{operation_id:string;ch…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+

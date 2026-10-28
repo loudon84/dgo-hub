@@ -1,0 +1,18 @@
+{
+  "label": "fix1-55bc0ea-final-build",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd run build"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\3fa990a2-cbf1-47cc-9f4d-648d89465568",
+  "actual_head_before": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "actual_head_after": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "started_utc": "2026-10-28T09:17:00.5409166Z",
+  "finished_utc": "2026-10-28T09:17:05.5294843Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\3fa990a2-cbf1-47cc-9f4d-648d89465568\\fix1-55bc0ea-final-build\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\3fa990a2-cbf1-47cc-9f4d-648d89465568\\fix1-55bc0ea-final-build\\stderr.txt"
+}

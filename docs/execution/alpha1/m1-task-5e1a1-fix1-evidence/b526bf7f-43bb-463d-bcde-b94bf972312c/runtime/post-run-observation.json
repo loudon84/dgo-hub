@@ -1,0 +1,41 @@
+{
+  "observed_at_utc": "2026-10-28T09:17:49.8071094Z",
+  "kind": "post-run read-only observation; does not infer process exit time",
+  "source_commit": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "final_build_capture": "3fa990a2-cbf1-47cc-9f4d-648d89465568",
+  "final_test_capture": "1ce86f6c-971f-4120-b9a6-5db25924a97a",
+  "node_module_path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\snapshot-apply-worker.js",
+  "post_run_artifact_size": 15569,
+  "post_run_artifact_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+  "runtime_imports": [
+    {
+      "run_id": "27b142f2-e927-45e5-965d-5960b40b4c0b",
+      "pid": 30468,
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "phase": "before",
+      "build_capture_id": "3fa990a2-cbf1-47cc-9f4d-648d89465568",
+      "module_size": 15569,
+      "attempt_id": "6a17b25d-dc30-4ac4-a74a-71a782e19f2a"
+    },
+    {
+      "run_id": "27b142f2-e927-45e5-965d-5960b40b4c0b",
+      "pid": 9992,
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "phase": "after",
+      "build_capture_id": "3fa990a2-cbf1-47cc-9f4d-648d89465568",
+      "module_size": 15569,
+      "attempt_id": "6a17b25d-dc30-4ac4-a74a-71a782e19f2a"
+    }
+  ],
+  "pid_absence": [
+    {
+      "observed_at_utc": "2026-10-28T09:17:49.8071094Z",
+      "pid": 30468
+    },
+    {
+      "observed_at_utc": "2026-10-28T09:17:49.8125458Z",
+      "pid": 9992
+    }
+  ],
+  "note": "Runtime import hashes are emitted before dynamic import by each child and matched to the final build capture; post-run artifact hash is an observation, not a substitute for the child records."
+}

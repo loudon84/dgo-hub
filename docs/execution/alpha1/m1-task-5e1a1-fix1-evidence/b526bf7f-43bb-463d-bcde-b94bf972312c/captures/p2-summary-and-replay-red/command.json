@@ -1,0 +1,18 @@
+{
+  "label": "fix1-summary-and-replay-red",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd test -- acceptance-tests/snapshot-recovery.test.ts"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\4e77a90a-b661-4955-b2a6-9929eba0d374",
+  "actual_head_before": "707771d8c8ea80ce9b9b0a8b4e039b006beba5eb",
+  "actual_head_after": "707771d8c8ea80ce9b9b0a8b4e039b006beba5eb",
+  "started_utc": "2026-10-28T08:50:12.2403326Z",
+  "finished_utc": "2026-10-28T08:50:17.5836397Z",
+  "exit_code": 1,
+  "stdout": "E:\\m1t5-runtime\\4e77a90a-b661-4955-b2a6-9929eba0d374\\fix1-summary-and-replay-red\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\4e77a90a-b661-4955-b2a6-9929eba0d374\\fix1-summary-and-replay-red\\stderr.txt"
+}

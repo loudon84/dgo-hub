@@ -1,0 +1,18 @@
+{
+  "label": "fix1-55bc0ea-final-typecheck",
+  "program": "cmd.exe",
+  "arguments": [
+    "/d",
+    "/c",
+    "npm.cmd run typecheck"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\caed6e17-95cc-441a-b2d8-c6dc32fc241d",
+  "actual_head_before": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "actual_head_after": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "started_utc": "2026-10-28T09:17:10.1191146Z",
+  "finished_utc": "2026-10-28T09:17:14.6682225Z",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\caed6e17-95cc-441a-b2d8-c6dc32fc241d\\fix1-55bc0ea-final-typecheck\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\caed6e17-95cc-441a-b2d8-c6dc32fc241d\\fix1-55bc0ea-final-typecheck\\stderr.txt"
+}
