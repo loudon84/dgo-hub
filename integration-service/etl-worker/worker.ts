@@ -305,6 +305,16 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
         WHERE i.job_id=$1 AND i.ordinal=$4 AND j.tenant_key=$2 AND j.source_id=$3 FOR UPDATE OF i`,
       [job.id,job.tenant_key,job.source_id,item.ordinal]);
       if (current.rows[0]?.status !== 'APPLYING' || current.rows[0].operation_id !== started.operation_id) return;
+      const recovery = await client.query<{ state: string }>(
+        'SELECT control.check_recovery_worker_binding($1,$2,$3::uuid,$4,$5::uuid,$6::uuid) AS state',
+        [job.tenant_key,job.source_id,job.id,item.ordinal,started.operation_id,claim.token]);
+      if (recovery.rows[0]?.state === 'CLAIM_LOST') throw new Error('WORKER_CLAIM_LOST');
+      if (!['VALID','ORDINARY'].includes(recovery.rows[0]?.state ?? '')) {
+        await client.query(`UPDATE control.ingestion_job_item SET status='QUARANTINED',error_code='RECOVERY_TARGET_CONFLICT',next_retry_at=NULL
+          WHERE job_id=$1 AND ordinal=$2`,[job.id,item.ordinal]);
+        await updateJobSummary(client,job);
+        return;
+      }
       if (!(await verifyOrderCustomerReference(client,job,record))) {
         await client.query(`UPDATE control.ingestion_job_item SET status='QUARANTINED',error_code='IDENTITY_MAPPING_TARGET_INVALID',next_retry_at=NULL
           WHERE job_id=$1 AND ordinal=$2`,[job.id,item.ordinal]);

@@ -3415,3 +3415,302 @@ REVOKE ALL ON FUNCTION control.list_ingestion_quarantine_current_owner(text,text
   FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
 GRANT EXECUTE ON FUNCTION control.list_ingestion_quarantine_current_owner(text,text,text,text,text,bigint,bigint,text,text,timestamptz,uuid,integer)
   TO hub_api;
+
+-- M1-5E1a2-2 additive suffix: immutable same-target recovery operations.
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_quarantine_recovery_origin_key
+  ON control.ingestion_quarantine_index(quarantine_id,tenant_key,source_id,entity,job_id,ordinal,event_id,source_pk);
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_item_recovery_child_key
+  ON control.ingestion_job_item(job_id,ordinal,event_id,source_pk,operation_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_item_recovery_operation_key
+  ON control.ingestion_job_item(job_id,ordinal,event_id,source_pk,operation);
+CREATE TABLE IF NOT EXISTS control.ingestion_recovery_operation (
+  operation_id uuid PRIMARY KEY, quarantine_id uuid NOT NULL UNIQUE,
+  tenant_key text NOT NULL, source_id text NOT NULL, entity text NOT NULL,
+  origin_job_id uuid NOT NULL, origin_ordinal integer NOT NULL, event_id uuid NOT NULL, source_pk text NOT NULL,
+  origin_operation text NOT NULL CHECK(origin_operation IN ('UPSERT','DELETE')),
+  child_job_id uuid NOT NULL UNIQUE, child_ordinal integer NOT NULL CHECK(child_ordinal=0),
+  route text NOT NULL CHECK(route='/hub/v1/admin/quarantine/{quarantine_id}/retry'),
+  idempotency_key text NOT NULL CHECK(idempotency_key ~ '^[A-Za-z0-9._:-]{1,128}$'),
+  request_digest bytea NOT NULL CHECK(octet_length(request_digest)=32), expected_state text NOT NULL,
+  mapping_revision bigint NOT NULL CHECK(mapping_revision>0), reason_json text NOT NULL CHECK(char_length(reason_json) BETWEEN 2 AND 6002),
+  approved_by text NOT NULL, approved_owner_revision bigint NOT NULL CHECK(approved_owner_revision>0),
+  own_object_id uuid NOT NULL, binding_kind text NOT NULL CHECK(binding_kind IN ('DELETE','CUSTOMER','ORDER')),
+  user_external_id text, user_target_id text, department_external_id text, department_target_id text,
+  customer_source_id text, customer_source_pk text, customer_object_id uuid,
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(tenant_key,source_id,route,idempotency_key),
+  FOREIGN KEY(tenant_key,approved_by) REFERENCES control.auth_subject(tenant_key,user_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(quarantine_id,tenant_key,source_id,entity,origin_job_id,origin_ordinal,event_id,source_pk)
+    REFERENCES control.ingestion_quarantine_index(quarantine_id,tenant_key,source_id,entity,job_id,ordinal,event_id,source_pk)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(origin_job_id,origin_ordinal,event_id,source_pk,origin_operation)
+    REFERENCES control.ingestion_job_item(job_id,ordinal,event_id,source_pk,operation) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(child_job_id,child_ordinal,event_id,source_pk,origin_operation)
+    REFERENCES control.ingestion_job_item(job_id,ordinal,event_id,source_pk,operation) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(child_job_id,tenant_key,source_id,entity) REFERENCES control.ingestion_job(id,tenant_key,source_id,entity)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(child_job_id,child_ordinal,event_id,source_pk,operation_id)
+    REFERENCES control.ingestion_job_item(job_id,ordinal,event_id,source_pk,operation_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK((binding_kind='DELETE' AND origin_operation='DELETE' AND user_external_id IS NULL AND user_target_id IS NULL AND department_external_id IS NULL
+      AND department_target_id IS NULL AND customer_source_id IS NULL AND customer_source_pk IS NULL AND customer_object_id IS NULL)
+    OR (binding_kind='CUSTOMER' AND origin_operation='UPSERT' AND entity='customer' AND user_external_id IS NOT NULL AND user_target_id IS NOT NULL
+      AND department_external_id IS NOT NULL AND department_target_id IS NOT NULL AND customer_source_id IS NULL
+      AND customer_source_pk IS NULL AND customer_object_id IS NULL)
+    OR (binding_kind='ORDER' AND origin_operation='UPSERT' AND entity='order' AND user_external_id IS NULL AND user_target_id IS NULL
+      AND department_external_id IS NULL AND department_target_id IS NULL AND customer_source_id IS NOT NULL
+      AND customer_source_pk IS NOT NULL AND customer_object_id IS NOT NULL))
+);
+CREATE OR REPLACE FUNCTION control.reject_ingestion_recovery_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,control AS $body$
+BEGIN RAISE EXCEPTION 'recovery operation immutable' USING ERRCODE='55000'; END;
+$body$;
+DROP TRIGGER IF EXISTS ingestion_recovery_immutable ON control.ingestion_recovery_operation;
+CREATE TRIGGER ingestion_recovery_immutable BEFORE UPDATE OR DELETE ON control.ingestion_recovery_operation
+  FOR EACH ROW EXECUTE FUNCTION control.reject_ingestion_recovery_mutation();
+REVOKE ALL ON control.ingestion_recovery_operation FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.reject_ingestion_recovery_mutation() FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.recovery_binding_internal(p_quarantine uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub AS $body$
+DECLARE q control.ingestion_quarantine_index%ROWTYPE; j control.ingestion_job%ROWTYPE;
+  i control.ingestion_job_item%ROWTYPE; own_id uuid; mappings jsonb; cfg jsonb; channel control.source_channel%ROWTYPE;
+  ue text; ut text; de text; dt text; rs text; rp text; rt text; ref_id uuid; n integer; lock_row record; current_fence bigint;
+BEGIN
+  current_fence:=control.lock_security_barrier_fence();
+  SELECT * INTO q FROM control.ingestion_quarantine_index WHERE quarantine_id=p_quarantine AND origin_kind='REST';
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  SELECT * INTO j FROM control.ingestion_job WHERE id=q.job_id AND tenant_key=q.tenant_key AND source_id=q.source_id AND entity=q.entity;
+  IF NOT FOUND OR j.version_domain<>'SOURCE_VERSION' THEN RETURN NULL; END IF;
+  IF j.security_barrier_fence_at_admission>current_fence OR
+    (q.owner_approval_id,q.owner_revision,q.channel_id,q.channel_epoch,q.config_revision,q.config_digest,q.mapping_revision,q.mapping_digest,
+      q.identity_mapping_revision,q.identity_mapping_digest,q.endpoint_profile_digest,q.test_report_id,q.approval_security_fence,q.security_barrier_fence_at_admission)
+    IS DISTINCT FROM (j.owner_approval_id,j.owner_revision,j.channel_id,j.channel_epoch,j.config_revision,j.config_digest,j.mapping_revision,j.mapping_digest,
+      j.identity_mapping_revision,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id,j.approval_security_fence,j.security_barrier_fence_at_admission)
+    THEN RETURN NULL; END IF;
+  SELECT * INTO i FROM control.ingestion_job_item WHERE job_id=q.job_id AND ordinal=q.ordinal AND event_id=q.event_id AND source_pk=q.source_pk;
+  IF NOT FOUND OR i.status<>'QUARANTINED' THEN RETURN NULL; END IF;
+  IF i.public_record->>'event_id' IS DISTINCT FROM i.event_id::text OR i.public_record->>'source_pk' IS DISTINCT FROM i.source_pk
+    OR i.public_record->>'source_version' IS DISTINCT FROM i.source_version::text OR i.public_record->>'operation' IS DISTINCT FROM i.operation
+    OR (i.operation='DELETE' AND i.public_record->'data' IS DISTINCT FROM 'null'::jsonb) THEN RETURN NULL; END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.lock_source_credential(q.tenant_key,q.source_id) c WHERE c.id=j.credential_id) THEN RETURN NULL; END IF;
+  SELECT * INTO channel FROM control.source_channel WHERE id=j.channel_id AND tenant_key=j.tenant_key AND source_id=j.source_id AND entity=j.entity;
+  IF NOT FOUND OR channel.state<>'active' OR channel.channel_epoch<>j.channel_epoch OR channel.version_domain<>j.version_domain THEN RETURN NULL; END IF;
+  SELECT im.mappings,cr.config INTO mappings,cfg FROM control.source_owner_approval a
+    JOIN control.source_test_report t ON (t.id,t.tenant_key,t.source_id)=(a.test_report_id,a.tenant_key,a.source_id)
+    JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(a.tenant_key,a.source_id,a.config_revision)
+    JOIN control.source_mapping_revision fm ON (fm.tenant_key,fm.source_id,fm.revision)=(a.tenant_key,a.source_id,a.mapping_revision)
+    JOIN control.source_identity_mapping_revision im ON (im.tenant_key,im.source_id,im.revision)=(a.tenant_key,a.source_id,a.identity_mapping_revision)
+    WHERE (a.id,a.tenant_key,a.source_id)=(j.owner_approval_id,j.tenant_key,j.source_id)
+      AND (a.owner_user_id,a.owner_revision,a.config_revision,a.mapping_revision,a.identity_mapping_revision)=
+          (j.owner_user_id,j.owner_revision,j.config_revision,j.mapping_revision,j.identity_mapping_revision)
+      AND (a.config_digest,a.mapping_digest,a.identity_mapping_digest,a.endpoint_profile_digest,a.test_report_id)=
+          (j.config_digest,j.mapping_digest,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id)
+      AND a.approval_security_fence=j.approval_security_fence
+      AND (a.source_credential_revision,a.credential_generation)=(j.credential_revision_at_admission,j.credential_generation_at_admission)
+      AND t.status='PASS' AND (t.config_revision,t.mapping_revision,t.identity_mapping_revision)=(a.config_revision,a.mapping_revision,a.identity_mapping_revision)
+      AND (t.config_digest,t.mapping_digest,t.identity_mapping_digest,t.endpoint_profile_digest,t.data_contract_ref)=
+          (a.config_digest,a.mapping_digest,a.identity_mapping_digest,a.endpoint_profile_digest,a.data_contract_ref)
+      AND (t.source_credential_revision,t.credential_generation)=(a.source_credential_revision,a.credential_generation)
+      AND cr.config_digest=a.config_digest AND fm.mapping_digest=a.mapping_digest AND im.mapping_digest=a.identity_mapping_digest
+      AND cr.config->'allowed_entities' ? j.entity;
+  IF NOT FOUND OR jsonb_typeof(mappings)<>'array' OR channel.connector<>cfg->>'connector' OR channel.mode<>cfg->>'mode'
+     OR channel.version_domain<>cfg->>'version_domain' THEN RETURN NULL; END IF;
+  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=j.tenant_key
+    AND b.effective_fence>j.security_barrier_fence_at_admission AND (b.source_id IS NULL OR b.source_id=j.source_id)
+    AND (b.credential_id IS NULL OR b.credential_id=j.credential_id) AND (b.entity IS NULL OR b.entity=j.entity)
+    AND (b.channel_id IS NULL OR b.channel_id=j.channel_id)
+    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')) THEN RETURN NULL; END IF;
+  -- Take the same per-identity locks as canonical apply, sorted when an order references a customer.
+  FOR lock_row IN SELECT * FROM (VALUES (j.source_id,j.entity,i.source_pk),
+    (CASE WHEN j.entity='order' AND i.operation='UPSERT' THEN i.public_record->'data'->'customer_ref'->>'source_id' END,
+     CASE WHEN j.entity='order' AND i.operation='UPSERT' THEN 'customer' END,
+     CASE WHEN j.entity='order' AND i.operation='UPSERT' THEN i.public_record->'data'->'customer_ref'->>'source_pk' END)) AS v(source_id,entity,source_pk)
+    WHERE source_id IS NOT NULL AND source_pk IS NOT NULL ORDER BY source_id COLLATE "C",entity COLLATE "C",source_pk COLLATE "C"
+  LOOP
+    PERFORM pg_advisory_xact_lock(hashtext(j.tenant_key),hashtext(array_to_json(ARRAY[lock_row.source_id,lock_row.entity,lock_row.source_pk])::text));
+  END LOOP;
+  -- The common global guard serializes these identity reads against every canonical writer and remap.
+  SELECT canonical_object_id INTO own_id FROM control.canonical_source_identity
+    WHERE tenant_key=j.tenant_key AND source_id=j.source_id AND entity=j.entity AND source_pk=i.source_pk FOR UPDATE;
+  IF own_id IS NULL THEN RETURN NULL; END IF;
+  IF i.operation='DELETE' THEN RETURN jsonb_build_object('kind','DELETE','own',own_id::text); END IF;
+  IF i.operation<>'UPSERT' OR jsonb_typeof(i.public_record->'data')<>'object' THEN RETURN NULL; END IF;
+  IF j.entity='customer' THEN
+    ue:=i.public_record->'data'->>'owner_external_id'; de:=i.public_record->'data'->>'department_external_id';
+    SELECT count(*),min(x->>'target_id') INTO n,ut FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='user' AND x->>'external_id'=ue;
+    IF n<>1 OR ut IS NULL THEN RETURN NULL; END IF;
+    SELECT count(*),min(x->>'target_id') INTO n,dt FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='department' AND x->>'external_id'=de;
+    IF n<>1 OR dt IS NULL THEN RETURN NULL; END IF;
+    IF EXISTS(SELECT 1 FROM control.source_identity_remap_fence f WHERE f.tenant_key=j.tenant_key AND f.source_id=j.source_id
+      AND ((f.kind='user' AND f.external_id=ue) OR (f.kind='department' AND f.external_id=de))
+      AND f.identity_mapping_revision>j.identity_mapping_revision) THEN RETURN NULL; END IF;
+    RETURN jsonb_build_object('kind','CUSTOMER','own',own_id::text,'user_external',ue,'user_target',ut,'department_external',de,'department_target',dt);
+  END IF;
+  rs:=i.public_record->'data'->'customer_ref'->>'source_id'; rp:=i.public_record->'data'->'customer_ref'->>'source_pk';
+  IF rs IS NULL OR rp IS NULL THEN RETURN NULL; END IF;
+  SELECT count(*),min(x->>'target_id') INTO n,rt FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='customer' AND x->>'external_id'=rp;
+  IF n<>1 OR rt IS NULL OR rt !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN RETURN NULL; END IF;
+  SELECT canonical_object_id INTO ref_id FROM control.canonical_source_identity WHERE tenant_key=j.tenant_key AND source_id=rs
+    AND entity='customer' AND source_pk=rp AND customer_id=canonical_object_id FOR UPDATE;
+  IF ref_id IS NULL OR ref_id::text<>rt OR NOT EXISTS(SELECT 1 FROM hub.canonical_customer WHERE tenant_id=j.tenant_key AND id=ref_id) THEN RETURN NULL; END IF;
+  IF EXISTS(SELECT 1 FROM control.source_identity_remap_fence f WHERE f.tenant_key=j.tenant_key AND f.source_id=j.source_id
+    AND f.kind='customer' AND f.external_id=rp AND f.identity_mapping_revision>j.identity_mapping_revision) THEN RETURN NULL; END IF;
+  RETURN jsonb_build_object('kind','ORDER','own',own_id::text,'customer_source',rs,'customer_pk',rp,'customer_object',ref_id::text);
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.recovery_binding_internal(uuid) FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE OR REPLACE FUNCTION control.resolve_recovery_owner_origin(p_tenant text,p_quarantine uuid,p_user text,p_issuer text,p_subject text,p_epoch bigint)
+RETURNS TABLE(source_id text,owner_revision bigint) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control AS $body$
+DECLARE src text; reg control.source_registry%ROWTYPE; epoch bigint; scopes text[];
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_api' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  SELECT i.source_id INTO src FROM control.ingestion_quarantine_index i WHERE i.tenant_key=p_tenant AND i.quarantine_id=p_quarantine;
+  IF NOT FOUND THEN RETURN; END IF;
+  PERFORM * FROM control.lock_source_credential(p_tenant,src);
+  IF NOT FOUND THEN RETURN; END IF;
+  SELECT * INTO reg FROM control.source_registry r WHERE r.tenant_key=p_tenant AND r.source_id=src FOR UPDATE;
+  IF NOT FOUND THEN RETURN; END IF;
+  IF reg.data_owner_user_id IS DISTINCT FROM p_user THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  SELECT s.auth_epoch,s.management_scopes INTO epoch,scopes FROM control.auth_subject s
+    JOIN control.tenant t ON t.tenant_key=s.tenant_key JOIN control.identity_binding b ON (b.tenant_key,b.user_id)=(s.tenant_key,s.user_id)
+    WHERE s.tenant_key=p_tenant AND s.user_id=p_user AND b.issuer=p_issuer AND b.subject=p_subject
+      AND t.enabled AND s.enabled AND b.enabled FOR UPDATE OF t,s,b;
+  IF NOT FOUND OR epoch IS DISTINCT FROM p_epoch THEN RAISE EXCEPTION 'AUTH_CONTEXT_CHANGED' USING ERRCODE='P0001'; END IF;
+  IF NOT (scopes @> ARRAY['source:approve']::text[]) THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  RETURN QUERY SELECT src,reg.owner_revision;
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.resolve_recovery_owner_origin(text,uuid,text,text,text,bigint) FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.resolve_recovery_owner_origin(text,uuid,text,text,text,bigint) TO hub_api;
+
+CREATE OR REPLACE FUNCTION control.recovery_child_digest_internal(p_values text[]) RETURNS bytea
+LANGUAGE plpgsql IMMUTABLE STRICT SET search_path=pg_catalog AS $body$
+DECLARE value text; result bytea:=''::bytea; bytes bytea;
+BEGIN
+  FOREACH value IN ARRAY p_values LOOP
+    IF value IS NULL THEN RETURN NULL; END IF;
+    bytes:=convert_to(value,'UTF8'); result:=result||int4send(octet_length(bytes))||bytes;
+  END LOOP;
+  RETURN public.digest(result,'sha256');
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.recovery_child_digest_internal(text[]) FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE OR REPLACE FUNCTION control.create_rest_recovery(p_tenant text,p_quarantine uuid,p_user text,p_issuer text,p_subject text,p_epoch bigint,
+  p_owner_revision bigint,p_key text,p_digest bytea,p_expected text,p_mapping bigint,p_reason text,p_operation uuid,p_child uuid,p_child_key text)
+RETURNS TABLE(code text,operation_id uuid,child_job_id uuid) LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub AS $body$
+DECLARE resolved record; q control.ingestion_quarantine_index%ROWTYPE; j control.ingestion_job%ROWTYPE; i control.ingestion_job_item%ROWTYPE;
+  existing control.ingestion_recovery_operation%ROWTYPE; binding jsonb; child_digest bytea;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_api' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  SELECT * INTO resolved FROM control.resolve_recovery_owner_origin(p_tenant,p_quarantine,p_user,p_issuer,p_subject,p_epoch);
+  IF NOT FOUND OR resolved.owner_revision IS DISTINCT FROM p_owner_revision THEN RETURN QUERY SELECT 'SOURCE_NOT_FOUND',NULL::uuid,NULL::uuid; RETURN; END IF;
+  SELECT * INTO q FROM control.ingestion_quarantine_index WHERE quarantine_id=p_quarantine AND tenant_key=p_tenant AND source_id=resolved.source_id;
+  IF NOT FOUND THEN RETURN QUERY SELECT 'SOURCE_NOT_FOUND',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF q.origin_kind='SNAPSHOT' THEN RETURN QUERY SELECT 'RECOVERY_SCOPE_UNAVAILABLE',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF p_key !~ '^[A-Za-z0-9._:-]{1,128}$' OR p_child_key !~ '^[A-Za-z0-9._:-]{1,128}$' OR octet_length(p_digest)<>32
+    OR p_operation IS NULL OR p_child IS NULL OR p_reason IS NULL OR char_length(p_reason) NOT BETWEEN 2 AND 6002 THEN
+    RETURN QUERY SELECT 'AUTH_INPUT_INVALID',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF p_digest IS DISTINCT FROM control.recovery_child_digest_internal(ARRAY['hub.recovery.api024.v1',p_tenant,q.source_id,
+    '/hub/v1/admin/quarantine/{quarantine_id}/retry',p_quarantine::text,p_expected,p_mapping::text,p_reason]) THEN
+    RETURN QUERY SELECT 'AUTH_INPUT_INVALID',NULL::uuid,NULL::uuid; RETURN; END IF;
+  SELECT * INTO existing FROM control.ingestion_recovery_operation WHERE tenant_key=p_tenant AND source_id=q.source_id
+    AND route='/hub/v1/admin/quarantine/{quarantine_id}/retry' AND idempotency_key=p_key;
+  IF FOUND AND (existing.request_digest IS DISTINCT FROM p_digest OR existing.quarantine_id<>p_quarantine) THEN
+    RETURN QUERY SELECT 'IDEMPOTENCY_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF p_mapping IS DISTINCT FROM q.mapping_revision OR p_expected IS DISTINCT FROM
+    translate(rtrim(replace(encode(convert_to('{"v":1,"quarantine_id":"'||p_quarantine::text||'","generation":"0"}','UTF8'),'base64'),E'\n',''),'='),'+/','-_') THEN
+    RETURN QUERY SELECT 'SOURCE_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+  binding:=control.recovery_binding_internal(p_quarantine);
+  IF binding IS NULL THEN RETURN QUERY SELECT 'RECOVERY_TARGET_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF existing.operation_id IS NOT NULL AND (existing.approved_by,existing.approved_owner_revision)
+      IS DISTINCT FROM (p_user,p_owner_revision) THEN
+    RETURN QUERY SELECT 'SOURCE_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+  IF existing.operation_id IS NOT NULL THEN
+    IF (existing.binding_kind,existing.own_object_id::text,existing.user_external_id,existing.user_target_id,
+        existing.department_external_id,existing.department_target_id,existing.customer_source_id,existing.customer_source_pk,existing.customer_object_id::text)
+      IS DISTINCT FROM (binding->>'kind',binding->>'own',binding->>'user_external',binding->>'user_target',
+        binding->>'department_external',binding->>'department_target',binding->>'customer_source',binding->>'customer_pk',binding->>'customer_object') THEN
+      RETURN QUERY SELECT 'RECOVERY_TARGET_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+    RETURN QUERY SELECT 'ACCEPTED',existing.operation_id,existing.child_job_id; RETURN;
+  END IF;
+  IF EXISTS(SELECT 1 FROM control.ingestion_recovery_operation WHERE quarantine_id=p_quarantine) THEN
+    RETURN QUERY SELECT 'SOURCE_CONFLICT',NULL::uuid,NULL::uuid; RETURN; END IF;
+  SELECT * INTO j FROM control.ingestion_job WHERE id=q.job_id;
+  SELECT * INTO i FROM control.ingestion_job_item WHERE job_id=q.job_id AND ordinal=q.ordinal;
+  child_digest:=control.recovery_child_digest_internal(ARRAY['hub.recovery.rest.v1',j.tenant_key,j.source_id,j.route,p_quarantine::text,
+    p_operation::text,j.id::text,i.ordinal::text,i.event_id::text,i.source_pk,i.source_version::text,i.operation,j.channel_id::text,
+    j.channel_epoch::text,j.owner_approval_id::text,encode(j.config_digest,'hex'),encode(j.mapping_digest,'hex'),encode(j.identity_mapping_digest,'hex')]);
+  INSERT INTO control.ingestion_job(id,tenant_key,source_id,entity,route,batch_id,raw_batch_id,idempotency_key,request_digest,status,received_count,
+    applied_count,credential_id,source_epoch_at_admission,credential_revision_at_admission,credential_generation_at_admission,channel_id,channel_epoch,
+    version_domain,owner_approval_id,owner_user_id,owner_revision,approval_security_fence,config_revision,config_digest,mapping_revision,mapping_digest,
+    identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,test_report_id,security_barrier_fence_at_admission,first_source_updated_at,last_source_updated_at)
+  VALUES(p_child,j.tenant_key,j.source_id,j.entity,j.route,j.batch_id,j.raw_batch_id,p_child_key,child_digest,'RECEIVED',1,0,j.credential_id,
+    j.source_epoch_at_admission,j.credential_revision_at_admission,j.credential_generation_at_admission,j.channel_id,j.channel_epoch,j.version_domain,
+    j.owner_approval_id,j.owner_user_id,j.owner_revision,j.approval_security_fence,j.config_revision,j.config_digest,j.mapping_revision,j.mapping_digest,
+    j.identity_mapping_revision,j.identity_mapping_digest,j.endpoint_profile_digest,j.test_report_id,j.security_barrier_fence_at_admission,i.source_updated_at,i.source_updated_at);
+  INSERT INTO control.ingestion_job_item(job_id,ordinal,event_id,source_pk,source_version,operation,source_updated_at,public_record,status,operation_id)
+    VALUES(p_child,0,i.event_id,i.source_pk,i.source_version,i.operation,i.source_updated_at,i.public_record,'RECEIVED',p_operation);
+  INSERT INTO control.ingestion_recovery_operation(operation_id,quarantine_id,tenant_key,source_id,entity,origin_job_id,origin_ordinal,event_id,source_pk,origin_operation,
+    child_job_id,child_ordinal,route,idempotency_key,request_digest,expected_state,mapping_revision,reason_json,approved_by,approved_owner_revision,
+    own_object_id,binding_kind,user_external_id,user_target_id,department_external_id,department_target_id,customer_source_id,customer_source_pk,customer_object_id)
+  VALUES(p_operation,p_quarantine,p_tenant,j.source_id,j.entity,j.id,i.ordinal,i.event_id,i.source_pk,i.operation,p_child,0,
+    '/hub/v1/admin/quarantine/{quarantine_id}/retry',p_key,p_digest,p_expected,p_mapping,p_reason,p_user,p_owner_revision,
+    (binding->>'own')::uuid,binding->>'kind',binding->>'user_external',binding->>'user_target',binding->>'department_external',binding->>'department_target',
+    binding->>'customer_source',binding->>'customer_pk',(binding->>'customer_object')::uuid);
+  INSERT INTO control.ingestion_processing_outbox(job_id) VALUES(p_child);
+  RETURN QUERY SELECT 'ACCEPTED',p_operation,p_child;
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.create_rest_recovery(text,uuid,text,text,text,bigint,bigint,text,bytea,text,bigint,text,uuid,uuid,text) FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.create_rest_recovery(text,uuid,text,text,text,bigint,bigint,text,bytea,text,bigint,text,uuid,uuid,text) TO hub_api;
+
+CREATE OR REPLACE FUNCTION control.check_recovery_worker_binding(p_tenant text,p_source text,p_job uuid,p_ordinal integer,p_operation uuid,p_token uuid)
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub AS $body$
+DECLARE r control.ingestion_recovery_operation%ROWTYPE; binding jsonb;
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_worker' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  IF p_token IS NULL OR NOT EXISTS(SELECT 1 FROM control.ingestion_processing_outbox o JOIN control.ingestion_job j ON j.id=o.job_id
+    JOIN control.ingestion_job_item i ON i.job_id=j.id WHERE j.id=p_job AND j.tenant_key=p_tenant AND j.source_id=p_source
+      AND i.ordinal=p_ordinal AND i.operation_id=p_operation AND i.status='APPLYING' AND o.claim_token=p_token
+      AND o.lease_expires_at IS NOT NULL AND o.lease_expires_at>clock_timestamp() AND o.acknowledged_at IS NULL) THEN RETURN 'CLAIM_LOST'; END IF;
+  SELECT * INTO r FROM control.ingestion_recovery_operation WHERE child_job_id=p_job;
+  IF NOT FOUND THEN RETURN 'ORDINARY'; END IF;
+  IF (r.tenant_key,r.source_id,r.child_ordinal,r.operation_id) IS DISTINCT FROM (p_tenant,p_source,p_ordinal,p_operation) THEN RETURN 'CONFLICT'; END IF;
+  binding:=control.recovery_binding_internal(r.quarantine_id);
+  IF binding IS NULL OR (r.binding_kind,r.own_object_id::text,r.user_external_id,r.user_target_id,r.department_external_id,
+      r.department_target_id,r.customer_source_id,r.customer_source_pk,r.customer_object_id::text)
+    IS DISTINCT FROM (binding->>'kind',binding->>'own',binding->>'user_external',binding->>'user_target',binding->>'department_external',
+      binding->>'department_target',binding->>'customer_source',binding->>'customer_pk',binding->>'customer_object') THEN RETURN 'CONFLICT'; END IF;
+  RETURN 'VALID';
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.check_recovery_worker_binding(text,text,uuid,integer,uuid,uuid) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.check_recovery_worker_binding(text,text,uuid,integer,uuid,uuid) TO hub_worker;
+
+CREATE OR REPLACE FUNCTION control.list_quarantine_retry_state(p_tenant text,p_source text,p_user text,p_issuer text,p_subject text,
+  p_epoch bigint,p_owner_revision bigint,p_ids uuid[]) RETURNS TABLE(quarantine_id uuid,state text,operation_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control AS $body$
+DECLARE reg control.source_registry%ROWTYPE; epoch bigint; scopes text[];
+BEGIN
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)<>'hub_api' THEN RAISE EXCEPTION 'AUTH_FORBIDDEN' USING ERRCODE='42501'; END IF;
+  PERFORM control.lock_security_barrier_fence();
+  PERFORM * FROM control.lock_source_credential(p_tenant,p_source);
+  SELECT * INTO reg FROM control.source_registry r WHERE r.tenant_key=p_tenant AND r.source_id=p_source FOR UPDATE;
+  IF NOT FOUND OR reg.data_owner_user_id IS DISTINCT FROM p_user OR reg.owner_revision IS DISTINCT FROM p_owner_revision THEN RETURN; END IF;
+  SELECT s.auth_epoch,s.management_scopes INTO epoch,scopes FROM control.auth_subject s JOIN control.tenant t ON t.tenant_key=s.tenant_key
+    JOIN control.identity_binding b ON (b.tenant_key,b.user_id)=(s.tenant_key,s.user_id)
+    WHERE s.tenant_key=p_tenant AND s.user_id=p_user AND b.issuer=p_issuer AND b.subject=p_subject AND t.enabled AND s.enabled AND b.enabled
+    FOR UPDATE OF t,s,b;
+  IF NOT FOUND OR epoch IS DISTINCT FROM p_epoch OR NOT (scopes @> ARRAY['source:read']::text[]) THEN RETURN; END IF;
+  RETURN QUERY SELECT q.quarantine_id,CASE WHEN q.origin_kind='SNAPSHOT' THEN 'SCOPE_UNAVAILABLE'
+    WHEN r.operation_id IS NULL THEN 'AVAILABLE' ELSE 'ACCEPTED' END,r.operation_id
+    FROM control.ingestion_quarantine_index q LEFT JOIN control.ingestion_recovery_operation r ON r.quarantine_id=q.quarantine_id
+    WHERE q.tenant_key=p_tenant AND q.source_id=p_source AND q.quarantine_id=ANY(p_ids);
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.list_quarantine_retry_state(text,text,text,text,text,bigint,bigint,uuid[]) FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.list_quarantine_retry_state(text,text,text,text,text,bigint,bigint,uuid[]) TO hub_api;

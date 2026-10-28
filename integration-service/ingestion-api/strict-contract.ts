@@ -77,7 +77,7 @@ function pointer(path: string, key: string | number): string {
 
 class JsonReader {
   private index = 0;
-  constructor(private readonly text: string) {}
+  constructor(private readonly text: string, private readonly allowUnpairedSurrogates = false) {}
 
   read(): unknown {
     this.space();
@@ -115,7 +115,7 @@ class JsonReader {
         let value: string;
         try { value = JSON.parse(this.text.slice(start, this.index)) as string; }
         catch { throw new IngestInputError('INGEST_INPUT_INVALID', path || '/'); }
-        validUnicode(value, path || '/');
+        if (!this.allowUnpairedSurrogates) validUnicode(value, path || '/');
         return value;
       }
       if (char === '\\') {
@@ -180,12 +180,12 @@ class JsonReader {
   }
 }
 
-export function parseStrictJson(rawBody: Buffer): unknown {
+export function parseStrictJson(rawBody: Buffer, allowUnpairedSurrogates = false): unknown {
   if (rawBody.length > STRICT_INGEST_BODY_LIMIT) throw new IngestInputError('INGEST_INPUT_INVALID', '/');
   let text: string;
   try { text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(rawBody); }
   catch { throw new IngestInputError('INGEST_INPUT_INVALID', '/'); }
-  return new JsonReader(text).read();
+  return new JsonReader(text, allowUnpairedSurrogates).read();
 }
 
 function invalid(path: string): never { throw new IngestInputError('INGEST_INPUT_INVALID', path || '/'); }

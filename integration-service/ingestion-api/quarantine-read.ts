@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { recoveryExpectedState } from './quarantine-recovery.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Pool, PoolClient } from 'pg';
 import { AuthError, AUTH_ERROR_STATUS } from '../auth/errors.js';
@@ -53,6 +54,7 @@ type QuarantineRow = Readonly<{
   proof: Record<string, string>;
   dependency_status: 'UNKNOWN' | 'AVAILABLE';
   dependency_code: string | null;
+  retry?: { state: 'AVAILABLE'|'ACCEPTED'|'SCOPE_UNAVAILABLE'; expected_state: string|null; operation_id?: string };
 }>;
 
 export type QuarantineReadOptions = Readonly<{
@@ -212,10 +214,23 @@ async function listCurrentOwnerPage(options: QuarantineReadOptions, principal: U
       filters.cursor?.created_at ?? null, filters.cursor?.quarantine_id ?? null, filters.limit]);
     const hasMore = rowsResult.rows.length > filters.limit;
     const items = hasMore ? rowsResult.rows.slice(0, filters.limit) : rowsResult.rows;
+    const retry = await client.query<{quarantine_id:string;state:'AVAILABLE'|'ACCEPTED'|'SCOPE_UNAVAILABLE';operation_id:string|null}>(
+      'SELECT * FROM control.list_quarantine_retry_state($1,$2,$3,$4,$5,$6::bigint,$7::bigint,$8::uuid[])',
+      [principal.tenantId,filters.sourceId,principal.userId,principal.issuer,principal.subject,identity.rows[0]!.auth_epoch,
+        owner.owner_revision,items.map(item=>item.quarantine_id)]);
+    if (retry.rows.length!==items.length) throw new AuthError('AUTH_UNAVAILABLE');
+    const states=new Map(retry.rows.map(row=>[row.quarantine_id,row]));
+    const safeItems=items.map(item=>{
+      const row=states.get(item.quarantine_id);
+      if (!row) throw new AuthError('AUTH_UNAVAILABLE');
+      return {...item,retry:row.state==='AVAILABLE' ? {state:row.state,expected_state:recoveryExpectedState(item.quarantine_id)} :
+        row.state==='ACCEPTED' && row.operation_id ? {state:row.state,expected_state:null,operation_id:row.operation_id} :
+        {state:'SCOPE_UNAVAILABLE' as const,expected_state:null}};
+    });
     const last = items.at(-1);
     const nextCursor = hasMore && last ? encodeCursor({ v: 1, context_sha256: contextDigest,
       created_at: last.created_at, quarantine_id: last.quarantine_id }) : null;
-    return { items, nextCursor };
+    return { items: safeItems, nextCursor };
   });
 }
 

@@ -6,6 +6,7 @@ import type { AuthService, SourceEntity, SourcePrincipal, UserPrincipal } from '
 import type { OidcAuthenticator } from '../auth/oidc.js';
 import { IngestInputError, parseStrictJson, requestDigest, STRICT_INGEST_BODY_LIMIT, validateHubBatch, type PublicBatch } from './strict-contract.js';
 import { registerQuarantineReadRoute } from './quarantine-read.js';
+import { registerQuarantineRecoveryRoute } from './quarantine-recovery.js';
 
 const ROUTES = {
   customer: '/hub/v1/ingest/crm/customers',
@@ -334,6 +335,7 @@ export async function registerStrictIngestionRoutes(app: FastifyInstance, option
     authService: options.authService,
     authenticator: options.authenticator,
   } : undefined);
+  await registerQuarantineRecoveryRoute(app, options?.authenticator ? { pool: options.pool, authService: options.authService, authenticator: options.authenticator } : undefined);
   app.register(async intake => {
     intake.removeContentTypeParser('application/json');
     intake.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_request, body, done) => done(null, body));
