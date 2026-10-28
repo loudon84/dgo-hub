@@ -1,0 +1,213 @@
+{
+  "format": "M1-5E1a1 Fix2 evidence manifest v1",
+  "created_at_utc": "2026-10-28T09:34:18.5484126Z",
+  "source_pin": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "actual_head": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+  "test_capture_id": "094845a5-3144-44f0-90f1-dd13f7e94901",
+  "verification_capture_id": "58d7df3f-a71e-4560-9655-135ecfe1f37c",
+  "build_output_manifest_path": "captures/build/build-output-manifest.json",
+  "build_output_manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5",
+  "runtime_binding_verification": "captures/verification/runtime-binding-verification.json",
+  "runtime_binding_result": "PASS",
+  "runtime_imports": [
+    {
+      "pid": 27356,
+      "phase": "before",
+      "run_id": "2f0f7a34-cef3-44e9-946f-30dff5f719c6",
+      "attempt_id": "21a5692c-c636-43fa-a8f8-2e4e65ac3221",
+      "source_pk": "C-REC-4",
+      "signal": "SIGKILL",
+      "module_path": "/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js",
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "module_size": 15569,
+      "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+      "manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5"
+    },
+    {
+      "pid": 45004,
+      "phase": "after",
+      "run_id": "2f0f7a34-cef3-44e9-946f-30dff5f719c6",
+      "attempt_id": "21a5692c-c636-43fa-a8f8-2e4e65ac3221",
+      "source_pk": "C-REC-4",
+      "signal": "SIGKILL",
+      "module_path": "/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js",
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "module_size": 15569,
+      "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+      "manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5"
+    }
+  ],
+  "pid_absence_observations": [
+    {
+      "pid": 27356,
+      "observed_absent_utc": "2026-10-28T09:33:43.362444Z",
+      "meaning": "later read-only absence observation; not an exit timestamp"
+    },
+    {
+      "pid": 45004,
+      "observed_absent_utc": "2026-10-28T09:33:43.3627694Z",
+      "meaning": "later read-only absence observation; not an exit timestamp"
+    }
+  ],
+  "source_record_count": 36,
+  "source_binding_evidence": 24,
+  "postbuild_manifest_created_utc": "2026-10-28T09:33:03.9578141Z",
+  "test_started_utc": "2026-10-28T09:33:12.856351Z",
+  "copies": [
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\command.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\command.json",
+      "size": 1123,
+      "source_sha256": "28684ec3c80a9f6af81c45fb4989d281eb8270bbc48f4eb150ab28444fc9c56e",
+      "destination_sha256": "28684ec3c80a9f6af81c45fb4989d281eb8270bbc48f4eb150ab28444fc9c56e"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\stdout.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\stdout.txt",
+      "size": 75,
+      "source_sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "destination_sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\stderr.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\stderr.txt",
+      "size": 0,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\before-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\before-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\after-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\after-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\build-output-manifest.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\build-output-manifest.json",
+      "size": 1263,
+      "source_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5",
+      "destination_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\build-output-manifest.json.sha256",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\build\\build-output-manifest.json.sha256",
+      "size": 65,
+      "source_sha256": "b06451289c0be47a5f267a81a789f76a40ac5022b01eb4e05d13cc890b498862",
+      "destination_sha256": "b06451289c0be47a5f267a81a789f76a40ac5022b01eb4e05d13cc890b498862"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\command.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\focused-test\\command.json",
+      "size": 1018,
+      "source_sha256": "89e7d389c676a20beeefde9fbb4c26ed74f4d713e7de6bc61622ecda9e0a3f31",
+      "destination_sha256": "89e7d389c676a20beeefde9fbb4c26ed74f4d713e7de6bc61622ecda9e0a3f31"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\stdout.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\focused-test\\stdout.txt",
+      "size": 2372,
+      "source_sha256": "ef88d844a49abe9012b282a7e6ee931e2869a5da951b7d791c721953a126d49e",
+      "destination_sha256": "ef88d844a49abe9012b282a7e6ee931e2869a5da951b7d791c721953a126d49e"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\stderr.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\focused-test\\stderr.txt",
+      "size": 1202,
+      "source_sha256": "7490d2f5ae183eae0fda3aac04f274197fdc4419b7bbb20a8b8e35b5841d3113",
+      "destination_sha256": "7490d2f5ae183eae0fda3aac04f274197fdc4419b7bbb20a8b8e35b5841d3113"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\before-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\focused-test\\before-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\after-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\focused-test\\after-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\command.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\command.json",
+      "size": 938,
+      "source_sha256": "74030c8e27b4bd248ce915a23d74d1df44727241380d2191be53ce2d8aa3d5e3",
+      "destination_sha256": "74030c8e27b4bd248ce915a23d74d1df44727241380d2191be53ce2d8aa3d5e3"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\stdout.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\stdout.txt",
+      "size": 2885,
+      "source_sha256": "66ca7589ca8b30c0fe51e8e378b51008640f3375a1c249b38a46be338bb56fd3",
+      "destination_sha256": "66ca7589ca8b30c0fe51e8e378b51008640f3375a1c249b38a46be338bb56fd3"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\stderr.txt",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\stderr.txt",
+      "size": 0,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\before-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\before-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\after-source.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\after-source.json",
+      "size": 1895,
+      "source_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236",
+      "destination_sha256": "bb80729b9b657b561778804a478f5b5f72f33a8fb6d5dd8ce130c932014d2236"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\runtime-binding-verification.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\captures\\verification\\runtime-binding-verification.json",
+      "size": 2887,
+      "source_sha256": "aa6338c1afa0f9eb53fbe1e38adeadd44b53d76e8713df4cdd0a4ff273a48720",
+      "destination_sha256": "aa6338c1afa0f9eb53fbe1e38adeadd44b53d76e8713df4cdd0a4ff273a48720"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\m1task5\\45e51944-8114-4d9f-89a5-7340f8f34c5f\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\runtime\\postgres-lifecycle.jsonl",
+      "size": 1048,
+      "source_sha256": "5761b55cfb1051756d3eeac9093e4a12bd3844cdb54c0a1290e27c2533227ef4",
+      "destination_sha256": "5761b55cfb1051756d3eeac9093e4a12bd3844cdb54c0a1290e27c2533227ef4"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\fix1-round2-tools-64c9e5b7-679c-4b53-b436-2361fd647262\\Capture-Build.ps1",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\tools\\Capture-Build.ps1",
+      "size": 3907,
+      "source_sha256": "45ce8a34db925d63b7a53d87b9b5453264f0240820be8383d26ea48e977de62b",
+      "destination_sha256": "45ce8a34db925d63b7a53d87b9b5453264f0240820be8383d26ea48e977de62b"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\fix1-round2-tools-64c9e5b7-679c-4b53-b436-2361fd647262\\Capture-Test.ps1",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\tools\\Capture-Test.ps1",
+      "size": 3174,
+      "source_sha256": "68d423b3a7b9b6b5273bead13a5bf74651d61782d428ac4c6003a420cbab6059",
+      "destination_sha256": "68d423b3a7b9b6b5273bead13a5bf74651d61782d428ac4c6003a420cbab6059"
+    },
+    {
+      "source": "E:\\m1t5-runtime\\fix1-round2-tools-64c9e5b7-679c-4b53-b436-2361fd647262\\Verify-BuildRuntimeBinding.ps1",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a1-fix2-evidence\\9d499149-7503-436f-b74c-5f7db7c33e3e\\tools\\Verify-BuildRuntimeBinding.ps1",
+      "size": 8696,
+      "source_sha256": "403bb5889bb48ce2dc1ecf9b437451b6e39fa65f3aafdfae0e1d47231b3ed419",
+      "destination_sha256": "403bb5889bb48ce2dc1ecf9b437451b6e39fa65f3aafdfae0e1d47231b3ed419"
+    }
+  ]
+}

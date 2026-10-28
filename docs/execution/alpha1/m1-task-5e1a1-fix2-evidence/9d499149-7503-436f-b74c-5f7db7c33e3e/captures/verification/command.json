@@ -1,0 +1,16 @@
+{
+  "kind": "Verification",
+  "capture_id": "58d7df3f-a71e-4560-9655-135ecfe1f37c",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c",
+  "command": "Verify persisted build manifest against focused Node child imports and source snapshots",
+  "started_utc": "2026-10-28T09:33:42.8539373Z",
+  "finished_utc": "2026-10-28T09:33:43.5123023Z",
+  "actual_head_before": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "actual_head_after": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\58d7df3f-a71e-4560-9655-135ecfe1f37c\\verify\\stderr.txt",
+  "build_capture_dir": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build",
+  "test_capture_dir": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test"
+}

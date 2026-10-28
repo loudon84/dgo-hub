@@ -1,0 +1,69 @@
+{
+  "result": "PASS",
+  "verified_at_utc": "2026-10-28T09:33:43.3644914Z",
+  "actual_head": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "product_source_pin": "55bc0ea1605952baa967ec81c6a4cc90564879c6",
+  "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+  "build_command_capture": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\command.json",
+  "build_output_manifest_path": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\build-output-manifest.json",
+  "build_output_manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5",
+  "build_finished_utc": "2026-10-28T09:33:03.9561048Z",
+  "test_started_utc": "2026-10-28T09:33:12.856351Z",
+  "output": {
+    "path": "E:\\git\\dgo-hub\\integration-service\\dist\\etl-worker\\snapshot-apply-worker.js",
+    "size": 15569,
+    "sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc"
+  },
+  "source_snapshot_equalities": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+  ],
+  "source_file_count": 6,
+  "source_records_across_build_test": 24,
+  "runtime_imports": [
+    {
+      "pid": 27356,
+      "phase": "before",
+      "run_id": "2f0f7a34-cef3-44e9-946f-30dff5f719c6",
+      "attempt_id": "21a5692c-c636-43fa-a8f8-2e4e65ac3221",
+      "source_pk": "C-REC-4",
+      "signal": "SIGKILL",
+      "module_path": "/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js",
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "module_size": 15569,
+      "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+      "manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5"
+    },
+    {
+      "pid": 45004,
+      "phase": "after",
+      "run_id": "2f0f7a34-cef3-44e9-946f-30dff5f719c6",
+      "attempt_id": "21a5692c-c636-43fa-a8f8-2e4e65ac3221",
+      "source_pk": "C-REC-4",
+      "signal": "SIGKILL",
+      "module_path": "/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js",
+      "module_sha256": "f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc",
+      "module_size": 15569,
+      "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+      "manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5"
+    }
+  ],
+  "pid_absence_observations": [
+    {
+      "pid": 27356,
+      "observed_absent_utc": "2026-10-28T09:33:43.3624440Z",
+      "meaning": "later read-only absence observation; not an exit timestamp"
+    },
+    {
+      "pid": 45004,
+      "observed_absent_utc": "2026-10-28T09:33:43.3627694Z",
+      "meaning": "later read-only absence observation; not an exit timestamp"
+    }
+  ],
+  "test_exit_code": 0,
+  "test_stdout_path": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\stdout.txt"
+}

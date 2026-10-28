@@ -1,0 +1,17 @@
+{
+  "kind": "Test",
+  "capture_id": "094845a5-3144-44f0-90f1-dd13f7e94901",
+  "build_capture_id": "08b23034-e615-43c8-a55c-75d23bd2ba1f",
+  "build_manifest_path": "E:\\m1t5-runtime\\08b23034-e615-43c8-a55c-75d23bd2ba1f\\build\\build-output-manifest.json",
+  "build_manifest_sha256": "dd7fbde6ce7812805032c05ede51a22e57fce899a2d5b1d2a875cffa12a5abb5",
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901",
+  "command": "npm.cmd test -- --reporter=verbose acceptance-tests/snapshot-recovery.test.ts",
+  "started_utc": "2026-10-28T09:33:12.8563510Z",
+  "finished_utc": "2026-10-28T09:33:37.0173928Z",
+  "actual_head_before": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "actual_head_after": "4bc2ebf837b7478c57519c2421b7b95f288108f5",
+  "exit_code": 0,
+  "stdout": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\stdout.txt",
+  "stderr": "E:\\m1t5-runtime\\094845a5-3144-44f0-90f1-dd13f7e94901\\test\\stderr.txt"
+}

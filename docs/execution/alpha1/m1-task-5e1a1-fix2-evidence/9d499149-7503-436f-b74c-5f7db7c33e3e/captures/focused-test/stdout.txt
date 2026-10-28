@@ -1,0 +1,20 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run --reporter=verbose acceptance-tests/snapshot-recovery.test.ts
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+FIX1_SEALED_LEASE_OBSERVATION [{"beforeExpiry":"2026-10-28 09:33:28.038164+00","beforeObserved":"2026-10-28 09:33:18.054032+00","afterExpiry":"2026-10-28 09:33:38.057492+00","afterObserved":"2026-10-28 09:33:29.571975+00"}]
+NODE_MODULE_LOAD_RECORD {"pid":27356,"run_id":"2f0f7a34-cef3-44e9-946f-30dff5f719c6","idempotency_key":"snapshot-recovery-sealed","build_capture_id":"08b23034-e615-43c8-a55c-75d23bd2ba1f","module_path":"/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js","module_sha256":"f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc","module_size":15569}\nNODE_CHILD_CRASH pid=27356 phase=before-aggregate-commit run_id=2f0f7a34-cef3-44e9-946f-30dff5f719c6 attempt_id=21a5692c-c636-43fa-a8f8-2e4e65ac3221 source_pk=C-REC-4 signal=SIGKILL
+NODE_MODULE_LOAD_RECORD {"pid":45004,"run_id":"2f0f7a34-cef3-44e9-946f-30dff5f719c6","idempotency_key":"snapshot-recovery-sealed","build_capture_id":"08b23034-e615-43c8-a55c-75d23bd2ba1f","module_path":"/E:/git/dgo-hub/integration-service/dist/etl-worker/snapshot-apply-worker.js","module_sha256":"f0a1422b1560cfc25b362588a0af69e9f63ce28b87c354cce8691d2228b643cc","module_size":15569}\nNODE_CHILD_CRASH pid=45004 phase=after-aggregate-commit run_id=2f0f7a34-cef3-44e9-946f-30dff5f719c6 attempt_id=21a5692c-c636-43fa-a8f8-2e4e65ac3221 source_pk=C-REC-4 signal=SIGKILL
+ ✓ acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > accepts a strict retry for a terminal incomplete run over authenticated HTTP 18690ms
+ ✓ acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > copies the immutable SEALED order proof and applies two source lines as one aggregate 557ms
+ ✓ acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > runs HTTP as hub_api and keeps recovery proof loaders worker-only 2ms
+ ✓ acceptance-tests/snapshot-recovery.test.ts > API-022 immutable snapshot recovery > does not replay an accepted operation after caller disablement 6ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  17:33:13
+   Duration  23.16s (transform 261ms, setup 0ms, import 525ms, tests 22.45s, environment 0ms)
+
