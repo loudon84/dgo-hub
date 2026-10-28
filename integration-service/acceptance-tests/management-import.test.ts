@@ -11,7 +11,6 @@ import { createOidcAuthenticator } from '../auth/oidc.js';
 import { createSourceRegistryService, failClosedCapabilityProbe, failClosedEndpointAllowlist, failClosedSecretResolver } from '../source-registry/service.js';
 import { runMigrations } from '../migrations/runner.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
-import { registerManagementImportRoutes } from '../ingestion-api/management-import.js';
 
 let fixture: OwnedPostgres;
 let app: Awaited<ReturnType<typeof buildApp>>;
@@ -60,7 +59,6 @@ beforeAll(async()=>{
   const sourceService=createSourceRegistryService({pool:rolePool,auth,secretResolver:failClosedSecretResolver,endpointAllowlist:failClosedEndpointAllowlist,capabilityProbe:failClosedCapabilityProbe});
   const options={pool:rolePool,authService:auth,authenticator,rawStoragePolicy:'local_lab_fixture' as const};
   app=await buildApp({logger:false,sourceRegistry:{authService:auth,sourceService,authenticator},strictIngestion:options});
-  await registerManagementImportRoutes(app,options);
   app.addHook('onSend',async(request,reply,payload)=>{if(dropResponse && request.url===`/hub/v1/admin/sources/${source}/import/customer`) {dropResponse=false;reply.raw.socket?.destroy();} return payload;});
   const headers={authorization:`Bearer ${token}`};
   const call=async(method:'POST'|'PUT',url:string,payload:Record<string,unknown>)=>app.inject({method,url,headers,payload});

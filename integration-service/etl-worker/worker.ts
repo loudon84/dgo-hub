@@ -1,3 +1,4 @@
+import { customerReferenceMappingKey } from '../source-registry/import-sample.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -24,12 +25,14 @@ type DurableJob = {
   credential_generation_at_admission: string; channel_id: string; channel_epoch: string; version_domain: 'SOURCE_VERSION' | 'SNAPSHOT_OBSERVATION';
   owner_approval_id: string; owner_user_id: string; owner_revision: string; config_revision: string; config_digest: Buffer;
   mapping_revision: string; mapping_digest: Buffer; identity_mapping_revision: string; identity_mapping_digest: Buffer;
-  endpoint_profile_digest: Buffer; test_report_id: string; security_barrier_fence_at_admission: string;
+  endpoint_profile_digest: Buffer | null; test_report_id: string; security_barrier_fence_at_admission: string;
 };
 type DurableItem = { ordinal: number; event_id: string; source_pk: string; source_version: string; operation: string;
   public_record: unknown; status: string; attempts_started: number; retries_used: number; next_retry_at: Date | null; operation_id: string };
 type DurableClaim = { jobId: string; tenantId: string; sourceId: string; token: string };
 export type DurableWorkerHooks = Readonly<{
+  afterOrderHeader?: () => Promise<void>;
+  afterOrderLine?: (index: number) => Promise<void>;
   afterClaim?: (claim: Readonly<DurableClaim>) => Promise<void>;
   afterCanonicalApply?: (item: Readonly<{ jobId: string; ordinal: number; operationId: string }>) => Promise<void>;
   beforeItemStatus?: (item: Readonly<{ jobId: string; ordinal: number; operationId: string }>) => Promise<void>;
@@ -86,7 +89,7 @@ function contextFor(job: DurableJob): ApplyContext {
     ownerUserId: job.owner_user_id, ownerRevision: job.owner_revision, configRevision: job.config_revision,
     configDigest: job.config_digest.toString('hex'), mappingRevision: job.mapping_revision, mappingDigest: job.mapping_digest.toString('hex'),
     identityMappingRevision: job.identity_mapping_revision, identityMappingDigest: job.identity_mapping_digest.toString('hex'),
-    endpointProfileDigest: job.endpoint_profile_digest.toString('hex'), testReportId: job.test_report_id,
+    endpointProfileDigest: job.endpoint_profile_digest?.toString('hex') ?? null, importRoute: job.route, testReportId: job.test_report_id,
     securityBarrierFenceAtAdmission: job.security_barrier_fence_at_admission,
   };
 }
@@ -102,12 +105,12 @@ function canonicalCustomerInput(record: PublicRecord) {
   };
 }
 
-function canonicalOrderInput(record: PublicRecord) {
+function canonicalOrderInput(job: DurableJob, record: PublicRecord) {
   const updated = canonicalUtc(record.source_updated_at);
   if (record.operation === 'DELETE') return { source_pk: record.source_pk, source_version: record.source_version, deleted_at: updated };
   if (!record.data || !('customer_ref' in record.data)) throw new Error('DURABLE_FACTS_INVALID');
   return {
-    source_pk: record.source_pk, customer_external_id: record.data.customer_ref.source_pk, order_no: record.data.order_no,
+    source_pk: record.source_pk, customer_external_id: job.endpoint_profile_digest === null ? customerReferenceMappingKey(record.data.customer_ref.source_id, record.data.customer_ref.source_pk) : record.data.customer_ref.source_pk, order_no: record.data.order_no,
     status: record.data.status, order_at: canonicalUtc(record.data.order_at), amount: canonicalDecimal(record.data.amount, 2),
     currency: record.data.currency, source_updated_at: updated, source_version: record.source_version, deleted_at: null,
     lines: record.data.lines.map(line => ({ ...line, quantity: canonicalDecimal(line.quantity, 6),
@@ -245,19 +248,25 @@ async function startAttempt(pool: Pool, claim: DurableClaim, job: DurableJob, it
 async function verifyOrderCustomerReference(client: PoolClient, job: DurableJob, record: PublicRecord): Promise<boolean> {
   if (job.entity !== 'order' || record.operation === 'DELETE' || !record.data || !('customer_ref' in record.data)) return true;
   const { source_id: refSourceId, source_pk: refSourcePk } = record.data.customer_ref;
+  const mappingKey = job.endpoint_profile_digest === null ? customerReferenceMappingKey(refSourceId, refSourcePk) : refSourcePk;
+  await client.query(`SELECT 1 FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' AND source_pk=$3 FOR UPDATE`, [job.tenant_key,refSourceId,refSourcePk]);
   const result = await client.query<{ mapped_target: string | null; object_id: string | null; live_customer_id: string | null }>(`SELECT
       (SELECT m.target_id::text FROM control.source_identity_mapping_revision r
         CROSS JOIN LATERAL jsonb_to_recordset(r.mappings) AS m(kind text,external_id text,target_id text)
         WHERE r.tenant_key=$1 AND r.source_id=$2 AND r.revision=$3::bigint
-          AND m.kind='customer' AND m.external_id=$4 LIMIT 1) AS mapped_target,
+          AND m.kind='customer' AND m.external_id=$6 LIMIT 1) AS mapped_target,
       s.canonical_object_id::text AS object_id,
       c.id::text AS live_customer_id
     FROM control.canonical_source_identity s
     LEFT JOIN hub.canonical_customer c ON c.tenant_id=s.tenant_key AND c.id=s.customer_id
       AND c.id=s.canonical_object_id AND c.deleted_at IS NULL
     WHERE s.tenant_key=$1 AND s.source_id=$5 AND s.entity='customer' AND s.source_pk=$4`,
-  [job.tenant_key,job.source_id,job.identity_mapping_revision,refSourcePk,refSourceId]);
+  [job.tenant_key,job.source_id,job.identity_mapping_revision,refSourcePk,refSourceId,mappingKey]);
   const row = result.rows[0];
+  if (row?.object_id) {
+    const live=await client.query(`SELECT 1 FROM hub.canonical_customer WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`,[job.tenant_key,row.object_id]);
+    if (!live.rowCount) return false;
+  }
   return !!row && !!row.mapped_target && row.mapped_target === row.object_id && row.live_customer_id === row.object_id;
 }
 
@@ -324,7 +333,7 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
       const context=contextFor(job);
       const outcome=job.entity==='customer'
         ? await applyCustomer(client,context,canonicalCustomerInput(record))
-        : await applyOrderAggregate(client,context,canonicalOrderInput(record));
+        : await applyOrderAggregate(client,context,canonicalOrderInput(job,record),{afterHeader:hooks.afterOrderHeader,afterLine:hooks.afterOrderLine});
       await hooks.afterCanonicalApply?.(hookItem);
       const persisted=itemOutcome(outcome);
       await hooks.beforeItemStatus?.(hookItem);

@@ -20,14 +20,14 @@ export type QuarantineContext = Readonly<{
   auth_epoch: string;
   owner_user_id: string;
   owner_revision: string;
-  origin_kind: 'REST' | 'SNAPSHOT' | null;
+  origin_kind: 'REST' | 'SNAPSHOT' | 'IMPORT' | null;
   error_code: string | null;
   limit: number;
 }>;
 
 type QuarantineFilters = Readonly<{
   sourceId: string;
-  originKind: 'REST' | 'SNAPSHOT' | null;
+  originKind: 'REST' | 'SNAPSHOT' | 'IMPORT' | null;
   errorCode: string | null;
   limit: number;
 }>;
@@ -36,7 +36,7 @@ type CursorValue = Readonly<{ v: 1; context_sha256: string; created_at: string; 
 
 type QuarantineRow = Readonly<{
   quarantine_id: string;
-  origin_kind: 'REST' | 'SNAPSHOT';
+  origin_kind: 'REST' | 'SNAPSHOT' | 'IMPORT';
   source_id: string;
   entity: 'customer' | 'order';
   relation: 'customer' | 'order' | null;
@@ -136,12 +136,12 @@ function parseFilters(query: unknown): QuarantineFilters & { cursor: CursorValue
   const errorCode = values.error_code;
   const limitValue = values.limit;
   if (typeof sourceId !== 'string' || !SOURCE_ID.test(sourceId) ||
-      (originKind !== undefined && originKind !== 'REST' && originKind !== 'SNAPSHOT') ||
+      (originKind !== undefined && originKind !== 'REST' && originKind !== 'SNAPSHOT' && originKind !== 'IMPORT') ||
       (errorCode !== undefined && (typeof errorCode !== 'string' || !ERROR_CODE.test(errorCode))) ||
       (limitValue !== undefined && (typeof limitValue !== 'string' || !/^(?:[1-9][0-9]?|100)$/.test(limitValue)))) {
     throw new AuthError('AUTH_INPUT_INVALID');
   }
-  return { sourceId, originKind: (originKind as 'REST' | 'SNAPSHOT' | undefined) ?? null,
+  return { sourceId, originKind: (originKind as 'REST' | 'SNAPSHOT' | 'IMPORT' | undefined) ?? null,
     errorCode: (errorCode as string | undefined) ?? null, limit: limitValue === undefined ? 20 : Number(limitValue),
     cursor: decodeCursor(values.cursor) };
 }

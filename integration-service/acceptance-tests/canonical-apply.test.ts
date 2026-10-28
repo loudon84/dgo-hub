@@ -99,14 +99,14 @@ async function approveIdentityMapping(context:ApplyContext,mappings:readonly {ki
     VALUES($1,$2,$3,$4,2,$5,$6,$7,$8,$9,$10,'fixture','{}'::jsonb,'PASS',$11) RETURNING id`,
   [context.tenantId,context.sourceId,context.configRevision,context.mappingRevision,Buffer.from(context.configDigest,'hex'),
     Buffer.from(context.mappingDigest,'hex'),identityDigest,context.credentialRevisionAtAdmission,context.credentialGenerationAtAdmission,
-    Buffer.from(context.endpointProfileDigest,'hex'),context.ownerUserId]);
+    Buffer.from(context.endpointProfileDigest!,'hex'),context.ownerUserId]);
   const approval=await database.query<{id:string}>(`INSERT INTO control.source_owner_approval(tenant_key,source_id,owner_user_id,owner_revision,
     config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,
     source_credential_revision,credential_generation,endpoint_profile_digest,data_contract_ref,test_report_id)
     VALUES($1,$2,$3,$4,$5,$6,2,$7,$8,$9,$10,$11,$12,'fixture',$13) RETURNING id`,
   [context.tenantId,context.sourceId,context.ownerUserId,context.ownerRevision,context.configRevision,context.mappingRevision,
     Buffer.from(context.configDigest,'hex'),Buffer.from(context.mappingDigest,'hex'),identityDigest,context.credentialRevisionAtAdmission,
-    context.credentialGenerationAtAdmission,Buffer.from(context.endpointProfileDigest,'hex'),report.rows[0].id]);
+    context.credentialGenerationAtAdmission,Buffer.from(context.endpointProfileDigest!,'hex'),report.rows[0].id]);
   return {...context,identityMappingRevision:'2',identityMappingDigest:identityDigest.toString('hex'),
     ownerApprovalId:approval.rows[0].id,testReportId:report.rows[0].id};
 }

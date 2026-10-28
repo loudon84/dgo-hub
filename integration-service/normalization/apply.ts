@@ -33,7 +33,8 @@ export type ApplyContext = Readonly<{
   mappingDigest: string;
   identityMappingRevision: string;
   identityMappingDigest: string;
-  endpointProfileDigest: string;
+  endpointProfileDigest: string | null;
+  importRoute?: string;
   testReportId: string;
   securityBarrierFenceAtAdmission: string;
 }>;
@@ -107,14 +108,14 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
        AND a.owner_user_id=$5 AND a.owner_revision=$6
        AND a.config_revision=$7 AND a.mapping_revision=$8 AND a.identity_mapping_revision=$9
        AND a.config_digest=$10 AND a.mapping_digest=$11 AND a.identity_mapping_digest=$12
-       AND a.source_credential_revision=$13 AND a.credential_generation=$14 AND a.endpoint_profile_digest=$15
+       AND a.source_credential_revision=$13 AND a.credential_generation=$14
+       AND ((c.config->>'connector'='SIMULATED_IMPORT' AND c.config->>'mode'='INCREMENTAL' AND c.config->>'version_domain'='SOURCE_VERSION' AND $15::bytea IS NULL AND a.endpoint_profile_digest IS NULL AND t.endpoint_profile_digest IS NULL AND a.sample_digest IS NOT NULL AND t.sample_digest=a.sample_digest) OR (c.config->>'connector'<>'SIMULATED_IMPORT' AND $15::bytea IS NOT NULL AND a.endpoint_profile_digest=$15 AND t.endpoint_profile_digest=a.endpoint_profile_digest))
        AND t.status='PASS' AND t.tenant_key=a.tenant_key AND t.source_id=a.source_id
        AND t.config_revision=a.config_revision AND t.mapping_revision=a.mapping_revision
        AND t.identity_mapping_revision=a.identity_mapping_revision
        AND t.config_digest=a.config_digest AND t.mapping_digest=a.mapping_digest
        AND t.identity_mapping_digest=a.identity_mapping_digest
        AND t.source_credential_revision=a.source_credential_revision AND t.credential_generation=a.credential_generation
-       AND t.endpoint_profile_digest=a.endpoint_profile_digest
        AND t.data_contract_ref=a.data_contract_ref
        AND c.config_digest=$10 AND m.mapping_digest=$11 AND i.mapping_digest=$12
        AND c.config->'allowed_entities' ? $16`,
@@ -123,9 +124,11 @@ async function verifyFrozenApplyContext(client: PoolClient, context: ApplyContex
     decimalProof(context.mappingRevision,'CANONICAL_APPLY_PROOF_INVALID'),decimalProof(context.identityMappingRevision,'CANONICAL_APPLY_PROOF_INVALID'),
     digestBytes(context.configDigest),digestBytes(context.mappingDigest),digestBytes(context.identityMappingDigest),
     decimalProof(context.credentialRevisionAtAdmission,'CANONICAL_APPLY_PROOF_INVALID'),
-    decimalProof(context.credentialGenerationAtAdmission,'CANONICAL_APPLY_PROOF_INVALID'),digestBytes(context.endpointProfileDigest),context.entity]);
+    decimalProof(context.credentialGenerationAtAdmission,'CANONICAL_APPLY_PROOF_INVALID'),context.endpointProfileDigest === null ? null : digestBytes(context.endpointProfileDigest),context.entity]);
   if (!frozen.rowCount || !Array.isArray(frozen.rows[0].identity_mappings)) throw new Error('CANONICAL_APPLY_PROOF_INVALID');
   const config=frozen.rows[0].config;
+  if (config.connector === 'SIMULATED_IMPORT' && (context.endpointProfileDigest !== null || context.importRoute !== `/hub/v1/admin/sources/${context.sourceId}/import/${context.entity}` || context.versionDomain !== 'SOURCE_VERSION')) throw new Error('CANONICAL_APPLY_PROOF_INVALID');
+  if (config.connector !== 'SIMULATED_IMPORT' && context.endpointProfileDigest === null) throw new Error('CANONICAL_APPLY_PROOF_INVALID');
   if (channel.rows[0].connector!==config.connector || channel.rows[0].mode!==config.mode ||
       channel.rows[0].version_domain!==config.version_domain || typeof frozen.rows[0].data_contract_ref!=='string') {
     throw new Error('CANONICAL_APPLY_PROOF_INVALID');
@@ -331,7 +334,7 @@ export async function applyCustomer(client: PoolClient, context: ApplyContext, i
   return { status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex') };
 }
 
-export async function applyOrderAggregate(client: PoolClient, context: ApplyContext, inputValue: CanonicalOrder | CanonicalDelete): Promise<ApplyResult> {
+export async function applyOrderAggregate(client: PoolClient, context: ApplyContext, inputValue: CanonicalOrder | CanonicalDelete, hooks: { afterHeader?: () => Promise<void>; afterLine?: (index: number) => Promise<void> } = {}): Promise<ApplyResult> {
   const fullInput = canonicalOrderSchema.safeParse(inputValue);
   const input = fullInput.success ? fullInput.data : canonicalOrderDeleteSchema.parse(inputValue);
   if (context.entity !== 'order') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
@@ -409,6 +412,7 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
       deleted_at=EXCLUDED.deleted_at,hub_revision=EXCLUDED.hub_revision`,
   [context.tenantId,objectId,customer.rows[0].id,orderInput.order_no,orderInput.status,orderInput.order_at,orderInput.amount,orderInput.currency,
     orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,orderInput.deleted_at ?? null,revision]);
+  await hooks.afterHeader?.();
   await client.query(`INSERT INTO control.canonical_source_identity
     (tenant_key,source_id,entity,source_pk,canonical_object_id,order_id) VALUES($1,$2,'order',$3,$4,$4)
     ON CONFLICT(tenant_key,source_id,entity,source_pk) DO UPDATE SET canonical_object_id=EXCLUDED.canonical_object_id,order_id=EXCLUDED.order_id`,
@@ -426,7 +430,7 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
       hub_revision=nextval('control.canonical_hub_revision_seq')
       WHERE tenant_id=$1 AND order_id=$2 AND deleted_at IS NULL AND NOT(source_line_id=ANY($7::text[]))`,
     [context.tenantId,objectId,orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,incomingLineIds]);
-    for (const line of orderInput.lines) {
+    for (const [index,line] of orderInput.lines.entries()) {
       const lineRevision = await allocateRevision(client);
       await client.query(`INSERT INTO hub.canonical_order_line
         (tenant_id,order_id,source_line_id,product_code,product_name,quantity,unit_price,line_amount,source_updated_at,
@@ -438,6 +442,7 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
           version_domain=EXCLUDED.version_domain,channel_epoch=EXCLUDED.channel_epoch,deleted_at=NULL,hub_revision=EXCLUDED.hub_revision`,
       [context.tenantId,objectId,line.source_line_id,line.product_code,line.product_name,line.quantity,line.unit_price,
         line.line_amount,orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,lineRevision]);
+      await hooks.afterLine?.(index + 1);
     }
   }
   await writeReceipt(client,context,{sourcePk:orderInput.source_pk,objectId,version,digest:sourceDigest,projection,deleted:orderInput.deleted_at != null});

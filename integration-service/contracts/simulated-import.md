@@ -1,6 +1,6 @@
-# Simulated import source contract (M1-I1)
+# Simulated import source contract
 
-This contract covers source configuration, sample validation, Owner approval and activation. It does not submit an ingestion job or write the standard replica. Durable batch intake and worker processing belong to M1-I2; G1/platform acceptance is a separate gate.
+This contract covers source configuration, sample validation, Owner approval, activation, durable intake and worker application. G1/platform acceptance is a separate gate.
 
 ## Configuration and identity
 
@@ -24,11 +24,17 @@ The test stores the sample digest, bounded results, current config/mapping/ident
 
 The existing lifecycle is `DRAFT → TESTED → APPROVED → ACTIVE`. A passing sample and current field and identity mappings are required before the configured current Owner can approve. Activation verifies the latest passing report, Owner, revisions and digests, current authority, and any consumed customer references. Editing configuration or mappings invalidates prior proof; editing an active source pauses it. Connector/mode switching remains unavailable.
 
-Import report and approval proofs contain a sample digest and a NULL endpoint-profile digest. External connector proofs retain a real endpoint-profile digest. Before M1-I2 enables import intake, the immutable migration 006 proof consumer must be replaced additively with a connector-aware NULL-safe comparison, preserving the existing credential identity, epoch, channel and security-fence checks. I1 activation alone is not evidence of ingestion or platform acceptance.
+Import report and approval proofs contain a sample digest and a NULL endpoint-profile digest. External connector proofs retain a real endpoint-profile digest. Migration 011 replaces the migration 006 proof consumer additively with connector-aware verification while preserving credential identity, epoch, channel and security-fence checks. The compatible worker verifies the same typed distinction; deployment follows the worker-first prerequisites below. I1 activation alone is not evidence of ingestion or platform acceptance.
 
 
-## Controlled management intake extension (M1-I2a; worker application pending I2b)
+## Controlled management intake extension
 
-The separately registered `POST /hub/v1/admin/sources/:id/import/:entity` takes an OIDC user with current same-tenant `source:write` and `Idempotency-Key` matching `[A-Za-z0-9._:-]{1,128}`. Entity is `customer` or `order`. The strict mapped-source `hub.v1` body has 1–100 records and at most 4 MiB of actual UTF-8 bytes. JSON numeric literals anywhere, including unmapped fields, are rejected with 422; identifiers, versions, quantities and decimal amounts are strings. Unknown envelope or event metadata and duplicate keys are rejected. The source and actor are obtained from the route and authenticated identity. The handler is not registered in the production application in I2a; I2b must first deliver and verify compatible workers.
+The separately registered `POST /hub/v1/admin/sources/:id/import/:entity` takes an OIDC user with current same-tenant `source:write` and `Idempotency-Key` matching `[A-Za-z0-9._:-]{1,128}`. Entity is `customer` or `order`. The strict mapped-source `hub.v1` body has 1–100 records and at most 4 MiB of actual UTF-8 bytes. JSON numeric literals anywhere, including unmapped fields, are rejected with 422; identifiers, versions, quantities and decimal amounts are strings. Unknown envelope or event metadata and duplicate keys are rejected. The source and actor are obtained from the route and authenticated identity. The compatible bundle registers this handler when its source registry and strict ingestion are configured; deployment requires the worker-first sequence below.
 
 A 202 receipt means the original exact bytes, original canonical digest, mapped effective records, frozen source proofs, job, outbox and management actor audit committed together. It does not mean application. The original canonical digest ignores JSON whitespace and key order; the key is scoped to tenant, source and concrete entity route. An exact retry returns the original receipt without re-mapping even after ordinary pause or mapping/config edits; changed original content conflicts even when mapping discards the changed field. Current same-tenant `source:write` and source namespace remain required for replay. Current same-tenant `source:read` is required to read import jobs and items; raw bodies and verifiers are not returned. Existing security barriers continue to govern eventual application.
+
+## Worker application and operational exposure (M1-I2b)
+
+The compatible application bundle registers management intake when source registry and strict ingestion are configured. A 202 continues to mean durable admission, not application. The durable worker uses the accepted effective record and frozen proof; it resolves order customer references using the confirmed typed key and exact same-tenant canonical identity. Failed import items are listed under the explicit `IMPORT` quarantine origin. Import retry via API-024 is `SCOPE_UNAVAILABLE`; the separate import recovery workflow belongs to I3.
+
+Before exposing this route in a deployment, install migration 012, stop or drain every incompatible queue claimant, then start and verify all strict workers from the matching source bundle before exposing the matching API. The common hub SHA in the deployment lock is release evidence; it is not an online capability guard or proof that every claimant was inventoried. The default worker is not ready unless strict worker mode is explicitly enabled with `HUB_ENABLE_STRICT_INGESTION_WORKER=true`. If these prerequisites cannot be met, keep the route unexposed. Local tests do not establish any site deployment or platform acceptance.
