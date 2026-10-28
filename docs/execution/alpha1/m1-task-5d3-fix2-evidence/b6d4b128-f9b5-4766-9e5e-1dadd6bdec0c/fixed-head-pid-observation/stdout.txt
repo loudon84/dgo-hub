@@ -1,0 +1,44 @@
+{
+  "observed_utc": "2026-10-28T05:11:56.9098459Z",
+  "source_lifecycle_runtime": "E:/m1t5-runtime/3b55bcab-a439-49b3-932e-7615c45b4100",
+  "queried_pids": [
+    17496,
+    26608,
+    35044,
+    37660,
+    43212
+  ],
+  "observations": [
+    {
+      "processes": [],
+      "queried_pid": 17496,
+      "process_count": 0,
+      "absent": true
+    },
+    {
+      "processes": [],
+      "queried_pid": 26608,
+      "process_count": 0,
+      "absent": true
+    },
+    {
+      "processes": [],
+      "queried_pid": 35044,
+      "process_count": 0,
+      "absent": true
+    },
+    {
+      "processes": [],
+      "queried_pid": 37660,
+      "process_count": 0,
+      "absent": true
+    },
+    {
+      "processes": [],
+      "queried_pid": 43212,
+      "process_count": 0,
+      "absent": true
+    }
+  ],
+  "note": "An extant PID is not attributed to the historical test child without matching creation evidence."
+}

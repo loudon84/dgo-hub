@@ -1,0 +1,168 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '47bd36b4-c44c-4bc2-b940-a80edb942524',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c4298157-89cc-4337-9cf5-78f47eadb8a7',
+  error_code: 'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:145:13'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '634adea4-7fb1-4214-9f42-e1af5c7194a7',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at Object.afterAggregateCommit (E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-runs.test.ts:559:63)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '8a318d45-a309-4263-a543-4c2398b965a5',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '6553fedf-c722-4f16-b65b-de5e5424b4de',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c21565b5-51c3-4f4c-92de-859caaad9511',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '2ea4b145-d217-4e1f-9bb1-16db75ee03c9',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '42501',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c215e381-9d75-4eb5-a19a-c702ff4309b3',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'fa4d3be0-df15-4e3e-b9a7-f237ecaaadda',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '75e01059-3c02-4823-a96e-f34e74ab4340',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '23503',
+  constraint: 'source_version_receipt_tenant_key_source_id_entity_source__fkey',
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg-pool\\index.js:45:11'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected [ { status: 'APPLYING', …(10) } ] to deeply equal [ { status: 'APPLYING', …(10) } ]
+
+- Expected
++ Received
+
+@@ -1,12 +1,12 @@
+  [
+    {
+      "canonical_deleted_at": null,
+      "d_claim_token": null,
+-     "d_error_code": "D_WORKER_LEASE_EXPIRED",
+-     "d_lease_expires_at": null,
+-     "d_next_retry_at": 2026-10-28T05:04:32.100Z,
++     "d_error_code": "NULL_TOKEN_TEST",
++     "d_lease_expires_at": 2026-10-28T05:04:27.117Z,
++     "d_next_retry_at": 2026-10-28T05:04:32.117Z,
+      "d_start_count": 1,
+      "effects": 0,
+      "operations": 1,
+      "outbox": 22,
+      "receipts": 22,
+
+ ❯ probe acceptance-tests/snapshot-runs.test.ts:2295:41
+    2293|                 await client.query('RESET ROLE');
+    2294|                 const afterProbe=await client.query(stateSql,stateValu…
+    2295|                 expect(afterProbe.rows).toEqual(beforeProbe.rows);
+       |                                         ^
+    2296|                 observed.push({[name]:result.rows[0]});
+    2297|               } finally {
+ ❯ expectNullClaimRejected acceptance-tests/snapshot-runs.test.ts:2308:13
+ ❯ acceptance-tests/snapshot-runs.test.ts:2416:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

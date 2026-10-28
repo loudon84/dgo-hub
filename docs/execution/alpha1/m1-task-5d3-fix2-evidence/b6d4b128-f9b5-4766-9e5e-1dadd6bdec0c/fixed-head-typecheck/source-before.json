@@ -1,0 +1,21 @@
+{
+  "phase": "before",
+  "actual_head": "0112c661c4a543d614ba8685693a8384b8dc7201",
+  "observed_utc": "2026-10-28T05:08:36.1723441Z",
+  "files": [
+    {
+      "lf_sha256": "b7e5ecf125b8b54593c5bfe635e8eea380d8e4ce22b8d64d7b88c00ebd4ac5b0",
+      "git_blob": "68e9d7b436951bf355a2ef49a492af3b23ae2186",
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "raw_size": 280494,
+      "raw_sha256": "b7e5ecf125b8b54593c5bfe635e8eea380d8e4ce22b8d64d7b88c00ebd4ac5b0"
+    },
+    {
+      "lf_sha256": "b3b3d3fc35a59f950ab053244e1fb2b1a45b95ab2166d45be7bbb3f0a1ebc45f",
+      "git_blob": "d54312f8bba392ff378bb8e1d95e483a57a904be",
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "raw_size": 215306,
+      "raw_sha256": "385c3302a3b2611df4a8328aba3035e52f67ddf9acb74f1b6c286af568fb4dd6"
+    }
+  ]
+}

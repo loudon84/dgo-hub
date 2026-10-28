@@ -1,0 +1,21 @@
+{
+  "phase": "after",
+  "actual_head": "551a95a8d5143a708743db0653572a3647aded50",
+  "observed_utc": "2026-10-28T05:01:21.1182278Z",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "git_blob": "3620afd3d905c5b301d9211777ee6e32682c1291",
+      "raw_size": 280037,
+      "lf_sha256": "7c4837ea53accaed09def3c106225fd1859b02e593638ba346ff68611d81be0b",
+      "raw_sha256": "7c4837ea53accaed09def3c106225fd1859b02e593638ba346ff68611d81be0b"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "git_blob": "9b2a74666d8bc3886482a710ee9ce19deac497c7",
+      "raw_size": 215018,
+      "lf_sha256": "04424482f53fff8a88ec5e4c60784480479570927906d7e6201cb4f9c57d6229",
+      "raw_sha256": "e05cfc644dc65cb2f782650d44cbd95754546ca01d19c645eccb466741f3589f"
+    }
+  ]
+}
