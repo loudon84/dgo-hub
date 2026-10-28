@@ -1451,7 +1451,8 @@ RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,con
 AS $body$
 DECLARE latest control.etl_snapshot_delete_run%ROWTYPE; run_row control.etl_run%ROWTYPE;
   entity_value text; base_count bigint; member_count bigint; total_count bigint:=0; has_above boolean:=false;
-  obs_invalid boolean; candidate uuid; digest_value bytea; baseline_digest bytea; member record; owner_role text; proof_json jsonb;
+  obs_invalid boolean; candidate uuid; digest_value bytea; baseline_digest bytea;
+  member record; owner_role text; proof_json jsonb;
 BEGIN
   PERFORM control.lock_security_barrier_fence();
   PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
@@ -1533,38 +1534,8 @@ BEGIN
     RETURN true;
   END IF;
   FOREACH entity_value IN ARRAY run_row.expected_entities LOOP
-    IF entity_value='customer' THEN
-      SELECT count(DISTINCT i.canonical_object_id) INTO base_count FROM control.canonical_source_identity i JOIN hub.canonical_customer cc
-        ON (cc.tenant_id,cc.id)=(i.tenant_key,i.customer_id)
-        WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=entity_value AND cc.deleted_at IS NULL;
-    ELSE
-      SELECT count(DISTINCT i.canonical_object_id) INTO base_count FROM control.canonical_source_identity i JOIN hub.canonical_order co
-        ON (co.tenant_id,co.id)=(i.tenant_key,i.order_id)
-        WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=entity_value AND co.deleted_at IS NULL;
-    END IF;
-    baseline_digest:=public.digest(convert_to(jsonb_build_object('proof',proof_json,'entity',entity_value,
-      'baseline',base_count,'kind','live-baseline-v1')::text,'UTF8'),'sha256');
-    IF entity_value='customer' THEN
-      FOR member IN SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
-        FROM control.canonical_source_identity i JOIN hub.canonical_customer cc
-          ON (cc.tenant_id,cc.id)=(i.tenant_key,i.customer_id)
-        WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=entity_value
-          AND i.customer_id IS NOT NULL AND cc.deleted_at IS NULL ORDER BY i.source_pk COLLATE "C" LOOP
-        baseline_digest:=public.digest(baseline_digest||convert_to(jsonb_build_object('tenant_key',member.tenant_key,
-          'source_id',member.source_id,'entity',member.entity,'source_pk',member.source_pk,
-          'canonical_object_id',member.canonical_object_id)::text,'UTF8'),'sha256');
-      END LOOP;
-    ELSE
-      FOR member IN SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
-        FROM control.canonical_source_identity i JOIN hub.canonical_order co
-          ON (co.tenant_id,co.id)=(i.tenant_key,i.order_id)
-        WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=entity_value
-          AND i.order_id IS NOT NULL AND co.deleted_at IS NULL ORDER BY i.source_pk COLLATE "C" LOOP
-        baseline_digest:=public.digest(baseline_digest||convert_to(jsonb_build_object('tenant_key',member.tenant_key,
-          'source_id',member.source_id,'entity',member.entity,'source_pk',member.source_pk,
-          'canonical_object_id',member.canonical_object_id)::text,'UTF8'),'sha256');
-      END LOOP;
-    END IF;
+    SELECT f.baseline_count,f.baseline_digest INTO base_count,baseline_digest
+      FROM control.etl_snapshot_delete_baseline_fingerprint(p_tenant_key,p_source_id,entity_value,proof_json) f;
     SELECT count(DISTINCT i.canonical_object_id) INTO member_count FROM control.etl_snapshot_delete_streak s
       JOIN control.canonical_source_identity i ON (i.tenant_key,i.source_id,i.entity,i.source_pk)=
         (s.tenant_key,s.source_id,s.entity,s.source_pk)
@@ -1580,9 +1551,8 @@ BEGIN
           OR (entity_value='order' AND i.order_id IS NOT NULL AND EXISTS(SELECT 1 FROM hub.canonical_order co
               WHERE co.tenant_id=i.tenant_key AND co.id=i.order_id AND co.deleted_at IS NULL)));
     candidate:=gen_random_uuid();
-    digest_value:=public.digest(convert_to(jsonb_build_object('proof',proof_json,'entity',entity_value,'run',latest.run_id,
-      'revision',1,'baseline',base_count,'count',member_count,
-      'baseline_membership_digest',encode(baseline_digest,'hex'))::text,'UTF8'),'sha256');
+    digest_value:=control.etl_snapshot_delete_candidate_digest_seed(proof_json,entity_value,latest.run_id,1,
+      base_count,member_count,baseline_digest);
     FOR member IN
       SELECT s.source_pk,i.canonical_object_id,s.first_absence_run_id,s.second_absence_run_id,
         s.second_absence_sequence,s.second_absence_completed_at
@@ -1601,10 +1571,9 @@ BEGIN
           OR (entity_value='order' AND i.order_id IS NOT NULL AND EXISTS(SELECT 1 FROM hub.canonical_order co
               WHERE co.tenant_id=i.tenant_key AND co.id=i.order_id AND co.deleted_at IS NULL)))
       ORDER BY s.source_pk COLLATE "C" LOOP
-      digest_value:=public.digest(digest_value||convert_to(jsonb_build_object('source_pk',member.source_pk,
-        'canonical_object_id',member.canonical_object_id,'origin_run_id',member.first_absence_run_id,
-        'second_run_id',member.second_absence_run_id,'sequence_value',member.second_absence_sequence,
-        'completed_at',member.second_absence_completed_at)::text,'UTF8'),'sha256');
+      digest_value:=control.etl_snapshot_delete_candidate_member_digest(digest_value,member.source_pk,
+        member.canonical_object_id,member.first_absence_run_id,member.second_absence_run_id,
+        member.second_absence_sequence,member.second_absence_completed_at);
     END LOOP;
     INSERT INTO control.etl_snapshot_delete_candidate(candidate_id,tenant_key,source_id,run_id,entity,candidate_revision,
       scope_digest,stable_scope_json,baseline_count,candidate_count,baseline_membership_digest,candidate_digest)
@@ -1829,6 +1798,40 @@ CREATE TRIGGER etl_snapshot_delete_run_facts_guard BEFORE UPDATE ON control.etl_
 FOR EACH ROW EXECUTE FUNCTION control.guard_etl_snapshot_delete_run_update();
 REVOKE ALL ON FUNCTION control.guard_etl_snapshot_delete_run_update() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
 
+CREATE FUNCTION control.etl_snapshot_delete_baseline_digest_seed(p_proof jsonb,p_entity text,p_count bigint)
+RETURNS bytea LANGUAGE sql IMMUTABLE STRICT SET search_path=pg_catalog
+AS $body$
+  SELECT public.digest(convert_to(jsonb_build_object('proof',p_proof,'entity',p_entity,'baseline',p_count,
+    'kind','live-baseline-v1')::text,'UTF8'),'sha256')
+$body$;
+
+CREATE FUNCTION control.etl_snapshot_delete_baseline_member_digest(p_prior bytea,p_tenant_key text,p_source_id text,
+  p_entity text,p_source_pk text,p_canonical_object_id uuid)
+RETURNS bytea LANGUAGE sql IMMUTABLE STRICT SET search_path=pg_catalog
+AS $body$
+  SELECT public.digest(p_prior||convert_to(jsonb_build_object('tenant_key',p_tenant_key,'source_id',p_source_id,
+    'entity',p_entity,'source_pk',p_source_pk,'canonical_object_id',p_canonical_object_id)::text,'UTF8'),'sha256')
+$body$;
+
+CREATE FUNCTION control.etl_snapshot_delete_candidate_digest_seed(p_proof jsonb,p_entity text,p_run_id uuid,p_revision integer,
+  p_baseline_count bigint,p_candidate_count bigint,p_baseline_digest bytea)
+RETURNS bytea LANGUAGE sql IMMUTABLE STRICT SET search_path=pg_catalog
+AS $body$
+  SELECT public.digest(convert_to(jsonb_build_object('proof',p_proof,'entity',p_entity,'run',p_run_id,
+    'revision',p_revision,'baseline',p_baseline_count,'count',p_candidate_count,
+    'baseline_membership_digest',encode(p_baseline_digest,'hex'))::text,'UTF8'),'sha256')
+$body$;
+
+CREATE FUNCTION control.etl_snapshot_delete_candidate_member_digest(p_prior bytea,p_source_pk text,p_canonical_object_id uuid,
+  p_origin_run_id uuid,p_second_run_id uuid,p_sequence_value numeric,p_completed_at timestamptz)
+RETURNS bytea LANGUAGE sql IMMUTABLE STRICT SET search_path=pg_catalog
+AS $body$
+  SELECT public.digest(p_prior||convert_to(jsonb_build_object('source_pk',p_source_pk,
+    'canonical_object_id',p_canonical_object_id,'origin_run_id',p_origin_run_id,'second_run_id',p_second_run_id,
+    'sequence_value',p_sequence_value,'completed_at',to_char(p_completed_at AT TIME ZONE 'UTC',
+      'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'))::text,'UTF8'),'sha256')
+$body$;
+
 CREATE FUNCTION control.etl_snapshot_delete_baseline_fingerprint(p_tenant_key text,p_source_id text,p_entity text,p_proof jsonb)
 RETURNS TABLE(baseline_count bigint,baseline_digest bytea)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub
@@ -1846,23 +1849,22 @@ BEGIN
   ELSE
     RAISE EXCEPTION 'invalid D entity' USING ERRCODE='22023';
   END IF;
-  digest_value:=public.digest(convert_to(jsonb_build_object('proof',p_proof,'entity',p_entity,
-    'baseline',count_value,'kind','live-baseline-v1')::text,'UTF8'),'sha256');
+  digest_value:=control.etl_snapshot_delete_baseline_digest_seed(p_proof,p_entity,count_value);
   IF p_entity='customer' THEN
     FOR member IN SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
       FROM control.canonical_source_identity i JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(i.tenant_key,i.customer_id)
       WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=p_entity AND i.customer_id IS NOT NULL AND c.deleted_at IS NULL
       ORDER BY i.source_pk COLLATE "C" LOOP
-      digest_value:=public.digest(digest_value||convert_to(jsonb_build_object('tenant_key',member.tenant_key,'source_id',member.source_id,
-        'entity',member.entity,'source_pk',member.source_pk,'canonical_object_id',member.canonical_object_id)::text,'UTF8'),'sha256');
+      digest_value:=control.etl_snapshot_delete_baseline_member_digest(digest_value,member.tenant_key,member.source_id,
+        member.entity,member.source_pk,member.canonical_object_id);
     END LOOP;
   ELSE
     FOR member IN SELECT i.tenant_key,i.source_id,i.entity,i.source_pk,i.canonical_object_id
       FROM control.canonical_source_identity i JOIN hub.canonical_order o ON (o.tenant_id,o.id)=(i.tenant_key,i.order_id)
       WHERE i.tenant_key=p_tenant_key AND i.source_id=p_source_id AND i.entity=p_entity AND i.order_id IS NOT NULL AND o.deleted_at IS NULL
       ORDER BY i.source_pk COLLATE "C" LOOP
-      digest_value:=public.digest(digest_value||convert_to(jsonb_build_object('tenant_key',member.tenant_key,'source_id',member.source_id,
-        'entity',member.entity,'source_pk',member.source_pk,'canonical_object_id',member.canonical_object_id)::text,'UTF8'),'sha256');
+      digest_value:=control.etl_snapshot_delete_baseline_member_digest(digest_value,member.tenant_key,member.source_id,
+        member.entity,member.source_pk,member.canonical_object_id);
     END LOOP;
   END IF;
   RETURN QUERY SELECT count_value,digest_value;
@@ -1876,20 +1878,23 @@ DECLARE c control.etl_snapshot_delete_candidate%ROWTYPE; member record; digest_v
 BEGIN
   SELECT * INTO c FROM control.etl_snapshot_delete_candidate WHERE candidate_id=p_candidate_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
-  digest_value:=public.digest(convert_to(jsonb_build_object('proof',c.stable_scope_json->'proof','entity',c.entity,
-    'run',c.run_id,'revision',c.candidate_revision,'baseline',c.baseline_count,'count',c.candidate_count,
-    'baseline_membership_digest',encode(c.baseline_membership_digest,'hex'))::text,'UTF8'),'sha256');
+  digest_value:=control.etl_snapshot_delete_candidate_digest_seed(c.stable_scope_json->'proof',c.entity,c.run_id,
+    c.candidate_revision,c.baseline_count,c.candidate_count,c.baseline_membership_digest);
   FOR member IN SELECT source_pk,canonical_object_id,origin_run_id,second_run_id,sequence_value,inferred_completed_at
     FROM control.etl_snapshot_delete_candidate_member WHERE candidate_id=p_candidate_id ORDER BY source_pk COLLATE "C" LOOP
-    digest_value:=public.digest(digest_value||convert_to(jsonb_build_object('source_pk',member.source_pk,
-      'canonical_object_id',member.canonical_object_id,'origin_run_id',member.origin_run_id,'second_run_id',member.second_run_id,
-      'sequence_value',member.sequence_value,'completed_at',member.inferred_completed_at)::text,'UTF8'),'sha256');
+    digest_value:=control.etl_snapshot_delete_candidate_member_digest(digest_value,member.source_pk,
+      member.canonical_object_id,member.origin_run_id,member.second_run_id,member.sequence_value,member.inferred_completed_at);
   END LOOP;
   RETURN digest_value;
 END;
 $body$;
 REVOKE ALL ON FUNCTION control.etl_snapshot_delete_baseline_fingerprint(text,text,text,jsonb),
-  control.etl_snapshot_delete_candidate_recomputed_digest(uuid) FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+  control.etl_snapshot_delete_candidate_recomputed_digest(uuid),
+  control.etl_snapshot_delete_baseline_digest_seed(jsonb,text,bigint),
+  control.etl_snapshot_delete_baseline_member_digest(bytea,text,text,text,text,uuid),
+  control.etl_snapshot_delete_candidate_digest_seed(jsonb,text,uuid,integer,bigint,bigint,bytea),
+  control.etl_snapshot_delete_candidate_member_digest(bytea,text,uuid,uuid,uuid,numeric,timestamptz)
+  FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
 
 CREATE TABLE control.etl_snapshot_delete_approval (
   approval_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1999,7 +2004,7 @@ BEGIN
       'baseline_count',c.baseline_count,'candidate_count',c.candidate_count,
       'approval_status',CASE WHEN NOT control.etl_snapshot_delete_ratio_exceeds(c.candidate_count,c.baseline_count)
         THEN 'NOT_REQUIRED' WHEN a.approval_id IS NULL THEN 'AWAITING_OWNER' ELSE 'APPROVED' END,
-      'approval_id',a.approval_id) ORDER BY c.entity),'[]'::jsonb)) INTO result
+      'approval_id',a.approval_id) ORDER BY c.entity) FILTER (WHERE c.candidate_id IS NOT NULL),'[]'::jsonb)) INTO result
   FROM control.etl_snapshot_delete_run x LEFT JOIN control.etl_snapshot_delete_candidate c
     ON (c.tenant_key,c.source_id,c.run_id)=(x.tenant_key,x.source_id,x.run_id)
   LEFT JOIN control.etl_snapshot_delete_approval a ON (a.candidate_id,a.candidate_revision)=(c.candidate_id,c.candidate_revision)

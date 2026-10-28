@@ -327,8 +327,14 @@ export async function listSnapshotRuns(pool: Pool, auth: Pick<AuthService,'asser
 type DeleteCandidatePage = Readonly<{ candidateId: string; limit: number; cursor?: string; requestId: string }>;
 type DeleteCandidateCursor = Readonly<{ tenant_key:string; source_id:string; run_id:string; candidate_id:string;
   candidate_revision:number; candidate_digest:string; last_key:Readonly<{tenant_key:string;source_id:string;entity:string;source_pk:string}> }>;
+// The maximum JSON payload is below 2 KiB: fixed keys/UUID/digest/revision,
+// two tenant keys (32 ASCII each), two source IDs (256 ASCII each), an entity
+// tag (8 ASCII), and a 128-code-point source_pk at at most 6 JSON UTF-8 bytes
+// per code point (control-character escaping). Base64url expansion stays
+// below 2.7 KiB, so 4 KiB is a strict headroom bound for the complete cursor.
+export const MAX_DELETE_CANDIDATE_CURSOR_LENGTH = 4096;
 function decodeDeleteCursor(value: string): DeleteCandidateCursor {
-  if (value.length>1024 || !/^[A-Za-z0-9_-]+$/.test(value)) fail('AUTH_INPUT_INVALID');
+  if (value.length>MAX_DELETE_CANDIDATE_CURSOR_LENGTH || !/^[A-Za-z0-9_-]+$/.test(value)) fail('AUTH_INPUT_INVALID');
   let parsed: unknown;
   try { const decoded=Buffer.from(value,'base64url').toString('utf8'); if(Buffer.from(decoded,'utf8').toString('base64url')!==value) fail('AUTH_INPUT_INVALID'); parsed=JSON.parse(decoded); }
   catch { return fail('AUTH_INPUT_INVALID'); }
@@ -336,12 +342,14 @@ function decodeDeleteCursor(value: string): DeleteCandidateCursor {
   const cursor=parsed as DeleteCandidateCursor;
   const keys=Object.keys(cursor).sort().join(',');
   if(keys!=='candidate_digest,candidate_id,candidate_revision,last_key,run_id,source_id,tenant_key' ||
-    typeof cursor.tenant_key!=='string' || typeof cursor.source_id!=='string' || !UUID.test(cursor.run_id) ||
+    typeof cursor.tenant_key!=='string' || !/^[a-z][a-z0-9_]{0,31}$/.test(cursor.tenant_key) ||
+    typeof cursor.source_id!=='string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(cursor.source_id) || !UUID.test(cursor.run_id) ||
     !UUID.test(cursor.candidate_id) || !Number.isSafeInteger(cursor.candidate_revision) || cursor.candidate_revision<1 ||
     typeof cursor.candidate_digest!=='string' || !/^[0-9a-f]{64}$/.test(cursor.candidate_digest) || !cursor.last_key ||
+    Object.keys(cursor.last_key).sort().join(',')!=='entity,source_id,source_pk,tenant_key' ||
     cursor.last_key.tenant_key!==cursor.tenant_key || cursor.last_key.source_id!==cursor.source_id ||
     typeof cursor.last_key.entity!=='string' || !['customer','order'].includes(cursor.last_key.entity) ||
-    typeof cursor.last_key.source_pk!=='string' || cursor.last_key.source_pk.length<1 || cursor.last_key.source_pk.length>128) fail('AUTH_INPUT_INVALID');
+    typeof cursor.last_key.source_pk!=='string' || [...cursor.last_key.source_pk].length<1 || [...cursor.last_key.source_pk].length>128) fail('AUTH_INPUT_INVALID');
   return cursor;
 }
 function encodeDeleteCursor(cursor: DeleteCandidateCursor): string { return Buffer.from(JSON.stringify(cursor),'utf8').toString('base64url'); }

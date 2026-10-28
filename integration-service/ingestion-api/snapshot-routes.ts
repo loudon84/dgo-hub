@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import { AuthError } from '../auth/errors.js';
 import type { AuthService, UserPrincipal } from '../auth/types.js';
 import type { OidcAuthenticator } from '../auth/oidc.js';
-import { createSnapshotRun, getSnapshotRun, listSnapshotRuns } from '../etl-worker/snapshot-runs.js';
+import { createSnapshotRun, getSnapshotRun, listSnapshotRuns, MAX_DELETE_CANDIDATE_CURSOR_LENGTH } from '../etl-worker/snapshot-runs.js';
 import { approveSnapshotDeleteCandidate, type DeleteCandidateApprovalInput } from '../etl-worker/snapshot-delete-api.js';
 
 export type SnapshotRouteOptions = Readonly<{ pool: Pool; authService: Pick<AuthService,'repository'|'assertCurrentPrincipal'>; authenticator: OidcAuthenticator }>;
@@ -54,7 +54,7 @@ function detailQuery(request: FastifyRequest): Readonly<{candidateId:string;limi
     if(typeof query.limit!=='string' || !/^(?:[1-9][0-9]?|100)$/.test(query.limit)) throw new AuthError('AUTH_INPUT_INVALID');
     limit=Number(query.limit);
   }
-  if(query.cursor!==undefined && (typeof query.cursor!=='string' || query.cursor.length>1024 || !/^[A-Za-z0-9_-]+$/.test(query.cursor))) {
+  if(query.cursor!==undefined && (typeof query.cursor!=='string' || query.cursor.length>MAX_DELETE_CANDIDATE_CURSOR_LENGTH || !/^[A-Za-z0-9_-]+$/.test(query.cursor))) {
     throw new AuthError('AUTH_INPUT_INVALID');
   }
   return Object.freeze({candidateId:query.candidate_id.toLowerCase(),limit,...(query.cursor===undefined?{}:{cursor:query.cursor})});

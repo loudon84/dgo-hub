@@ -1149,7 +1149,7 @@ describe('durable snapshot run admission', () => {
         const allowedDens:('customer'|'order')[]=includeOrder?['customer','order']:['customer'];
         await auth.repository.provisionSourceCredential({sourceId,tenantId:owner.tenantId,token:createCredential().secret,
           secretRef:'vault:/snapshot/source',allowedEntities:allowedDens,revision:'1'});
-        const dConfig={name:`Owned D source ${sourceId}`,connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
+        const dConfig={name:`Owned D source ${sourceId}`.slice(0,128),connector:'postgresql',mode:'FULL_SNAPSHOT',version_domain:'SNAPSHOT_OBSERVATION',
           endpoint_allowlist_ref:'pg-test',secret_ref:'vault:/snapshot/source',allowed_entities:allowedDens,delete_contract:deleteContract};
         await service.create(owner,{source_id:sourceId,data_owner_user_id:owner.userId,config:dConfig});
         await service.writeMappings(owner,sourceId,'1',[
@@ -1302,6 +1302,16 @@ describe('durable snapshot run admission', () => {
         FROM control.etl_snapshot_delete_candidate h JOIN control.etl_snapshot_delete_candidate_member m USING(candidate_id)
         WHERE h.run_id=$1 AND h.entity='customer' GROUP BY h.baseline_count,h.candidate_count`,[overSecond.run_id]);
       expect(overCandidate.rows).toEqual([{baseline_count:'20',candidate_count:'2',keys:['C-19','C-20']}]);
+      const frozenDigestCheck=await fixture.pool.query(`SELECT encode(c.candidate_digest,'hex') AS frozen_digest,
+        encode(control.etl_snapshot_delete_candidate_recomputed_digest(c.candidate_id),'hex') AS recomputed_digest,
+        encode(c.baseline_membership_digest,'hex') AS frozen_baseline_digest,
+        encode(b.baseline_digest,'hex') AS recomputed_baseline_digest
+        FROM control.etl_snapshot_delete_candidate c CROSS JOIN LATERAL
+          control.etl_snapshot_delete_baseline_fingerprint(c.tenant_key,c.source_id,c.entity,c.stable_scope_json->'proof') b
+        WHERE c.run_id=$1 AND c.entity='customer'`,[overSecond.run_id]);
+      expect(frozenDigestCheck.rows).toHaveLength(1);
+      expect(frozenDigestCheck.rows[0]!.frozen_digest).toBe(frozenDigestCheck.rows[0]!.recomputed_digest);
+      expect(frozenDigestCheck.rows[0]!.frozen_baseline_digest).toBe(frozenDigestCheck.rows[0]!.recomputed_baseline_digest);
       const orderHeader=await fixture.pool.query(`SELECT baseline_count::text,candidate_count::text FROM control.etl_snapshot_delete_candidate
         WHERE run_id=$1 AND entity='order'`,[overSecond.run_id]);
       expect(orderHeader.rows).toEqual([{baseline_count:'1',candidate_count:'1'}]);
@@ -1596,6 +1606,50 @@ describe('durable snapshot run admission', () => {
         [owner.tenantId,tombstoneDRun.run_id]);
       expect(tombstoneReservation.rows).toEqual([{status:'SKIPPED',consumed:0,busy:false}]);
       expect(tombstoneSource.config.delete_contract).toBe('tombstone');
+      const tombstoneApi=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+        authenticator:async()=>owner}});
+      try {
+        const skippedSummary=await tombstoneApi.inject({method:'GET',url:`/hub/v1/admin/etl-runs/${tombstoneDRun.run_id}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(skippedSummary.statusCode).toBe(200);
+        expect(skippedSummary.json().data.delete_reconciliation.candidates).toEqual([]);
+      } finally { await tombstoneApi.close(); }
+
+      // At the API-019 source limit, a full-length source key makes the
+      // generated full-key cursor exceed the former 1024-character cap.
+      const longSourceId='s'.repeat(160);
+      const longSourcePkA='A'.repeat(128);
+      const longSourcePkB='B'.repeat(128);
+      await createDSource(longSourceId,false);
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES($1,'Long key A','owner-ext','dept-ext','ACTIVE','2026-10-25 12:21:00.123456+00'),
+              ($2,'Long key B','owner-ext','dept-ext','ACTIVE','2026-10-25 12:22:00.123456+00')`,[longSourcePkA,longSourcePkB]);
+      await completeCWithoutD(longSourceId,'1','d2-long-source-baseline');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      await ownerPool.query(`DELETE FROM ${sourceSchema}.customers WHERE customer_id=ANY($1::text[])`,[[longSourcePkA,longSourcePkB]]);
+      await completeCWithoutD(longSourceId,'1','d2-long-source-first-absence');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const longCandidateRun=await completeCWithoutD(longSourceId,'1','d2-long-source-second-absence');
+      await (await import('../etl-worker/snapshot-delete-worker.js')).runSnapshotDeleteWorkerOnce(roleScopedPool('hub_worker'));
+      const longCandidateRow=await fixture.pool.query(`SELECT candidate_id::text FROM control.etl_snapshot_delete_candidate
+        WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3 AND entity='customer'`,[owner.tenantId,longSourceId,longCandidateRun.run_id]);
+      expect(longCandidateRow.rowCount).toBe(1);
+      const longSourceApi=await buildApp({logger:false,snapshotRuns:{pool:roleScopedPool('hub_api'),authService:auth,
+        authenticator:async()=>owner}});
+      try {
+        const baseUrl=`/hub/v1/admin/etl-runs/${longCandidateRun.run_id}?include=delete_candidates&candidate_id=${longCandidateRow.rows[0]!.candidate_id}&limit=1`;
+        const longFirst=await longSourceApi.inject({method:'GET',url:baseUrl,headers:{authorization:'Bearer owner-token'}});
+        expect(longFirst.statusCode).toBe(200);
+        const longCursor=longFirst.json().data.next_cursor as string;
+        expect(longCursor.length).toBeGreaterThan(1024);
+        const longSecond=await longSourceApi.inject({method:'GET',url:`${baseUrl}&cursor=${encodeURIComponent(longCursor)}`,
+          headers:{authorization:'Bearer owner-token'}});
+        expect(longSecond.statusCode).toBe(200);
+        expect(longSecond.json().data.delete_candidate_members).toHaveLength(1);
+      } finally { await longSourceApi.close(); }
+      await ownerPool.query(`INSERT INTO ${sourceSchema}.customers(customer_id,customer_name,owner_id,department_id,status,updated_at)
+        VALUES($1,'Long key A','owner-ext','dept-ext','ACTIVE','2026-10-25 12:21:00.123456+00'),
+              ($2,'Long key B','owner-ext','dept-ext','ACTIVE','2026-10-25 12:22:00.123456+00')`,[longSourcePkA,longSourcePkB]);
 
       // A fresh unconsumed reservation outranks prepared candidate checks at a
       // one-source worker limit, so lexically early prepared work cannot starve it.
