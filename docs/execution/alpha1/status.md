@@ -104,3 +104,9 @@ Initial source b32b7469 passed historical 65 C/B/API tests and 11 connector test
 Root verified 107 Fix2 artifacts and the corrected 200-artifact Fix1 package without hash/size mismatches. Reviewer verified all 24 latest captured source records against product blobs/raw bytes. Earlier child trailing-blank-line capture discrepancy is explicitly qualified, with original hashes preserved. Migrations 001–008 are unchanged; 009 remains unreleased and owned by the full M1-5 phase.
 
 D absence reconciliation/Owner approval, E manual recovery/cutover, integrated M1-5 verification and whole-phase review remain pending. Full DB permission-matrix assurance remains limited. Real upstream/Hermes/site integration and formal 48-case acceptance remain NOT_RUN; C approval is local engineering completion.
+
+## M1-5D1 implementation awaiting independent review — 2026-10-28
+
+D1 source `68bfa362` adds durable complete-run consumption, per-entity absence candidates and exact 5% threshold control, source-wide policy pause, and admission/activation reservation guards. Fresh local gates passed 26/26 snapshot tests, typecheck and build. Root verified 137 evidence artifacts and 21 before/after source-manifest pairs with no mismatches. Historical capture shortcomings are qualified in the [D1 report](m1-task-5d1-report.md); corrected captures supersede them. GPT-6.1 Sol independent Spec/Quality review is pending.
+
+D2 Owner review/approval and D3 logical deletion have not started. Migration 009 remains phase-owned; formal site acceptance and real upstream/Hermes integration remain NOT_RUN.

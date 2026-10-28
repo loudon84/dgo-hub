@@ -52,3 +52,9 @@ Use fresh UUID-isolated roots under absolute `M0_RUN_EVIDENCE_ROOT`, capture exa
 ## Review handoff
 
 Provide exact accepted source pin, source and migration diff, fresh evidence, crash/recovery matrix, grants, unresolved races and assurance limits to independent Sol review. Whole M1-5 schema, populated upgrade, integrated local oracle, and whole-phase review remain required after D3. Do not claim production/site/source or formal gate completion.
+
+## Pin-checked delete input notes
+
+At the reviewed C pin, both existing strict delete schemas accept exactly `{source_pk, source_version, deleted_at}`; pass the already-bound observation as decimal `source_version` and the second complete run's exact DB `completed_at` as offset RFC3339 `deleted_at`. The digest excludes `source_version` but includes `source_pk` and `deleted_at`; persist/read the exact run time losslessly as RFC3339 text with microseconds because a JavaScript `Date` can truncate PostgreSQL `timestamptz` precision. Order deletion applies the same logical-delete time to live lines, advances their hub revisions, and writes one order-level receipt/outbox operation. See `context/m1-task5d3-delete-semantics.md`.
+
+D cannot reuse C `loadProof`, C claim assertions, or `record_etl_snapshot_aggregate` after C `COMPLETE`: C finish clears its claim and the C loader is restricted to live continuation states. D needs a D-fenced loader that verifies the completed immutable C run/seal/manifest/observation and reconstructs the same `ApplyContext` from frozen proof; the canonical helper itself can still enforce the C-derived frozen proof and typed barriers. Recheck current Owner separately, because the helper validates frozen Owner approval but does not enforce current Owner revision. Preserve helper replay rules and record D effect idempotency in the same aggregate transaction.

@@ -48,3 +48,13 @@ Use fresh UUID-isolated evidence roots under absolute `M0_RUN_EVIDENCE_ROOT`, ac
 ## Review handoff
 
 Submit the implementation commit and evidence to independent Sol review. D3 begins only after D2 acceptance. Refresh every relevant seam from the selected immutable pin before implementation, including API-021 route composition, auth currentness, audit and idempotency exact function signatures.
+
+## Controller clarifications before pin refresh
+
+Exact-member mode requires both the ordinary `source:read` boundary and `source:approve`, the operation-time validated principal, and the exact current enabled Owner. Require a strict UUID `candidate_id` query parameter with `include=delete_candidates`; it selects one per-entity set in the specified run. Reject `candidate_id`, member cursor or member page options outside that explicit include mode. Bind the opaque cursor to tenant/source/run/candidate ID/revision/digest and last full key; any mismatch is a safe 400/409 without members. Use the existing public pagination naming/encoding conventions discovered at the refreshed pin.
+
+The durable approval must capture the actual approver's existing identity binding and authorization epoch/currentness facts, not merely a claimed Owner ID. D3 must be able to reject a revoked/disabled/rebound identity or removed required scope through the existing database authority, without storing bearer tokens or treating token expiry as approval expiry. The pin refresh must identify the exact supported fields/functions and record the design before coding. Current exact Owner/revision and candidate proof checks remain mandatory. Replay still revalidates the current principal and exact Owner before returning any original response.
+
+### Durable identity epoch ruling
+
+Persist the current database `auth_epoch` obtained under the locked existing identity authority with the actual approver binding. Any subsequent epoch change invalidates that approval, in addition to enabled/tenant/binding/Owner/scope/barrier checks; D3 must mark pending work stale before effects. This is conservative durable-authority binding, not bearer-token expiry. Do not globally change `assertCurrentPrincipal` semantics for unrelated APIs. A new approval after authority changes requires a current valid candidate; never mutate an old approval.
