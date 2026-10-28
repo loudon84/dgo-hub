@@ -130,3 +130,23 @@ D3 logical deletion and recovery remain unimplemented; D2 API approval performs 
 Source `23cac1b6` closes all three D2 findings. GPT-6.1 Sol [scoped rereview](reviews/m1-task-5d2-rereview-1.md) records Spec PASS / Quality Approved. Final gates: 26/26 snapshot tests, typecheck/build; 62 repair artifacts and all 12 final source-manifest pairs verified. API-021 long-key cursor roundtrip, empty summary and shared digest authority are corrected. The documented larger-page and existing maximum-source admission limits remain whole-phase assurance gaps.
 
 D3 is next: worker logical tombstones, immutable per-member effect receipts, current-approval enforcement and process crash recovery. No D3 effects have been implemented at this checkpoint. E remains outside this request.
+
+## M1-5D3 local implementation in progress — 2026-10-28
+
+D3 now has an initial fenced claim/effect worker, durable member operations, own-effect baseline reconstruction and API-060 replay integration. A targeted owned-fixture gate passed actual Node SIGKILL before/after aggregate COMMIT with two independent cohorts, stable operation/OBS/time, atomic receipt/outbox/effect recovery, paused sources and no source connector calls. That gate was 1 passed/25 skipped, not a new full-suite gate.
+
+D-specific retry/heartbeat, authority/data-drift and order rollback gates are still being added. D3 source review and whole-D completion are pending. E has not started; real-source/site/formal48 verification remains NOT_RUN.
+
+### D3 independent review requires repairs
+
+Product ac9fdeec passed local snapshot 26/26, schema/grant 1/1 and build. Independent GPT-6.1 Sol review found two P1 defects: expired-start crash backoff/budget exhaustion, and missing current Owner subject locking for below-threshold effects. Fix round 1 is in progress with focused lifecycle and concurrent-disable regressions. D3 and whole D remain open; E has not started. See [D3 review](reviews/m1-task-5d3-review.md).
+
+## M1-5D local implementation and independent reviews closed — 2026-10-28
+
+D1 deletion candidates/threshold controls, D2 exact Owner approval, and D3 logical deletion/recovery are now locally complete, with separate GPT-6.1 Sol acceptance. Final D3 product is 0112c661; evidence/report commit 7b28a843. The [final scoped review](reviews/m1-task-5d3-rereview-2.md) records Spec PASS / Quality Approved, with all three D3 findings closed after two repair rounds.
+
+D3 preserves immutable candidate/operation identities, exact bound observation/time, atomic logical customer/order effects, receipt/outbox/outcome, source pause policy, and current authority. Verified branches include real process death before/after COMMIT, fourth-start crash exhaustion, database 5/30/120 retry delays, old/NULL claim fencing, low-threshold Owner-disable serialization, barrier/data drift, and approval replay. [D3 implementation and repair history](m1-task-5d3-report.md).
+
+Latest Fix2 gate on 0112c661: build and typecheck passed; focused covering test 1 passed/25 skipped. Fix1 unfiltered snapshot 26/26 belongs to source 7600189 and remains separately identified. Root verified all 51 final artifacts against both original runtime and destination hashes, six source-bracket pairs, and resource lifecycle/absence records; Sol verified actual source-byte bindings. Historical Fix1 mapping omissions are explicitly qualified and supplied in a separately verified supplement, preserving original captures.
+
+M1-5 remains IN_PROGRESS. Next stage is E manual recovery/cutover, followed by integrated verification and whole-phase review. E has not started. Existing maximum-source admission and permission-matrix assurance limits remain recorded. Migration 009 stays unreleased/phase-owned; 001–008 remain unchanged. Formal 48-case/site, live CRM/order systems, Hermes and production verification remain NOT_RUN.

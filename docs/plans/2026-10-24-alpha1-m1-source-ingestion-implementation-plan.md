@@ -155,3 +155,7 @@ D1 candidate accounting/threshold/source reservation is locally complete at prod
 ## M1-5D2 checkpoint — 2026-10-28
 
 D2 Owner review/API060 local implementation and source review are complete at product23cac1b6; paired reports353951e5/evidencea8d8a607. Independent Sol Spec PASS / Quality Approved; final26 snapshot tests plus typecheck/build0. D3 worker effects/recovery proceeds from refreshed23 interfaces and shared digest helpers. D1/D2 alone do not complete D or M1-5; D3/E/integrated verification remain. 009 unreleased phase-owned, formal48/site NOT_RUN.
+
+## M1-5D checkpoint — 2026-10-28
+
+D1/D2/D3 local implementation is complete with independent GPT-6.1 Sol acceptance for each slice. D3 final source0112c661/evidence7b28a843 closes crash fallback/exhaustion, low-threshold Owner authority locking and NULL claim fencing; final scoped Spec PASS / Quality Approved at docs/execution/alpha1/reviews/m1-task-5d3-rereview-2.md. Latest Fix2 build/typecheck passed and focused gate1passed25skipped; earlier Fix1 unfiltered26/26 remains attributed to7600189. Evidence corrections preserve raw historical records and provide exact source-to-destination bindings. Whole M1-5 remains IN_PROGRESS: E manual recovery/cutover, integrated local gate and whole-phase review are still required. E not started. 009 remains unreleased phase-owned;001–008 unchanged; formal48/site/real-source/Hermes/production NOT_RUN.
