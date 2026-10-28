@@ -1,0 +1,42 @@
+{
+  "phase": "after",
+  "head": "3fbbd4d38f6568979b6b37b32d5322000f1ddb6a",
+  "utc": "2026-10-28T03:48:26.3977300Z",
+  "files": [
+    {
+      "lf_sha256": "f717f56d280ef04d42dc071f582c14b66212e5f679c8f7059fe1de6eb4358470",
+      "raw_sha256": "f717f56d280ef04d42dc071f582c14b66212e5f679c8f7059fe1de6eb4358470",
+      "size": 249021,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "git_blob": "6f6f9f26c797a8d611766712d62e3e2200fdae1a"
+    },
+    {
+      "lf_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d",
+      "raw_sha256": "6266ac88193c97f3650f257b493bb894dd059370160f4ed6c6ba20a45c1d592d",
+      "size": 12060,
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "git_blob": "dde90426efad9f53686e0d3a1c8904e53bad0a8c"
+    },
+    {
+      "lf_sha256": "800c50d9b664842fb23f5fdf41ee834a76986f7f0aacd3afffbb31647c484786",
+      "raw_sha256": "10c8a9863418746e465f4f17465d1483fca1858ff6946b803b0e7d819bce144f",
+      "size": 213705,
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "git_blob": "443c3564666b375362bbf4cd598ee0e55e780b2c"
+    },
+    {
+      "lf_sha256": "2008ec21d2da56d14991aad85b13acbc09eb637c8b8bdeb02c0986f6041b5abe",
+      "raw_sha256": "2008ec21d2da56d14991aad85b13acbc09eb637c8b8bdeb02c0986f6041b5abe",
+      "size": 3969,
+      "path": "integration-service/acceptance-tests/m1-task5d3-schema.test.ts",
+      "git_blob": "2267f6703a99f156269b2087c37ac2d7865441ee"
+    },
+    {
+      "lf_sha256": "8875bc6f32565e4110521e530adff112f13a887da4d22d7f61999b95755223c6",
+      "raw_sha256": "8875bc6f32565e4110521e530adff112f13a887da4d22d7f61999b95755223c6",
+      "size": 2386,
+      "path": "integration-service/acceptance-tests/fixtures/snapshot-delete-child.mjs",
+      "git_blob": "b654836b320449648568a4d6bf3e847731559d95"
+    }
+  ]
+}

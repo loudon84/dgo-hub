@@ -1,0 +1,170 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '8eb60c0a-055b-4c96-b2b3-1ad306673f82',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '898a2a3b-e7df-45fb-8491-5a748ec5c79d',
+  error_code: 'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:145:13'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '67e6bcc8-9f85-4b8f-b221-27b2537ff586',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at Object.afterAggregateCommit (E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-runs.test.ts:559:63)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'e52241cc-0f05-4e79-98b0-107417736e02',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'b88405db-2c23-42a6-a561-a0486120e76f',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '548921e0-112e-490f-a685-6c41dc00e713',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'd932718f-c5b5-41fb-a728-9e143323128e',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '42501',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '1beacd8b-0ac3-41de-9d75-6072add715c9',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'df51a412-f7e1-4836-9e18-7fb38d86320b',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'c41ea484-f635-4c0a-82ea-3700ae8bd964',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '23503',
+  constraint: 'source_version_receipt_tenant_key_source_id_entity_source__fkey',
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg-pool\\index.js:45:11'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e-d-crash-baseline-efe58c3f',
+  run_id: '9120d0a5-a252-429d-87ff-4b42b3f0b63b',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected [ { status: 'FAILED' } ] to deeply equal [ { status: 'COMPLETE' } ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "status": "COMPLETE",
++     "status": "FAILED",
+    },
+  ]
+
+ ❯ completeCWithoutD acceptance-tests/snapshot-runs.test.ts:379:32
+    377|         await expect(runSnapshotContinuationWorkerOnce(roleScopedPool(…
+    378|         const completed=await fixture.pool.query('SELECT status FROM c…
+    379|         expect(completed.rows).toEqual([{status:'COMPLETE'}]);
+       |                                ^
+    380|         return run;
+    381|       };
+ ❯ acceptance-tests/snapshot-runs.test.ts:2196:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

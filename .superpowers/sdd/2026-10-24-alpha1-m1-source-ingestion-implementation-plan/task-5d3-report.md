@@ -1,0 +1,34 @@
+# M1 Task 5D3 implementation report
+
+## Scope and source identity
+
+This implementation covers M1-5D3 only. It was dispatched against baseline `3fbbd4d38f6568979b6b37b32d5322000f1ddb6a` with accepted D2 product `23cac1b6a3f00b595ecff085dc59f14dd771bc73`. Product and acceptance-test changes are committed as `ac9fdeec20b2e4b9e2737b287034dd7354f193d9` (`Implement M1 task 5D3 durable delete apply`). The fixed-HEAD source bracketing in the final gates records that actual HEAD and unchanged file bytes before and after each command.
+
+The implementation adds durable D claim/lease and retry state, bounded four-start processing with database-clock delays, heartbeat fencing, full candidate/currentness checks, and transactional canonical delete, durable outcome, receipt, progress, and outbox writes. The worker processes only a fully validated, frozen C cohort. Candidate operations are allocated durably at freeze and reused across retries; effect application is idempotent against the exact durable receipt. Source connector reads and physical business deletes are not introduced into D. API replay returns an existing valid APPLYING/COMPLETE approval result only under the bound identity, owner, epoch, scope, and currentness checks; it does not create a replacement approval. Above-threshold cohorts remain paused/disabled through approval and terminal processing; finalization does not activate them.
+
+The schema contract was recorded before product edits at the SDD context path `context/m1-task5d3-schema-contract.md`. The fixed migration 009 remains phase-owned and unreleased; this report makes no deployed-upgrade claim.
+
+## Final fixed-HEAD gates
+
+| Gate | Runtime | Command | Result |
+|---|---|---|---|
+| Build | `E:\m1t5-runtime\4699ecb8-32c2-40a8-a7e3-f034e82723a7` | `npm run build` | exit 0; emitted worker SHA-256 `cb8ff507fb5361c0d57e559b41f6fed6141bd2dea0d75357e0d632c8c792ff70` |
+| Snapshot acceptance | `E:\m1t5-runtime\349a4cfe-1a38-4d40-8dcc-37f18fee6f12` | `npm test -- acceptance-tests/snapshot-runs.test.ts` | exit 0; 26/26 passed, unfiltered, 150.05s |
+| Schema and grants | `E:\m1t5-runtime\0805cee9-4640-46bb-975b-4c30c72b22be` | `npm test -- acceptance-tests/m1-task5d3-schema.test.ts` | exit 0; 1/1 passed |
+| Typecheck | `E:\m1t5-runtime\390a27e2-6b7c-4365-aecd-0de47cb9ce90` | `npm run typecheck` | exit 0; pre-product-commit, with only a trailing blank-line removal in migration 009 after this gate; no semantic source change |
+
+The final snapshot test loads the built worker with the same dist hash above. Its coverage includes populated 001-008 migration facts followed by 009 and identical 009 reapplication, actual role-grant denials, durable claim and retry behavior, lease expiration/heartbeat extension, authority epoch invalidation, matching barrier rejection, post-approval equal-count baseline tuple substitution, above-threshold no-effect checks, owner/auth restoration, API replay after own effects, and actual Node SIGKILL immediately before and after COMMIT. Crash recovery assertions cover real customer tombstones and order lines, stable operation IDs, and atomic canonical/receipt/outbox/effect/progress behavior. The schema test additionally verifies worker-private helper/table writes fail with 42501.
+
+The 60-second lease heartbeat case checks the renewed lease after waiting beyond its original `lease_until`. The suite also verifies all-or-nothing rollback when the durable D outcome write fails, then successful retry from a new valid cohort. The matching-barrier stale branch is typed `D_CANDIDATE_STALE` only when frozen D candidate rows exist; the pre-candidate C behavior remains unchanged.
+
+## Diagnostic history and corrections
+
+No pre-implementation RED run was captured. This report does not represent later failures as a pre-change RED. The retained diagnostic attempts show: (1) an early matching-barrier assertion exposed a stale D row without its typed reason; the narrow migration-009 branch fix added that reason for frozen D candidates; (2) the newer-C test initially restored scopes without restoring `departmentId=sales-east` and `businessRole=sales`, then was corrected to restore all auth fields; (3) the no-connector assertion was moved to bracket the D worker while allowing the explicitly expected newer C scan. The final unfiltered 26-test run passed after these corrections.
+
+A deliberately injected `afterAggregateCommit` mutation of both `customer_id` and `canonical_object_id` for `C-1` is rejected by PostgreSQL with SQLSTATE `23503`, constraint `source_version_receipt_tenant_key_source_id_entity_source__fkey`, because the source-version receipt still references the original canonical object. The test now asserts that exact SQLSTATE/constraint and the safe persisted C failure (`SNAPSHOT_C_PROCESSING_FAILED`, one customer outcome, zero order outcomes). This is the intended foreign-key protection in that corruption injection, not a D3 failure and not `SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED`. The earlier diagnostic stderr containing the database error is retained in the evidence package; final successful snapshot stderr was empty.
+
+## Evidence and limits
+
+The explicitly whitelisted runtime captures are under `docs/execution/alpha1/m1-task-5d3-evidence/c758ec4a-c664-41f7-af83-03d131187ad0/`. `manifest.json` lists each copied file’s original runtime path, byte size, and SHA-256; all 61 listed files were verified against the manifest. Manifest SHA-256: `42eeef2340e14db3a8b62f2ab2a380b5f9675db9771cb2df95d2752fdd1df8ac`.
+
+This is implementation and local acceptance evidence for M1-5D3. It does not claim the formal 48-hour/site acceptance, Hermes validation, production rollout, or completion of M1-5D as a whole. No E work was performed.

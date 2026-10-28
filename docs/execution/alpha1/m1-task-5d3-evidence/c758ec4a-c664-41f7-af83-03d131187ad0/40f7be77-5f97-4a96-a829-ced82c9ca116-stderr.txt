@@ -1,0 +1,152 @@
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '921a6e7a-40be-4dbd-8262-05ba44e3a3a1',
+  error_code: 'SNAPSHOT_IDENTITY_MAPPING_TARGET_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:115:28)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '2cc0f5e5-15fe-4ec0-a880-9481c88dab18',
+  error_code: 'SNAPSHOT_ORDER_CUSTOMER_REFERENCE_CHANGED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:145:13'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'bb51e2c4-331e-4749-be90-4108c840af56',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at Object.afterAggregateCommit (E:/git/dgo-hub/integration-service/acceptance-tests/snapshot-runs.test.ts:559:63)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'bdd770e3-19ec-437a-84b2-9b05c3360a39',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: 'a3f8b8d1-78f6-4fb3-98ac-7cf3a0497839',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '20945fd4-6ca2-41aa-8eb2-bb99590e2cd3',
+  error_code: 'SNAPSHOT_CUSTOMER_IDENTITY_INVALID',
+  sqlstate: undefined,
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'Error',
+  failure_site: 'at validateAndSeal (E:/git/dgo-hub/integration-service/etl-worker/snapshot-apply-worker.ts:117:27)'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '52d66a58-a38c-47b1-88e8-4ea80e796683',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '42501',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '4ac2aaa6-1712-4886-bbbc-40cd16b35e82',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '65df9f70-9d88-4b81-a70b-ee701fb7d433',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '57P01',
+  constraint: undefined,
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg\\lib\\client.js:694:17'
+}
+
+stderr | acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+snapshot continuation failed {
+  tenant_key: 'snapshot_tenant',
+  source_id: 'pg-e2e',
+  run_id: '2c9b762e-cacb-4a45-8313-f0900ff1b84d',
+  error_code: 'SNAPSHOT_C_PROCESSING_FAILED',
+  sqlstate: '23503',
+  constraint: 'source_version_receipt_tenant_key_source_id_entity_source__fkey',
+  column: undefined,
+  failure_name: 'error',
+  failure_site: 'at E:\\git\\dgo-hub\\integration-service\\node_modules\\pg-pool\\index.js:45:11'
+}
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  acceptance-tests/snapshot-runs.test.ts > durable snapshot run admission > restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan
+AssertionError: expected 62 to be 61 // Object.is equality
+
+- Expected
++ Received
+
+- 61
++ 62
+
+ ❯ acceptance-tests/snapshot-runs.test.ts:2226:36
+    2224|           newer_presence_run_id:newerPresenceRun.run_id,newer_presence…
+    2225|           old_approval_replay_status:staleApprovalReplay.statusCode,ol…
+    2226|         expect(sourceConnectCalls).toBe(sourceCallsBefore);
+       |                                    ^
+    2227|         const pausedCrashSources=await fixture.pool.query(`SELECT sr.s…
+    2228|           JOIN control.etl_snapshot_schedule s USING(tenant_key,source…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
