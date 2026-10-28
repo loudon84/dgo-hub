@@ -1,8 +1,8 @@
 # M1 Task 5D1 capture index
 
-Product source commit: `68bfa36203be6446c47e0927ab9d982b5a380343` (parent at gates: `854df4cfb2492a5cd70da7343131e49d58f8e407`; final gated source tree was subsequently committed byte-for-byte, with LF-normalized binding recorded in `source-bindings.json`). Base: `3040666fa9da2de19ba7b8bf632c4765f278b455`. Branch: `feat/alpha1-implementation`.
+Product source commit: `68bfa36203be6446c47e0927ab9d982b5a380343`, parent `3040666fa9da2de19ba7b8bf632c4765f278b455`. The original gates ran at temporary commit `854df4cfb2492a5cd70da7343131e49d58f8e407`, also parented by `3040666`; 68bfa amended 854df, so 854df is not the parent of 68bfa. No reset or rebase occurred. Fresh gates at HEAD `4163984f28cde7e70a9452416e43b71a0afad7ee` with actual per-gate before/after source manifests are indexed in `fresh-gates-4163984f-20261028/capture-index.md`. Base: `3040666fa9da2de19ba7b8bf632c4765f278b455`. Branch: `feat/alpha1-implementation`.
 
-## Final three gates
+## Original three gate captures (historical; superseded by fresh gates below)
 
 `M0_RUN_EVIDENCE_ROOT` equaled the external root on each command. Raw command, stdout, stderr, exit code, source root and digests are copied under the listed gate folder and described in its `capture-metadata.json`.
 
@@ -12,9 +12,9 @@ Product source commit: `68bfa36203be6446c47e0927ab9d982b5a380343` (parent at gat
 | Typecheck | `E:\m1t5-runtime\91663241-93d1-4fd8-84be-72b993717fbc` | 0 | `gates/91663241-93d1-4fd8-84be-72b993717fbc/capture-metadata.json` |
 | Build | `E:\m1t5-runtime\33e1f484-8aeb-4413-9256-3cc70a12006c` | 0 | `gates/33e1f484-8aeb-4413-9256-3cc70a12006c/capture-metadata.json` |
 
-Source bindings, per-file before/after raw SHA-256, LF-normalized SHA-256, byte sizes and Git blob IDs: `source-bindings.json`. The migration file was CRLF in the tested Windows working tree and LF in its Git blob; its LF-normalized SHA-256 matches the committed blob. No source edit followed the final captured gates. `three-gate-metadata.json` indexes the three capture records.
+The original `source-bindings.json` compares the base source to the final product source and does not provide true before/after snapshots around each command. The original `three-gate-metadata.json` records the 854df HEAD only. Treat the three rows above and their logs as historical captures; they are superseded by the fresh gates and per-command source snapshots in `fresh-gates-4163984f-20261028/capture-index.md`.
 
-## Owned runtime resources from the final full suite
+## Owned runtime resources from the original full suite (historical)
 
 Only test-owned resources were inspected and cleaned. The PostgreSQL fixture helper used immutable image `postgres@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297`, `taskLabel=m1task5`, unique run labels, tmpfs-only database storage and its existing ownership checks. The three exact `containerId` / `runLabel` pairs are in `owned-lifecycle/postgres/postgres-lifecycle-<runLabel>.jsonl`; each ends with `ownershipConfirmed=true`, `containerAbsentAfterRemoval=true` after `docker rm --force`. No other containers were targeted.
 
@@ -38,4 +38,20 @@ Every listed external root's explicit command/output/error/exit artifacts is cop
 
 The external artifacts were copied by explicit UUID and filename whitelist. Generated temporary migration copies under test roots, ignored reference clones, `.env`/credential material, npm configuration, and blocked host-artifact paths are excluded from this package.
 
-Report copies: .superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/task-5d1-report.md and docs/execution/alpha1/m1-task-5d1-report.md have identical SHA-256 `E072172F00AEB5DFC7746E5EC5422192A0A56C73F4F2CCABE22BC75822F6047F`.
+Report copies: .superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/task-5d1-report.md and docs/execution/alpha1/m1-task-5d1-report.md are identical, SHA-256 `4bbc9b10d5466787994c8fe8eb53a273989abcd00e7cb5313cea121c0d7cf1ad`.
+
+## Corrected fresh gate capture
+
+The fresh final gate captures and true per-command source-before/after manifests are in `fresh-gates-4163984f-20261028/capture-index.md`. See that index for corrected Git parentage, all three fresh UUID roots, exact HEAD, hashes/sizes/blobs, and the copied owned lifecycle records. The earlier 854df metadata and logs remain retained as historical artifacts. The earlier source-bindings.json compares base to product and is not per-gate bracketing evidence.
+
+## Capture wrapper setup attempts
+
+These attempts are retained under their original external UUID directories and were not counted as npm gates:
+
+| External UUID | Result |
+|---|---|
+| `939e2f1b-efce-403a-8015-bad19375d64c` | Wrapper stopped at unsupported PowerShell `utf8NoBOM` encoding parameter before npm invocation. |
+| `fa681987-207e-4a09-a525-acc1a41f8f31`, `8e5f5c28-33f0-43da-a181-670cf00fa042` | Wrapper failed because this PowerShell/.NET runtime lacks `SHA256.HashData`; npm was not invoked. |
+| `f1d11674-7872-4304-b367-58cad25fd535`, `cb97124d-3873-4d8e-9f0e-5d845d1100df`, `c7e8f8d2-3b5b-4e8a-84c1-b2c32a42b54b` | Wrapper invoked npm with an extra `npm` command token and received `Unknown command: "npm"`; these are wrapper failures, not test/typecheck/build gate results. |
+
+The fresh capture wrapper was corrected and all three requested commands then ran successfully with separate UUID roots.

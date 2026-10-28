@@ -1,0 +1,55 @@
+{
+  "schema": "m1-task-5d1-per-gate-source-binding-v1",
+  "gate_HEAD": "4163984f28cde7e70a9452416e43b71a0afad7ee",
+  "gate_HEAD_parent": "68bfa36203be6446c47e0927ab9d982b5a380343",
+  "product_commit": "68bfa36203be6446c47e0927ab9d982b5a380343",
+  "product_commit_parent": "3040666fa9da2de19ba7b8bf632c4765f278b455",
+  "earlier_gate_commit": "854df4cfb2492a5cd70da7343131e49d58f8e407",
+  "earlier_gate_commit_parent": "3040666fa9da2de19ba7b8bf632c4765f278b455",
+  "earlier_commit_amended_into_product_commit": true,
+  "diff_854df_to_68bfa": "integration-service/acceptance-tests/snapshot-runs.test.ts only: 9 insertions, 4 deletions (explicit child entry/label/ownership/exit lifecycle capture)",
+  "reset_or_rebase": "none",
+  "run_worktree_source_delta": "The earlier gates ran with the test-only lifecycle instrumentation in the working tree, which the later --amend recorded into 68bfa. These fresh gates run at 4163984, with before/after source captures against the committed tree.",
+  "gateRoots": [
+    "E:\\m1t5-runtime\\df90d946-3af4-45cf-835f-6c65be2c8117",
+    "E:\\m1t5-runtime\\e9e2ef4b-0e8f-40e1-9c06-200980cc593b",
+    "E:\\m1t5-runtime\\cbaef082-b59c-4b7c-a23c-34000369b8dc"
+  ],
+  "files": [
+    {
+      "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5d1-schema-contract.md",
+      "product_commit_blob": "b34865c438d2d7e74abcd642e302328319dc3648",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "product_commit_blob": "6a1e55a6f77e3d2449a3f7b9f51104b0af19b2d1",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-delete-worker.ts",
+      "product_commit_blob": "5465d434513a972601f4b1f8593032e66c730de7",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "product_commit_blob": "757a1949c806f1759231ffdb43a36f4a58ed2bd3",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/etl-worker/worker.ts",
+      "product_commit_blob": "832773de94354c1c76c3440fa322bdb5550742da",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "product_commit_blob": "b3624c66ac451fe5a180f2c6b32c4d9f9a7ede68",
+      "matches_all_gate_before_after": true
+    },
+    {
+      "path": "integration-service/source-registry/service.ts",
+      "product_commit_blob": "33a73a3b2da9f1dda38a65de56cef68667bd9c40",
+      "matches_all_gate_before_after": true
+    }
+  ]
+}
