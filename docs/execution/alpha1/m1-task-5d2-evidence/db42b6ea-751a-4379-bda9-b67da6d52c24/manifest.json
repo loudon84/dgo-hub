@@ -1,0 +1,301 @@
+{
+  "package_id": "db42b6ea-751a-4379-bda9-b67da6d52c24",
+  "source_commit": "0871e857fe00b866fdf9a8b51a19641ebfb11d33",
+  "artifacts": [
+    {
+      "bytes": 1841,
+      "gate": "focused-d2",
+      "sha256": "164d6b130f491b0af87b8be0ab685542fc54101caf6927fb249ffc33f59349ca",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/before.json",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/before.json"
+    },
+    {
+      "bytes": 1841,
+      "gate": "focused-d2",
+      "sha256": "164d6b130f491b0af87b8be0ab685542fc54101caf6927fb249ffc33f59349ca",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/after.json",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/after.json"
+    },
+    {
+      "bytes": 153,
+      "gate": "focused-d2",
+      "sha256": "708d689c43e2c67bc155e1ffee3544f0ed8e0b76e4612c9a272558ab24a1f337",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/command.txt",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/command.txt"
+    },
+    {
+      "bytes": 1,
+      "gate": "focused-d2",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/exit.txt",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/exit.txt"
+    },
+    {
+      "bytes": 244,
+      "gate": "focused-d2",
+      "sha256": "ef1de8f8f97332510f55bc9ab6e3bc10bd8bee9c3d9974df9022d459ac662e85",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/stdout.txt",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/stdout.txt"
+    },
+    {
+      "bytes": 0,
+      "gate": "focused-d2",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/stderr.txt",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/stderr.txt"
+    },
+    {
+      "bytes": 1516,
+      "gate": "focused-d2",
+      "sha256": "ac131d1db4e3c5a1744e3f5a8864bf6a32d8e7caabb39e483eacd49098bef0aa",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/node-child-lifecycle.jsonl",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/node-child-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "focused-d2",
+      "sha256": "150a57a353a0727d8415f4718a0a3471d7161ac7d68cf0c9d377d081257e886e",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/m1task5/84010b0c-7a74-43e1-924f-3bd48f1745fc/postgres-lifecycle.jsonl",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/m1task5/84010b0c-7a74-43e1-924f-3bd48f1745fc/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "focused-d2",
+      "sha256": "70988a3ac741a57783c9d8715a8dca3c5c585676858242ac9299a6ac290755e8",
+      "relative_source_path": "bda6d1d5-a234-4b1e-82df-d589f5e35aae/m1task5/f9bc986f-bf68-4e95-9f20-dde599da1199/postgres-lifecycle.jsonl",
+      "package_path": "gates/focused-d2/bda6d1d5-a234-4b1e-82df-d589f5e35aae/m1task5/f9bc986f-bf68-4e95-9f20-dde599da1199/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1841,
+      "gate": "populated-migration-reapply",
+      "sha256": "70f7e76b545add86e290e0fab6e6ffe7a1296d4b121b9368da6028a7c42bdedf",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/before.json",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/before.json"
+    },
+    {
+      "bytes": 1841,
+      "gate": "populated-migration-reapply",
+      "sha256": "70f7e76b545add86e290e0fab6e6ffe7a1296d4b121b9368da6028a7c42bdedf",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/after.json",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/after.json"
+    },
+    {
+      "bytes": 155,
+      "gate": "populated-migration-reapply",
+      "sha256": "9db63b79e03d5192ccbb4956bca9a9087281a9ee2bf0e68be9567059e8336bdc",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/command.txt",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/command.txt"
+    },
+    {
+      "bytes": 1,
+      "gate": "populated-migration-reapply",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/exit.txt",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/exit.txt"
+    },
+    {
+      "bytes": 242,
+      "gate": "populated-migration-reapply",
+      "sha256": "e1f430a3cc1dfe3e15da6bbf8d04efd198d9f40ddd2082c1dbf1b857879b5942",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/stdout.txt",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/stdout.txt"
+    },
+    {
+      "bytes": 0,
+      "gate": "populated-migration-reapply",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/stderr.txt",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/stderr.txt"
+    },
+    {
+      "bytes": 1048,
+      "gate": "populated-migration-reapply",
+      "sha256": "99a93ae8c177badc5b9735dc1c3ba6f6f126d42579861d6e0618667c26c34725",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/m1task5/b7d5ee51-846f-4d17-9e7b-929b82ca6992/postgres-lifecycle.jsonl",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/m1task5/b7d5ee51-846f-4d17-9e7b-929b82ca6992/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "populated-migration-reapply",
+      "sha256": "5641cdffbb863ad2f9c801102dd3d15d9d814b9b68d8fa691f57ede87b19536b",
+      "relative_source_path": "730b5e8a-c187-4f53-8f87-146264522371/m1task5/d06fb6b2-9533-4ac5-9600-7981d35cc8c3/postgres-lifecycle.jsonl",
+      "package_path": "gates/populated-migration-reapply/730b5e8a-c187-4f53-8f87-146264522371/m1task5/d06fb6b2-9533-4ac5-9600-7981d35cc8c3/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 2248,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "9ac4d35dd4c055ee699625c534fc590baaa2f1745808d8cf2d062ac8dd82d8eb",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/before.json",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/before.json"
+    },
+    {
+      "bytes": 2248,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "9ac4d35dd4c055ee699625c534fc590baaa2f1745808d8cf2d062ac8dd82d8eb",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/after.json",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/after.json"
+    },
+    {
+      "bytes": 61,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "a9b5d35fd0f5bd469061fbdeddad5cb934a05e391e8424e73c6328e409c1d29b",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/command.txt",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/command.txt"
+    },
+    {
+      "bytes": 1,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/exit.txt",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/exit.txt"
+    },
+    {
+      "bytes": 232,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "3effaa68a18ed788601c7733d7b487b9b98c4b58387da1aae4a07de40a61dc75",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/stdout.txt",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/stdout.txt"
+    },
+    {
+      "bytes": 0,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/stderr.txt",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/stderr.txt"
+    },
+    {
+      "bytes": 1516,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "9ccbffb015510903fd643d56842d825a4ab9cb76b4ed8c7f38e91ca51587f7ad",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/node-child-lifecycle.jsonl",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/node-child-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "27801e18469296963bd3f2bf1d6b9c982a8c1daab0473d23a0e653073c368b1a",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/7051a0ac-522f-47aa-a518-8c7b23ae3afb/postgres-lifecycle.jsonl",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/7051a0ac-522f-47aa-a518-8c7b23ae3afb/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "f0ce4647d41aa7f83da7b50f30991e16c8aaa6da421af5be0222990881f8fdae",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/839d0e54-b9be-4acb-8028-6d5a55477b8f/postgres-lifecycle.jsonl",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/839d0e54-b9be-4acb-8028-6d5a55477b8f/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 1048,
+      "gate": "full-snapshot-runs-26",
+      "sha256": "ebdc4973dc0ba4bd2deb9e31f8cab92331237f26b7290dcb1282d2c39d077aab",
+      "relative_source_path": "474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/9354fe7b-f529-4ce1-9023-0495231ffe68/postgres-lifecycle.jsonl",
+      "package_path": "gates/full-snapshot-runs-26/474a4e3c-df66-41d4-994f-cd0c67235271/m1task5/9354fe7b-f529-4ce1-9023-0495231ffe68/postgres-lifecycle.jsonl"
+    },
+    {
+      "bytes": 2248,
+      "gate": "typecheck",
+      "sha256": "bdbecad522e85f15b2a9ec5df37ca6053075f65ab89f82722cf97cb671bfdf9d",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/before.json",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/before.json"
+    },
+    {
+      "bytes": 2248,
+      "gate": "typecheck",
+      "sha256": "bdbecad522e85f15b2a9ec5df37ca6053075f65ab89f82722cf97cb671bfdf9d",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/after.json",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/after.json"
+    },
+    {
+      "bytes": 17,
+      "gate": "typecheck",
+      "sha256": "982c1455e5e73c8ccab2d70a550c972e2841a0582596e26a7fcc53b80e14aa14",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/command.txt",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/command.txt"
+    },
+    {
+      "bytes": 1,
+      "gate": "typecheck",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/exit.txt",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/exit.txt"
+    },
+    {
+      "bytes": 92,
+      "gate": "typecheck",
+      "sha256": "bfd1a5449c3ec49d872bf46d9ac527dba63c7c201a2ac5ac1f4978929dc7ebbe",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/stdout.txt",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/stdout.txt"
+    },
+    {
+      "bytes": 0,
+      "gate": "typecheck",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relative_source_path": "1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/stderr.txt",
+      "package_path": "gates/typecheck/1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2/stderr.txt"
+    },
+    {
+      "bytes": 2248,
+      "gate": "build",
+      "sha256": "3c13c6fd9ff9092c091b358eeb65a39adeba0058672e57dda5155a22ec01de4b",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/before.json",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/before.json"
+    },
+    {
+      "bytes": 2248,
+      "gate": "build",
+      "sha256": "3c13c6fd9ff9092c091b358eeb65a39adeba0058672e57dda5155a22ec01de4b",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/after.json",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/after.json"
+    },
+    {
+      "bytes": 13,
+      "gate": "build",
+      "sha256": "16c0e4305ac213dff39fc82b69b6e08aeeb8758e33cd72d7c409752a70e9f054",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/command.txt",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/command.txt"
+    },
+    {
+      "bytes": 1,
+      "gate": "build",
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/exit.txt",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/exit.txt"
+    },
+    {
+      "bytes": 79,
+      "gate": "build",
+      "sha256": "a9c32976e2c37eda1c02f06b567108e5d945fb32295731ac1f282d490c1083d0",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/stdout.txt",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/stdout.txt"
+    },
+    {
+      "bytes": 0,
+      "gate": "build",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "relative_source_path": "b265b52c-ad75-468d-b7ee-77422ac0ea4c/stderr.txt",
+      "package_path": "gates/build/b265b52c-ad75-468d-b7ee-77422ac0ea4c/stderr.txt"
+    }
+  ],
+  "gates": {
+    "focused-d2": {
+      "actual_head": "7c8d815d81e015f1594c6990ee7853cc3ef7543c",
+      "m0_run_evidence_root": "E:\\m1t5-runtime\\bda6d1d5-a234-4b1e-82df-d589f5e35aae"
+    },
+    "populated-migration-reapply": {
+      "actual_head": "7c8d815d81e015f1594c6990ee7853cc3ef7543c",
+      "m0_run_evidence_root": "E:\\m1t5-runtime\\730b5e8a-c187-4f53-8f87-146264522371"
+    },
+    "full-snapshot-runs-26": {
+      "actual_head": "0871e857fe00b866fdf9a8b51a19641ebfb11d33",
+      "m0_run_evidence_root": "E:\\m1t5-runtime\\474a4e3c-df66-41d4-994f-cd0c67235271"
+    },
+    "build": {
+      "actual_head": "0871e857fe00b866fdf9a8b51a19641ebfb11d33",
+      "m0_run_evidence_root": "E:\\m1t5-runtime\\b265b52c-ad75-468d-b7ee-77422ac0ea4c"
+    },
+    "typecheck": {
+      "actual_head": "0871e857fe00b866fdf9a8b51a19641ebfb11d33",
+      "m0_run_evidence_root": "E:\\m1t5-runtime\\1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "sha256_raw": "c70e20bc891b9e9879fb99ed3cabcca59b791f44b5d55271b87d935a1a98f019",
+      "bytes": 196022,
+      "path": "integration-service/acceptance-tests/snapshot-runs.test.ts",
+      "git_blob": "4b1c841f216d96e48bccb6e9b68a8ec69dd4f763",
+      "sha256_lf": "c70e20bc891b9e9879fb99ed3cabcca59b791f44b5d55271b87d935a1a98f019"
+    },
+    {
+      "sha256_raw": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806",
+      "bytes": 29801,
+      "path": "integration-service/etl-worker/snapshot-runs.ts",
+      "git_blob": "a625ae853769330460f76b5d43483dc4ada0a5dc",
+      "sha256_lf": "894ff433d270d7e2d5ddf56464ff84f825602d4fa856c3b2bd79eb0082fbd806"
+    },
+    {
+      "sha256_raw": "db0f31de4c2e217c958522c26558c56c37f811ca460125cbb3eb2d800703f908",
+      "bytes": 3469,
+      "path": "integration-service/etl-worker/snapshot-delete-api.ts",
+      "git_blob": "1bf807f7471e0e5d8fa8d9efa8e69d899ab0c529",
+      "sha256_lf": "db0f31de4c2e217c958522c26558c56c37f811ca460125cbb3eb2d800703f908"
+    },
+    {
+      "sha256_raw": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61",
+      "bytes": 8460,
+      "path": "integration-service/ingestion-api/snapshot-routes.ts",
+      "git_blob": "7c7028db9632b00c43c2bd890f6e94a14737a85b",
+      "sha256_lf": "de288863b8b6d29574e359c8ee5c5a79606f62e65868e3ac96dd8010348eed61"
+    },
+    {
+      "sha256_raw": "d2d34ca473487fc303256f1fe7c1bb9659d7884d233f97f2dc049abd2bf2197a",
+      "bytes": 171386,
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "git_blob": "6a174076e6e2629c66732c8882ad1f70b00964a7",
+      "sha256_lf": "42b3304e109460c205be25693fe0e86f2473ba6bc2a6e82f4e609b31cf81ee3f"
+    },
+    {
+      "sha256_raw": "3a6d612359b345352f18d504a510f1f412999a9d2de79dca62bdb95d953fa313",
+      "bytes": 7576,
+      "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5d2-schema-contract.md",
+      "git_blob": "d9c829a581b82322b98cef4d68671d711a20d5ec",
+      "sha256_lf": "11231c4c9300d9bfefedd5ed44034bdd1fb6a5f8d5b693a216bb88a62074a7f0"
+    }
+  ],
+  "actual_head": "0871e857fe00b866fdf9a8b51a19641ebfb11d33"
+}

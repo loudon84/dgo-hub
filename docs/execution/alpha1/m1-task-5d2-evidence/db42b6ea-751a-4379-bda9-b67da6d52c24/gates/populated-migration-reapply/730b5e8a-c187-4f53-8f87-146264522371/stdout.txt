@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 25 skipped (26)
+   Start at  09:43:22
+   Duration  6.01s (transform 269ms, setup 0ms, import 545ms, tests 5.29s, environment 0ms)
+

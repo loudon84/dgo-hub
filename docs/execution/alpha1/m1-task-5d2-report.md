@@ -1,6 +1,6 @@
 # M1-5D2 implementation report
 
-Status: implemented and locally verified at product commit `0871e857fe00b866fdf9a8b51a19641ebfb11d33` (`Implement source delete candidate approval API`). The schema and function contract was committed before the product changes in the same product/test commit. Report and runtime evidence are kept separate from that commit.
+Status: implemented and locally verified at product commit `0871e857fe00b866fdf9a8b51a19641ebfb11d33` (`Implement source delete candidate approval API`). The schema and function contract was recorded before product edits and committed with the source. Report and runtime evidence are kept separate from that commit.
 
 ## Implemented behavior
 
@@ -14,13 +14,13 @@ Status: implemented and locally verified at product commit `0871e857fe00b866fdf9
 
 All commands below were run from `E:\git\dgo-hub\integration-service` with a fresh UUID evidence root and `M0_RUN_EVIDENCE_ROOT` set to that exact absolute root. Each gate captured its exact command, stdout, stderr, exit code, actual HEAD, and before/after source manifests containing raw and LF hashes, byte sizes, and Git blob IDs.
 
-| Command | Result | Evidence root |
-| --- | --- | --- |
-| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts` | 26 passed, 0 skipped, exit 0 | `E:\m1t5-runtime\474a4e3c-df66-41d4-994f-cd0c67235271` |
-| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts -t "upgrades populated 001-008 registry facts through 009 and preserves every prior checksum"` | 1 passed, exit 0; populated 001–008 upgrade, assembled 009, and identical reapply | `E:\m1t5-runtime\730b5e8a-c187-4f53-8f87-146264522371` |
-| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts -t "restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan"` | 1 passed, exit 0 | `E:\m1t5-runtime\bda6d1d5-a234-4b1e-82df-d589f5e35aae` |
-| `npm run typecheck` | exit 0 | `E:\m1t5-runtime\1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2` |
-| `npm run build` | exit 0 | `E:\m1t5-runtime\b265b52c-ad75-468d-b7ee-77422ac0ea4c` |
+| Command | Result | Captured actual HEAD | Evidence root |
+| --- | --- | --- | --- |
+| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts` | 26 passed, 0 skipped, exit 0 | `0871e857fe00b866fdf9a8b51a19641ebfb11d33` | `E:\m1t5-runtime\474a4e3c-df66-41d4-994f-cd0c67235271` |
+| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts -t "upgrades populated 001-008 registry facts through 009 and preserves every prior checksum"` | 1 passed, exit 0; populated 001–008 upgrade, assembled 009, and identical reapply | `7c8d815d81e015f1594c6990ee7853cc3ef7543c` (precommit) | `E:\m1t5-runtime\730b5e8a-c187-4f53-8f87-146264522371` |
+| `npm exec vitest run -- acceptance-tests/snapshot-runs.test.ts -t "restarts after terminating its owned PostgreSQL reader and publishes a fresh full scan"` | 1 passed, exit 0 | `7c8d815d81e015f1594c6990ee7853cc3ef7543c` (precommit) | `E:\m1t5-runtime\bda6d1d5-a234-4b1e-82df-d589f5e35aae` |
+| `npm run typecheck` | exit 0 | `0871e857fe00b866fdf9a8b51a19641ebfb11d33` | `E:\m1t5-runtime\1e9709ca-855c-4a5d-b2c2-f5c38f9ea1f2` |
+| `npm run build` | exit 0 | `0871e857fe00b866fdf9a8b51a19641ebfb11d33` | `E:\m1t5-runtime\b265b52c-ad75-468d-b7ee-77422ac0ea4c` |
 
 The 26 count is the existing file’s test count, not a count of internal assertions. Its D2 HTTP/API-role scenario verifies default-page request handling, explicit two-page cursor use, scope-bound cursor rejection, malformed/out-of-mode query rejection, limit 100 acceptance and 101 rejection, cross-source, cross-tenant, non-Owner, and missing-approval-scope denies. It verifies same-count live baseline substitution returns 409 without an approval; disabled and rebound OIDC identities cannot replay; the stored approval epoch equals the current database epoch; read-audit and approval-audit failures fail closed; direct API-role DML returns 42501; privileged approval/audit mutation returns 55000; two above-threshold entity candidates require separate approvals; source remains busy, paused, and unscheduled after each; and canonical/receipt/outbox counts match before and after approval.
 
@@ -28,7 +28,7 @@ The real API fixture has two customer candidate members. The default-limit HTTP 
 
 ## Evidence and source binding
 
-The final full-test `before.json` and `after.json` bind all six product-owned paths to actual HEAD `0871e857fe00b866fdf9a8b51a19641ebfb11d33`; manifests are identical across the gate. Exact per-file raw/LF SHA-256, byte size, and Git blob values are in those captured manifests. The explicit evidence inventory is `E:\m1t5-runtime\6c837d40-e80f-41f9-8142-81c106baac9f\evidence-index.json` (39 individually enumerated files; SHA-256 `1a31ea8bc6cf51102dec0cf962799a07af2d43762b380cf94a47515722381bbe`). It references captured artifacts in place and does not copy them.
+The final full-test `before.json` and `after.json` bind all six product-owned paths to actual HEAD `0871e857fe00b866fdf9a8b51a19641ebfb11d33`; manifests are identical across the gate. Exact per-file raw/LF SHA-256, byte size, and Git blob values are in those captured manifests and listed below. The reviewable evidence package is [m1-task-5d2-evidence/db42b6ea-751a-4379-bda9-b67da6d52c24](docs/execution/alpha1/m1-task-5d2-evidence/db42b6ea-751a-4379-bda9-b67da6d52c24/manifest.json); its explicit manifest has 39 whitelisted artifact copies, preserves each gate and original evidence-root path, records exact `M0_RUN_EVIDENCE_ROOT` and captured HEAD per gate, and has SHA-256 `e702f30efd294e5f83606190502c4fb8bc9513c513ad066c2df898ec9db601d9`. Each copied artifact was checked against the original path, byte count, and SHA-256. No recursive copy was used.
 
 The committed source bindings in both final manifests are:
 
