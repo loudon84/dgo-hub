@@ -1344,6 +1344,36 @@ describe('API-023 quarantine read', () => {
         JOIN control.ingestion_job j ON j.id=i.job_id JOIN control.canonical_source_identity s ON
         (s.tenant_key,s.source_id,s.entity,s.source_pk)=(j.tenant_key,j.source_id,j.entity,i.source_pk) WHERE i.job_id=$1`,[deleteRetry.json().data.child_job_id]);
       expect(deleteResult.rows[0]).toEqual({status:'QUARANTINED',error_code:'SOURCE_VERSION_CONFLICT',canonical_object_id:objectId});
+      const authorityFence=await apiPool.connect();
+      let signalAttempt!:()=>void;
+      const attempted=new Promise<void>(resolve=>{signalAttempt=resolve;});
+      const instrumentedPool=new Proxy(apiPool,{get(target,property,receiver){
+        if(property!=='connect') return Reflect.get(target,property,receiver);
+        return async()=>{
+          const client=await apiPool.connect();
+          return new Proxy(client,{get(inner,key,innerReceiver){
+            if(key!=='query') return Reflect.get(inner,key,innerReceiver);
+            return async (...args:unknown[])=>{
+              if(typeof args[0]==='string' && args[0].includes('control.resolve_recovery_owner_origin')) signalAttempt();
+              return (client.query as (...values:unknown[])=>Promise<unknown>)(...args);
+            };
+          }});
+        };
+      }});
+      const raceApp=await buildApp({logger:false,strictIngestion:{pool:instrumentedPool,authService:createAuthService({pool:apiPool}),authenticator}});
+      try {
+        await authorityFence.query('BEGIN');
+        await authorityFence.query('SELECT control.lock_security_barrier_fence()');
+        const replayRace=raceApp.inject({method:'POST',url:`/hub/v1/admin/quarantine/${originalId}/retry`,
+          headers:{authorization:`Bearer ${await tokenFor(subject)}`,'idempotency-key':'recovery-first','content-type':'application/json'},
+          payload:{expected_state:expectedToken,mapping_revision:'1',reason:'\u0000\ud800'}});
+        await attempted;
+        await authorityFence.query('UPDATE control.source_registry SET owner_revision=owner_revision+1 WHERE tenant_key=$1 AND source_id=$2',[tenantId,sourceId]);
+        await authorityFence.query('COMMIT');
+        const raced=await replayRace;
+        expect(raced.statusCode,raced.body).toBe(409);
+        expect(raced.json().error.code).toBe('SOURCE_CONFLICT');
+      } finally { await authorityFence.query('ROLLBACK').catch(()=>undefined); authorityFence.release(); await raceApp.close(); }
     } finally {
       await worker.end();
       await fixture.pool.query("UPDATE control.auth_subject SET enabled=true WHERE tenant_key=$1 AND user_id='recovery-sales'",[tenantId]);
