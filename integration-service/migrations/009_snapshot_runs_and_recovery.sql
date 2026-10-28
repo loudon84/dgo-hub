@@ -2678,3 +2678,506 @@ GRANT EXECUTE ON FUNCTION control.claim_etl_snapshot_delete_apply(text,text,uuid
   control.record_etl_snapshot_delete_effect(text,text,uuid,uuid,text,text,uuid,text),
   control.finish_etl_snapshot_delete_apply(text,text,uuid,uuid,text,text),
   control.retry_etl_snapshot_delete_apply(text,text,uuid,uuid,text) TO hub_worker;
+
+-- M1-5E1a1 API-022 immutable recovery linkage.
+ALTER TABLE control.etl_run DROP CONSTRAINT etl_run_request_route_check;
+ALTER TABLE control.etl_run ADD CONSTRAINT etl_run_request_route_check CHECK (request_route IN ('API-019','API-022','DUE_GATE'));
+ALTER TABLE control.etl_run ADD COLUMN failure_version bigint NOT NULL DEFAULT 0 CHECK (failure_version>=0);
+UPDATE control.etl_run SET failure_version=1 WHERE status IN ('FAILED','INCOMPLETE');
+ALTER TABLE control.etl_run ADD COLUMN recovery_operation_id uuid;
+ALTER TABLE control.etl_run ADD COLUMN recovery_lineage_root_run_id uuid;
+ALTER TABLE control.etl_run ADD COLUMN recovery_parent_run_id uuid;
+ALTER TABLE control.etl_run ADD COLUMN recovery_original_run_id uuid;
+ALTER TABLE control.etl_run ADD COLUMN recovery_original_attempt_id uuid;
+ALTER TABLE control.etl_run ADD COLUMN recovery_mode text CHECK (recovery_mode IS NULL OR recovery_mode IN ('FRESH_SCAN','SEALED_STAGE'));
+ALTER TABLE control.etl_run ADD COLUMN recovery_source_manifest_digest bytea CHECK (recovery_source_manifest_digest IS NULL OR octet_length(recovery_source_manifest_digest)=32);
+ALTER TABLE control.etl_run ADD CONSTRAINT etl_run_recovery_tuple_check CHECK (
+  (recovery_operation_id IS NULL AND recovery_lineage_root_run_id IS NULL AND recovery_parent_run_id IS NULL AND
+   recovery_original_run_id IS NULL AND recovery_original_attempt_id IS NULL AND recovery_mode IS NULL AND recovery_source_manifest_digest IS NULL)
+  OR (recovery_operation_id IS NOT NULL AND recovery_lineage_root_run_id IS NOT NULL AND recovery_parent_run_id IS NOT NULL AND
+   recovery_original_run_id IS NOT NULL AND recovery_original_attempt_id IS NOT NULL AND recovery_mode IS NOT NULL));
+CREATE TABLE control.etl_snapshot_recovery_operation (
+  operation_id uuid PRIMARY KEY,
+  tenant_key text NOT NULL,
+  source_id text NOT NULL,
+  route text NOT NULL DEFAULT 'API-022' CHECK (route='API-022'),
+  idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 1 AND 160),
+  request_digest bytea NOT NULL CHECK (octet_length(request_digest)=32),
+  lineage_root_run_id uuid NOT NULL,
+  parent_run_id uuid NOT NULL,
+  original_run_id uuid NOT NULL,
+  original_attempt_id uuid NOT NULL,
+  original_failure_version bigint NOT NULL CHECK (original_failure_version>0),
+  original_manifest_digest bytea CHECK (original_manifest_digest IS NULL OR octet_length(original_manifest_digest)=32),
+  original_proof_scope_digest bytea CHECK (original_proof_scope_digest IS NULL OR octet_length(original_proof_scope_digest)=32),
+  original_semantic_digest bytea CHECK (original_semantic_digest IS NULL OR octet_length(original_semantic_digest)=32),
+  recovery_mode text NOT NULL CHECK (recovery_mode IN ('FRESH_SCAN','SEALED_STAGE')),
+  child_run_id uuid NOT NULL,
+  child_attempt_id uuid NOT NULL,
+  reason text NOT NULL CHECK (length(reason)>0 AND char_length(reason)<=1000),
+  initiator_issuer text NOT NULL,
+  initiator_subject text NOT NULL,
+  initiator_tenant text NOT NULL,
+  initiator_user_id text NOT NULL,
+  initiator_auth_epoch bigint NOT NULL CHECK (initiator_auth_epoch>=0),
+  initiator_scopes text[] NOT NULL CHECK ('source:write'=ANY(initiator_scopes)),
+  request_id uuid NOT NULL,
+  accepted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE(tenant_key,source_id,route,idempotency_key),
+  UNIQUE(tenant_key,source_id,child_run_id),
+  UNIQUE(tenant_key,source_id,parent_run_id),
+  FOREIGN KEY(tenant_key,source_id,lineage_root_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,parent_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,original_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(original_attempt_id) REFERENCES control.etl_run_attempt(attempt_id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,source_id,child_run_id) REFERENCES control.etl_run(tenant_key,source_id,run_id) DEFERRABLE INITIALLY DEFERRED,
+  FOREIGN KEY(child_attempt_id) REFERENCES control.etl_run_attempt(attempt_id) DEFERRABLE INITIALLY DEFERRED
+);
+ALTER TABLE control.etl_run ADD CONSTRAINT etl_run_recovery_operation_fk FOREIGN KEY(recovery_operation_id)
+  REFERENCES control.etl_snapshot_recovery_operation(operation_id) DEFERRABLE INITIALLY DEFERRED;
+
+CREATE FUNCTION control.guard_etl_run_failure_version() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  IF TG_OP='INSERT' THEN
+    NEW.failure_version:=CASE WHEN NEW.status IN ('FAILED','INCOMPLETE') THEN GREATEST(NEW.failure_version,1) ELSE 0 END;
+    RETURN NEW;
+  END IF;
+  IF NEW.recovery_operation_id IS DISTINCT FROM OLD.recovery_operation_id OR
+     NEW.recovery_lineage_root_run_id IS DISTINCT FROM OLD.recovery_lineage_root_run_id OR
+     NEW.recovery_parent_run_id IS DISTINCT FROM OLD.recovery_parent_run_id OR
+     NEW.recovery_original_run_id IS DISTINCT FROM OLD.recovery_original_run_id OR
+     NEW.recovery_original_attempt_id IS DISTINCT FROM OLD.recovery_original_attempt_id OR
+     NEW.recovery_mode IS DISTINCT FROM OLD.recovery_mode OR
+     NEW.recovery_source_manifest_digest IS DISTINCT FROM OLD.recovery_source_manifest_digest THEN
+    RAISE EXCEPTION 'immutable snapshot recovery lineage' USING ERRCODE='55000';
+  END IF;
+  IF NEW.status IN ('FAILED','INCOMPLETE') AND NEW.status IS DISTINCT FROM OLD.status THEN
+    NEW.failure_version:=OLD.failure_version+1;
+  ELSE
+    NEW.failure_version:=OLD.failure_version;
+  END IF;
+  RETURN NEW;
+END;
+$body$;
+CREATE TRIGGER etl_run_failure_version BEFORE INSERT OR UPDATE ON control.etl_run
+FOR EACH ROW EXECUTE FUNCTION control.guard_etl_run_failure_version();
+
+CREATE FUNCTION control.reject_etl_snapshot_recovery_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,control
+AS $body$
+BEGIN
+  RAISE EXCEPTION 'immutable snapshot recovery operation' USING ERRCODE='55000';
+END;
+$body$;
+CREATE TRIGGER etl_snapshot_recovery_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_recovery_operation
+FOR EACH ROW EXECUTE FUNCTION control.reject_etl_snapshot_recovery_mutation();
+
+REVOKE ALL ON control.etl_snapshot_recovery_operation FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+REVOKE ALL ON FUNCTION control.guard_etl_run_failure_version(),control.reject_etl_snapshot_recovery_mutation()
+  FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT SELECT(failure_version,recovery_operation_id,recovery_lineage_root_run_id,recovery_parent_run_id,recovery_original_run_id,
+  recovery_original_attempt_id,recovery_mode,recovery_source_manifest_digest) ON control.etl_run TO hub_worker;
+GRANT INSERT(recovery_operation_id,recovery_lineage_root_run_id,recovery_parent_run_id,recovery_original_run_id,
+  recovery_original_attempt_id,recovery_mode,recovery_source_manifest_digest) ON control.etl_run TO hub_worker;
+GRANT UPDATE(failure_version) ON control.etl_run TO hub_worker;
+GRANT SELECT(failure_version,recovery_operation_id,recovery_lineage_root_run_id,recovery_parent_run_id,recovery_original_run_id,
+  recovery_original_attempt_id,recovery_mode,recovery_source_manifest_digest) ON control.etl_run TO hub_api;
+
+CREATE FUNCTION control.create_etl_snapshot_manual_recovery(p_tenant_key text,p_original_run_id uuid,p_failed_version bigint,
+  p_idempotency_key text,p_request_digest bytea,p_reason text,p_issuer text,p_subject text,p_user_id text,p_auth_epoch bigint,
+  p_scopes text[],p_request_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE original control.etl_run%ROWTYPE; latest_attempt control.etl_run_attempt%ROWTYPE; manifest_row control.etl_snapshot_manifest%ROWTYPE;
+  validation_row control.etl_snapshot_validation%ROWTYPE; lineage uuid; mode_value text; operation uuid:=gen_random_uuid(); child uuid:=gen_random_uuid();
+  child_attempt uuid:=gen_random_uuid(); child_attempt_operation uuid:=gen_random_uuid(); old_operation control.etl_snapshot_recovery_operation%ROWTYPE;
+  item record; source_enabled boolean; tenant_enabled boolean; channel_id uuid;
+BEGIN
+  IF p_request_digest IS NULL OR octet_length(p_request_digest)<>32
+    OR p_failed_version IS NULL OR p_failed_version<1 OR p_idempotency_key !~ '^[A-Za-z0-9._:-]{1,160}$'
+    OR p_reason IS NULL OR btrim(p_reason)='' OR char_length(p_reason)>1000 OR p_auth_epoch IS NULL OR p_auth_epoch<0
+    OR p_request_id IS NULL OR p_issuer IS NULL OR p_subject IS NULL OR p_user_id IS NULL OR NOT ('source:write'=ANY(p_scopes)) THEN
+    RAISE EXCEPTION 'AUTH_INPUT_INVALID' USING ERRCODE='22023';
+  END IF;
+  PERFORM control.lock_security_barrier_fence();
+  SELECT * INTO original FROM control.etl_run WHERE tenant_key=p_tenant_key AND run_id=p_original_run_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SOURCE_NOT_FOUND' USING ERRCODE='P0001'; END IF;
+  PERFORM 1 FROM control.lock_source_credential(p_tenant_key,original.source_id);
+  IF NOT FOUND THEN RAISE EXCEPTION 'SOURCE_NOT_FOUND' USING ERRCODE='P0001'; END IF;
+  IF NOT control.lock_etl_snapshot_source(p_tenant_key,original.source_id) THEN RAISE EXCEPTION 'SOURCE_NOT_FOUND' USING ERRCODE='P0001'; END IF;
+  SELECT c.enabled,t.enabled INTO source_enabled,tenant_enabled FROM control.source_credential c JOIN control.tenant t USING(tenant_key)
+    WHERE c.tenant_key=p_tenant_key AND c.source_id=original.source_id FOR UPDATE OF c,t;
+  IF NOT FOUND OR NOT source_enabled OR NOT tenant_enabled THEN RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001'; END IF;
+  FOR item IN SELECT key,value FROM jsonb_each(original.entity_channel_proof) ORDER BY key LOOP
+    channel_id:=(item.value->>'channel_id')::uuid;
+    PERFORM 1 FROM control.source_channel WHERE id=channel_id AND tenant_key=p_tenant_key AND source_id=original.source_id
+      AND entity=item.key AND state='active' FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001'; END IF;
+  END LOOP;
+  IF EXISTS(SELECT 1 FROM control.source_security_barrier b WHERE b.tenant_key=p_tenant_key
+    AND b.effective_fence>original.security_barrier_fence AND (b.source_id IS NULL OR b.source_id=original.source_id)
+    AND (b.credential_id IS NULL OR b.credential_id=original.credential_id)
+    AND b.barrier_type IN ('TENANT_DISABLED','CREDENTIAL_COMPROMISE','SOURCE_SCOPE_SECURITY_REMOVAL','CHANNEL_RETIRED')
+    AND ((b.entity IS NULL AND b.channel_id IS NULL) OR EXISTS(SELECT 1 FROM jsonb_each(original.entity_channel_proof) e
+      WHERE (b.entity IS NULL OR e.key=b.entity) AND (b.channel_id IS NULL OR e.value->>'channel_id'=b.channel_id::text)))) THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+  END IF;
+  SELECT * INTO old_operation FROM control.etl_snapshot_recovery_operation WHERE tenant_key=p_tenant_key AND source_id=original.source_id
+    AND route='API-022' AND idempotency_key=p_idempotency_key FOR UPDATE;
+  IF FOUND THEN
+    IF old_operation.request_digest<>p_request_digest THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT' USING ERRCODE='P0001'; END IF;
+    RETURN jsonb_build_object('operation_id',old_operation.operation_id,'original_run_id',old_operation.original_run_id,
+      'run_id',old_operation.child_run_id,'attempt_id',old_operation.child_attempt_id,'recovery_mode',old_operation.recovery_mode,
+      'status','QUEUED','replayed',true);
+  END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_snapshot_recovery_operation prior
+      WHERE prior.tenant_key=p_tenant_key AND prior.source_id=original.source_id AND prior.route='API-022'
+        AND prior.parent_run_id=original.run_id) THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+  END IF;
+  IF original.status NOT IN ('FAILED','INCOMPLETE') OR p_failed_version<>original.failure_version THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=original.source_id
+      AND status IN ('QUEUED','SCANNING','VALIDATING','READY','APPLYING')) OR control.etl_snapshot_source_delete_busy(p_tenant_key,original.source_id) THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS(SELECT 1 FROM control.etl_run_attempt a WHERE a.run_id=original.run_id AND
+       (a.status='RUNNING' AND a.lease_expires_at>clock_timestamp())) OR EXISTS(
+    SELECT 1 FROM control.etl_snapshot_continuation c WHERE c.run_id=original.run_id AND c.claim_token IS NOT NULL AND c.lease_until>clock_timestamp()) THEN
+    RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001';
+  END IF;
+  SELECT * INTO latest_attempt FROM control.etl_run_attempt WHERE run_id=original.run_id ORDER BY ordinal DESC LIMIT 1 FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001'; END IF;
+  SELECT * INTO manifest_row FROM control.etl_snapshot_manifest WHERE tenant_key=p_tenant_key AND source_id=original.source_id
+    AND run_id=original.run_id AND attempt_id=latest_attempt.attempt_id AND state='EXTRACTED';
+  IF FOUND THEN
+    SELECT * INTO validation_row FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=original.source_id
+      AND run_id=original.run_id AND attempt_id=latest_attempt.attempt_id AND manifest_digest=manifest_row.manifest_digest;
+  END IF;
+  IF FOUND AND (SELECT config->>'version_domain' FROM control.source_config_revision WHERE tenant_key=p_tenant_key
+      AND source_id=original.source_id AND revision=original.config_revision AND config_digest=original.config_digest)='SNAPSHOT_OBSERVATION'
+      AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=original.source_id AND run_id=original.run_id) THEN
+    validation_row:=NULL; manifest_row:=NULL;
+  END IF;
+  mode_value:=CASE WHEN manifest_row.manifest_digest IS NOT NULL AND validation_row.manifest_digest IS NOT NULL THEN 'SEALED_STAGE' ELSE 'FRESH_SCAN' END;
+  SELECT COALESCE(parent.recovery_lineage_root_run_id,original.run_id) INTO lineage FROM control.etl_run parent
+    WHERE parent.tenant_key=p_tenant_key AND parent.run_id=original.run_id;
+  INSERT INTO control.etl_run(tenant_key,source_id,run_mode,request_kind,request_route,idempotency_key,request_digest,status,
+    credential_id,credential_revision,credential_generation,source_epoch,admission_source_epoch,expected_entities,entity_channel_proof,
+    config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,
+    test_report_id,approval_id,data_contract_ref,delete_contract,security_barrier_fence,owner_user_id,owner_revision,
+    recovery_operation_id,recovery_lineage_root_run_id,recovery_parent_run_id,recovery_original_run_id,recovery_original_attempt_id,
+    recovery_mode,recovery_source_manifest_digest)
+  VALUES(p_tenant_key,original.source_id,'FULL_SNAPSHOT','MANUAL','API-022',p_idempotency_key,p_request_digest,'QUEUED',
+    original.credential_id,original.credential_revision,original.credential_generation,original.source_epoch,original.admission_source_epoch,
+    original.expected_entities,original.entity_channel_proof,original.config_revision,original.config_digest,original.mapping_revision,
+    original.mapping_digest,original.identity_mapping_revision,original.identity_mapping_digest,original.endpoint_profile_digest,
+    original.test_report_id,original.approval_id,original.data_contract_ref,original.delete_contract,original.security_barrier_fence,
+    original.owner_user_id,original.owner_revision,operation,lineage,original.run_id,original.run_id,latest_attempt.attempt_id,
+    mode_value,CASE WHEN mode_value='SEALED_STAGE' THEN manifest_row.manifest_digest ELSE NULL END)
+    RETURNING run_id INTO child;
+  INSERT INTO control.etl_run_attempt(attempt_id,tenant_key,source_id,run_id,ordinal,operation_id,status)
+    VALUES(child_attempt,p_tenant_key,original.source_id,child,1,child_attempt_operation,'QUEUED');
+  INSERT INTO control.etl_snapshot_recovery_operation(operation_id,tenant_key,source_id,idempotency_key,request_digest,
+    lineage_root_run_id,parent_run_id,original_run_id,original_attempt_id,original_failure_version,original_manifest_digest,
+    original_proof_scope_digest,original_semantic_digest,recovery_mode,child_run_id,child_attempt_id,reason,
+    initiator_issuer,initiator_subject,initiator_tenant,initiator_user_id,initiator_auth_epoch,initiator_scopes,request_id)
+  VALUES(operation,p_tenant_key,original.source_id,p_idempotency_key,p_request_digest,lineage,original.run_id,original.run_id,
+    latest_attempt.attempt_id,original.failure_version,CASE WHEN mode_value='SEALED_STAGE' THEN manifest_row.manifest_digest END,
+    CASE WHEN mode_value='SEALED_STAGE' THEN validation_row.proof_scope_digest END,
+    CASE WHEN mode_value='SEALED_STAGE' THEN validation_row.semantic_digest END,mode_value,child,child_attempt,btrim(p_reason),
+    p_issuer,p_subject,p_tenant_key,p_user_id,p_auth_epoch,p_scopes,p_request_id);
+  UPDATE control.etl_snapshot_schedule SET active_run_id=child,last_run_id=child,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=original.source_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SOURCE_CONFLICT' USING ERRCODE='P0001'; END IF;
+  RETURN jsonb_build_object('operation_id',operation,'original_run_id',original.run_id,'run_id',child,'attempt_id',child_attempt,
+    'recovery_mode',mode_value,'status','QUEUED','replayed',false);
+END;
+$body$;
+ALTER FUNCTION control.create_etl_snapshot_manual_recovery(text,uuid,bigint,text,bytea,text,text,text,text,bigint,text[],uuid) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.create_etl_snapshot_manual_recovery(text,uuid,bigint,text,bytea,text,text,text,text,bigint,text[],uuid)
+  FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.create_etl_snapshot_manual_recovery(text,uuid,bigint,text,bytea,text,text,text,text,bigint,text[],uuid) TO hub_api;
+
+-- SEALED_STAGE is a worker-only page-for-page copy into fresh child coordinates.
+-- The original attempt is selected exclusively through the immutable operation.
+CREATE FUNCTION control.read_etl_snapshot_recovery_manifest(p_tenant_key text,p_source_id text,p_child_run_id uuid,
+  p_child_attempt_id uuid,p_claim_token uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE child_row control.etl_run%ROWTYPE; operation_row control.etl_snapshot_recovery_operation%ROWTYPE;
+  original_manifest control.etl_snapshot_manifest%ROWTYPE; original_attempt control.etl_run_attempt%ROWTYPE;
+  original_validation control.etl_snapshot_validation%ROWTYPE; version_domain text;
+BEGIN
+  child_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_child_run_id,p_claim_token);
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  IF child_row.recovery_mode<>'SEALED_STAGE' OR child_row.recovery_operation_id IS NULL OR
+     child_row.recovery_source_manifest_digest IS NULL OR p_child_attempt_id IS NULL OR
+     NOT EXISTS(SELECT 1 FROM control.etl_run_attempt a WHERE a.tenant_key=p_tenant_key AND a.source_id=p_source_id
+       AND a.run_id=p_child_run_id AND a.attempt_id=p_child_attempt_id AND a.status='RUNNING' AND a.claim_token=p_claim_token
+       AND a.lease_expires_at>clock_timestamp()) THEN RAISE EXCEPTION 'snapshot recovery claim invalid' USING ERRCODE='40001'; END IF;
+  SELECT * INTO operation_row FROM control.etl_snapshot_recovery_operation o WHERE o.operation_id=child_row.recovery_operation_id
+    AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_child_run_id AND o.recovery_mode='SEALED_STAGE';
+  IF NOT FOUND OR operation_row.original_run_id<>child_row.recovery_original_run_id OR
+     operation_row.original_attempt_id<>child_row.recovery_original_attempt_id OR
+     operation_row.original_manifest_digest<>child_row.recovery_source_manifest_digest THEN
+    RAISE EXCEPTION 'snapshot recovery link invalid' USING ERRCODE='55000';
+  END IF;
+  SELECT * INTO original_attempt FROM control.etl_run_attempt a WHERE a.attempt_id=operation_row.original_attempt_id
+    AND a.run_id=operation_row.original_run_id AND a.tenant_key=p_tenant_key AND a.source_id=p_source_id AND a.status='COMPLETE';
+  SELECT * INTO original_manifest FROM control.etl_snapshot_manifest m WHERE m.tenant_key=p_tenant_key AND m.source_id=p_source_id
+    AND m.run_id=operation_row.original_run_id AND m.attempt_id=operation_row.original_attempt_id AND m.state='EXTRACTED'
+    AND m.manifest_digest=operation_row.original_manifest_digest;
+  SELECT * INTO original_validation FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id
+    AND v.run_id=operation_row.original_run_id AND v.attempt_id=operation_row.original_attempt_id
+    AND v.manifest_digest=operation_row.original_manifest_digest AND v.proof_scope_digest=operation_row.original_proof_scope_digest
+    AND v.semantic_digest=operation_row.original_semantic_digest;
+  IF original_attempt.attempt_id IS NULL OR original_manifest.attempt_id IS NULL OR original_validation.attempt_id IS NULL THEN
+    RAISE EXCEPTION 'snapshot recovery proof unavailable' USING ERRCODE='55000';
+  END IF;
+  SELECT config->>'version_domain' INTO version_domain FROM control.source_config_revision WHERE tenant_key=p_tenant_key
+    AND source_id=p_source_id AND revision=child_row.config_revision AND config_digest=child_row.config_digest;
+  IF version_domain='SNAPSHOT_OBSERVATION' AND NOT EXISTS(SELECT 1 FROM control.etl_snapshot_observation o
+      WHERE o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.run_id=operation_row.original_run_id
+        AND o.attempt_id=operation_row.original_attempt_id) THEN
+    RAISE EXCEPTION 'snapshot recovery observation unavailable' USING ERRCODE='55000';
+  END IF;
+  RETURN jsonb_build_object('manifest',original_manifest.manifest,'manifest_digest',encode(original_manifest.manifest_digest,'hex'),
+    'original_run_id',operation_row.original_run_id,'original_attempt_id',operation_row.original_attempt_id,
+    'original_manifest_digest',encode(operation_row.original_manifest_digest,'hex'));
+END;
+$body$;
+
+CREATE FUNCTION control.read_etl_snapshot_recovery_stage_page(p_tenant_key text,p_source_id text,p_child_run_id uuid,
+  p_child_attempt_id uuid,p_claim_token uuid,p_relation text,p_page_no integer)
+RETURNS TABLE(entity text,relation text,page_no integer,row_count integer,first_key text,last_key text,page_digest bytea,rows jsonb)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE child_row control.etl_run%ROWTYPE; operation_row control.etl_snapshot_recovery_operation%ROWTYPE;
+  source_page control.etl_snapshot_stage_page%ROWTYPE;
+BEGIN
+  child_row:=control.assert_etl_snapshot_claim(p_tenant_key,p_source_id,p_child_run_id,p_claim_token);
+  PERFORM control.lock_etl_snapshot_source(p_tenant_key,p_source_id);
+  IF child_row.recovery_mode<>'SEALED_STAGE' OR child_row.recovery_operation_id IS NULL OR
+     p_relation NOT IN ('customer','order','order_line') OR p_page_no<1 OR
+     NOT EXISTS(SELECT 1 FROM control.etl_run_attempt a WHERE a.tenant_key=p_tenant_key AND a.source_id=p_source_id
+       AND a.run_id=p_child_run_id AND a.attempt_id=p_child_attempt_id AND a.status='RUNNING' AND a.claim_token=p_claim_token
+       AND a.lease_expires_at>clock_timestamp()) THEN RETURN; END IF;
+  SELECT * INTO operation_row FROM control.etl_snapshot_recovery_operation o WHERE o.operation_id=child_row.recovery_operation_id
+    AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_child_run_id
+    AND o.original_run_id=child_row.recovery_original_run_id
+    AND o.original_attempt_id=child_row.recovery_original_attempt_id AND o.original_manifest_digest=child_row.recovery_source_manifest_digest
+    AND o.recovery_mode='SEALED_STAGE';
+  IF NOT FOUND OR NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key
+      AND v.source_id=p_source_id AND v.run_id=operation_row.original_run_id AND v.attempt_id=operation_row.original_attempt_id
+      AND v.manifest_digest=operation_row.original_manifest_digest AND v.proof_scope_digest=operation_row.original_proof_scope_digest
+      AND v.semantic_digest=operation_row.original_semantic_digest) THEN RETURN; END IF;
+  SELECT * INTO source_page FROM control.etl_snapshot_stage_page p WHERE p.tenant_key=p_tenant_key AND p.source_id=p_source_id
+    AND p.run_id=operation_row.original_run_id AND p.attempt_id=operation_row.original_attempt_id
+    AND p.relation=p_relation AND p.page_no=p_page_no;
+  IF NOT FOUND THEN RETURN; END IF;
+  entity:=source_page.entity; relation:=source_page.relation; page_no:=source_page.page_no; row_count:=source_page.row_count;
+  first_key:=source_page.first_key; last_key:=source_page.last_key; page_digest:=source_page.page_digest;
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('entity',r.entity,'relation',r.relation,'source_pk',r.source_pk,
+    'parent_source_pk',r.parent_source_pk,'source_version',r.source_version,'facts',r.facts) ORDER BY r.row_ordinal),'[]'::jsonb)
+    INTO rows FROM control.etl_snapshot_stage_record r WHERE r.tenant_key=p_tenant_key AND r.source_id=p_source_id
+      AND r.run_id=operation_row.original_run_id AND r.attempt_id=operation_row.original_attempt_id
+      AND r.entity=source_page.entity AND r.relation=p_relation AND r.page_no=p_page_no;
+  IF jsonb_array_length(rows)<>row_count THEN RAISE EXCEPTION 'snapshot recovery stage coverage invalid' USING ERRCODE='55000'; END IF;
+  RETURN NEXT;
+END;
+$body$;
+ALTER FUNCTION control.read_etl_snapshot_recovery_manifest(text,text,uuid,uuid,uuid) OWNER TO CURRENT_USER;
+ALTER FUNCTION control.read_etl_snapshot_recovery_stage_page(text,text,uuid,uuid,uuid,text,integer) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.read_etl_snapshot_recovery_manifest(text,text,uuid,uuid,uuid),
+  control.read_etl_snapshot_recovery_stage_page(text,text,uuid,uuid,uuid,text,integer) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.read_etl_snapshot_recovery_manifest(text,text,uuid,uuid,uuid),
+  control.read_etl_snapshot_recovery_stage_page(text,text,uuid,uuid,uuid,text,integer) TO hub_worker;
+
+ALTER TABLE control.etl_snapshot_apply_outcome ADD COLUMN reused_original_outcome_id uuid
+  REFERENCES control.etl_snapshot_apply_outcome(outcome_id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+CREATE FUNCTION control.read_etl_snapshot_recovery_c_metadata(p_tenant_key text,p_source_id text,p_run_id uuid,
+  p_attempt_id uuid,p_claim_token uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  IF r.recovery_operation_id IS NULL THEN RETURN jsonb_build_object('recovery_mode',NULL); END IF;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_recovery_operation o WHERE o.operation_id=r.recovery_operation_id
+      AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_run_id
+      AND o.recovery_mode=r.recovery_mode AND o.original_run_id=r.recovery_original_run_id
+      AND o.original_attempt_id=r.recovery_original_attempt_id) THEN RETURN NULL; END IF;
+  RETURN jsonb_build_object('recovery_mode',r.recovery_mode,'original_run_id',r.recovery_original_run_id,
+    'original_attempt_id',r.recovery_original_attempt_id,'lineage_root_run_id',r.recovery_lineage_root_run_id);
+END;
+$body$;
+
+CREATE OR REPLACE FUNCTION control.persist_etl_snapshot_observation(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid,
+  p_semantic_digest bytea,p_reuse_scope_digest bytea) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE existing numeric(20,0); chosen numeric(20,0); next numeric(20,0); r control.etl_run%ROWTYPE;
+  operation_row control.etl_snapshot_recovery_operation%ROWTYPE;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN NULL; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key AND v.source_id=p_source_id AND v.run_id=p_run_id
+      AND v.attempt_id=p_attempt_id AND v.semantic_digest=p_semantic_digest AND v.proof_scope_digest=p_reuse_scope_digest) THEN RETURN NULL; END IF;
+  IF r.recovery_mode='SEALED_STAGE' THEN
+    SELECT * INTO operation_row FROM control.etl_snapshot_recovery_operation o WHERE o.operation_id=r.recovery_operation_id
+      AND o.tenant_key=p_tenant_key AND o.source_id=p_source_id AND o.child_run_id=p_run_id AND o.child_attempt_id=p_attempt_id
+      AND o.recovery_mode='SEALED_STAGE';
+    IF NOT FOUND OR operation_row.original_semantic_digest<>p_semantic_digest OR
+       operation_row.original_proof_scope_digest<>p_reuse_scope_digest THEN RETURN NULL; END IF;
+    SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id
+      AND run_id=operation_row.original_run_id AND attempt_id=operation_row.original_attempt_id;
+    RETURN chosen::text;
+  END IF;
+  SELECT sequence_value INTO chosen FROM control.etl_snapshot_observation WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id;
+  IF chosen IS NOT NULL THEN RETURN chosen::text; END IF;
+  SELECT a.sequence_value INTO existing FROM control.etl_snapshot_observation_sequence s
+    JOIN control.etl_snapshot_observation_allocation a ON (a.tenant_key,a.source_id,a.sequence_value)=(s.tenant_key,s.source_id,s.next_value-1)
+    WHERE s.tenant_key=p_tenant_key AND a.semantic_digest=p_semantic_digest AND a.reuse_scope_digest=p_reuse_scope_digest
+      AND EXISTS(SELECT 1 FROM control.etl_snapshot_observation b JOIN control.etl_run prior
+        ON (prior.tenant_key,prior.source_id,prior.run_id)=(b.tenant_key,b.source_id,b.run_id)
+        WHERE (b.tenant_key,b.source_id,b.sequence_value)=(a.tenant_key,a.source_id,a.sequence_value) AND prior.status='COMPLETE')
+    ORDER BY a.sequence_value DESC LIMIT 1;
+  IF existing IS NOT NULL THEN chosen:=existing;
+  ELSE
+    INSERT INTO control.etl_snapshot_observation_sequence(tenant_key,source_id) VALUES(p_tenant_key,p_source_id) ON CONFLICT DO NOTHING;
+    SELECT next_value INTO next FROM control.etl_snapshot_observation_sequence WHERE tenant_key=p_tenant_key AND source_id=p_source_id FOR UPDATE;
+    IF next>99999999999999999999 THEN RAISE EXCEPTION 'observation sequence exhausted' USING ERRCODE='22003'; END IF;
+    chosen:=next;
+    INSERT INTO control.etl_snapshot_observation_allocation(tenant_key,source_id,sequence_value,semantic_digest,reuse_scope_digest)
+      VALUES(p_tenant_key,p_source_id,chosen,p_semantic_digest,p_reuse_scope_digest);
+    UPDATE control.etl_snapshot_observation_sequence SET next_value=chosen+1 WHERE tenant_key=p_tenant_key AND source_id=p_source_id;
+  END IF;
+  INSERT INTO control.etl_snapshot_observation(tenant_key,source_id,run_id,attempt_id,sequence_value)
+    VALUES(p_tenant_key,p_source_id,p_run_id,p_attempt_id,chosen) ON CONFLICT(tenant_key,source_id,run_id) DO NOTHING;
+  RETURN chosen::text;
+END;
+$body$;
+
+CREATE FUNCTION control.get_etl_snapshot_recovery_prior_range(p_tenant_key text,p_source_id text,p_child_run_id uuid,
+  p_attempt_id uuid,p_claim_token uuid,p_entity text,p_source_pk text)
+RETURNS TABLE(aggregate_digest bytea,proof_scope_digest bytea,status text,error_code text,outcome_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE; o control.etl_snapshot_recovery_operation%ROWTYPE;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_child_run_id,p_attempt_id,p_claim_token) THEN RETURN; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_child_run_id;
+  IF r.recovery_mode<>'SEALED_STAGE' THEN RETURN; END IF;
+  SELECT * INTO o FROM control.etl_snapshot_recovery_operation WHERE operation_id=r.recovery_operation_id
+    AND child_run_id=p_child_run_id AND recovery_mode='SEALED_STAGE';
+  IF NOT FOUND THEN RETURN; END IF;
+  RETURN QUERY SELECT ar.aggregate_digest,ar.proof_scope_digest,ao.status,ao.error_code,ao.outcome_id
+    FROM control.etl_snapshot_apply_range ar JOIN control.etl_snapshot_apply_outcome ao
+      ON (ao.outcome_id,ao.tenant_key,ao.source_id,ao.run_id,ao.attempt_id)=
+         (ar.outcome_id,ar.tenant_key,ar.source_id,ar.run_id,ar.attempt_id)
+    WHERE ar.tenant_key=p_tenant_key AND ar.source_id=p_source_id AND ar.run_id=o.original_run_id
+      AND ar.attempt_id=o.original_attempt_id AND ar.entity=p_entity AND ar.source_pk=p_source_pk
+      AND ao.status IN ('APPLIED','DUPLICATE','IGNORED_STALE');
+END;
+$body$;
+
+CREATE FUNCTION control.record_etl_snapshot_recovery_reuse(p_tenant_key text,p_source_id text,p_child_run_id uuid,p_attempt_id uuid,
+  p_claim_token uuid,p_entity text,p_source_pk text,p_aggregate_digest bytea,p_proof_scope_digest bytea) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE r control.etl_run%ROWTYPE; o control.etl_snapshot_recovery_operation%ROWTYPE; prior record; new_outcome uuid;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_child_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_child_run_id;
+  IF r.recovery_mode<>'SEALED_STAGE' THEN RETURN false; END IF;
+  SELECT * INTO o FROM control.etl_snapshot_recovery_operation WHERE operation_id=r.recovery_operation_id
+    AND child_run_id=p_child_run_id AND recovery_mode='SEALED_STAGE';
+  IF NOT FOUND OR NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation v WHERE v.tenant_key=p_tenant_key
+      AND v.source_id=p_source_id AND v.run_id=p_child_run_id AND v.attempt_id=p_attempt_id
+      AND v.proof_scope_digest=p_proof_scope_digest) THEN RETURN false; END IF;
+  SELECT ar.aggregate_digest,ar.proof_scope_digest,ao.status,ao.outcome_id INTO prior
+    FROM control.etl_snapshot_apply_range ar JOIN control.etl_snapshot_apply_outcome ao
+      ON (ao.outcome_id,ao.tenant_key,ao.source_id,ao.run_id,ao.attempt_id)=
+         (ar.outcome_id,ar.tenant_key,ar.source_id,ar.run_id,ar.attempt_id)
+    WHERE ar.tenant_key=p_tenant_key AND ar.source_id=p_source_id AND ar.run_id=o.original_run_id
+      AND ar.attempt_id=o.original_attempt_id AND ar.entity=p_entity AND ar.source_pk=p_source_pk
+      AND ao.status IN ('APPLIED','DUPLICATE','IGNORED_STALE') FOR SHARE OF ar,ao;
+  IF NOT FOUND OR prior.aggregate_digest<>p_aggregate_digest OR prior.proof_scope_digest<>p_proof_scope_digest THEN RETURN false; END IF;
+  INSERT INTO control.etl_snapshot_apply_outcome(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,
+    aggregate_digest,status,reused_original_outcome_id)
+  VALUES(p_tenant_key,p_source_id,p_child_run_id,p_attempt_id,p_entity,p_entity,'',p_source_pk,p_aggregate_digest,'DUPLICATE',prior.outcome_id)
+    RETURNING outcome_id INTO new_outcome;
+  INSERT INTO control.etl_snapshot_apply_range(tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,
+    aggregate_digest,proof_scope_digest,outcome_id)
+  VALUES(p_tenant_key,p_source_id,p_child_run_id,p_attempt_id,p_entity,p_entity,'',p_source_pk,p_aggregate_digest,p_proof_scope_digest,new_outcome);
+  INSERT INTO control.etl_snapshot_checkpoint(tenant_key,source_id,run_id,entity,last_relation,last_parent_source_pk,last_source_pk,completed_count)
+    VALUES(p_tenant_key,p_source_id,p_child_run_id,p_entity,p_entity,'',p_source_pk,1)
+    ON CONFLICT(tenant_key,source_id,run_id,entity) DO UPDATE SET last_relation=EXCLUDED.last_relation,
+      last_parent_source_pk=EXCLUDED.last_parent_source_pk,last_source_pk=EXCLUDED.last_source_pk,
+      completed_count=control.etl_snapshot_checkpoint.completed_count+1,updated_at=clock_timestamp();
+  RETURN true;
+END;
+$body$;
+
+ALTER FUNCTION control.read_etl_snapshot_recovery_c_metadata(text,text,uuid,uuid,uuid) OWNER TO CURRENT_USER;
+ALTER FUNCTION control.get_etl_snapshot_recovery_prior_range(text,text,uuid,uuid,uuid,text,text) OWNER TO CURRENT_USER;
+ALTER FUNCTION control.record_etl_snapshot_recovery_reuse(text,text,uuid,uuid,uuid,text,text,bytea,bytea) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.read_etl_snapshot_recovery_c_metadata(text,text,uuid,uuid,uuid),
+  control.get_etl_snapshot_recovery_prior_range(text,text,uuid,uuid,uuid,text,text),
+  control.record_etl_snapshot_recovery_reuse(text,text,uuid,uuid,uuid,text,text,bytea,bytea) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.read_etl_snapshot_recovery_c_metadata(text,text,uuid,uuid,uuid),
+  control.get_etl_snapshot_recovery_prior_range(text,text,uuid,uuid,uuid,text,text),
+  control.record_etl_snapshot_recovery_reuse(text,text,uuid,uuid,uuid,text,text,bytea,bytea) TO hub_worker;
+
+CREATE OR REPLACE FUNCTION control.finish_etl_snapshot_run(p_tenant_key text,p_source_id text,p_run_id uuid,p_attempt_id uuid,p_claim_token uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control
+AS $body$
+DECLARE expected bigint; done bigint; bad bigint; applied bigint; completed timestamptz; r control.etl_run%ROWTYPE;
+BEGIN
+  IF NOT control.assert_etl_snapshot_continuation(p_tenant_key,p_source_id,p_run_id,p_attempt_id,p_claim_token) THEN RETURN false; END IF;
+  SELECT * INTO r FROM control.etl_run WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id FOR UPDATE;
+  IF NOT EXISTS(SELECT 1 FROM control.etl_snapshot_validation WHERE tenant_key=p_tenant_key AND source_id=p_source_id
+      AND run_id=p_run_id AND attempt_id=p_attempt_id) THEN RETURN false; END IF;
+  SELECT count(*) INTO expected FROM control.etl_snapshot_stage_record WHERE tenant_key=p_tenant_key AND source_id=p_source_id
+    AND run_id=p_run_id AND attempt_id=p_attempt_id AND relation IN ('customer','order');
+  SELECT count(*),count(*) FILTER(WHERE status IN ('QUARANTINED','CHANNEL_EPOCH_RETIRED','FAILED')),
+    count(*) FILTER(WHERE status='APPLIED') INTO done,bad,applied FROM control.etl_snapshot_apply_outcome
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND attempt_id=p_attempt_id;
+  IF done<>expected THEN RETURN false; END IF;
+  IF bad=0 THEN
+    UPDATE control.etl_run SET status='COMPLETE',completed_at=clock_timestamp(),applied_count=applied,
+      completeness_summary=jsonb_build_object('status','COMPLETE','outcome_count',done)
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND status='APPLYING'
+      RETURNING completed_at INTO completed;
+    IF NOT FOUND THEN RETURN false; END IF;
+    IF r.recovery_mode IS DISTINCT FROM 'SEALED_STAGE' AND (r.recovery_lineage_root_run_id IS NULL OR NOT EXISTS(
+        SELECT 1 FROM control.etl_snapshot_delete_run d JOIN control.etl_run prior
+          ON (prior.tenant_key,prior.source_id,prior.run_id)=(d.tenant_key,d.source_id,d.run_id)
+        WHERE d.tenant_key=p_tenant_key AND d.source_id=p_source_id
+          AND coalesce(prior.recovery_lineage_root_run_id,prior.run_id)=r.recovery_lineage_root_run_id)) THEN
+      PERFORM control.reserve_etl_snapshot_delete_run(p_tenant_key,p_source_id,p_run_id,p_attempt_id);
+    END IF;
+    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,last_successful_run_id=p_run_id,
+      next_due_at=clock_timestamp()+make_interval(secs=>interval_seconds),updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
+  ELSE
+    UPDATE control.etl_run SET status='FAILED',completed_at=clock_timestamp(),quarantined_count=GREATEST(quarantined_count,bad),
+      completeness_summary=jsonb_build_object('status','FAILED','outcome_count',done,'failed_count',bad)
+      WHERE run_id=p_run_id AND status='APPLYING';
+    UPDATE control.etl_snapshot_schedule SET active_run_id=NULL,last_run_id=p_run_id,updated_at=clock_timestamp()
+      WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND active_run_id=p_run_id;
+  END IF;
+  UPDATE control.etl_snapshot_continuation SET claim_token=NULL,lease_until=NULL,updated_at=clock_timestamp()
+    WHERE tenant_key=p_tenant_key AND source_id=p_source_id AND run_id=p_run_id AND claim_token=p_claim_token;
+  RETURN true;
+END;
+$body$;
+ALTER FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) OWNER TO CURRENT_USER;
+REVOKE ALL ON FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) FROM PUBLIC,hub_api,hub_mcp,hub_publisher,hub_hasura_read;
+GRANT EXECUTE ON FUNCTION control.finish_etl_snapshot_run(text,text,uuid,uuid,uuid) TO hub_worker;

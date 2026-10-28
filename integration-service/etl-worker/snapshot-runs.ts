@@ -64,6 +64,7 @@ function summary(row: RunRow): SnapshotRunSummary {
     completed_at: row.completed_at ? new Date(row.completed_at).toISOString() : null,
     config_revision: String(row.config_revision), mapping_revision: String(row.mapping_revision),
     identity_mapping_revision: String(row.identity_mapping_revision),
+    ...(row.status==='FAILED'||row.status==='INCOMPLETE'?{failure_version:String(row.failure_version)}:{}),
     completeness_report: completeness ?? Object.freeze({ status: 'NOT_STARTED' as const }), checkpoint_summary: checkpoint });
 }
 
@@ -363,7 +364,7 @@ export async function getSnapshotRun(pool: Pool, auth: Pick<AuthService,'assertC
   return transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if(!deleteCandidatePage) await auth.assertCurrentPrincipal(principal,'source:read',client);
-    const result = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY},checkpoint_summary,completeness_summary FROM control.etl_run
+    const result = await client.query<RunRow>(`SELECT ${SELECT_SUMMARY},failure_version FROM control.etl_run
       WHERE tenant_key=$1 AND run_id=$2::uuid`, [principal.tenantId,runId]);
     if (!result.rowCount) fail('SOURCE_NOT_FOUND');
     const runSummary=summary(result.rows[0]);

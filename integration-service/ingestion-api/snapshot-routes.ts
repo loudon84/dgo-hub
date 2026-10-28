@@ -4,6 +4,7 @@ import { AuthError } from '../auth/errors.js';
 import type { AuthService, UserPrincipal } from '../auth/types.js';
 import type { OidcAuthenticator } from '../auth/oidc.js';
 import { createSnapshotRun, getSnapshotRun, listSnapshotRuns, MAX_DELETE_CANDIDATE_CURSOR_LENGTH } from '../etl-worker/snapshot-runs.js';
+import { createSnapshotRecovery } from '../etl-worker/snapshot-recovery.js';
 import { approveSnapshotDeleteCandidate, type DeleteCandidateApprovalInput } from '../etl-worker/snapshot-delete-api.js';
 
 export type SnapshotRouteOptions = Readonly<{ pool: Pool; authService: Pick<AuthService,'repository'|'assertCurrentPrincipal'>; authenticator: OidcAuthenticator }>;
@@ -28,6 +29,17 @@ function strictBody(request: FastifyRequest): Record<string, unknown> {
       typeof body.approved_config_revision !== 'string' || !/^[1-9][0-9]*$/.test(body.approved_config_revision) ||
       body.run_mode !== 'FULL_SNAPSHOT') throw new AuthError('AUTH_INPUT_INVALID');
   return body;
+}
+function strictRecoveryBody(request:FastifyRequest):Readonly<{failed_version:string;reason:string}>{
+  if(request.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json'||
+    !request.body||typeof request.body!=='object'||Array.isArray(request.body)) throw new AuthError('AUTH_INPUT_INVALID');
+  const body=request.body as Record<string,unknown>;
+  if(Object.keys(body).length!==2||Object.keys(body).some(key=>!['failed_version','reason'].includes(key))||
+    typeof body.failed_version!=='string'||! /^[1-9][0-9]*$/.test(body.failed_version)||typeof body.reason!=='string')
+    throw new AuthError('AUTH_INPUT_INVALID');
+  const reason=body.reason.trim();
+  if(Array.from(reason).length<1||Array.from(reason).length>1000) throw new AuthError('AUTH_INPUT_INVALID');
+  return Object.freeze({failed_version:body.failed_version,reason});
 }
 function strictQuery(request: FastifyRequest): Record<string, string> {
   const query = request.query as Record<string, unknown>;
@@ -114,6 +126,15 @@ export async function registerSnapshotRoutes(app: FastifyInstance, options: Snap
         const page=query?{candidateId:query.candidateId,limit:query.limit,requestId:request.id,...(query.cursor===undefined?{}:{cursor:query.cursor})}:undefined;
         return reply.send(envelope(request,await getSnapshotRun(options.pool,options.authService,principal,request.params.id,page)));
       } catch (error) { return fail(request,reply,error); }
+    });
+    admin.post<{ Params:{id:string} }>('/hub/v1/admin/etl-runs/:id/retry',async(request,reply)=>{
+      try {
+        const principal=await currentUser(request,options.authenticator);
+        const body=strictRecoveryBody(request);
+        const result=await createSnapshotRecovery(options.pool,options.authService,principal,request.params.id,body,
+          idempotencyKey(request),request.id);
+        return reply.code(202).send(envelope(request,result));
+      } catch(error){ return fail(request,reply,error); }
     });
     admin.post<{ Params: { id:string; candidate_id:string } }>(
       '/hub/v1/admin/sources/:id/delete-candidates/:candidate_id/approve',async(request,reply)=>{

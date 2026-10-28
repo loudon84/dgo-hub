@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import type { SourceConfig } from '../source-registry/service.js';
 import type { EndpointProfile } from '../source-registry/capability-probe.js';
-import type { SnapshotPage, SnapshotRelation } from './postgres-snapshot-connector.js';
+import { snapshotRowsPageDigest, type SnapshotPage, type SnapshotRelation } from './postgres-snapshot-connector.js';
 
 export type SnapshotClaim = Readonly<{ run_id: string; claim_token: string }>;
 export type SnapshotAttempt = Readonly<{ attempt_id: string; ordinal: number; operation_id: string }>;
@@ -19,6 +19,9 @@ export type FrozenSnapshotProof = Readonly<{
   mapping_digest: string;
   identity_mapping_digest: string;
   endpoint_profile_digest: string;
+  recovery_mode?: 'FRESH_SCAN'|'SEALED_STAGE'|null;
+  recovery_original_run_id?: string|null;
+  recovery_original_attempt_id?: string|null;
 }>;
 
 function stable(value: unknown): string {
@@ -54,7 +57,8 @@ export function createSnapshotStageStore(pool: Pool) {
     async loadFrozenProof(tenantId: string, sourceId: string, runId: string): Promise<FrozenSnapshotProof> {
       return transaction(pool,async client=>{
         const run=await client.query<Record<string,any>>(`SELECT run_id,tenant_key,source_id,status,expected_entities,config_revision,config_digest,
-          mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,security_barrier_fence
+          mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,security_barrier_fence,
+          recovery_mode,recovery_original_run_id,recovery_original_attempt_id
           FROM control.etl_run WHERE tenant_key=$1 AND source_id=$2 AND run_id=$3`,[tenantId,sourceId,runId]);
         if(!run.rowCount || run.rows[0].status!=='SCANNING') throw new Error('SNAPSHOT_RUN_UNAVAILABLE');
         const row=run.rows[0];
@@ -79,8 +83,54 @@ export function createSnapshotStageStore(pool: Pool) {
         return Object.freeze({ tenant_key:tenantId,source_id:sourceId,run_id:runId,expected_entities:Object.freeze([...row.expected_entities]),
           security_barrier_fence:String(row.security_barrier_fence),config,endpoint_profile:profile,mappings,
           config_digest:configDigest,mapping_digest:mappingDigest,identity_mapping_digest:identityDigest,
-          endpoint_profile_digest:digestHex(row.endpoint_profile_digest) });
+          endpoint_profile_digest:digestHex(row.endpoint_profile_digest),recovery_mode:row.recovery_mode,
+          recovery_original_run_id:row.recovery_original_run_id,recovery_original_attempt_id:row.recovery_original_attempt_id });
       });
+    },
+    async copySealedStage(tenantId:string,sourceId:string,runId:string,attemptId:string,token:string,operationId:string):Promise<number> {
+      const source=await transaction(pool,async client=>{
+        const result=await client.query<{proof:Record<string,any>}>(
+          'SELECT control.read_etl_snapshot_recovery_manifest($1,$2,$3,$4,$5) AS proof',[tenantId,sourceId,runId,attemptId,token]);
+        const proof=result.rows[0]?.proof;
+        if(!proof||!proof.manifest||typeof proof.original_manifest_digest!=='string') throw new Error('SNAPSHOT_RECOVERY_PROOF_INVALID');
+        return proof;
+      });
+      const manifest:Record<string,unknown>={...(source.manifest as Record<string,unknown>),attempt_id:attemptId,operation_id:operationId,
+        recovery_source:{run_id:source.original_run_id,attempt_id:source.original_attempt_id,
+          manifest_digest:source.original_manifest_digest,copy_kind:'EXACT_STAGE_FACTS'}};
+      if(!Array.isArray(manifest.relation_counts)) throw new Error('SNAPSHOT_MANIFEST_INVALID');
+      let copied=0;
+      for(const item of manifest.relation_counts as Array<Record<string,any>>) {
+        const relation=item.relation;
+        if(!['customer','order','order_line'].includes(relation)||!Number.isSafeInteger(item.page_count)||item.page_count<0)
+          throw new Error('SNAPSHOT_MANIFEST_INVALID');
+        for(let pageNo=1;pageNo<=item.page_count;pageNo++) {
+          const page=await transaction(pool,async client=>{
+            const result=await client.query<Record<string,any>>(
+              'SELECT * FROM control.read_etl_snapshot_recovery_stage_page($1,$2,$3,$4,$5,$6,$7)',
+              [tenantId,sourceId,runId,attemptId,token,relation,pageNo]);
+            return result.rows[0];
+          });
+          if(!page||!Array.isArray(page.rows)||page.rows.length!==page.row_count) throw new Error('SNAPSHOT_RECOVERY_STAGE_INVALID');
+          const pageDigest=digestHex(page.page_digest);
+          if(snapshotRowsPageDigest(page.rows)!==pageDigest) throw new Error('SNAPSHOT_RECOVERY_STAGE_DIGEST_MISMATCH');
+          await transaction(pool,async client=>{
+            const result=await client.query<{write_etl_snapshot_page:number}>(
+              'SELECT control.write_etl_snapshot_page($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::bytea,$12::jsonb)',
+              [tenantId,sourceId,runId,attemptId,token,page.entity,page.relation,page.page_no,page.first_key,page.last_key,
+                Buffer.from(pageDigest,'hex'),JSON.stringify(page.rows)]);
+            if(Number(result.rows[0]?.write_etl_snapshot_page)!==page.rows.length) throw new Error('SNAPSHOT_RECOVERY_STAGE_COPY_REJECTED');
+          });
+          copied+=page.rows.length;
+        }
+      }
+      await transaction(pool,async client=>{
+        const result=await client.query<{complete_etl_snapshot_manifest:string}>(
+          'SELECT control.complete_etl_snapshot_manifest($1,$2,$3,$4,$5,$6::jsonb,$7::bytea)',
+          [tenantId,sourceId,runId,attemptId,token,JSON.stringify(manifest),Buffer.from(snapshotManifestDigest(manifest),'hex')]);
+        if(Number(result.rows[0]?.complete_etl_snapshot_manifest)!==Number(manifest.row_count)) throw new Error('SNAPSHOT_RECOVERY_MANIFEST_REJECTED');
+      });
+      return copied;
     },
     beginAttempt(tenantId: string, sourceId: string, runId: string, token: string, leaseSeconds: number): Promise<SnapshotAttempt> {
       return transaction(pool,async client=>{

@@ -15,6 +15,9 @@ export type SnapshotCProof = SnapshotRunProof & Readonly<{
   identity_mappings: readonly { kind: string; external_id: string; target_id: string | null }[];
   manifest: Record<string, unknown>;
   manifest_digest: string;
+  recovery_mode?: 'FRESH_SCAN'|'SEALED_STAGE'|null;
+  recovery_original_run_id?: string|null;
+  recovery_original_attempt_id?: string|null;
 }>;
 
 type PageReceipt = Readonly<{ entity: 'customer'|'order'; relation: SnapshotRelation; page_no: number; row_count: number;
@@ -76,6 +79,10 @@ export function createSnapshotContinuationStore(pool: Pool) {
           [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
         const proof=result.rows[0]?.proof;
         if(!proof || proof.status!==claim.status) throw new Error('SNAPSHOT_C_PROOF_INVALID');
+        const recoveryResult=await client.query<{metadata:Record<string,any>}>('SELECT control.read_etl_snapshot_recovery_c_metadata($1,$2,$3,$4,$5) AS metadata',
+          [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token]);
+        const recovery=recoveryResult.rows[0]?.metadata;
+        if(!recovery) throw new Error('SNAPSHOT_RECOVERY_LINK_INVALID');
         const {manifest, digest:manifestDigest}=proof.manifest ?? {};
         if(!manifest || snapshotManifestDigest(manifest)!==manifestDigest || manifest.attempt_id!==claim.attempt_id || manifest.state!=='EXTRACTED')
           throw new Error('SNAPSHOT_MANIFEST_INVALID');
@@ -83,7 +90,7 @@ export function createSnapshotContinuationStore(pool: Pool) {
             digest(proof.identity_mappings)!==proof.identity_mapping_digest || digest(proof.config.endpoint_profile)!==proof.endpoint_profile_digest ||
             stable([...proof.expected_entities].sort())!==stable([...(proof.config.allowed_entities as string[])].sort()))
           throw new Error('SNAPSHOT_C_PROOF_INVALID');
-        return Object.freeze({ ...proof, manifest, manifest_digest:manifestDigest }) as SnapshotCProof;
+        return Object.freeze({ ...proof, manifest, manifest_digest:manifestDigest,...recovery }) as SnapshotCProof;
       });
     },
     async *stagePages(claim:SnapshotContinuationClaim,proof:SnapshotCProof):AsyncGenerator<StagePage> {
@@ -182,6 +189,22 @@ export function createSnapshotContinuationStore(pool: Pool) {
         [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,sourcePk]);
       const row=result.rows[0];
       return row ? Object.freeze({...row,aggregate_digest:hex(row.aggregate_digest),proof_scope_digest:hex(row.proof_scope_digest)}) : undefined;
+    },
+    async recoveryPriorRange(claim:SnapshotContinuationClaim,entity:'customer'|'order',sourcePk:string):Promise<
+      Readonly<{aggregate_digest:string;proof_scope_digest:string;status:string;error_code:string|null;outcome_id:string}>|undefined> {
+      const result=await call<{aggregate_digest:Buffer;proof_scope_digest:Buffer;status:string;error_code:string|null;outcome_id:string}>(
+        'SELECT * FROM control.get_etl_snapshot_recovery_prior_range($1,$2,$3,$4,$5,$6,$7)',
+        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,entity,sourcePk]);
+      const row=result.rows[0];
+      return row?Object.freeze({...row,aggregate_digest:hex(row.aggregate_digest),proof_scope_digest:hex(row.proof_scope_digest)}):undefined;
+    },
+    async recordRecoveryReuse(client:PoolClient,claim:SnapshotContinuationClaim,input:Readonly<{entity:'customer'|'order';source_pk:string;
+      aggregate_digest:string;proof_scope_digest:string}>):Promise<boolean> {
+      const result=await client.query<{record_etl_snapshot_recovery_reuse:boolean}>(
+        'SELECT control.record_etl_snapshot_recovery_reuse($1,$2,$3,$4,$5,$6,$7,$8::bytea,$9::bytea)',
+        [claim.tenant_key,claim.source_id,claim.run_id,claim.attempt_id,claim.claim_token,input.entity,input.source_pk,
+          Buffer.from(input.aggregate_digest,'hex'),Buffer.from(input.proof_scope_digest,'hex')]);
+      return result.rows[0]?.record_etl_snapshot_recovery_reuse===true;
     },
     async seal(claim:SnapshotContinuationClaim,proof:SnapshotCProof,proofScopeDigest:string,semanticDigest:string,coverage:Record<string,unknown>):Promise<boolean> {
       const result=await call<{seal_etl_snapshot_validation:boolean}>(

@@ -138,6 +138,18 @@ async function applyOne(pool:Pool,store:ReturnType<typeof createSnapshotContinua
     if(previous.aggregate_digest!==aggregate||previous.proof_scope_digest!==proofScope) throw new Error('SNAPSHOT_RECOVERY_DRIFT');
     return false;
   }
+  if(proof.recovery_mode==='SEALED_STAGE') {
+    const original=await store.recoveryPriorRange(claim,entity,row.source_pk);
+    if(original) {
+      if(original.aggregate_digest!==aggregate||original.proof_scope_digest!==proofScope) throw new Error('SNAPSHOT_RECOVERY_DRIFT');
+      const reused=await transaction(pool,async client=>{
+        if(!await store.assertApplyClaim(client,claim)) throw new Error('SNAPSHOT_C_CLAIM_LOST');
+        return store.recordRecoveryReuse(client,claim,{entity,source_pk:row.source_pk,aggregate_digest:aggregate,proof_scope_digest:proofScope});
+      });
+      if(!reused) throw new Error('SNAPSHOT_RECOVERY_RANGE_REUSE_REJECTED');
+      return false;
+    }
+  }
   const ctx=applyContext(proof,entity);
   const recorded=await transaction(pool,async client=>{
     if(!await store.assertApplyClaim(client,claim)) throw new Error('SNAPSHOT_C_CLAIM_LOST');

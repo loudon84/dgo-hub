@@ -29,6 +29,7 @@ export type SnapshotRunProof = Readonly<{
   mapping_revision: string;
   mapping_digest: string;
   identity_mapping_revision: string;
+  failure_version?: string;
   identity_mapping_digest: string;
   endpoint_profile_digest: string;
   test_report_id: string;

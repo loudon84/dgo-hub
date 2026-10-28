@@ -95,6 +95,10 @@ export async function runSnapshotWorkerOnce(pool: Pool, dependencies: SnapshotWo
       const attempt = await store.beginAttempt(source.tenant_key, source.source_id, claim.run_id, claim.claim_token, leaseSeconds);
       attemptId = attempt.attempt_id;
       const proof = await store.loadFrozenProof(source.tenant_key, source.source_id, claim.run_id);
+      if(proof.recovery_mode==='SEALED_STAGE') {
+        await store.copySealedStage(source.tenant_key,source.source_id,claim.run_id,attempt.attempt_id,claim.claim_token,attempt.operation_id);
+        continue;
+      }
       const profile = proof.endpoint_profile;
       validateEndpointProfile(proof.config, profile, { environmentKind: dependencies.egressPolicy.environmentKind });
       const password = await dependencies.secretResolver.resolve(proof.config.secret_ref);
