@@ -46,3 +46,32 @@ The full-suite PostgreSQL lifecycle records identify three owned containers, all
 Earlier failed attempts remain preserved under their original external UUID roots, including migration SQLSTATE 42830 and native API SQL errors 42702, 42703, and 42P01; fixes were applied before the final green gates. The transient test-fixture C validation failure was traced to a scope update clearing the fixture Owner’s `sales-east` department and `sales` role; the fixture now preserves both while changing the auth epoch, and the full file passes.
 
 Formal 48 gates, Sites, Hermes, and production/live-source verification are `NOT_RUN`. Testing used owned local PostgreSQL fixtures only. No production verification is claimed.
+
+## Fix Round 1 — cursor bound, empty summary, shared digest serializers
+
+**Source commit:** `23cac1b6a3f00b595ecff085dc59f14dd771bc73` (parent dispatch BASE `97463138699e3ef9421ef94a7442b6084f0df08a`). **Evidence package commit:** `a8d8a607484b1a6c2544551bab28c36f0cd0d9f6`. The explicit package is [m1-task-5d2-evidence/08be4383-e3c1-4c0b-86f3-232a55bca1af](docs/execution/alpha1/m1-task-5d2-evidence/08be4383-e3c1-4c0b-86f3-232a55bca1af/manifest.json), with 62 individually whitelisted artifacts; manifest SHA-256 `8b7e5f130b2c77d7981c9085338d04568918aacf62e436abb7b7922f578f387f`. Artifact copies were checked against each named source path, byte count, and SHA-256. The package includes exact commands/stdout/stderr/exit codes, source manifests, and owned PostgreSQL/Node lifecycle records. Failed RED attempts remain included and were not replaced by GREEN captures.
+
+### Fixes
+
+- API-021 cursor parsing and HTTP query validation now share a strict 4096-character cap. The complete JSON/base64url representation is bounded from the existing identity limits: up to 32 ASCII tenant characters twice, 256 ASCII source-ID characters twice, 128 Unicode code points for the source primary key, fixed UUID/digest/revision values, fixed JSON syntax and property names. A source-key code point can use at most six UTF-8 bytes in JSON through control-character escaping; even that upper bound keeps the encoded cursor below 2.7 KiB. Decoding also requires the exact outer and nested key sets, supported tenant/source syntax, UUIDs, digest, entity, and the source-key code-point limit.
+- The real C→D/API-021 HTTP regression uses the API-019 maximum source ID of 160 characters and a 128-character source key. Page 1 produces a cursor above 1024 characters; page 2 returns HTTP 200 and the remaining exact member. The repository’s source registry accepts IDs through 256 characters, while API-019 currently caps run creation at 160; the existing 256-character `data_contract_ref` limit also prevents provisioning the 256-character service-test fixture. Those pre-existing limits were left unchanged. The 4096-character bound covers the registry’s 256-character source-ID shape by derivation.
+- API-021 candidate aggregation now filters `candidate_id IS NOT NULL`. The actual HTTP detail request for a `SKIPPED` tombstone reservation returns `delete_reconciliation.candidates: []`.
+- Freeze calls the baseline fingerprint helper. Shared baseline seed/member-fold helpers are used by that helper; shared candidate seed/member-fold helpers are used by both freeze and candidate recomputation. Candidate completion timestamps are serialized as fixed UTC `YYYY-MM-DDTHH:MM:SS.ffffffZ`, avoiding session timezone or `DateStyle` changes. The C→D test compares the frozen candidate digest with recomputation and the frozen baseline fingerprint with the current helper result.
+
+### Verification
+
+All gates used a fresh `E:/m1t5-runtime/<UUID>` root and set `M0_RUN_EVIDENCE_ROOT` to that exact absolute root. Captured before/after manifests include actual HEAD and, for each changed source/test file, raw and LF SHA-256, byte size, and Git blob. The postcommit manifests are unchanged across each command and bind to source commit `23cac1b6a3f00b595ecff085dc59f14dd771bc73`.
+
+| Command | Result | Actual HEAD | Evidence root |
+| --- | --- | --- | --- |
+| `npm test -- acceptance-tests/snapshot-runs.test.ts` | 26 passed, 0 skipped, exit 0; includes populated 001–008 → assembled 009 → identical 009 reapply and the C→D digest-equality assertions | `23cac1b6a3f00b595ecff085dc59f14dd771bc73` | `E:/m1t5-runtime/ad060ad5-081f-4484-bd79-fd68e8b62542` |
+| `npm run typecheck` | exit 0 | `23cac1b6a3f00b595ecff085dc59f14dd771bc73` | `E:/m1t5-runtime/966932d7-aadf-499d-8d24-2ac79427aa57` |
+| `npm run build` | exit 0 | `23cac1b6a3f00b595ecff085dc59f14dd771bc73` | `E:/m1t5-runtime/37db7bda-e8da-42df-8312-f36c970ffbc2` |
+
+TDD RED evidence: the HTTP summary assertion failed on the null candidate object at `E:/m1t5-runtime/4aa2eb2d-b978-4f7c-9a66-8a10c075fe9c`; after that fix, the real second cursor-page request failed with HTTP 400 at `E:/m1t5-runtime/cfc084cb-d86a-4163-ad3e-1bcb6fe12800`. An attempted 238-character source ID was rejected by the existing API-019 160-character source-ID validation at `E:/m1t5-runtime/35e22478-cb7f-411a-9e92-8a8cf4aafdfd`; no product limit was changed. The first candidate-digest helper signature also produced PostgreSQL `42883` for numeric observation sequences at `E:/m1t5-runtime/2e97b4e5-1b85-42e1-b58d-bbcd9cdb15fd`; the helper now uses the schema’s `numeric` sequence type. These failed attempts are preserved in the evidence package.
+
+The 26 count is the existing test-file count; the new HTTP checks are assertions in its D2 lifecycle test, not extra named tests. The real fixture has two candidate members, so this run does not prove pagination truncation for sets above 20. No 256-character source ID could be provisioned end-to-end through current API-019; the bound for that registry limit is derived as stated above.
+
+Formal 48 gates, D3 effects, Sites, Hermes, and production/live-source behavior remain `NOT_RUN`. Verification used only owned local PostgreSQL fixtures; no production claim is made.
+
+Product bytes and tests are committed separately from this evidence package and the following report commit.
