@@ -1,0 +1,15 @@
+{
+  "command": [
+    "npm.cmd",
+    "run",
+    "test",
+    "--",
+    "acceptance-tests/quarantine-read.test.ts",
+    "--reporter=dot"
+  ],
+  "cwd": "E:\\git\\dgo-hub\\integration-service",
+  "evidence_root": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e",
+  "head_before": "18d8420bfce2bc1b7f8df18d1bc6305efa7a7a08",
+  "head_after": "18d8420bfce2bc1b7f8df18d1bc6305efa7a7a08",
+  "exit": 1
+}

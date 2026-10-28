@@ -1,0 +1,61 @@
+{
+  "head": "18d8420bfce2bc1b7f8df18d1bc6305efa7a7a08",
+  "files": [
+    {
+      "path": "integration-service/acceptance-tests/quarantine-read.test.ts",
+      "raw_bytes": 75321,
+      "raw_sha256": "6666b0b2121afd324f96bf6cddbf10193834c099b31d2f4013a01821b4b416c0",
+      "lf_bytes": 75321,
+      "lf_sha256": "6666b0b2121afd324f96bf6cddbf10193834c099b31d2f4013a01821b4b416c0",
+      "git_blob": "650c4ae15a45706efa58c836ad0e439009db5787"
+    },
+    {
+      "path": "integration-service/ingestion-api/quarantine-read.ts",
+      "raw_bytes": 11069,
+      "raw_sha256": "86647634a67a83c994149573d549ad28f924e642f48d4231dd5102c9aa164a84",
+      "lf_bytes": 11069,
+      "lf_sha256": "86647634a67a83c994149573d549ad28f924e642f48d4231dd5102c9aa164a84",
+      "git_blob": "619b404c8a69a11506745bde80c4f812995f26a7"
+    },
+    {
+      "path": "integration-service/ingestion-api/strict-ingestion.ts",
+      "raw_bytes": 22093,
+      "raw_sha256": "db70e3ee65b39d4a4103156f0de5052fe353570ad835a0e31acd8d2f23fdcd3b",
+      "lf_bytes": 22093,
+      "lf_sha256": "db70e3ee65b39d4a4103156f0de5052fe353570ad835a0e31acd8d2f23fdcd3b",
+      "git_blob": "f06366a2f2d6e360414112281be9f531b20f89b1"
+    },
+    {
+      "path": "integration-service/migrations/009_snapshot_runs_and_recovery.sql",
+      "raw_bytes": 274503,
+      "raw_sha256": "740db83bc730e31a746aa644a7cfd89f72ab8740c27223391a8d5fc8fd9ee217",
+      "lf_bytes": 274499,
+      "lf_sha256": "3aa3605551e5394af984874c0b0791680e78ab3d9bbe3fc9c5ca58e5c3a18549",
+      "git_blob": "60f190c9d7c9bea672fa3cd2b2e34b961474e4f6"
+    },
+    {
+      "path": "integration-service/contracts/api-gap-matrix.md",
+      "raw_bytes": 22760,
+      "raw_sha256": "1c46182705ee7fadc1f44d008fbd676bae90c192cb97e1d56c90175734c87eef",
+      "lf_bytes": 22703,
+      "lf_sha256": "41487071e5b34af9805c792dfed9280fb31135829f08bf6f50c737e5aff30b1f",
+      "git_blob": "3237eb2a79c0575b34324fb3c5b924a7088da0b1"
+    },
+    {
+      "path": "docs/\u6570\u636e\u6cbb\u7406\u4e0e\u672c\u4f53\u96c6\u6210\u4e2d\u53f0_\u4ea7\u54c1\u67b6\u6784\u4e0e\u4e8c\u5f00\u8bf4\u660e_v1.0.md",
+      "raw_bytes": 165570,
+      "raw_sha256": "45853a0dc7224bb44a31ee2398a11b8dcebc9f96bdb6a00b69e0141a9a47fa82",
+      "lf_bytes": 165570,
+      "lf_sha256": "45853a0dc7224bb44a31ee2398a11b8dcebc9f96bdb6a00b69e0141a9a47fa82",
+      "git_blob": "ab60c98bde25fb4f6fc4a9734d963eccbf3e382a"
+    },
+    {
+      "path": ".superpowers/sdd/2026-10-24-alpha1-m1-source-ingestion-implementation-plan/context/m1-task5e1a2-1-schema-contract.md",
+      "raw_bytes": 17693,
+      "raw_sha256": "5f223bbe4e43b9748f302e22609c688247fa1e443740803dc680c098e2da6353",
+      "lf_bytes": 17693,
+      "lf_sha256": "5f223bbe4e43b9748f302e22609c688247fa1e443740803dc680c098e2da6353",
+      "git_blob": "05c8ea0642d60872310d4ea96283b06dbcb3866d"
+    }
+  ]
+}

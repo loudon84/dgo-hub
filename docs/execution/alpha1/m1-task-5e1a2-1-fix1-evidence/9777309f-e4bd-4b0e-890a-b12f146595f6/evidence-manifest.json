@@ -1,0 +1,549 @@
+{
+  "source_commit": "6879f48",
+  "files": [
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\before-sources.json",
+      "original_sha256": "419c2b2834b178b3631fdce5a370bfa81b613c470aea83b38c9124cd90706056",
+      "destination_sha256": "419c2b2834b178b3631fdce5a370bfa81b613c470aea83b38c9124cd90706056",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\after-sources.json",
+      "original_sha256": "419c2b2834b178b3631fdce5a370bfa81b613c470aea83b38c9124cd90706056",
+      "destination_sha256": "419c2b2834b178b3631fdce5a370bfa81b613c470aea83b38c9124cd90706056",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\gate.json",
+      "original_sha256": "c43796ea88129fcc4849feef8a7ad70408e629a70682d96a1ffa9d46dac98f79",
+      "destination_sha256": "c43796ea88129fcc4849feef8a7ad70408e629a70682d96a1ffa9d46dac98f79",
+      "original_size": 488,
+      "destination_size": 488
+    },
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\stdout.log",
+      "original_sha256": "7eed01848d6e1cf6a6e1004d15a965a9dc69b6ceaefe0a52c20b5859c2437ff4",
+      "destination_sha256": "7eed01848d6e1cf6a6e1004d15a965a9dc69b6ceaefe0a52c20b5859c2437ff4",
+      "original_size": 431,
+      "destination_size": 431
+    },
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\stderr.log",
+      "original_sha256": "d8b27de53d723dd3a2c745b0f79519914d9ee1727956d02f2c15958781d8419f",
+      "destination_sha256": "d8b27de53d723dd3a2c745b0f79519914d9ee1727956d02f2c15958781d8419f",
+      "original_size": 11918,
+      "destination_size": 11918
+    },
+    {
+      "original": "E:\\m1t5-runtime\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\m1task5\\a4aff03b-43a8-4e34-bdfb-53cae258aa72\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\4ea2d2fa-235e-4233-a5aa-dcec1ce7b01f\\m1task5\\a4aff03b-43a8-4e34-bdfb-53cae258aa72\\postgres-lifecycle.jsonl",
+      "original_sha256": "cc24a8213236c793089346fd00401790c19c6a5af20b47438d7a4035a9ada2e4",
+      "destination_sha256": "cc24a8213236c793089346fd00401790c19c6a5af20b47438d7a4035a9ada2e4",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\before-sources.json",
+      "original_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "destination_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\after-sources.json",
+      "original_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "destination_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\gate.json",
+      "original_sha256": "0a3d70c4e27c0c12cddd6fc340c6d6773c48f767b0ea4ffb1faca7ff0d6de8f1",
+      "destination_sha256": "0a3d70c4e27c0c12cddd6fc340c6d6773c48f767b0ea4ffb1faca7ff0d6de8f1",
+      "original_size": 414,
+      "destination_size": 414
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\stdout.log",
+      "original_sha256": "d42f253152433aab8f074ee3f2a0fda2ac8ffe2f14b8efd39eee1116e14fafbe",
+      "destination_sha256": "d42f253152433aab8f074ee3f2a0fda2ac8ffe2f14b8efd39eee1116e14fafbe",
+      "original_size": 401,
+      "destination_size": 401
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\stderr.log",
+      "original_sha256": "1eb9bbf34cac10028cc301716c3bae9de54a4290c02179455dc7d62d1d95aa62",
+      "destination_sha256": "1eb9bbf34cac10028cc301716c3bae9de54a4290c02179455dc7d62d1d95aa62",
+      "original_size": 3436,
+      "destination_size": 3436
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\quarantine-accepted009-source-pin.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\quarantine-accepted009-source-pin.json",
+      "original_sha256": "3a11dd86b3c137f9fd71f628f3c46754108277ce881d591fa692105247c8f9d5",
+      "destination_sha256": "3a11dd86b3c137f9fd71f628f3c46754108277ce881d591fa692105247c8f9d5",
+      "original_size": 932,
+      "destination_size": 932
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "original_sha256": "62552abeaeccc4b213db62ea7fb86114f8563e508ff07b46cfa3669cfb3a4b4b",
+      "destination_sha256": "62552abeaeccc4b213db62ea7fb86114f8563e508ff07b46cfa3669cfb3a4b4b",
+      "original_size": 832,
+      "destination_size": 832
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\1d790931-a3b5-4784-903b-30ebb29d4ea6\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\1d790931-a3b5-4784-903b-30ebb29d4ea6\\postgres-lifecycle.jsonl",
+      "original_sha256": "8641741538815266dc7fc5d28dfd519c7fb12e8a1ccc7e287629856913cc1b7c",
+      "destination_sha256": "8641741538815266dc7fc5d28dfd519c7fb12e8a1ccc7e287629856913cc1b7c",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\863d61cb-5efb-4f47-9489-96559680fd64\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\863d61cb-5efb-4f47-9489-96559680fd64\\postgres-lifecycle.jsonl",
+      "original_sha256": "e2875f6dac5ceef547fd9bac87690e26c374d8968bc74614d3a137d10ad8c532",
+      "destination_sha256": "e2875f6dac5ceef547fd9bac87690e26c374d8968bc74614d3a137d10ad8c532",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\e2367a0e-5613-4d65-94a9-9749b9f96a02\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\991da828-4a66-4b5b-b443-318f3ee5025e\\m1task5\\e2367a0e-5613-4d65-94a9-9749b9f96a02\\postgres-lifecycle.jsonl",
+      "original_sha256": "f6c206fff1a250c9bf3c63b3515cb2a15d84e624d58a5cf94594ac39256b3db6",
+      "destination_sha256": "f6c206fff1a250c9bf3c63b3515cb2a15d84e624d58a5cf94594ac39256b3db6",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\before-sources.json",
+      "original_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "destination_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\after-sources.json",
+      "original_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "destination_sha256": "d48a76b2043c01c44ef96f6abbe2b215807779545acf9ea25a0455a83590ec12",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\gate.json",
+      "original_sha256": "1e13ac0038fce6d3e17e83e09037ec0a45a7a0e5e417c616ea675fe1bbd4e538",
+      "destination_sha256": "1e13ac0038fce6d3e17e83e09037ec0a45a7a0e5e417c616ea675fe1bbd4e538",
+      "original_size": 414,
+      "destination_size": 414
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\stdout.log",
+      "original_sha256": "ec574abb4a1bc81e36d16687344166914fab3e5792cd25cd24d7d0953bbacd2f",
+      "destination_sha256": "ec574abb4a1bc81e36d16687344166914fab3e5792cd25cd24d7d0953bbacd2f",
+      "original_size": 401,
+      "destination_size": 401
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\stderr.log",
+      "original_sha256": "1eb9bbf34cac10028cc301716c3bae9de54a4290c02179455dc7d62d1d95aa62",
+      "destination_sha256": "1eb9bbf34cac10028cc301716c3bae9de54a4290c02179455dc7d62d1d95aa62",
+      "original_size": 3436,
+      "destination_size": 3436
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\quarantine-accepted009-source-pin.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\quarantine-accepted009-source-pin.json",
+      "original_sha256": "bc7e9f3e888534b0ddf93207039b93414907ad9b76125ec0979ae5283eca4b91",
+      "destination_sha256": "bc7e9f3e888534b0ddf93207039b93414907ad9b76125ec0979ae5283eca4b91",
+      "original_size": 932,
+      "destination_size": 932
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "original_sha256": "dafc46d2a06284b4b13780284d820919299ce54bf2cbcbdea40e5e9a0d19bb06",
+      "destination_sha256": "dafc46d2a06284b4b13780284d820919299ce54bf2cbcbdea40e5e9a0d19bb06",
+      "original_size": 832,
+      "destination_size": 832
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\4f954f4b-51ed-46da-8376-9f404b3f564e\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\4f954f4b-51ed-46da-8376-9f404b3f564e\\postgres-lifecycle.jsonl",
+      "original_sha256": "f91ec1fb1d1c1addf3fdb506da0ddc4a0e38ed10890cc8b26786556fe57f078c",
+      "destination_sha256": "f91ec1fb1d1c1addf3fdb506da0ddc4a0e38ed10890cc8b26786556fe57f078c",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\bc0d3384-c802-4c5f-b43c-b1c44575f2e4\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\bc0d3384-c802-4c5f-b43c-b1c44575f2e4\\postgres-lifecycle.jsonl",
+      "original_sha256": "860f00b1dde6261d4f8fa66ae55eabacb2c254a10d272d6c3291e97cf1eade87",
+      "destination_sha256": "860f00b1dde6261d4f8fa66ae55eabacb2c254a10d272d6c3291e97cf1eade87",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\e0b10cbf-9307-4a79-8fab-7f4b3154ccb7\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f1088261-3d48-49fa-b584-cdc5cbcd6c3a\\m1task5\\e0b10cbf-9307-4a79-8fab-7f4b3154ccb7\\postgres-lifecycle.jsonl",
+      "original_sha256": "d87964488153030fb73a77d8ab5e5f494dcf276189b3a6e89a71dd50ae99b98e",
+      "destination_sha256": "d87964488153030fb73a77d8ab5e5f494dcf276189b3a6e89a71dd50ae99b98e",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\before-sources.json",
+      "original_sha256": "d207a497fea761089d0cc53b0e633459e1b4909601af9d65782886765f916db2",
+      "destination_sha256": "d207a497fea761089d0cc53b0e633459e1b4909601af9d65782886765f916db2",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\after-sources.json",
+      "original_sha256": "d207a497fea761089d0cc53b0e633459e1b4909601af9d65782886765f916db2",
+      "destination_sha256": "d207a497fea761089d0cc53b0e633459e1b4909601af9d65782886765f916db2",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\gate.json",
+      "original_sha256": "fda222d282317ee53829732cb40f82e9f903f9c090b6cc6e1709857ff81c1c5e",
+      "destination_sha256": "fda222d282317ee53829732cb40f82e9f903f9c090b6cc6e1709857ff81c1c5e",
+      "original_size": 414,
+      "destination_size": 414
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\stdout.log",
+      "original_sha256": "9b2bc45b5a65b9cb5b71387ccc03572f5e5aa69fdc3471bdb1dff57bbd532c92",
+      "destination_sha256": "9b2bc45b5a65b9cb5b71387ccc03572f5e5aa69fdc3471bdb1dff57bbd532c92",
+      "original_size": 401,
+      "destination_size": 401
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\stderr.log",
+      "original_sha256": "76c3afeb728e63fe051b75d3d4a2592eec026b5a5ed215321ceb274243abe945",
+      "destination_sha256": "76c3afeb728e63fe051b75d3d4a2592eec026b5a5ed215321ceb274243abe945",
+      "original_size": 3955,
+      "destination_size": 3955
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\quarantine-accepted009-source-pin.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\quarantine-accepted009-source-pin.json",
+      "original_sha256": "f5595a0a99ec3b019d3ff301e26014035c9b2fda0df9e2cf6002a9d40ea7fef1",
+      "destination_sha256": "f5595a0a99ec3b019d3ff301e26014035c9b2fda0df9e2cf6002a9d40ea7fef1",
+      "original_size": 932,
+      "destination_size": 932
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "original_sha256": "f1a46b14c549600e0b801b403fd6bd885922bc254661ca5ca348303e0067a433",
+      "destination_sha256": "f1a46b14c549600e0b801b403fd6bd885922bc254661ca5ca348303e0067a433",
+      "original_size": 832,
+      "destination_size": 832
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\08b0d44a-cd27-4382-997d-88f2b7467fb0\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\08b0d44a-cd27-4382-997d-88f2b7467fb0\\postgres-lifecycle.jsonl",
+      "original_sha256": "c1876053064ff7f9922b3f11aa4056e39121c4bd315cd27b39c4c2dd0b516294",
+      "destination_sha256": "c1876053064ff7f9922b3f11aa4056e39121c4bd315cd27b39c4c2dd0b516294",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\ec1474ad-4acd-451c-be15-f240ea1bfde6\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\ec1474ad-4acd-451c-be15-f240ea1bfde6\\postgres-lifecycle.jsonl",
+      "original_sha256": "30e484c4281a490537ff4b5c44760bd44480044fdd443f723d44d418d5a608bf",
+      "destination_sha256": "30e484c4281a490537ff4b5c44760bd44480044fdd443f723d44d418d5a608bf",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\f4729740-bdfc-4984-aa86-93595822d8ef\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\437fecfd-5d35-4c04-937f-8b797b342ce0\\m1task5\\f4729740-bdfc-4984-aa86-93595822d8ef\\postgres-lifecycle.jsonl",
+      "original_sha256": "edfab2ff71257b6f31db3f58bd0cdcb76fbe0ac7ada43236d6a36828d7c1f70b",
+      "destination_sha256": "edfab2ff71257b6f31db3f58bd0cdcb76fbe0ac7ada43236d6a36828d7c1f70b",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\before-sources.json",
+      "original_sha256": "8a7371db88722c256db57f481ffea9ecfa7421bc2bc58d8be7cd4b6c3dc2dd98",
+      "destination_sha256": "8a7371db88722c256db57f481ffea9ecfa7421bc2bc58d8be7cd4b6c3dc2dd98",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\after-sources.json",
+      "original_sha256": "8a7371db88722c256db57f481ffea9ecfa7421bc2bc58d8be7cd4b6c3dc2dd98",
+      "destination_sha256": "8a7371db88722c256db57f481ffea9ecfa7421bc2bc58d8be7cd4b6c3dc2dd98",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\gate.json",
+      "original_sha256": "d89e3c234b26132d0c1fb6bdf6037f1694a84a118ff887da4c8bdfb462c16d41",
+      "destination_sha256": "d89e3c234b26132d0c1fb6bdf6037f1694a84a118ff887da4c8bdfb462c16d41",
+      "original_size": 414,
+      "destination_size": 414
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\stdout.log",
+      "original_sha256": "9e9f6d5537ae63668a12ac0dabd52a21c32a78a124ff308d2a8d150c1ec2e21e",
+      "destination_sha256": "9e9f6d5537ae63668a12ac0dabd52a21c32a78a124ff308d2a8d150c1ec2e21e",
+      "original_size": 393,
+      "destination_size": 393
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\stderr.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_size": 0,
+      "destination_size": 0
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\quarantine-accepted009-source-pin.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\quarantine-accepted009-source-pin.json",
+      "original_sha256": "f94a2ccc0888f0ccd0549406d2f1086c307872a974080124166f73fa455ce867",
+      "destination_sha256": "f94a2ccc0888f0ccd0549406d2f1086c307872a974080124166f73fa455ce867",
+      "original_size": 932,
+      "destination_size": 932
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "original_sha256": "ff5ea000ecaf78591899c869a5f6f6e3d4d57df9d94ceac821b340a7c11c3e17",
+      "destination_sha256": "ff5ea000ecaf78591899c869a5f6f6e3d4d57df9d94ceac821b340a7c11c3e17",
+      "original_size": 832,
+      "destination_size": 832
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\072aa3b1-96ee-412a-b32b-89e2247c84ba\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\072aa3b1-96ee-412a-b32b-89e2247c84ba\\postgres-lifecycle.jsonl",
+      "original_sha256": "7d14ff827a36ea43f7a17acae20d891ffb21a199ac5065a8595f820615487665",
+      "destination_sha256": "7d14ff827a36ea43f7a17acae20d891ffb21a199ac5065a8595f820615487665",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\361d50db-d591-46ec-82df-f8a3c2002996\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\361d50db-d591-46ec-82df-f8a3c2002996\\postgres-lifecycle.jsonl",
+      "original_sha256": "1f151d0645e1fddf83d8f089574bcd290758c78bed37f2ff6d1f1ecaf008b50c",
+      "destination_sha256": "1f151d0645e1fddf83d8f089574bcd290758c78bed37f2ff6d1f1ecaf008b50c",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\ecde83e7-a090-4400-99e1-d394d3282fb6\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\a9197432-59a8-45bb-9bb8-9d2a107277e4\\m1task5\\ecde83e7-a090-4400-99e1-d394d3282fb6\\postgres-lifecycle.jsonl",
+      "original_sha256": "519e71266bc74717ca5864595ae0bba83de3d8e8fa67995a3ac93af807ef7a4f",
+      "destination_sha256": "519e71266bc74717ca5864595ae0bba83de3d8e8fa67995a3ac93af807ef7a4f",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\82771a28-0ccc-47e9-a597-ee997acef963\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\82771a28-0ccc-47e9-a597-ee997acef963\\before-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\82771a28-0ccc-47e9-a597-ee997acef963\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\82771a28-0ccc-47e9-a597-ee997acef963\\after-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\82771a28-0ccc-47e9-a597-ee997acef963\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\82771a28-0ccc-47e9-a597-ee997acef963\\gate.json",
+      "original_sha256": "70b568ce6c71aa0e324154afb2c92ea09bfe91125943314f9d44ba6b1a8303cc",
+      "destination_sha256": "70b568ce6c71aa0e324154afb2c92ea09bfe91125943314f9d44ba6b1a8303cc",
+      "original_size": 332,
+      "destination_size": 332
+    },
+    {
+      "original": "E:\\m1t5-runtime\\82771a28-0ccc-47e9-a597-ee997acef963\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\82771a28-0ccc-47e9-a597-ee997acef963\\stdout.log",
+      "original_sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "destination_sha256": "463776b60b82ddaf45dc7bc7a63317c2398f1a240b5bd269b697a2cf4122166a",
+      "original_size": 75,
+      "destination_size": 75
+    },
+    {
+      "original": "E:\\m1t5-runtime\\82771a28-0ccc-47e9-a597-ee997acef963\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\82771a28-0ccc-47e9-a597-ee997acef963\\stderr.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_size": 0,
+      "destination_size": 0
+    },
+    {
+      "original": "E:\\m1t5-runtime\\2290e030-e754-4e32-9469-477472bd74a8\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\2290e030-e754-4e32-9469-477472bd74a8\\before-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\2290e030-e754-4e32-9469-477472bd74a8\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\2290e030-e754-4e32-9469-477472bd74a8\\after-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\2290e030-e754-4e32-9469-477472bd74a8\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\2290e030-e754-4e32-9469-477472bd74a8\\gate.json",
+      "original_sha256": "49abec8f36a6b802e8b7f309da08c1c83c9a583f23dbe586f0e5774059a22c7e",
+      "destination_sha256": "49abec8f36a6b802e8b7f309da08c1c83c9a583f23dbe586f0e5774059a22c7e",
+      "original_size": 336,
+      "destination_size": 336
+    },
+    {
+      "original": "E:\\m1t5-runtime\\2290e030-e754-4e32-9469-477472bd74a8\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\2290e030-e754-4e32-9469-477472bd74a8\\stdout.log",
+      "original_sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "destination_sha256": "187e461fe6432af80189c89edc4015fcb4b0ed4397ff9f014d66cdb3ae9cc10e",
+      "original_size": 88,
+      "destination_size": 88
+    },
+    {
+      "original": "E:\\m1t5-runtime\\2290e030-e754-4e32-9469-477472bd74a8\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\2290e030-e754-4e32-9469-477472bd74a8\\stderr.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_size": 0,
+      "destination_size": 0
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\before-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\before-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\after-sources.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\after-sources.json",
+      "original_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "destination_sha256": "b67ee64d25cb9950311fef027be9990901d4c2a063a525fc36c96e6e55d132df",
+      "original_size": 2890,
+      "destination_size": 2890
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\gate.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\gate.json",
+      "original_sha256": "b9d5c29aae9b62d465321eed0e6b4cfd1e3e8e6386579e5731e8e91def315f95",
+      "destination_sha256": "b9d5c29aae9b62d465321eed0e6b4cfd1e3e8e6386579e5731e8e91def315f95",
+      "original_size": 414,
+      "destination_size": 414
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\stdout.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\stdout.log",
+      "original_sha256": "7b19516557f517b04d5ccdfd009251fd963e95e1e3a800c598d32774c6d363ca",
+      "destination_sha256": "7b19516557f517b04d5ccdfd009251fd963e95e1e3a800c598d32774c6d363ca",
+      "original_size": 393,
+      "destination_size": 393
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\stderr.log",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\stderr.log",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "destination_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "original_size": 0,
+      "destination_size": 0
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\pretest-build-manifest.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\pretest-build-manifest.json",
+      "original_sha256": "81b51a9e0d5a92fd5b72a165c285f4e976186a894ebe746c72fe155fbbd20d15",
+      "destination_sha256": "81b51a9e0d5a92fd5b72a165c285f4e976186a894ebe746c72fe155fbbd20d15",
+      "original_size": 14978,
+      "destination_size": 14978
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\later-absence.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\later-absence.json",
+      "original_sha256": "021e6d66cbbab899b3591d7ac712ec08173b8e761d9165c35611df622c75a45e",
+      "destination_sha256": "021e6d66cbbab899b3591d7ac712ec08173b8e761d9165c35611df622c75a45e",
+      "original_size": 10259,
+      "destination_size": 10259
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\quarantine-accepted009-source-pin.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\quarantine-accepted009-source-pin.json",
+      "original_sha256": "764ef46f975b6e9f77937d126cc9ce58629b4f6bb3a48829c467c0cb1dca7e90",
+      "destination_sha256": "764ef46f975b6e9f77937d126cc9ce58629b4f6bb3a48829c467c0cb1dca7e90",
+      "original_size": 932,
+      "destination_size": 932
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\quarantine-populated-008-rest-upgrade.json",
+      "original_sha256": "2d30af3937dfa16f2168ef8a12f8a0b00eef479bd5626e32d7b06f74bc7b6f38",
+      "destination_sha256": "2d30af3937dfa16f2168ef8a12f8a0b00eef479bd5626e32d7b06f74bc7b6f38",
+      "original_size": 832,
+      "destination_size": 832
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\0059ffd3-88a2-4191-aae1-79b1d0fc1470\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\0059ffd3-88a2-4191-aae1-79b1d0fc1470\\postgres-lifecycle.jsonl",
+      "original_sha256": "c8f93b643ab6c411534218a314e5e29497a50c086485dbb29d0662b867503ddb",
+      "destination_sha256": "c8f93b643ab6c411534218a314e5e29497a50c086485dbb29d0662b867503ddb",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\05a75869-7d8b-42ba-9cce-b96adb56da14\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\05a75869-7d8b-42ba-9cce-b96adb56da14\\postgres-lifecycle.jsonl",
+      "original_sha256": "3752a34831c80419cce786ce1d971bc1e3f76008db22695911ba44d6691b0045",
+      "destination_sha256": "3752a34831c80419cce786ce1d971bc1e3f76008db22695911ba44d6691b0045",
+      "original_size": 1048,
+      "destination_size": 1048
+    },
+    {
+      "original": "E:\\m1t5-runtime\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\77c7ef87-2a12-4b83-b4b6-44f6075c39e6\\postgres-lifecycle.jsonl",
+      "destination": "E:\\git\\dgo-hub\\docs\\execution\\alpha1\\m1-task-5e1a2-1-fix1-evidence\\9777309f-e4bd-4b0e-890a-b12f146595f6\\f34e87d7-0fd6-4129-9256-c1ef8f2d6af9\\m1task5\\77c7ef87-2a12-4b83-b4b6-44f6075c39e6\\postgres-lifecycle.jsonl",
+      "original_sha256": "b99988929db6f8b66f6e25577f434fb276041b88644d49274bdade2e9334eefe",
+      "destination_sha256": "b99988929db6f8b66f6e25577f434fb276041b88644d49274bdade2e9334eefe",
+      "original_size": 1048,
+      "destination_size": 1048
+    }
+  ]
+}

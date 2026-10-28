@@ -1,0 +1,14 @@
+
+> data-governance-integration-service@1.0.0 test
+> vitest run acceptance-tests/quarantine-read.test.ts --reporter=dot -t rejects an inherited non-exact|rejects ascending UUIDs
+
+
+ RUN  v4.1.12 E:/git/dgo-hub/integration-service
+
+---xx--------------
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 17 skipped (19)
+   Start at  18:49:53
+   Duration  4.27s (transform 271ms, setup 0ms, import 553ms, tests 3.54s, environment 0ms)
+
