@@ -1256,6 +1256,12 @@ describe('API-023 quarantine read', () => {
           expect(denied.statusCode,denied.body).toBe(401);
         } finally { await fixture.pool.query(`UPDATE control.${table} SET enabled=true WHERE ${predicate}`,[...values]); }
       }
+      await auth.repository.provisionSubject({tenantId,userId:'rebound-owner',managementScopes:['source:approve']});
+      await fixture.pool.query('UPDATE control.identity_binding SET user_id=$3 WHERE issuer=$1 AND subject=$2',[controlledIssuer,subject,'rebound-owner']);
+      try {
+        const rebound=await recover(original.rows[0]!.quarantine_id,'recovery-first');
+        expect(rebound.statusCode,rebound.body).toBe(403);
+      } finally { await fixture.pool.query('UPDATE control.identity_binding SET user_id=$3 WHERE issuer=$1 AND subject=$2',[controlledIssuer,subject,ownerId]); }
       const conflict=await recover(original.rows[0]!.quarantine_id,'recovery-other');
       expect(conflict.statusCode).toBe(409);
       expect(conflict.json().error.code).toBe('SOURCE_CONFLICT');
@@ -1565,11 +1571,29 @@ describe('API-023 quarantine read', () => {
       `SELECT quarantine_id::text,idempotency_key,expected_state,mapping_revision::text,reason_json FROM control.ingestion_recovery_operation
        WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' LIMIT 1`,[tenantId,sourceId]);
     const row=operation.rows[0]!;
+    const candidate=await fixture.pool.query<{quarantine_id:string}>(`SELECT q.quarantine_id::text FROM control.ingestion_quarantine_index q
+      JOIN control.ingestion_job_item i ON (i.job_id,i.ordinal)=(q.job_id,q.ordinal)
+      WHERE q.tenant_key=$1 AND q.source_id=$2 AND q.entity='customer' AND i.operation='DELETE'
+        AND NOT EXISTS(SELECT 1 FROM control.ingestion_recovery_operation r WHERE r.quarantine_id=q.quarantine_id) LIMIT 1`,[tenantId,sourceId]);
+    expect(candidate.rowCount).toBe(1);
+    const candidateId=candidate.rows[0]!.quarantine_id;
+    expect((await fixture.pool.query('SELECT control.recovery_binding_internal($1) AS binding',[candidateId])).rows[0].binding.kind).toBe('DELETE');
     await apiPool.query(`SELECT control.record_source_security_barrier($1,$2,'SOURCE_SCOPE_SECURITY_REMOVAL','TEST_BARRIER','customer')`,[sourceId,tenantId]);
     const denied=await app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${row.quarantine_id}/retry`,
       headers:{authorization:`Bearer ${await tokenFor(subject)}`,'idempotency-key':row.idempotency_key,'content-type':'application/json'},
       payload:{expected_state:row.expected_state,mapping_revision:row.mapping_revision,reason:JSON.parse(row.reason_json)}});
     expect(denied.statusCode,denied.body).toBe(409);
     expect(denied.json().error.code).toBe('RECOVERY_TARGET_CONFLICT');
+    const blockedNew=await app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${candidateId}/retry`,
+      headers:{authorization:`Bearer ${await tokenFor(subject)}`,'idempotency-key':'barrier-new','content-type':'application/json'},
+      payload:{expected_state:Buffer.from(JSON.stringify({v:1,quarantine_id:candidateId,generation:'0'})).toString('base64url'),mapping_revision:'1',reason:'barrier'}});
+    expect(blockedNew.statusCode).toBe(409);
+    expect(blockedNew.json().error.code).toBe('RECOVERY_TARGET_CONFLICT');
+    expect((await fixture.pool.query('SELECT count(*)::integer AS count FROM control.ingestion_recovery_operation WHERE quarantine_id=$1',[candidateId])).rows[0].count).toBe(0);
+    await auth.repository.setTenantEnabled(tenantId,false);
+    const disabled=await app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${row.quarantine_id}/retry`,
+      headers:{authorization:`Bearer ${await tokenFor(subject)}`,'idempotency-key':row.idempotency_key,'content-type':'application/json'},
+      payload:{expected_state:row.expected_state,mapping_revision:row.mapping_revision,reason:JSON.parse(row.reason_json)}});
+    expect(disabled.statusCode).toBe(401);
   });
 });
