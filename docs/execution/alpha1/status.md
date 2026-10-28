@@ -118,3 +118,9 @@ Independent review records five Important defects in scope initialization, delet
 ### D1 review closed; D2 next
 
 Source `634e0c84` closes all five D1 findings. GPT-6.1 Sol [scoped rereview](reviews/m1-task-5d1-rereview-1.md) records Spec PASS / Quality Approved with no new material defects. Final gates passed 26/26 snapshot tests, typecheck/build; 29 repair artifacts and all 21 source-manifest pairs verified. Earlier assurance limits remain explicit. D2 Owner candidate review and exact approval is next; D3 logical effects and E remain pending.
+
+## M1-5D2 implementation under independent review — 2026-10-28
+
+D2 source `0871e857` adds safe API-021 candidate summaries and exact-Owner member paging, plus API-060 immutable exact-set approval, audit and idempotency. It also adds freeze-time full baseline fingerprints and selective reservation guards. Latest local gates passed 26/26 snapshot tests, typecheck/build; the full file includes populated 001–008 upgrade and identical009 reapply. Root checked all 39 packaged artifacts and 18 source-manifest pairs without mismatch. Independent Sol review is pending. [D2 report](m1-task-5d2-report.md) records the two-member pagination limit and local-only scope.
+
+D3 logical deletion and recovery remain unimplemented; D2 API approval performs no business deletion. E and integrated whole-phase verification remain pending.
