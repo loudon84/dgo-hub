@@ -9,6 +9,7 @@ import type { HubRuntimeConfiguration } from '../contracts/runtime-config.js';
 import { registerSourceRegistryRoutes, type SourceRegistryRouteOptions } from '../source-registry/routes.js';
 import { registerStrictIngestionRoutes, type StrictIngestionOptions } from './strict-ingestion.js';
 import { registerManagementImportRoutes } from './management-import.js';
+import { registerImportRecoveryRoutes } from './import-recovery-routes.js';
 import { registerSnapshotRoutes, type SnapshotRouteOptions } from './snapshot-routes.js';
 
 function key(request: { headers: Record<string, unknown> }, expected: string, header: string) {
@@ -16,11 +17,16 @@ function key(request: { headers: Record<string, unknown> }, expected: string, he
 }
 export async function registerRoutes(app: FastifyInstance, options: { identity?: IdentityRouteOptions; sourceRegistry?: SourceRegistryRouteOptions;
   strictIngestion?: StrictIngestionOptions; snapshotRuns?: SnapshotRouteOptions; runtime?: HubRuntimeConfiguration } = {}) {
-  if (options.identity) await registerIdentityRoutes(app, options.identity);
-  if (options.sourceRegistry) await registerSourceRegistryRoutes(app, options.sourceRegistry);
+  app.setNotFoundHandler((request,reply)=>reply.code(404).send({request_id:request.id,
+    error:{code:'NOT_FOUND',message:'NOT_FOUND',retryable:false,details:{}}}));
+  if (options.identity) await registerIdentityRoutes(app, options.identity, {suppressNotFound:true});
+  if (options.sourceRegistry) await registerSourceRegistryRoutes(app, options.sourceRegistry, {suppressNotFound:true});
   await registerStrictIngestionRoutes(app, options.strictIngestion);
   if (options.sourceRegistry && options.strictIngestion) await registerManagementImportRoutes(app, options.strictIngestion);
-  if (options.snapshotRuns) await registerSnapshotRoutes(app, options.snapshotRuns);
+  if (options.sourceRegistry && options.strictIngestion?.authenticator) await registerImportRecoveryRoutes(app, {
+    pool:options.strictIngestion.pool,authService:options.strictIngestion.authService,authenticator:options.strictIngestion.authenticator,
+  });
+  if (options.snapshotRuns) await registerSnapshotRoutes(app, options.snapshotRuns, {suppressNotFound:true});
   app.get('/health', async () => ({ ok: true }));
   if (options.runtime?.environmentKind !== 'local_lab' || options.runtime.legacyLabEnabled !== true) return;
   app.post<{ Params: { kind: 'customer' | 'order' }; Body: unknown }>('/v1/ingest/:kind', async (request, reply) => {

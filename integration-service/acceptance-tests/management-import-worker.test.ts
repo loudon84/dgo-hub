@@ -226,6 +226,10 @@ beforeAll(async()=>{
   await runMigrations(fixture.pool,{directory:upgradeDir,environmentKind:'local_lab'});
   await fixture.pool.query(await readFile(join(migrationSource,'012_import_quarantine.sql'),'utf8'));
   expect((await fixture.pool.query(`SELECT to_jsonb(q) row FROM control.ingestion_quarantine_index q WHERE tenant_key IN ('legacy_snapshot_012','legacy_rest_012') ORDER BY origin_kind`)).rows).toEqual(priorQuarantine);
+  for(const name of ['013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission','017_import_recovery_worker_context','018_import_recovery_customer_apply','019_order_visibility_effects']) {
+    await copyFile(join(migrationSource,`${name}.sql`),join(upgradeDir,`${name}.sql`));
+    expect((await runMigrations(fixture.pool,{directory:upgradeDir,environmentKind:'local_lab'})).applied).toEqual([name]);
+  }
 },90000);
 afterAll(async()=>{if(app) await app.close();if(jwks) await new Promise<void>(resolve=>jwks.close(()=>resolve()));if(fixture) await fixture.close();});
 
@@ -342,8 +346,8 @@ it('captures an import quarantine with explicit origin and unavailable recovery'
  SELECT origin_kind,tenant_key,source_id,entity,job_id,ordinal,event_id,source_pk,status,error_code,created_at,owner_approval_id,owner_revision+1,channel_id,channel_epoch,config_revision,config_digest,mapping_revision,mapping_digest,identity_mapping_revision,identity_mapping_digest,endpoint_profile_digest,test_report_id,approval_security_fence,security_barrier_fence_at_admission FROM control.ingestion_quarantine_index WHERE quarantine_id=$1`,[row.rows[0].quarantine_id])).rejects.toMatchObject({code:'23514'});
  const restricted=new pg.Pool({connectionString:`postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,options:'-c role=hub_worker'});try {await expect(restricted.query('INSERT INTO control.ingestion_quarantine_index DEFAULT VALUES')).rejects.toMatchObject({code:'42501'});} finally {await restricted.end();}
  const list=await app.inject({method:'GET',url:`/hub/v1/admin/quarantine?source_id=${source}&origin_kind=IMPORT`,headers:{authorization:`Bearer ${token}`}});
- expect(list.statusCode).toBe(200);expect(JSON.stringify(list.json())).toContain('SCOPE_UNAVAILABLE');expect(JSON.stringify(list.json())).not.toContain('discarded');
- const counts=async()=> (await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.ingestion_recovery_operation) operations,(SELECT count(*)::int FROM control.ingestion_recovery_registry) registry,(SELECT count(*)::int FROM control.ingestion_job) jobs,(SELECT count(*)::int FROM control.ingestion_processing_outbox) outbox`)).rows[0];
+ expect(list.statusCode,list.body).toBe(200);expect(JSON.stringify(list.json())).toContain('SCOPE_UNAVAILABLE');expect(JSON.stringify(list.json())).not.toContain('discarded');
+ const counts=async()=> (await fixture.pool.query(`SELECT (SELECT count(*)::int FROM control.ingestion_recovery_operation) rest_operations,(SELECT count(*)::int FROM control.import_recovery_operation) import_operations,(SELECT count(*)::int FROM control.ingestion_job) jobs,(SELECT count(*)::int FROM control.ingestion_processing_outbox) outbox`)).rows[0];
  const before=await counts(),id=row.rows[0].quarantine_id;
  const retry=await app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${id}/retry`,headers:{authorization:`Bearer ${token}`,'content-type':'application/json','idempotency-key':'import-retry'},payload:{expected_state:recoveryExpectedState(id),mapping_revision:'1',reason:'retry request'}});
  expect(retry.statusCode).toBe(409);expect(retry.json().error.code).toBe('RECOVERY_SCOPE_UNAVAILABLE');expect(await counts()).toEqual(before);
@@ -377,3 +381,41 @@ it('quarantines accepted imports when barriers arrive after claim, including cha
  const second=await fixture.pool.query('SELECT status,error_code FROM control.ingestion_job_item WHERE job_id=$1',[retiredId]);expect(second.rows[0]).toEqual({status:'QUARANTINED',error_code:'CHANNEL_EPOCH_RETIRED'});
  } finally {await worker.end();}
 });
+
+it('exposes an import recovery scope without accepting a previously bound invalid target',async()=>{
+  const found=await fixture.pool.query<{quarantine_id:string}>(`SELECT quarantine_id::text FROM control.ingestion_quarantine_index WHERE tenant_key=$1 AND source_id=$2 AND source_pk='customer-bad' AND origin_kind='IMPORT'`,[tenant,source]);
+  expect(found.rowCount).toBe(1);
+  const response=await app.inject({method:'GET',url:`/hub/v1/admin/quarantine/${found.rows[0]!.quarantine_id}/import-recovery`,headers:{authorization:`Bearer ${token}`}});
+  expect(response.statusCode).toBe(200);
+  expect(response.json().data).toEqual({state:'SCOPE_UNAVAILABLE'});
+});
+
+it('recovers an import customer with missing original mappings under a newly approved binding',async()=>{
+ const src='i3r-customer',headers={authorization:`Bearer ${token}`};
+ const call=(method:'POST'|'PUT',url:string,payload:Record<string,unknown>)=>app.inject({method,url,headers,payload});
+ const sample=JSON.parse(raw);sample.batch_id='61000000-0000-4000-8000-000000000001';sample.records[0].event_id='61000000-0000-4000-8000-000000000002';
+ const missing=JSON.parse(JSON.stringify(sample));missing.batch_id='61000000-0000-4000-8000-000000000003';missing.records[0].event_id='61000000-0000-4000-8000-000000000004';missing.records[0].source_pk='recovery-customer';missing.records[0].data.rep='rep-missing';missing.records[0].data.team='team-missing';
+ expect((await call('POST','/hub/v1/admin/sources',{source_id:src,data_owner_user_id:'owner',config:{name:'I3R Customer',connector:'SIMULATED_IMPORT',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',allowed_entities:['customer'],delete_contract:'tombstone'}})).statusCode).toBe(201);
+ const mappings=[{entity:'customer',source_field:'display',target_field:'customer_name',transform:'trim'},{entity:'customer',source_field:'rep',target_field:'owner_user_id',transform:'source-id'},{entity:'customer',source_field:'team',target_field:'dept_id',transform:'source-id'},{entity:'customer',source_field:'state',target_field:'status',transform:'identity'}];
+ expect((await call('PUT',`/hub/v1/admin/sources/${src}/mappings`,{expected_revision:'1',mappings})).statusCode).toBe(200);
+ const confirm=async(kind:string,external:string,target:string,revision:string)=>{const candidate=await app.inject({method:'GET',url:`/hub/v1/admin/identity-mappings?source_id=${src}&kind=${kind}&external_id=${external}`,headers});expect(candidate.statusCode).toBe(200);expect((await call('PUT',`/hub/v1/admin/identity-mappings/${candidate.json().data.id}`,{expected_revision:revision,target_id:target,reason:'confirmed'})).statusCode).toBe(200);};
+ const activate=async(data:unknown)=>{const tested=await call('POST',`/hub/v1/admin/sources/${src}/test`,{expected_revision:'1',samples:{customer:JSON.stringify(data)}});expect(tested.json().data.status).toBe('PASS');const report=tested.json().data;const approval=await call('POST',`/hub/v1/admin/sources/${src}/approve`,{revision:'1',test_report_id:report.test_report_id,data_contract_ref:report.data_contract_ref});expect(approval.statusCode).toBe(200);expect((await call('POST',`/hub/v1/admin/sources/${src}/activate`,{revision:'1',approval_id:approval.json().data.approval_id})).statusCode).toBe(200);};
+ await confirm('user','rep-a','owner','0');await confirm('department','team-a','dept1','1');await activate(sample);
+ const admitted=await app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/import/customer`,headers:{...headers,'content-type':'application/json','idempotency-key':'i3r-customer-origin'},payload:JSON.stringify(missing)});expect(admitted.statusCode).toBe(202);
+ const job=admitted.json().data.job_id;
+ const snapshot=async()=> (await fixture.pool.query(`SELECT b.body_bytes,to_jsonb(j)-'updated_at'-'status'-'applied_count' job,i.public_record,i.event_id::text,i.source_pk,i.source_version::text,i.operation FROM control.ingestion_job j JOIN raw.ingestion_batch b ON b.id=j.raw_batch_id JOIN control.ingestion_job_item i ON i.job_id=j.id WHERE j.id=$1`,[job])).rows[0];
+ const before=await snapshot();const worker=new pg.Pool({connectionString:`postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,options:'-c role=hub_worker'});
+ try {
+ await runDurableWorkerOnce(worker);
+ const q=await fixture.pool.query<{quarantine_id:string;error_code:string}>(`SELECT quarantine_id::text,error_code FROM control.ingestion_quarantine_index WHERE job_id=$1`,[job]);expect(q.rows[0].error_code).toBe('IDENTITY_MAPPING_REQUIRED');const id=q.rows[0].quarantine_id;
+ expect((await fixture.pool.query(`SELECT 1 FROM control.canonical_source_identity WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' AND source_pk='recovery-customer'`,[tenant,src])).rowCount).toBe(0);
+ await confirm('user','rep-missing','owner','2');await confirm('department','team-missing','dept1','3');await activate(missing);
+ const get=await app.inject({method:'GET',url:`/hub/v1/admin/quarantine/${id}/import-recovery`,headers});expect(get.statusCode).toBe(200);expect(get.json().data.state).toBe('AVAILABLE');
+ const proof=(await fixture.pool.query<{revision:string;digest:string}>(`SELECT r.identity_mapping_revision::text revision,encode(m.mapping_digest,'hex') digest FROM control.source_registry r JOIN control.source_identity_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision) WHERE r.tenant_key=$1 AND r.source_id=$2`,[tenant,src])).rows[0]!;
+ const body={expected_state:get.json().data.expected_state,expected_source_revision:'1',identity_mapping_revision:proof.revision,identity_mapping_digest:proof.digest,bindings:[{kind:'user',external_id:'rep-missing',target_id:'owner'},{kind:'department',external_id:'team-missing',target_id:'dept1'}],reason:'Confirmed missing mappings'};
+ const post=()=>app.inject({method:'POST',url:`/hub/v1/admin/quarantine/${id}/import-recovery`,headers:{...headers,'idempotency-key':'i3r-confirm'},payload:body});const accepted=await post();expect(accepted.statusCode).toBe(202);expect(accepted.json().data.status).toBe('ACCEPTED');expect((await post()).json().data).toEqual(accepted.json().data);
+ await runDurableWorkerOnce(worker);expect(await snapshot()).toEqual(before);
+ const actual=await fixture.pool.query(`SELECT s.canonical_object_id::text id,c.customer_name,c.owner_user_id,c.dept_id,c.status,c.source_version::text FROM control.canonical_source_identity s JOIN hub.canonical_customer c ON (c.tenant_id,c.id)=(s.tenant_key,s.customer_id) WHERE s.tenant_key=$1 AND s.source_id=$2 AND s.entity='customer' AND s.source_pk='recovery-customer'`,[tenant,src]);expect(actual.rowCount).toBe(1);expect(actual.rows[0]).toMatchObject({customer_name:'Acme',owner_user_id:'owner',dept_id:'dept1',status:'ACTIVE',source_version:'1'});
+ const final=await app.inject({method:'GET',url:`/hub/v1/admin/quarantine/${id}/import-recovery`,headers});expect(final.json().data.state).toBe('APPLIED');expect(final.json().data.child_job_id).toBe(accepted.json().data.child_job_id);
+ } finally {await worker.end();}
+},30000);

@@ -89,7 +89,7 @@ function idempotencyKey(request: FastifyRequest): string {
   return value;
 }
 
-export async function registerSnapshotRoutes(app: FastifyInstance, options: SnapshotRouteOptions): Promise<void> {
+export async function registerSnapshotRoutes(app: FastifyInstance, options: SnapshotRouteOptions, composition: {suppressNotFound?:boolean} = {}): Promise<void> {
   app.register(async admin => {
     admin.setErrorHandler((error,request,reply) => {
       const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error && typeof error.statusCode === 'number'
@@ -98,7 +98,7 @@ export async function registerSnapshotRoutes(app: FastifyInstance, options: Snap
       return reply.code(statusCode === 413 ? 413 : statusCode === 415 ? 415 : statusCode < 500 ? 400 : 503).send({ request_id:request.id,
         error:{code,message:code,retryable:code==='AUTH_UNAVAILABLE',details:{}} });
     });
-    admin.setNotFoundHandler((request,reply) => reply.code(404).send({ request_id:request.id,
+    if(!composition.suppressNotFound) admin.setNotFoundHandler((request,reply) => reply.code(404).send({ request_id:request.id,
       error:{code:'NOT_FOUND',message:'NOT_FOUND',retryable:false,details:{}} }));
     admin.post<{ Params: { id: string } }>('/hub/v1/admin/sources/:id/etl-runs', async (request,reply) => {
       try {

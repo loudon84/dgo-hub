@@ -67,6 +67,20 @@ const SECRET_REF = /^(?:vault|secret|env):\/[A-Za-z0-9._/-]{1,240}$/;
 const REF = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SOURCE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/;
 
+// A source test finalizes its report and event together under the source lock.
+// Select the last test event before validating it; never skip a bad last event.
+const CURRENT_TEST_EVENT = `EXISTS (
+  SELECT 1 FROM control.source_lifecycle_event latest
+  WHERE (latest.tenant_key,latest.source_id)=(t.tenant_key,t.source_id)
+    AND latest.id=(SELECT max(e.id) FROM control.source_lifecycle_event e
+      WHERE (e.tenant_key,e.source_id)=(t.tenant_key,t.source_id) AND e.action IN ('TEST_PASSED','TEST_FAILED'))
+    AND latest.action='TEST_PASSED' AND latest.details->>'test_report_id'=t.id::text
+    AND NOT EXISTS (SELECT 1 FROM control.source_lifecycle_event duplicate
+      WHERE (duplicate.tenant_key,duplicate.source_id)=(t.tenant_key,t.source_id)
+        AND duplicate.id<>latest.id AND duplicate.action IN ('TEST_PASSED','TEST_FAILED')
+        AND duplicate.details->>'test_report_id'=t.id::text)
+)`;
+
 function fail(code: ConstructorParameters<typeof AuthError>[0]): never { throw new AuthError(code); }
 function requireScope(principal: UserPrincipal, scope: UserPrincipal['managementScopes'][number]): void {
   if (!principal.managementScopes.includes(scope)) fail('AUTH_FORBIDDEN');
@@ -407,7 +421,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
       if (decimal(row.mapping_revision) !== revisionInput) fail('SOURCE_CONFLICT');
       const maps = await loadMappings(client,principal.tenantId,sourceId,revisionInput,decimal(row.identity_mapping_revision));
       const configuredEntities = row.allowed_entities as SourceEntity[];
-      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings,row.connector==='postgresql');
+      const errors=mappingContractErrors(configuredEntities,maps.fieldMappings,row.connector==='postgresql' || row.connector==='SIMULATED_IMPORT');
       return { revision: revisionInput, valid: errors.length === 0, errors };
     });
   }
@@ -632,8 +646,7 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
            AND (t.config_revision,t.mapping_revision,t.identity_mapping_revision,t.source_credential_revision,t.credential_generation)=
                (r.current_config_revision,r.mapping_revision,r.identity_mapping_revision,c.revision,c.credential_generation)
            ${config.connector==='SIMULATED_IMPORT' ? 'AND t.endpoint_profile_digest IS NULL AND t.sample_digest IS NOT NULL AND $6::bytea IS NULL' : 'AND t.endpoint_profile_digest=$6'}
-           AND NOT EXISTS(SELECT 1 FROM control.source_test_report newer WHERE newer.tenant_key=t.tenant_key AND newer.source_id=t.source_id
-             AND (newer.created_at,newer.id)>(t.created_at,t.id))
+           AND ${CURRENT_TEST_EVENT}
            AND (t.config_digest,t.mapping_digest,t.identity_mapping_digest) = (
              SELECT cr.config_digest,m.mapping_digest,i.mapping_digest
              FROM control.source_config_revision cr
@@ -680,15 +693,14 @@ export function createSourceRegistryService(deps: SourceRegistryDependencies) {
           JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(a.tenant_key,a.source_id,a.mapping_revision)
           JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision)=(a.tenant_key,a.source_id,a.identity_mapping_revision)
           JOIN control.source_credential c ON (c.tenant_key,c.source_id)=(a.tenant_key,a.source_id)
-         JOIN control.source_test_report t ON t.id=a.test_report_id
+         JOIN control.source_test_report t ON t.id=a.test_report_id AND (t.tenant_key,t.source_id)=(a.tenant_key,a.source_id)
          WHERE a.id=$3 AND a.tenant_key=$1 AND a.source_id=$2 AND a.owner_user_id=$4
            AND (a.owner_revision,a.config_revision,a.mapping_revision,a.identity_mapping_revision,a.source_credential_revision,a.credential_generation)=
                ((SELECT owner_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
                 (SELECT current_config_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
                 (SELECT mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),
                 (SELECT identity_mapping_revision FROM control.source_registry WHERE tenant_key=$1 AND source_id=$2),c.revision,c.credential_generation)
-           AND t.status='PASS' AND (t.created_at,t.id)=(SELECT newest.created_at,newest.id FROM control.source_test_report newest
-             WHERE newest.tenant_key=$1 AND newest.source_id=$2 ORDER BY newest.created_at DESC,newest.id DESC LIMIT 1)
+           AND t.status='PASS' AND ${CURRENT_TEST_EVENT}
            ${config.connector==='SIMULATED_IMPORT' ? 'AND t.endpoint_profile_digest IS NULL AND a.endpoint_profile_digest IS NULL AND t.sample_digest=a.sample_digest AND a.sample_digest IS NOT NULL AND $5::bytea IS NULL' : 'AND t.endpoint_profile_digest=$5 AND a.endpoint_profile_digest=$5'}
            AND (a.config_digest,a.mapping_digest,a.identity_mapping_digest)=(cr.config_digest,m.mapping_digest,i.mapping_digest)
           AND c.enabled`,[principal.tenantId,sourceId,approvalId,row.data_owner_user_id,profileDigest],

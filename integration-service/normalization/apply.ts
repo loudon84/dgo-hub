@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient, QueryResultRow } from 'pg';
 import { canonicalVersion, sourceContentDigest, validateCanonicalIdentifier, validateCanonicalSourceId } from './canonical.js';
-import { canonicalCustomerInput } from './durable-record.js';
+import { canonicalCustomerInput, canonicalOrderInput } from './durable-record.js';
 import type { ImportRecoveryWorkerScope } from '../etl-worker/import-recovery-context.js';
 import {
   canonicalCustomerSchema,
@@ -385,7 +385,50 @@ async function applyCustomerValidated(client: PoolClient, context: ApplyContext,
   return { status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex') };
 }
 
-export async function applyOrderAggregate(client: PoolClient, context: ApplyContext, inputValue: CanonicalOrder | CanonicalDelete, hooks: { afterHeader?: () => Promise<void>; afterLine?: (index: number) => Promise<void> } = {}): Promise<ApplyResult> {
+type OrderHooks = { afterHeader?: () => Promise<void>; afterLine?: (index: number) => Promise<void> };
+
+export async function applyOrderAggregate(client: PoolClient, context: ApplyContext, inputValue: CanonicalOrder | CanonicalDelete, hooks: OrderHooks = {}): Promise<ApplyResult> {
+  if (context.entity !== 'order') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
+  return applyOrderValidated(client,context,inputValue,hooks);
+}
+
+/** The operation and its immutable facts are obtained only from the live worker scope. */
+export async function applyImportRecoveryOrder(client:PoolClient,scope:ImportRecoveryWorkerScope):Promise<ApplyResult> {
+  const {readImportRecoveryWorkerContext}=await import('../etl-worker/import-recovery-context.js');
+  const recovery=await readImportRecoveryWorkerContext(client,scope);
+  if(recovery.entity!=='order') throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
+  return applyOrderValidated(client,recovery.originalContext,canonicalOrderInput({endpoint_profile_digest:null},recovery.original.record),{},{...recovery,scope});
+}
+
+type OrderRecovery = Awaited<ReturnType<typeof import('../etl-worker/import-recovery-context.js').readImportRecoveryWorkerContext>> & {scope:ImportRecoveryWorkerScope};
+async function resolveRecoveryOrderCustomer(client:PoolClient,context:ApplyContext,recovery:OrderRecovery,input:CanonicalOrder) {
+  const data=recovery.original.record.data;
+  if(!data || !('customer_ref' in data)) throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
+  const ref=data.customer_ref;
+  const original=recovery.originalProof.identity_mappings.filter(m=>m.kind==='customer' && m.external_id===input.customer_external_id);
+  const binding=recovery.bindingProof.identity_mappings.filter(m=>m.kind==='customer' && m.external_id===input.customer_external_id);
+  const confirmed=recovery.confirmedBindings;
+  const selected=confirmed[0];
+  if(original.length>1 || original[0]?.target_id || binding.length!==1 || !binding[0]!.target_id || confirmed.length!==1 ||
+     !selected || selected.kind!=='customer' || selected.externalId!==input.customer_external_id ||
+     selected.sourceId!==ref.source_id || selected.sourcePk!==ref.source_pk ||
+     selected.targetId.toLowerCase()!==binding[0]!.target_id.toLowerCase()) throw new Error('IMPORT_RECOVERY_PROOF_INVALID');
+  if(await identityFenceIsNewer(client,recovery.bindingContext,{kind:'customer',externalId:input.customer_external_id}))
+    return {result:{status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED'} as const};
+  const identity=await client.query<{canonical_object_id:string;customer_id:string|null}>(`SELECT canonical_object_id::text,customer_id::text
+    FROM control.canonical_source_identity WHERE (tenant_key,source_id,entity,source_pk)=($1,$2,'customer',$3) FOR UPDATE`,
+    [context.tenantId,ref.source_id,ref.source_pk]);
+  const row=identity.rows[0];
+  if(!row || row.canonical_object_id!==selected.targetId.toLowerCase() || row.customer_id!==row.canonical_object_id)
+    return {result:{status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID'} as const};
+  const customer=await client.query<{id:string}>(`SELECT id::text FROM hub.canonical_customer
+    WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL FOR UPDATE`,[context.tenantId,row.canonical_object_id]);
+  if(!customer.rowCount) return {result:{status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID'} as const};
+  return {id:customer.rows[0]!.id};
+}
+
+async function applyOrderValidated(client: PoolClient, context: ApplyContext, inputValue: CanonicalOrder | CanonicalDelete,
+  hooks:OrderHooks,recovery?:OrderRecovery): Promise<ApplyResult> {
   const fullInput = canonicalOrderSchema.safeParse(inputValue);
   const input = fullInput.success ? fullInput.data : canonicalOrderDeleteSchema.parse(inputValue);
   if (context.entity !== 'order') throw new Error('CANONICAL_APPLY_PROOF_INVALID');
@@ -393,10 +436,14 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
   validateCanonicalSourceId(context.sourceId);
   const version = canonicalVersion(input.source_version);
   const sourceDigest = Buffer.from(sourceContentDigest(input),'hex');
-  const proof = await verifyFrozenApplyContext(client,context);
+  const proof = recovery?.originalProof ?? await verifyFrozenApplyContext(client,context);
   if ('status' in proof) return proof;
+  const recoveryInput=recovery ? canonicalOrderSchema.parse(inputValue) : undefined;
+  const recoveryCustomer=recovery && recoveryInput ? await resolveRecoveryOrderCustomer(client,context,recovery,recoveryInput) : undefined;
+  if(recoveryCustomer && 'result' in recoveryCustomer && recoveryCustomer.result) return recoveryCustomer.result;
   const prior = await receiptFor(client,context,input.source_pk);
   if (prior) {
+    if(recovery && prior.canonical_object_id!==recovery.reservedObjectId) throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
     const priorVersion = BigInt(prior.source_version);
     const currentVersion = BigInt(version);
     if (currentVersion < priorVersion) return { status:'IGNORED_STALE',objectId:prior.canonical_object_id,digest:prior.source_content_digest.toString('hex') };
@@ -430,29 +477,45 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
     await writeOutbox(client,context,{objectId,revision,operation:'DELETE',projection,digest:sourceDigest});
     return {status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex')};
   }
-  const orderInput=canonicalOrderSchema.parse(inputValue);
-  const fenceSuperseded = await identityFenceIsNewer(client,context,{kind:'customer',externalId:orderInput.customer_external_id});
-  if (fenceSuperseded) return { status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED' };
-  const customerMapping = mappingFor(proof.identity_mappings,'customer',orderInput.customer_external_id);
-  if (!customerMapping || !customerMapping.target_id) return { status:'QUARANTINED',code:'IDENTITY_MAPPING_REQUIRED' };
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(customerMapping.target_id)) {
-    return { status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' };
+  const orderInput=recoveryInput ?? canonicalOrderSchema.parse(inputValue);
+  let customerId:string;
+  if(recoveryCustomer && 'id' in recoveryCustomer) customerId=recoveryCustomer.id;
+  else {
+    const fenceSuperseded = await identityFenceIsNewer(client,context,{kind:'customer',externalId:orderInput.customer_external_id});
+    if (fenceSuperseded) return { status:'QUARANTINED',code:'AUTHORITY_MAPPING_SUPERSEDED' };
+    const customerMapping = mappingFor(proof.identity_mappings,'customer',orderInput.customer_external_id);
+    if (!customerMapping || !customerMapping.target_id) return { status:'QUARANTINED',code:'IDENTITY_MAPPING_REQUIRED' };
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(customerMapping.target_id)) {
+      return { status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' };
+    }
+    const customer = await client.query<{ id:string }>(`SELECT id FROM hub.canonical_customer
+      WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`,[context.tenantId,customerMapping.target_id]);
+    if (!customer.rowCount) return { status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' };
+    customerId=customer.rows[0]!.id;
   }
-  const customer = await client.query<{ id:string }>(`SELECT id FROM hub.canonical_customer
-    WHERE tenant_id=$1 AND id=$2::uuid AND deleted_at IS NULL`,[context.tenantId,customerMapping.target_id]);
-  if (!customer.rowCount) return { status:'QUARANTINED',code:'IDENTITY_MAPPING_TARGET_INVALID' };
   if (context.versionDomain==='SNAPSHOT_OBSERVATION' && prior && prior.source_content_digest.equals(sourceDigest) && !prior.deleted) {
     const current=await client.query<{customer_id:string;deleted_at:Date|null}>(`SELECT customer_id,deleted_at
       FROM hub.canonical_order WHERE tenant_id=$1 AND id=$2`,[context.tenantId,prior.canonical_object_id]);
-    if(current.rowCount && current.rows[0].deleted_at===null && current.rows[0].customer_id===customer.rows[0].id) {
-      const projection=await projectionDigest(client,sourceDigest,prior.canonical_object_id,{customer_id:customer.rows[0].id});
+    if(current.rowCount && current.rows[0].deleted_at===null && current.rows[0].customer_id===customerId) {
+      const projection=await projectionDigest(client,sourceDigest,prior.canonical_object_id,{customer_id:customerId});
       await writeReceipt(client,context,{sourcePk:orderInput.source_pk,objectId:prior.canonical_object_id,version,digest:sourceDigest,projection,deleted:false});
       return {status:'DUPLICATE',objectId:prior.canonical_object_id,digest:sourceDigest.toString('hex')};
     }
   }
   const identity = await lockSourceIdentity(client,context,orderInput.source_pk);
+  if(recovery && identity.rows[0]?.canonical_object_id!==recovery.reservedObjectId) throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
   const objectId = identity.rows[0]?.canonical_object_id ?? randomUUID();
-  const projection=await projectionDigest(client,sourceDigest,objectId,{customer_id:customer.rows[0].id});
+  const previous=identity.rows[0]?.order_id ? await client.query<{customer_id:string}>(
+    'SELECT customer_id::text FROM hub.canonical_order WHERE tenant_id=$1 AND id=$2 FOR UPDATE',
+    [context.tenantId,identity.rows[0].order_id]) : undefined;
+  const customerChanged=context.versionDomain==='SOURCE_VERSION' && !!previous?.rowCount && previous.rows[0]!.customer_id!==customerId;
+  if(customerChanged) {
+    const oldReference=await client.query<{target_id:string}>(`SELECT target_id FROM control.canonical_identity_reference
+      WHERE (tenant_key,source_id,entity,source_pk,kind)=($1,$2,'order',$3,'customer') FOR UPDATE`,
+    [context.tenantId,context.sourceId,orderInput.source_pk]);
+    if(oldReference.rows[0]?.target_id!==previous!.rows[0]!.customer_id) throw new Error('CANONICAL_ORDER_REFERENCE_INVALID');
+  }
+  const projection=await projectionDigest(client,sourceDigest,objectId,{customer_id:customerId});
   const revision = await allocateRevision(client);
   await client.query(`INSERT INTO hub.canonical_order
     (tenant_id,id,customer_id,order_no,status,order_at,amount,currency,source_updated_at,source_version,version_domain,channel_epoch,deleted_at,hub_revision)
@@ -461,17 +524,13 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
       order_at=EXCLUDED.order_at,amount=EXCLUDED.amount,currency=EXCLUDED.currency,source_updated_at=EXCLUDED.source_updated_at,
       source_version=EXCLUDED.source_version,version_domain=EXCLUDED.version_domain,channel_epoch=EXCLUDED.channel_epoch,
       deleted_at=EXCLUDED.deleted_at,hub_revision=EXCLUDED.hub_revision`,
-  [context.tenantId,objectId,customer.rows[0].id,orderInput.order_no,orderInput.status,orderInput.order_at,orderInput.amount,orderInput.currency,
+  [context.tenantId,objectId,customerId,orderInput.order_no,orderInput.status,orderInput.order_at,orderInput.amount,orderInput.currency,
     orderInput.source_updated_at,version,context.versionDomain,context.channelEpoch,orderInput.deleted_at ?? null,revision]);
   await hooks.afterHeader?.();
   await client.query(`INSERT INTO control.canonical_source_identity
     (tenant_key,source_id,entity,source_pk,canonical_object_id,order_id) VALUES($1,$2,'order',$3,$4,$4)
     ON CONFLICT(tenant_key,source_id,entity,source_pk) DO UPDATE SET canonical_object_id=EXCLUDED.canonical_object_id,order_id=EXCLUDED.order_id`,
   [context.tenantId,context.sourceId,orderInput.source_pk,objectId]);
-  await client.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
-    VALUES($1,$2,'order',$3,'customer',$4,$5)
-    ON CONFLICT(tenant_key,source_id,entity,source_pk,kind) DO UPDATE SET external_id=EXCLUDED.external_id,target_id=EXCLUDED.target_id`,
-  [context.tenantId,context.sourceId,orderInput.source_pk,orderInput.customer_external_id,customer.rows[0].id]);
   if (orderInput.deleted_at != null) {
     await client.query(`UPDATE hub.canonical_order_line SET deleted_at=$3,hub_revision=nextval('control.canonical_hub_revision_seq')
       WHERE tenant_id=$1 AND order_id=$2 AND deleted_at IS NULL`,[context.tenantId,objectId,orderInput.deleted_at]);
@@ -498,5 +557,18 @@ export async function applyOrderAggregate(client: PoolClient, context: ApplyCont
   }
   await writeReceipt(client,context,{sourcePk:orderInput.source_pk,objectId,version,digest:sourceDigest,projection,deleted:orderInput.deleted_at != null});
   await writeOutbox(client,context,{objectId,revision,operation:orderInput.deleted_at?'DELETE':'UPSERT',projection,digest:sourceDigest});
+  if(customerChanged) {
+    if(recovery) await client.query(`SELECT control.record_import_recovery_order_customer_change($1,$2,$3::uuid,$4,$5::uuid,$6::uuid)`,[
+      recovery.scope.tenantId,recovery.scope.sourceId,recovery.scope.jobId,recovery.scope.ordinal,recovery.scope.itemOperationId,recovery.scope.claimToken,
+    ]);
+    else await client.query(`SELECT control.record_canonical_order_customer_change($1,$2,$3,$4::uuid,$5::uuid,$6::bigint,$7,$8::bigint,$9::uuid,$10::uuid,$11::bigint,$12)`,[
+      context.tenantId,context.sourceId,orderInput.source_pk,context.credentialId,context.channelId,context.channelEpoch,context.versionDomain,
+      context.securityBarrierFenceAtAdmission,context.ownerApprovalId,context.testReportId,context.identityMappingRevision,orderInput.customer_external_id,
+    ]);
+  }
+  await client.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
+    VALUES($1,$2,'order',$3,'customer',$4,$5)
+    ON CONFLICT(tenant_key,source_id,entity,source_pk,kind) DO UPDATE SET external_id=EXCLUDED.external_id,target_id=EXCLUDED.target_id`,
+  [context.tenantId,context.sourceId,orderInput.source_pk,orderInput.customer_external_id,customerId]);
   return { status:'APPLIED',objectId,hubRevision:revision,digest:sourceDigest.toString('hex') };
 }

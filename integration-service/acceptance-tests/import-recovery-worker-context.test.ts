@@ -130,6 +130,8 @@ async function prepareChildren() {
   expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['017_import_recovery_worker_context']);
   await copyFile(fileURLToPath(new URL('../migrations/018_import_recovery_customer_apply.sql',import.meta.url)),join(context.migrationDirectory,'018_import_recovery_customer_apply.sql'));
   expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['018_import_recovery_customer_apply']);
+  await copyFile(fileURLToPath(new URL('../migrations/019_order_visibility_effects.sql',import.meta.url)),join(context.migrationDirectory,'019_order_visibility_effects.sql'));
+  expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual(['019_order_visibility_effects']);
   return {customerJob,orderJob};
  })();
  return prepared;
@@ -141,13 +143,22 @@ async function childStates(ids:string[]) {
   WHERE j.id=ANY($1::uuid[]) ORDER BY j.id`,[ids])).rows;
 }
 
-it('leaves the order child untouched and advances a later ordinary job before LIMIT',async()=>{
+it('claims a supported order and a later ordinary job while independently held reader fixtures stay untouched',async()=>{
  const {customerJob,orderJob}=await prepareChildren();
- // Keep the customer available for the independent rollback-only reader tests below.
- await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp()+interval '1 day' WHERE job_id=$1`,[customerJob]);
+ // Keep both children for the independent rollback-only reader tests below.
+ await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp()+interval '1 day' WHERE job_id=ANY($1::uuid[])`,[[customerJob,orderJob]]);
  const ids=[customerJob,orderJob],before=await childStates(ids);
  expect(before).toHaveLength(2);
  for(const child of before) expect(child).toMatchObject({job_status:'RECEIVED',item_status:'RECEIVED',attempts_started:0,retries_used:0,error_code:null,claim_token:null,lease_expires_at:null,acknowledged_at:null});
+ const supported=await setupOrderRecoveryFixture(context,'w0-supported','w0-supported-reference');
+ const headers={authorization:`Bearer ${context.token}`};
+ const available=await recoveryApi.inject({method:'GET',url:`/hub/v1/admin/quarantine/${supported.q}/import-recovery`,headers});
+ expect(available.statusCode,available.body).toBe(200);const state=available.json().data;
+ const accepted=await recoveryApi.inject({method:'POST',url:`/hub/v1/admin/quarantine/${supported.q}/import-recovery`,headers:{...headers,'content-type':'application/json','idempotency-key':'w0-supported-order'},payload:JSON.stringify({expected_state:state.expected_state,expected_source_revision:state.expected_source_revision,identity_mapping_revision:state.identity_mapping_revision,identity_mapping_digest:state.identity_mapping_digest,bindings:[{kind:'customer',source_id:source,source_pk:'w0-supported-reference',target_id:supported.ids[1]}],reason:'confirmed'})});
+ expect(accepted.statusCode,accepted.body).toBe(202);const supportedJob=accepted.json().data.child_job_id;
+ expect(await runDurableWorkerOnce(worker,{limit:1})).toBe(1);
+ const [applied]=await childStates([supportedJob]);
+ expect(applied).toMatchObject({job_status:'SUCCEEDED',item_status:'APPLIED',attempts_started:1,retries_used:0,error_code:null,claim_token:null,lease_expires_at:null,acknowledged_at:expect.any(Date)});
  const ordinary=structuredClone(customerBody);ordinary.batch_id='abcdef12-3456-0000-0000-000000000031';ordinary.records[0]!.event_id='abcdef12-3456-0000-0000-000000000032';ordinary.records[0]!.source_pk='w0-later-ordinary';
  const {job}=await admit(source,'customer',ordinary,'w0-later-ordinary');
  expect(await runDurableWorkerOnce(worker,{limit:1})).toBe(1);
@@ -435,18 +446,20 @@ it('fails closed on wrong tenant, unknown job, replaced and acknowledged claims'
  }})).rejects.toThrow('WORKER_CLAIM_LOST');
 },60000);
 
-it('does not process or acknowledge a flagged job delivered by a controlled stale claimant',async()=>{
+it('quarantines an invalid flagged order context without ordinary fallback or canonical effects',async()=>{
  const {orderJob}=await prepareChildren();let hookCalled=false;
- // Test-only pool wrapper injects a stale candidate after the real SQL exclusion, without adding a production bypass.
+ await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp() WHERE job_id=$1`,[orderJob]);
+ // Test-only wrapper sends a wrong item operation to the real scope-only SQL reader.
  const stalePool=new Proxy(worker,{get(target,property){
   if(property==='connect') return async()=>{
    const client=await target.connect(),query=client.query.bind(client);
    return new Proxy(client,{get(inner,key){
     if(key==='query') return async(sql:unknown,...args:unknown[])=>{
-     const result=await (query as (...v:unknown[])=>Promise<import('pg').QueryResult>)(sql,...args);
-     if(typeof sql==='string' && sql.includes('SELECT o.job_id,j.tenant_key,j.source_id'))
-      return {...result,rowCount:1,rows:[{job_id:orderJob,tenant_key:tenant,source_id:orderFixture.src}]};
-     return result;
+     if(typeof sql==='string' && sql.includes('SELECT control.read_import_recovery_worker_context')) {
+      const values=[...(args[0] as unknown[])];values[4]='abcd0000-0000-0000-0000-000000000999';
+      return (query as (...v:unknown[])=>Promise<import('pg').QueryResult>)(sql,values);
+     }
+     return (query as (...v:unknown[])=>Promise<import('pg').QueryResult>)(sql,...args);
     };
     const value=Reflect.get(inner,key,inner);return typeof value==='function'?value.bind(inner):value;
    }});
@@ -455,8 +468,7 @@ it('does not process or acknowledge a flagged job delivered by a controlled stal
  }});
  expect(await runDurableWorkerOnce(stalePool,{limit:1,hooks:{afterClaim:async()=>{hookCalled=true;}}})).toBe(1);
  const [state]=await childStates([orderJob]);
- expect(hookCalled).toBe(false);
- expect(state).toMatchObject({job_status:'PROCESSING',item_status:'RECEIVED',attempts_started:0,retries_used:0,error_code:null,acknowledged_at:null});
- expect(state.claim_token).toBeTruthy();
+ expect(hookCalled).toBe(true);
+ expect(state).toMatchObject({job_status:'FAILED',item_status:'QUARANTINED',attempts_started:1,retries_used:0,error_code:'IMPORT_RECOVERY_CONTEXT_INVALID',claim_token:null,acknowledged_at:expect.any(Date)});
  expect((await context.fixture.pool.query(`SELECT 1 FROM hub.canonical_order o JOIN control.canonical_source_identity s ON (s.tenant_key,s.order_id)=(o.tenant_id,o.id) WHERE s.tenant_key=$1 AND s.source_id=$2 AND s.source_pk='order-w0-reference'`,[tenant,orderFixture.src])).rowCount).toBe(0);
 },60000);

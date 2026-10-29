@@ -92,7 +92,7 @@ function pageQuery(query: unknown): { cursor?: string; limit?: number } {
 }
 
 /** Register only APIs whose actor is derived from the configured, verified OIDC subject. */
-export async function registerIdentityRoutes(app: FastifyInstance, options: IdentityRouteOptions): Promise<void> {
+export async function registerIdentityRoutes(app: FastifyInstance, options: IdentityRouteOptions, composition: {suppressNotFound?:boolean} = {}): Promise<void> {
   app.register(async identity => {
     identity.setErrorHandler((error, request, reply) => {
       const code = typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' ? error.code : '';
@@ -102,7 +102,7 @@ export async function registerIdentityRoutes(app: FastifyInstance, options: Iden
       }
       return sendFailure(request, reply, error);
     });
-    identity.setNotFoundHandler((request, reply) => sendNotFound(request, reply));
+    if(!composition.suppressNotFound) identity.setNotFoundHandler((request, reply) => sendNotFound(request, reply));
 
   identity.get('/hub/v1/me', async (request, reply) => {
     try { return reply.send(envelope(request, safeUser(await currentUser(request, options.authenticator)))); }

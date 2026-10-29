@@ -16,7 +16,7 @@ let child:string,operation:string,reserved:string;
 
 beforeAll(async()=>{
  context=await setupImportRecoveryFixture('schema');
- for(const [name,version] of [['015_import_recovery_schema.sql','015_import_recovery_schema'],['016_import_recovery_admission.sql','016_import_recovery_admission'],['017_import_recovery_worker_context.sql','017_import_recovery_worker_context'],['018_import_recovery_customer_apply.sql','018_import_recovery_customer_apply']]) {
+ for(const [name,version] of [['015_import_recovery_schema.sql','015_import_recovery_schema'],['016_import_recovery_admission.sql','016_import_recovery_admission'],['017_import_recovery_worker_context.sql','017_import_recovery_worker_context'],['018_import_recovery_customer_apply.sql','018_import_recovery_customer_apply'],['019_order_visibility_effects.sql','019_order_visibility_effects']]) {
   await copyFile(fileURLToPath(new URL(`../migrations/${name}`,import.meta.url)),join(context.migrationDirectory,name));
   expect((await runMigrations(context.fixture.pool,{directory:context.migrationDirectory,environmentKind:'local_lab'})).applied).toEqual([version]);
  }
@@ -111,7 +111,21 @@ it('commits a signed self-affected ownership change with one epoch increment and
  const sampleSelf={schema_version:'hub.v1',batch_id:crypto.randomUUID(),records:[{event_id:crypto.randomUUID(),source_pk:'self-sample',source_version:'1',operation:'UPSERT',source_updated_at:'2026-10-29T04:00:00Z',data:{display:'Sample',rep:'old-key',team:'self-team',state:'ACTIVE'}}]};
  async function approve() {
   const tested=await call('POST',`/hub/v1/admin/sources/${src}/test`,{expected_revision:'1',samples:{customer:JSON.stringify(sampleSelf)}});expect(tested.json().data.status).toBe('PASS');
-  const report=tested.json().data,approved=await call('POST',`/hub/v1/admin/sources/${src}/approve`,{revision:'1',test_report_id:report.test_report_id,data_contract_ref:report.data_contract_ref});expect(approved.statusCode,approved.body).toBe(200);
+  const report=tested.json().data,approved=await call('POST',`/hub/v1/admin/sources/${src}/approve`,{revision:'1',test_report_id:report.test_report_id,data_contract_ref:report.data_contract_ref});
+  if(approved.statusCode!==200) {
+   const diagnostic=await context.fixture.pool.query(`SELECT t.id::text,to_char(t.created_at,'YYYY-MM-DD HH24:MI:SS.US') created_at,t.status,t.identity_mapping_revision::text,r.lifecycle,r.identity_mapping_revision::text current_identity,
+    t.config_revision=r.current_config_revision config_match,t.mapping_revision=r.mapping_revision mapping_match,t.identity_mapping_revision=r.identity_mapping_revision identity_match,
+    t.source_credential_revision=c.revision credential_match,t.credential_generation=c.credential_generation generation_match,
+    t.config_digest=cr.config_digest config_digest_match,t.mapping_digest=m.mapping_digest mapping_digest_match,t.identity_mapping_digest=i.mapping_digest identity_digest_match,
+    EXISTS(SELECT 1 FROM control.source_test_report newer WHERE newer.tenant_key=t.tenant_key AND newer.source_id=t.source_id AND (newer.created_at,newer.id)>(t.created_at,t.id)) newer_exists
+    FROM control.source_test_report t JOIN control.source_registry r USING(tenant_key,source_id) JOIN control.source_credential c USING(tenant_key,source_id)
+    JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(r.tenant_key,r.source_id,r.current_config_revision)
+    JOIN control.source_mapping_revision m ON (m.tenant_key,m.source_id,m.revision)=(r.tenant_key,r.source_id,r.mapping_revision)
+    JOIN control.source_identity_mapping_revision i ON (i.tenant_key,i.source_id,i.revision)=(r.tenant_key,r.source_id,r.identity_mapping_revision)
+    WHERE t.tenant_key=$1 AND t.source_id=$2 ORDER BY t.created_at,t.id`,[tenant,src]);
+   expect(approved.statusCode,`${approved.body} ${JSON.stringify(diagnostic.rows)} selected=${report.test_report_id}`).toBe(200);
+  }
+  expect(approved.statusCode,approved.body).toBe(200);
   expect((await call('POST',`/hub/v1/admin/sources/${src}/activate`,{revision:'1',approval_id:approved.json().data.approval_id})).statusCode).toBe(200);
  }
  async function send(version:string,rep:string) {
@@ -245,7 +259,14 @@ async function prepareIsolatedCustomer(label:string) {
  const imported=await context.app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/import/customer`,headers:{...headers,'content-type':'application/json','idempotency-key':`origin-${label}`},payload:JSON.stringify(batch)});expect(imported.statusCode,imported.body).toBe(202);
  await runDurableWorkerOnce(worker);
  const originalJob=imported.json().data.job_id as string;
- const q=(await context.fixture.pool.query<{id:string}>(`SELECT quarantine_id::text AS id FROM control.ingestion_quarantine_index WHERE job_id=$1 AND ordinal=1`,[originalJob])).rows[0]!.id;
+ const quarantines=await context.fixture.pool.query<{id:string}>(`SELECT quarantine_id::text AS id FROM control.ingestion_quarantine_index WHERE job_id=$1 AND ordinal=1`,[originalJob]);
+ if(!quarantines.rowCount) {
+  const queue=await context.fixture.pool.query(`SELECT j.id::text,j.source_id,j.status,i.ordinal,i.status item_status,b.available_at::text,b.lease_expires_at::text,b.acknowledged_at::text,b.claim_token::text,b.available_at<=clock_timestamp() due
+   FROM control.ingestion_job j JOIN control.ingestion_job_item i ON i.job_id=j.id JOIN control.ingestion_processing_outbox b ON b.job_id=j.id
+   WHERE b.acknowledged_at IS NULL ORDER BY b.available_at,b.id`);
+  throw new Error(`original ${originalJob} missing quarantine; queue=${JSON.stringify(queue.rows)}`);
+ }
+ const q=quarantines.rows[0]!.id;
  await bind('department','missing-dept','dept1','3');await approve();
  const get=await api.inject({method:'GET',url:`/hub/v1/admin/quarantine/${q}/import-recovery`,headers});expect(get.statusCode,get.body).toBe(200);const state=get.json().data;
  const post=await api.inject({method:'POST',url:`/hub/v1/admin/quarantine/${q}/import-recovery`,headers:{...headers,'content-type':'application/json','idempotency-key':`recover-${label}`},payload:JSON.stringify({expected_state:state.expected_state,expected_source_revision:state.expected_source_revision,identity_mapping_revision:state.identity_mapping_revision,identity_mapping_digest:state.identity_mapping_digest,bindings:[{kind:'department',external_id:'missing-dept',target_id:'dept1'}],reason:'confirmed'})});expect(post.statusCode,post.body).toBe(202);
@@ -357,7 +378,8 @@ it('hides an APPLIED recovery receipt after a later higher version replaces it',
  let get=await api.inject({method:'GET',url:`/hub/v1/admin/quarantine/${x.q}/import-recovery`,headers:x.headers});
  expect(get.json().data).toMatchObject({state:'APPLIED',receipt:{canonical_object_id:x.op.reserved_object_id,source_version:'42'}});
  const ordinary=await enqueueOrdinaryVersion(x,'43','Newer value');await runDurableWorkerOnce(worker,{limit:1});
- expect((await context.fixture.pool.query(`SELECT status FROM control.ingestion_job_item WHERE job_id=$1`,[ordinary])).rows[0].status).toBe('APPLIED');
+ const ordinaryState=(await context.fixture.pool.query(`SELECT i.status,b.available_at::text,b.available_at<=clock_timestamp() due,b.claim_token::text FROM control.ingestion_job_item i JOIN control.ingestion_processing_outbox b ON b.job_id=i.job_id WHERE i.job_id=$1`,[ordinary])).rows[0];
+ expect(ordinaryState.status,JSON.stringify(ordinaryState)).toBe('APPLIED');
  get=await api.inject({method:'GET',url:`/hub/v1/admin/quarantine/${x.q}/import-recovery`,headers:x.headers});
  expect(get.json().data).toEqual({state:'APPLIED',operation_id:x.operationId,child_job_id:x.job,receipt:null});
  expect(await x.effects()).toEqual({canonical_object_id:x.op.reserved_object_id,customer_id:x.op.reserved_object_id,receipts:1,outboxes:2,refs:2,audits:0});
@@ -367,7 +389,8 @@ it('does not launder a post-acceptance remap through an equal-version receipt',a
  const x=await prepareIsolatedCustomer('duplicate-remap');
  await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp()+interval '1 day' WHERE job_id=$1`,[x.job]);
  const ordinary=await enqueueOrdinaryVersion(x,'42','  Literal Selected  ');await runDurableWorkerOnce(worker,{limit:1});
- expect((await context.fixture.pool.query(`SELECT status FROM control.ingestion_job_item WHERE job_id=$1`,[ordinary])).rows[0].status).toBe('APPLIED');
+ const ordinaryState=(await context.fixture.pool.query(`SELECT i.status,b.available_at::text,b.available_at<=clock_timestamp() due,b.claim_token::text FROM control.ingestion_job_item i JOIN control.ingestion_processing_outbox b ON b.job_id=i.job_id WHERE i.job_id=$1`,[ordinary])).rows[0];
+ expect(ordinaryState.status,JSON.stringify(ordinaryState)).toBe('APPLIED');
  await x.bind('user','selected-user',x.other,'4');const before=await x.effects();
  await context.fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=clock_timestamp()-interval '1 second' WHERE job_id=$1`,[x.job]);
  await runDurableWorkerOnce(worker,{limit:1});

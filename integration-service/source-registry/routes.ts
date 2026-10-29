@@ -45,7 +45,7 @@ function body(request: FastifyRequest, allowed: readonly string[]): Record<strin
 }
 
 /** M1 source APIs use only the verified OIDC principal for tenant and actor identity. */
-export async function registerSourceRegistryRoutes(app: FastifyInstance, options: SourceRegistryRouteOptions): Promise<void> {
+export async function registerSourceRegistryRoutes(app: FastifyInstance, options: SourceRegistryRouteOptions, composition: {suppressNotFound?:boolean} = {}): Promise<void> {
   app.register(async admin => {
     admin.setErrorHandler((error, request, reply) => {
       const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error &&
@@ -54,7 +54,7 @@ export async function registerSourceRegistryRoutes(app: FastifyInstance, options
       return reply.code(statusCode === 413 ? 413 : statusCode === 415 ? 415 : statusCode < 500 ? 400 : 503).send({ request_id:request.id,
         error:{code,message:code,retryable:code==='AUTH_UNAVAILABLE',details:{}} });
     });
-    admin.setNotFoundHandler((request, reply) => reply.code(404).send({
+    if(!composition.suppressNotFound) admin.setNotFoundHandler((request, reply) => reply.code(404).send({
       request_id: request.id, error: { code: 'NOT_FOUND', message: 'NOT_FOUND', retryable: false, details: {} },
     }));
 

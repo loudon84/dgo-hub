@@ -860,6 +860,8 @@ describe('M1-4 durable strict worker', () => {
     batch.records[0]!.data.amount='10.00';
     const accepted=await post(JSON.stringify(batch),'rollback-after-order-line',orderRoute);
     expect(accepted.statusCode).toBe(202);
+    await fixture.pool.query(`UPDATE control.ingestion_processing_outbox SET available_at=CASE WHEN job_id=$1 THEN '2000-01-01T00:00:00Z'::timestamptz
+      ELSE '2099-01-01T00:00:00Z'::timestamptz END WHERE acknowledged_at IS NULL`,[accepted.json().data.job_id]);
     const eventsBefore=(await fixture.pool.query<{count:string}>('SELECT count(*)::text AS count FROM control.canonical_apply_outbox WHERE tenant_key=$1 AND source_id=$2',[tenantId,sourceId])).rows[0]!.count;
     await fixture.pool.query(`CREATE FUNCTION control.test_fail_worker_order_line() RETURNS trigger LANGUAGE plpgsql AS $$
       BEGIN RAISE EXCEPTION 'synthetic worker line failure'; END $$`);

@@ -24,7 +24,7 @@ function failure(request:FastifyRequest,reply:FastifyReply,error:unknown) {
  const status=error instanceof AuthError?error.status:error instanceof ImportRecoveryError?409:503;
  return reply.code(status).send({request_id:request.id,error:{code,message:code,retryable:status===503,details:{}}});
 }
-/** Deliberately not registered by the production application until a compatible worker exists. */
+/** Local candidate registrar; stop or upgrade incompatible claimants before enabling these routes. */
 export async function registerImportRecoveryRoutes(app:FastifyInstance,options:Options):Promise<void> {
  app.register(async scope=>{
   scope.removeContentTypeParser('application/json');

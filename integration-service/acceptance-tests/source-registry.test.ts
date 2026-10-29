@@ -9,6 +9,7 @@ import { createAuthService } from '../auth/service.js';
 import { createCredential, digestCredential } from '../auth/credentials.js';
 import { buildApp } from '../app.js';
 import { createBoundedCapabilityProbe } from '../source-registry/capability-probe.js';
+import { customerReferenceMappingKey } from '../source-registry/import-sample.js';
 import { createSourceRegistryService, type EndpointAllowlist, type SecretResolver, type SourceConfig, type CapabilityProbe, type SourceRegistryService } from '../source-registry/service.js';
 import { runMigrations } from '../migrations/runner.js';
 import { fixtureEvidenceRootFromEnvironment, startOwnedPostgres, type OwnedPostgres } from './helpers/postgres.js';
@@ -82,9 +83,9 @@ describe('M1 source admission authorization', () => {
   });
 
   it('applies migration 008 after the clean M0 and M1 chain and skips the same checksums on repeat', async () => {
-    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission','017_import_recovery_worker_context','018_import_recovery_customer_apply'],skipped:[]});
+    expect(initialMigrationResult).toEqual({applied:['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission','017_import_recovery_worker_context','018_import_recovery_customer_apply','019_order_visibility_effects'],skipped:[]});
     const first = await runMigrations(fixture.pool, { directory: migrationsDirectory, environmentKind: 'local_lab' });
-    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission','017_import_recovery_worker_context','018_import_recovery_customer_apply'] });
+    expect(first).toEqual({ applied: [], skipped: ['001_init','002_identity_auth','003_mcp_audit_boundary','004_alpha1_runtime_security','005_source_registry','006_canonical_data_and_receipts','007_durable_ingestion_jobs','008_durable_worker_leases_and_retries','009_snapshot_runs_and_recovery','010_simulated_import','011_management_import_admission','012_import_quarantine','013_import_recovery_candidate','014_import_recovery_binding','015_import_recovery_schema','016_import_recovery_admission','017_import_recovery_worker_context','018_import_recovery_customer_apply','019_order_visibility_effects'] });
     const row = await fixture.pool.query<{ version: number; name: string; checksum: string }>(
       'SELECT version,name,checksum FROM control.schema_migration WHERE version=5',
     );
@@ -310,6 +311,169 @@ describe('M1 source admission authorization', () => {
     const pausedClient=await fixture.pool.connect();
     try { await pausedClient.query('BEGIN'); await expect(auth.assertCurrentSource(pauseSnapshot,'customer',pausedClient)).rejects.toMatchObject({code:'AUTH_CONTEXT_CHANGED'}); await pausedClient.query('ROLLBACK'); }
     finally { pausedClient.release(); }
+  });
+
+  it.each(['backwards','equal'] as const)('orders source tests by completion with %s report timestamps', async (ordering) => {
+    const {owner,service}=await freshnessFixture();
+    const first=await service.test(owner,'crm-new','1');
+    const second=await service.test(owner,'crm-new','1');
+    expect([first.status,second.status]).toEqual(['PASS','PASS']);
+    let firstId=first.test_report_id,secondId=second.test_report_id;
+    if(ordering==='equal') {
+      // Fix UUID ordering so the historical timestamp/UUID comparator picks the older report.
+      const ids=['ffffffff-ffff-4fff-8fff-ffffffffffff','00000000-0000-4000-8000-000000000001'];
+      for(const [from,to] of [[firstId,ids[0]!],[secondId,ids[1]!]]) {
+        await fixture.pool.query(`UPDATE control.source_lifecycle_event SET details=jsonb_set(details,'{test_report_id}',to_jsonb($2::text))
+          WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND details->>'test_report_id'=$1`,[from,to]);
+        await fixture.pool.query('UPDATE control.source_test_report SET id=$2 WHERE id=$1',[from,to]);
+      }
+      [firstId,secondId]=ids as [string,string];
+    }
+    await fixture.pool.query(`UPDATE control.source_test_report SET created_at=CASE WHEN id=$1::uuid THEN '2099-01-01'::timestamptz
+      ELSE $3::timestamptz END WHERE id IN ($1::uuid,$2::uuid)`,[firstId,secondId,ordering==='equal'?'2099-01-01':'2000-01-01']);
+    const events=await fixture.pool.query<{id:string;report_id:string}>(`SELECT id::text,details->>'test_report_id' report_id
+      FROM control.source_lifecycle_event WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND action LIKE 'TEST_%' ORDER BY id`);
+    expect(events.rows.map(event=>event.report_id)).toEqual([firstId,secondId]);
+    await expect(service.approve(owner,'crm-new','1',firstId,first.data_contract_ref)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    const approval=await service.approve(owner,'crm-new','1',secondId,second.data_contract_ref);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+  });
+
+  it('activates the latest completed test despite backwards report timestamps', async () => {
+    const {owner,service}=await freshnessFixture();
+    const first=await service.test(owner,'crm-new','1');
+    const second=await service.test(owner,'crm-new','1');
+    await fixture.pool.query(`UPDATE control.source_test_report SET created_at=CASE WHEN id=$1::uuid THEN '2000-01-01'::timestamptz
+      ELSE '2099-01-01'::timestamptz END WHERE id IN ($1::uuid,$2::uuid)`,[first.test_report_id,second.test_report_id]);
+    const approval=await service.approve(owner,'crm-new','1',second.test_report_id,second.data_contract_ref);
+    await fixture.pool.query(`UPDATE control.source_test_report SET created_at=CASE WHEN id=$1::uuid THEN '2099-01-01'::timestamptz
+      ELSE '2000-01-01'::timestamptz END WHERE id IN ($1::uuid,$2::uuid)`,[first.test_report_id,second.test_report_id]);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+  });
+
+  it('rejects an older PASS on approve and activate when the last completed test failed', async () => {
+    const {owner,service,failProbe}=await freshnessFixture();
+    const passed=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',passed.test_report_id,passed.data_contract_ref);
+    failProbe();
+    const failed=await service.test(owner,'crm-new','1');
+    expect(failed.status).toBe('FAIL');
+    await fixture.pool.query(`UPDATE control.source_test_report SET created_at=CASE WHEN id=$1::uuid THEN '2099-01-01'::timestamptz
+      ELSE '2000-01-01'::timestamptz END WHERE id IN ($1::uuid,$2::uuid)`,[passed.test_report_id,failed.test_report_id]);
+    // Isolate freshness from the normal lifecycle denial with a controlled fixture mutation.
+    await fixture.pool.query("UPDATE control.source_registry SET lifecycle='TESTED' WHERE source_id='crm-new'");
+    await expect(service.approve(owner,'crm-new','1',passed.test_report_id,passed.data_contract_ref)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await fixture.pool.query("UPDATE control.source_registry SET lifecycle='APPROVED' WHERE source_id='crm-new'");
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+  });
+
+  it.each(['absent','mismatched','wrong-source'] as const)('rejects a candidate with an %s selected test event', async (defect) => {
+    const {owner,service}=await freshnessFixture();
+    const first=await service.test(owner,'crm-new','1');
+    const second=await service.test(owner,'crm-new','1');
+    let replacement=first.test_report_id;
+    if(defect==='wrong-source') {
+      const credential=createCredential();
+      await auth.repository.provisionSourceCredential({sourceId:'crm-other',tenantId:owner.tenantId,token:credential.secret,
+        secretRef:'vault:/crm/credential-v1',allowedEntities:['customer'],revision:'0'});
+      await service.create(owner,{source_id:'crm-other',data_owner_user_id:owner.userId,config:freshnessConfig()});
+      await service.writeMappings(owner,'crm-other','1',customerMappings());
+      const foreign=await service.test(owner,'crm-other','1');
+      await expect(service.approve(owner,'crm-new','1',foreign.test_report_id,foreign.data_contract_ref)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+      replacement=foreign.test_report_id;
+    }
+    if(defect==='absent') await fixture.pool.query(`DELETE FROM control.source_lifecycle_event
+      WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND details->>'test_report_id'=$1`,[second.test_report_id]);
+    else await fixture.pool.query(`UPDATE control.source_lifecycle_event SET details=jsonb_set(details,'{test_report_id}',to_jsonb($2::text))
+      WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND details->>'test_report_id'=$1`,[second.test_report_id,replacement]);
+    // Removing a completed event requires a privileged role. The unmatched
+    // candidate still fails; detecting an arbitrarily deleted later event is
+    // outside the API role's append-only event boundary.
+    for(const report of defect==='absent'?[second]:[first,second])
+      await expect(service.approve(owner,'crm-new','1',report.test_report_id,report.data_contract_ref)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    expect((await fixture.pool.query("SELECT id FROM control.source_owner_approval WHERE source_id='crm-new'")).rowCount).toBe(0);
+  });
+
+  it('accepts a current real test when an unrelated historical synthetic report has no event', async () => {
+    const {owner,service}=await freshnessFixture();
+    const previous=await service.test(owner,'crm-new','1');
+    const orphan=await fixture.pool.query<{id:string}>(`INSERT INTO control.source_test_report
+      (tenant_key,source_id,config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,
+       source_credential_revision,credential_generation,endpoint_profile_digest,data_contract_ref,report,status,created_by)
+      SELECT tenant_key,source_id,config_revision,mapping_revision,identity_mapping_revision,config_digest,mapping_digest,identity_mapping_digest,
+       source_credential_revision,credential_generation,endpoint_profile_digest,data_contract_ref,report,status,created_by
+      FROM control.source_test_report WHERE id=$1 RETURNING id::text`,[previous.test_report_id]);
+    const latest=await service.test(owner,'crm-new','1');
+    expect(orphan.rows[0]!.id).not.toBe(latest.test_report_id);
+    const approval=await service.approve(owner,'crm-new','1',latest.test_report_id,latest.data_contract_ref);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+  });
+
+  it('rejects activation when the approved latest event no longer matches its proof', async () => {
+    const {owner,service}=await freshnessFixture();
+    const first=await service.test(owner,'crm-new','1');
+    const latest=await service.test(owner,'crm-new','1');
+    const approval=await service.approve(owner,'crm-new','1',latest.test_report_id,latest.data_contract_ref);
+    await fixture.pool.query(`UPDATE control.source_lifecycle_event SET details=jsonb_set(details,'{test_report_id}',to_jsonb($2::text))
+      WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND details->>'test_report_id'=$1`,[latest.test_report_id,first.test_report_id]);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await fixture.pool.query(`UPDATE control.source_lifecycle_event SET details=jsonb_set(details,'{test_report_id}',to_jsonb($1::text))
+      WHERE id=(SELECT max(id) FROM control.source_lifecycle_event WHERE tenant_key='m1_tenant' AND source_id='crm-new' AND action LIKE 'TEST_%')`,[latest.test_report_id]);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+  });
+
+  it('retains current contract and digest proof checks alongside event freshness', async () => {
+    const {owner,service}=await freshnessFixture();
+    const report=await service.test(owner,'crm-new','1');
+    await expect(service.approve(owner,'crm-new','1',report.test_report_id,'wrong-contract')).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    const original=(await fixture.pool.query<{mapping_digest:Buffer}>('SELECT mapping_digest FROM control.source_test_report WHERE id=$1',[report.test_report_id])).rows[0]!.mapping_digest;
+    await fixture.pool.query('UPDATE control.source_test_report SET mapping_digest=$2 WHERE id=$1',[report.test_report_id,Buffer.alloc(32,7)]);
+    await expect(service.approve(owner,'crm-new','1',report.test_report_id,report.data_contract_ref)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await fixture.pool.query('UPDATE control.source_test_report SET mapping_digest=$2 WHERE id=$1',[report.test_report_id,original]);
+    const approval=await service.approve(owner,'crm-new','1',report.test_report_id,report.data_contract_ref);
+    await fixture.pool.query(`UPDATE control.source_mapping_revision SET mapping_digest=$1 WHERE tenant_key='m1_tenant' AND source_id='crm-new'
+      AND revision=(SELECT mapping_revision FROM control.source_registry WHERE tenant_key='m1_tenant' AND source_id='crm-new')`,[Buffer.alloc(32,7)]);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).rejects.toMatchObject({code:'SOURCE_CONFLICT'});
+    await fixture.pool.query(`UPDATE control.source_mapping_revision SET mapping_digest=$1 WHERE tenant_key='m1_tenant' AND source_id='crm-new'
+      AND revision=(SELECT mapping_revision FROM control.source_registry WHERE tenant_key='m1_tenant' AND source_id='crm-new')`,[original]);
+    await expect(service.activate(owner,'crm-new','1',approval.approval_id)).resolves.toMatchObject({lifecycle:'ACTIVE'});
+  });
+
+  it('validates the complete simulated-import order mapping accepted by the sample test route', async () => {
+    const owner=await prepareOwner(),pool=roleScopedPool(),{service}=managerService(pool),src='import-order-map';
+    const app=await buildApp({logger:false,sourceRegistry:{authService:auth,sourceService:service,
+      authenticator:async token=>token==='owner-token'?owner:Promise.reject(new Error('invalid'))}});
+    try {
+      await service.create(owner,{source_id:src,data_owner_user_id:owner.userId,config:{name:'Import orders',connector:'SIMULATED_IMPORT',
+        mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',allowed_entities:['order'],delete_contract:'tombstone'}});
+      const fields=[['buyer','customer_id','identity'],['number','order_no','trim'],['state','status','identity'],['at','order_at','identity'],
+        ['total','amount','decimal-string'],['ccy','currency','identity'],...['source_line_id','product_code','product_name','quantity','unit_price','line_amount']
+          .map(field=>[`lines.${field}`,`lines.${field}`,['quantity','unit_price','line_amount'].includes(field)?'decimal-string':'identity'])]
+        .map(([source_field,target_field,transform])=>({entity:'order',source_field,target_field,transform}));
+      const mapping=await service.writeMappings(owner,src,'1',fields);
+      const customer=(await fixture.pool.query<{id:string}>(`INSERT INTO hub.canonical_customer
+        (tenant_id,customer_name,owner_user_id,dept_id,status,source_updated_at,source_version,version_domain,channel_epoch,hub_revision)
+        VALUES($1,'Buyer',$2,'fixture-dept','ACTIVE',now(),1,'SOURCE_VERSION',1,1) RETURNING id::text`,[owner.tenantId,owner.userId])).rows[0]!.id;
+      await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id,customer_id)
+        VALUES($1,$2,'customer','c1',$3,$3)`,[owner.tenantId,src,customer]);
+      await service.writeIdentityMappings(owner,src,[{kind:'customer',external_id:customerReferenceMappingKey(src,'c1'),target_id:customer}]);
+      const sample={schema_version:'hub.v1',batch_id:'71000000-0000-4000-8000-000000000001',records:[{
+        event_id:'71000000-0000-4000-8000-000000000002',source_pk:'o1',source_version:'1',operation:'UPSERT',
+        source_updated_at:'2026-10-29T00:00:00Z',data:{buyer:{source_id:src,source_pk:'c1'},number:'O1',state:'CONFIRMED',
+          at:'2026-10-29T00:00:00Z',total:'12.00',ccy:'CNY',lines:[{source_line_id:'l1',product_code:'p',product_name:'item',
+            quantity:'1.000000',unit_price:'12.000000',line_amount:'12.00'}]}}]};
+      const headers={authorization:'Bearer owner-token'};
+      const tested=await app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/test`,headers,
+        payload:{expected_revision:'1',samples:{order:JSON.stringify(sample)}}});
+      expect(tested.statusCode,tested.body).toBe(202);
+      expect(tested.json().data.status).toBe('PASS');
+      const validate=await app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/mappings/validate`,headers,payload:{revision:mapping.revision}});
+      expect(validate.statusCode,validate.body).toBe(200);
+      expect(validate.json().data).toEqual({revision:mapping.revision,valid:true,errors:[]});
+      const incomplete=await service.writeMappings(owner,src,mapping.revision,fields.filter(field=>field.target_field!=='lines.quantity'));
+      const invalid=await app.inject({method:'POST',url:`/hub/v1/admin/sources/${src}/mappings/validate`,headers,payload:{revision:incomplete.revision}});
+      expect(invalid.json().data).toMatchObject({valid:false,errors:expect.arrayContaining(['MAPPING_REQUIRED:order:lines.quantity'])});
+    } finally {await app.close();}
   });
 
   it('runs first activation through tested config, exact Owner approval, and an immutable single channel', async () => {
@@ -995,6 +1159,21 @@ function managerService(pool: typeof fixture.pool = fixture.pool) {
   const capabilityProbe=createBoundedCapabilityProbe({environmentKind:'local_lab'});
   return {service:createSourceRegistryService({pool,auth,secretResolver,endpointAllowlist,capabilityProbe,environmentKind:'local_lab'}),seenSecrets,
     secretResolver,endpointAllowlist,capabilityProbe};
+}
+
+function freshnessConfig():SourceConfig {
+  return {name:'CRM',connector:'rest',mode:'INCREMENTAL',version_domain:'SOURCE_VERSION',endpoint_allowlist_ref:'crm-prod',
+    secret_ref:'vault:/crm/credential-v1',allowed_entities:['customer'],delete_contract:'tombstone'};
+}
+
+async function freshnessFixture() {
+  const owner=await prepareOwner(),pool=roleScopedPool(),base=managerService(pool);
+  let probePass=true;
+  const service=createSourceRegistryService({pool,auth,secretResolver:base.secretResolver,endpointAllowlist:base.endpointAllowlist,
+    capabilityProbe:{run:async()=>({passed:probePass,checks:[probePass?'PROFILE_VALID':'ENDPOINT_REJECTED']})},environmentKind:'local_lab'});
+  await service.create(owner,{source_id:'crm-new',data_owner_user_id:owner.userId,config:freshnessConfig()});
+  await service.writeMappings(owner,'crm-new','1',customerMappings());
+  return {owner,service,failProbe:()=>{probePass=false;}};
 }
 
 function customerMappings(firstSourceField='customer_name') {

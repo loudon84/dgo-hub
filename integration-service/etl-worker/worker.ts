@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { readHubRuntimeConfiguration, type HubRuntimeConfiguration } from '../contracts/runtime-config.js';
 import { validateHubBatch, type PublicRecord } from '../ingestion-api/strict-contract.js';
-import { applyCustomer, applyImportRecoveryCustomer, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
+import { applyCustomer, applyImportRecoveryCustomer, applyImportRecoveryOrder, applyOrderAggregate, type ApplyContext, type ApplyResult } from '../normalization/apply.js';
 import { canonicalCustomerInput, canonicalOrderInput } from '../normalization/durable-record.js';
 import { durableRetryDelayMs } from './retry.js';
 import { runSnapshotWorkerOnce, type SnapshotWorkerDependencies } from './snapshot-worker.js';
@@ -125,8 +125,7 @@ async function claimJobs(pool: Pool, limit: number, leaseMs: number): Promise<Du
   return transaction(pool, async client => {
     const candidates = await client.query<{ job_id: string; tenant_key: string; source_id: string }>(`SELECT o.job_id,j.tenant_key,j.source_id
       FROM control.ingestion_processing_outbox o JOIN control.ingestion_job j ON j.id=o.job_id
-      WHERE ((to_jsonb(j)->>'import_recovery_operation_id') IS NULL OR j.entity='customer')
-        AND o.acknowledged_at IS NULL AND o.available_at<=clock_timestamp()
+      WHERE o.acknowledged_at IS NULL AND o.available_at<=clock_timestamp()
         AND (o.claim_token IS NULL OR o.lease_expires_at<=clock_timestamp())
       ORDER BY o.available_at,o.id LIMIT $1 FOR UPDATE OF o SKIP LOCKED`, [limit]);
     const claims: DurableClaim[] = [];
@@ -164,7 +163,6 @@ async function loadItems(pool: Pool, job: DurableJob): Promise<DurableItem[]> {
 }
 
 async function setInvalidFacts(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, errorCode: string): Promise<void> {
-  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   await transaction(pool, async client => {
     await client.query('SELECT control.lock_security_barrier_fence()');
     if (!await lockClaim(client, claim)) return;
@@ -272,7 +270,6 @@ async function recordTransientFailure(pool: Pool, claim: DurableClaim, job: Dura
 
 async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item: DurableItem, record: PublicRecord,
   leaseMs: number, hooks: DurableWorkerHooks): Promise<void> {
-  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   const started = await startAttempt(pool,claim,job,item,leaseMs);
   if (!started) return;
   const hookItem = { jobId:job.id,ordinal:item.ordinal,operationId:started.operation_id };
@@ -287,8 +284,11 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
       if (current.rows[0]?.status !== 'APPLYING' || current.rows[0].operation_id !== started.operation_id) return;
       let outcome:ApplyResult;
       if(job.import_recovery_operation_id!==null) {
-        outcome=await applyImportRecoveryCustomer(client,{tenantId:job.tenant_key,sourceId:job.source_id,jobId:job.id,
-          ordinal:item.ordinal,itemOperationId:started.operation_id,claimToken:claim.token});
+        const scope={tenantId:job.tenant_key,sourceId:job.source_id,jobId:job.id,
+          ordinal:item.ordinal,itemOperationId:started.operation_id,claimToken:claim.token};
+        if(job.entity==='customer') outcome=await applyImportRecoveryCustomer(client,scope);
+        else if(job.entity==='order') outcome=await applyImportRecoveryOrder(client,scope);
+        else throw new Error('IMPORT_RECOVERY_CONTEXT_INVALID');
       } else {
       const recovery = await client.query<{ state: string }>(
         'SELECT control.check_recovery_worker_binding($1,$2,$3::uuid,$4,$5::uuid,$6::uuid) AS state',
@@ -335,7 +335,6 @@ async function applyItem(pool: Pool, claim: DurableClaim, job: DurableJob, item:
 }
 
 async function finishClaim(pool: Pool, claim: DurableClaim, job: DurableJob): Promise<void> {
-  if (job.import_recovery_operation_id !== null && job.entity !== 'customer') return;
   await transaction(pool, async client => {
     const locked=await client.query(`SELECT o.id FROM control.ingestion_processing_outbox o
       JOIN control.ingestion_job j ON j.id=o.job_id WHERE o.job_id=$1 AND j.tenant_key=$2 AND j.source_id=$3
@@ -368,8 +367,6 @@ export async function runDurableWorkerOnce(pool: Pool, options: { limit?: number
   const claims=await claimJobs(pool,limit,leaseMs);
   for (const claim of claims) {
     const job=await loadJob(pool,claim);
-    // Order recovery is pending W2, including stale/direct claims.
-    if (job.import_recovery_operation_id !== null && job.entity !== 'customer') continue;
     await options.hooks?.afterClaim?.(claim);
     const items=await loadItems(pool,job);
     for (const item of items) {
