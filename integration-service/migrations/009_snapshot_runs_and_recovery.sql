@@ -3714,3 +3714,182 @@ END;
 $body$;
 REVOKE ALL ON FUNCTION control.list_quarantine_retry_state(text,text,text,text,text,bigint,bigint,uuid[]) FROM PUBLIC,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
 GRANT EXECUTE ON FUNCTION control.list_quarantine_retry_state(text,text,text,text,text,bigint,bigint,uuid[]) TO hub_api;
+
+-- M1-5E1a3: quarantine-time binding. No historical backfill.
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_quarantine_snapshot_binding_key ON control.ingestion_quarantine_index
+  (quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest);
+CREATE TABLE IF NOT EXISTS control.etl_snapshot_quarantine_binding (
+  quarantine_id uuid PRIMARY KEY, tenant_key text NOT NULL, source_id text NOT NULL, run_id uuid NOT NULL,
+  attempt_id uuid NOT NULL, outcome_id uuid NOT NULL UNIQUE, entity text NOT NULL, relation text NOT NULL,
+  parent_source_pk text NOT NULL, source_pk text NOT NULL, aggregate_digest bytea NOT NULL, proof_scope_digest bytea NOT NULL,
+  eligibility text NOT NULL CHECK(eligibility IN ('PROVEN','INELIGIBLE')),
+  binding_kind text, own_object_id uuid, user_external_id text, user_target_id text,
+  department_external_id text, department_target_id text, customer_source_id text, customer_source_pk text, customer_object_id uuid,
+  FOREIGN KEY(quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest)
+    REFERENCES control.ingestion_quarantine_index(quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  CHECK ((eligibility='INELIGIBLE' AND binding_kind IS NULL AND own_object_id IS NULL AND user_external_id IS NULL AND user_target_id IS NULL
+    AND department_external_id IS NULL AND department_target_id IS NULL AND customer_source_id IS NULL AND customer_source_pk IS NULL AND customer_object_id IS NULL)
+    OR (eligibility='PROVEN' AND binding_kind IS NOT NULL AND own_object_id IS NOT NULL AND
+      ((binding_kind='DELETE' AND user_external_id IS NULL AND user_target_id IS NULL AND department_external_id IS NULL AND department_target_id IS NULL
+        AND customer_source_id IS NULL AND customer_source_pk IS NULL AND customer_object_id IS NULL)
+       OR (binding_kind='CUSTOMER' AND entity='customer' AND user_external_id IS NOT NULL AND user_target_id IS NOT NULL
+        AND department_external_id IS NOT NULL AND department_target_id IS NOT NULL AND customer_source_id IS NULL AND customer_source_pk IS NULL AND customer_object_id IS NULL)
+       OR (binding_kind='ORDER' AND entity='order' AND user_external_id IS NULL AND user_target_id IS NULL AND department_external_id IS NULL
+        AND department_target_id IS NULL AND customer_source_id IS NOT NULL AND customer_source_pk IS NOT NULL AND customer_object_id IS NOT NULL))))
+);
+DROP TRIGGER IF EXISTS etl_snapshot_quarantine_binding_immutable ON control.etl_snapshot_quarantine_binding;
+CREATE TRIGGER etl_snapshot_quarantine_binding_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_quarantine_binding
+  FOR EACH ROW EXECUTE FUNCTION control.reject_ingestion_recovery_mutation();
+REVOKE ALL ON control.etl_snapshot_quarantine_binding FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+
+CREATE OR REPLACE FUNCTION control.capture_snapshot_quarantine_binding() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control,hub AS $body$
+DECLARE q control.ingestion_quarantine_index%ROWTYPE; runrow control.etl_run%ROWTYPE; stage control.etl_snapshot_stage_record%ROWTYPE;
+  mappings jsonb; cfg jsonb; own uuid; ue text; ut text; de text; dt text; rs text; rp text; rt text; ref uuid; n integer;
+  k text; eligible boolean:=false; deletion boolean:=false;
+BEGIN
+  PERFORM control.lock_security_barrier_fence();
+  SELECT * INTO q FROM control.ingestion_quarantine_index WHERE origin_kind='SNAPSHOT' AND outcome_id=NEW.outcome_id
+    AND (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest)=
+      (NEW.tenant_key,NEW.source_id,NEW.run_id,NEW.attempt_id,NEW.entity,NEW.relation,NEW.parent_source_pk,NEW.source_pk,NEW.aggregate_digest,NEW.proof_scope_digest);
+  IF NOT FOUND THEN RETURN NEW; END IF;
+  IF coalesce(nullif(current_setting('role',true),'none'),session_user)='hub_worker' THEN
+    SELECT * INTO runrow FROM control.etl_run WHERE (tenant_key,source_id,run_id)=(q.tenant_key,q.source_id,q.run_id);
+    SELECT * INTO stage FROM control.etl_snapshot_stage_record WHERE (tenant_key,source_id,run_id,attempt_id,entity,relation,parent_source_pk,source_pk)=
+      (q.tenant_key,q.source_id,q.run_id,q.attempt_id,q.entity,q.relation,q.parent_source_pk,q.source_pk);
+    SELECT im.mappings,cr.config INTO mappings,cfg FROM control.source_identity_mapping_revision im
+      JOIN control.source_config_revision cr ON (cr.tenant_key,cr.source_id,cr.revision)=(runrow.tenant_key,runrow.source_id,runrow.config_revision)
+      WHERE (im.tenant_key,im.source_id,im.revision,im.mapping_digest)=(runrow.tenant_key,runrow.source_id,runrow.identity_mapping_revision,runrow.identity_mapping_digest)
+        AND cr.config_digest=runrow.config_digest;
+    SELECT canonical_object_id INTO own FROM control.canonical_source_identity WHERE (tenant_key,source_id,entity,source_pk)=
+      (q.tenant_key,q.source_id,q.entity,q.source_pk) FOR UPDATE;
+    deletion:=runrow.delete_contract='tombstone' AND coalesce(stage.facts->>'deleted_at','') NOT IN ('','false');
+    IF own IS NOT NULL AND jsonb_typeof(mappings)='array' THEN
+      IF deletion THEN k:='DELETE'; eligible:=true;
+      ELSIF q.entity='customer' THEN
+        ue:=stage.facts->>'owner_user_id'; de:=stage.facts->>'dept_id';
+        SELECT count(*),min(x->>'target_id') INTO n,ut FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='user' AND x->>'external_id'=ue;
+        IF n=1 AND ut IS NOT NULL THEN
+          SELECT count(*),min(x->>'target_id') INTO n,dt FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='department' AND x->>'external_id'=de;
+          IF n=1 AND dt IS NOT NULL AND EXISTS(SELECT 1 FROM control.canonical_identity_reference r WHERE
+            (r.tenant_key,r.source_id,r.entity,r.source_pk,r.kind,r.external_id,r.target_id)=(q.tenant_key,q.source_id,q.entity,q.source_pk,'user',ue,ut))
+            AND EXISTS(SELECT 1 FROM control.canonical_identity_reference r WHERE
+            (r.tenant_key,r.source_id,r.entity,r.source_pk,r.kind,r.external_id,r.target_id)=(q.tenant_key,q.source_id,q.entity,q.source_pk,'department',de,dt))
+            AND NOT EXISTS(SELECT 1 FROM control.source_identity_remap_fence f WHERE f.tenant_key=q.tenant_key AND f.source_id=q.source_id
+            AND ((f.kind='user' AND f.external_id=ue) OR (f.kind='department' AND f.external_id=de)) AND f.identity_mapping_revision>runrow.identity_mapping_revision) THEN
+            k:='CUSTOMER'; eligible:=true;
+          END IF;
+        END IF;
+      ELSIF q.entity='order' THEN
+        rp:=stage.facts->>'customer_id'; rs:=coalesce(nullif(cfg->'endpoint_profile'->'entities'->'order'->>'customer_source_id',''),q.source_id);
+        SELECT count(*),min(x->>'target_id') INTO n,rt FROM jsonb_array_elements(mappings) x WHERE x->>'kind'='customer' AND x->>'external_id'=rp;
+        IF n=1 AND rt ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+          SELECT customer_id INTO ref FROM control.canonical_source_identity WHERE (tenant_key,source_id,entity,source_pk)=(q.tenant_key,rs,'customer',rp) FOR UPDATE;
+          IF ref::text=rt AND EXISTS(SELECT 1 FROM control.canonical_identity_reference r WHERE
+            (r.tenant_key,r.source_id,r.entity,r.source_pk,r.kind,r.external_id,r.target_id)=(q.tenant_key,q.source_id,q.entity,q.source_pk,'customer',rp,rt))
+            AND NOT EXISTS(SELECT 1 FROM control.source_identity_remap_fence f WHERE f.tenant_key=q.tenant_key AND f.source_id=q.source_id
+            AND f.kind='customer' AND f.external_id=rp AND f.identity_mapping_revision>runrow.identity_mapping_revision) THEN k:='ORDER'; eligible:=true; END IF;
+        END IF;
+      END IF;
+    END IF;
+  END IF;
+  INSERT INTO control.etl_snapshot_quarantine_binding(quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,
+    aggregate_digest,proof_scope_digest,eligibility,binding_kind,own_object_id,user_external_id,user_target_id,department_external_id,department_target_id,
+    customer_source_id,customer_source_pk,customer_object_id)
+  VALUES(q.quarantine_id,q.tenant_key,q.source_id,q.run_id,q.attempt_id,q.outcome_id,q.entity,q.relation,q.parent_source_pk,q.source_pk,q.aggregate_digest,q.proof_scope_digest,
+    CASE WHEN eligible THEN 'PROVEN' ELSE 'INELIGIBLE' END,CASE WHEN eligible THEN k END,CASE WHEN eligible THEN own END,
+    CASE WHEN eligible AND k='CUSTOMER' THEN ue END,CASE WHEN eligible AND k='CUSTOMER' THEN ut END,
+    CASE WHEN eligible AND k='CUSTOMER' THEN de END,CASE WHEN eligible AND k='CUSTOMER' THEN dt END,
+    CASE WHEN eligible AND k='ORDER' THEN rs END,CASE WHEN eligible AND k='ORDER' THEN rp END,CASE WHEN eligible AND k='ORDER' THEN ref END);
+  RETURN NEW;
+END;
+$body$;
+REVOKE ALL ON FUNCTION control.capture_snapshot_quarantine_binding() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+DROP TRIGGER IF EXISTS zz_etl_snapshot_quarantine_binding_capture ON control.etl_snapshot_apply_range;
+CREATE TRIGGER zz_etl_snapshot_quarantine_binding_capture AFTER INSERT ON control.etl_snapshot_apply_range
+  FOR EACH ROW EXECUTE FUNCTION control.capture_snapshot_quarantine_binding();
+
+-- Shared immutable API-024 namespace and scoped snapshot operation.
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_quarantine_scoped_kind_key ON control.ingestion_quarantine_index
+  (quarantine_id,tenant_key,source_id,origin_kind);
+CREATE UNIQUE INDEX IF NOT EXISTS ingestion_recovery_registry_rest_link_key ON control.ingestion_recovery_operation
+  (operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest);
+CREATE UNIQUE INDEX IF NOT EXISTS etl_snapshot_binding_scoped_key ON control.etl_snapshot_quarantine_binding
+  (quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest);
+CREATE TABLE IF NOT EXISTS control.etl_snapshot_recovery_target_operation (
+  operation_id uuid PRIMARY KEY, quarantine_id uuid NOT NULL, tenant_key text NOT NULL, source_id text NOT NULL,
+  run_id uuid NOT NULL, attempt_id uuid NOT NULL, outcome_id uuid NOT NULL, entity text NOT NULL, relation text NOT NULL,
+  parent_source_pk text NOT NULL, source_pk text NOT NULL, aggregate_digest bytea NOT NULL, proof_scope_digest bytea NOT NULL,
+  generation bigint NOT NULL CHECK(generation>=0), previous_operation_id uuid,
+  route text NOT NULL CHECK(route='/hub/v1/admin/quarantine/{quarantine_id}/retry'),
+  idempotency_key text NOT NULL CHECK(idempotency_key ~ '^[A-Za-z0-9._:-]{1,128}$'),
+  request_digest bytea NOT NULL CHECK(octet_length(request_digest)=32), expected_state text NOT NULL,
+  mapping_revision bigint NOT NULL CHECK(mapping_revision>0), reason_json text NOT NULL CHECK(char_length(reason_json) BETWEEN 2 AND 6002),
+  approved_by text NOT NULL, approved_owner_revision bigint NOT NULL CHECK(approved_owner_revision>0),
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp(), UNIQUE(quarantine_id,generation),
+  UNIQUE(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest),
+  CHECK((generation=0 AND previous_operation_id IS NULL) OR (generation>0 AND previous_operation_id IS NOT NULL)),
+  FOREIGN KEY(quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest)
+    REFERENCES control.etl_snapshot_quarantine_binding(quarantine_id,tenant_key,source_id,run_id,attempt_id,outcome_id,entity,relation,parent_source_pk,source_pk,aggregate_digest,proof_scope_digest)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(tenant_key,approved_by) REFERENCES control.auth_subject(tenant_key,user_id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+DROP TRIGGER IF EXISTS etl_snapshot_recovery_target_immutable ON control.etl_snapshot_recovery_target_operation;
+CREATE TRIGGER etl_snapshot_recovery_target_immutable BEFORE UPDATE OR DELETE ON control.etl_snapshot_recovery_target_operation
+  FOR EACH ROW EXECUTE FUNCTION control.reject_ingestion_recovery_mutation();
+REVOKE ALL ON control.etl_snapshot_recovery_target_operation FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+CREATE TABLE IF NOT EXISTS control.ingestion_recovery_registry (
+  tenant_key text NOT NULL, source_id text NOT NULL, route text NOT NULL CHECK(route='/hub/v1/admin/quarantine/{quarantine_id}/retry'),
+  idempotency_key text NOT NULL CHECK(idempotency_key ~ '^[A-Za-z0-9._:-]{1,128}$'), request_digest bytea NOT NULL CHECK(octet_length(request_digest)=32),
+  quarantine_id uuid NOT NULL, origin_kind text NOT NULL CHECK(origin_kind IN ('REST','SNAPSHOT')), operation_id uuid NOT NULL UNIQUE,
+  rest_operation_id uuid, snapshot_operation_id uuid, PRIMARY KEY(tenant_key,source_id,route,idempotency_key),
+  UNIQUE(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest),
+  CHECK((origin_kind='REST' AND rest_operation_id IS NOT NULL AND rest_operation_id=operation_id AND snapshot_operation_id IS NULL) OR
+        (origin_kind='SNAPSHOT' AND snapshot_operation_id IS NOT NULL AND snapshot_operation_id=operation_id AND rest_operation_id IS NULL)),
+  FOREIGN KEY(quarantine_id,tenant_key,source_id,origin_kind) REFERENCES control.ingestion_quarantine_index(quarantine_id,tenant_key,source_id,origin_kind)
+    ON UPDATE RESTRICT ON DELETE RESTRICT,
+  FOREIGN KEY(rest_operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+    REFERENCES control.ingestion_recovery_operation(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+    DEFERRABLE INITIALLY DEFERRED,
+  FOREIGN KEY(snapshot_operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+    REFERENCES control.etl_snapshot_recovery_target_operation(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+    DEFERRABLE INITIALLY DEFERRED
+);
+-- Existing REST links are authoritative; replay accepts only byte-identical links.
+INSERT INTO control.ingestion_recovery_registry(tenant_key,source_id,route,idempotency_key,request_digest,quarantine_id,origin_kind,operation_id,rest_operation_id)
+  SELECT tenant_key,source_id,route,idempotency_key,request_digest,quarantine_id,'REST',operation_id,operation_id FROM control.ingestion_recovery_operation
+  ON CONFLICT(tenant_key,source_id,route,idempotency_key) DO NOTHING;
+DO $body$ BEGIN
+  IF EXISTS(SELECT 1 FROM control.ingestion_recovery_operation r LEFT JOIN control.ingestion_recovery_registry k
+    ON (k.tenant_key,k.source_id,k.route,k.idempotency_key,k.request_digest,k.quarantine_id,k.origin_kind,k.operation_id,k.rest_operation_id)=
+       (r.tenant_key,r.source_id,r.route,r.idempotency_key,r.request_digest,r.quarantine_id,'REST',r.operation_id,r.operation_id)
+    WHERE k.operation_id IS NULL) THEN RAISE EXCEPTION 'RECOVERY_REGISTRY_BACKFILL_CONFLICT' USING ERRCODE='23505'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='control.ingestion_recovery_operation'::regclass AND conname='ingestion_recovery_registry_fk') THEN
+    ALTER TABLE control.ingestion_recovery_operation ADD CONSTRAINT ingestion_recovery_registry_fk
+      FOREIGN KEY(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+      REFERENCES control.ingestion_recovery_registry(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='control.etl_snapshot_recovery_target_operation'::regclass AND conname='snapshot_recovery_registry_fk') THEN
+    ALTER TABLE control.etl_snapshot_recovery_target_operation ADD CONSTRAINT snapshot_recovery_registry_fk
+      FOREIGN KEY(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+      REFERENCES control.ingestion_recovery_registry(operation_id,quarantine_id,tenant_key,source_id,route,idempotency_key,request_digest)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $body$;
+DROP TRIGGER IF EXISTS ingestion_recovery_registry_immutable ON control.ingestion_recovery_registry;
+CREATE TRIGGER ingestion_recovery_registry_immutable BEFORE UPDATE OR DELETE ON control.ingestion_recovery_registry
+  FOR EACH ROW EXECUTE FUNCTION control.reject_ingestion_recovery_mutation();
+REVOKE ALL ON control.ingestion_recovery_registry FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+CREATE OR REPLACE FUNCTION control.register_rest_recovery_operation() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,control AS $body$
+BEGIN
+  INSERT INTO control.ingestion_recovery_registry(tenant_key,source_id,route,idempotency_key,request_digest,quarantine_id,origin_kind,operation_id,rest_operation_id)
+    VALUES(NEW.tenant_key,NEW.source_id,NEW.route,NEW.idempotency_key,NEW.request_digest,NEW.quarantine_id,'REST',NEW.operation_id,NEW.operation_id);
+  RETURN NEW;
+END $body$;
+REVOKE ALL ON FUNCTION control.register_rest_recovery_operation() FROM PUBLIC,hub_api,hub_worker,hub_mcp,hub_publisher,hub_hasura_read;
+DROP TRIGGER IF EXISTS ingestion_recovery_registry_capture ON control.ingestion_recovery_operation;
+CREATE TRIGGER ingestion_recovery_registry_capture AFTER INSERT ON control.ingestion_recovery_operation
+  FOR EACH ROW EXECUTE FUNCTION control.register_rest_recovery_operation();

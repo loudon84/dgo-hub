@@ -250,8 +250,8 @@ async function seedMixedOrigins(): Promise<void> {
   }
 }
 
-async function runRealSnapshotQuarantine(): Promise<void> {
-  const cSourceId = 'crm-quarantine-c-capture';
+async function runRealSnapshotQuarantine(proven = false): Promise<void> {
+  const cSourceId = proven ? 'crm-quarantine-c-proven' : 'crm-quarantine-c-capture';
   const ownerAuth = createAuthService({ pool: fixture.pool });
   const ownerPrincipal: UserPrincipal = { userId: ownerId, tenantId, departmentId: 'sales-east', businessRole: 'sales',
     managementScopes: ['source:read', 'source:write', 'source:approve', 'mapping:write'] as const,
@@ -290,6 +290,19 @@ async function runRealSnapshotQuarantine(): Promise<void> {
   const approval = await sourceService.approve(ownerPrincipal, cSourceId, '1', report.test_report_id, report.data_contract_ref);
   await sourceService.activate(ownerPrincipal, cSourceId, '1', approval.approval_id);
   const run = await createSnapshotRun(apiPool, createAuthService({ pool: apiPool }), ownerPrincipal, cSourceId, '1', 'real-c-quarantine');
+  if (proven) {
+    const ownId = randomUUID();
+    await fixture.pool.query(`INSERT INTO control.canonical_source_identity(tenant_key,source_id,entity,source_pk,canonical_object_id)
+      VALUES($1,$2,'customer','C-2',$3)`, [tenantId,cSourceId,ownId]);
+    await fixture.pool.query(`INSERT INTO control.canonical_identity_reference(tenant_key,source_id,entity,source_pk,kind,external_id,target_id)
+      VALUES($1,$2,'customer','C-2','user','owner-ext',$3),($1,$2,'customer','C-2','department','dept-ext','sales-east')`,
+      [tenantId,cSourceId,ownerId]);
+    await fixture.pool.query(`INSERT INTO control.source_version_receipt(tenant_key,source_id,channel_id,channel_epoch,entity,source_pk,
+      version_domain,source_version,source_content_digest,projection_digest,canonical_object_id,deleted)
+      SELECT $1,$2,id,channel_epoch,'customer','C-2',version_domain,1,$3,$4,$5,false FROM control.source_channel
+      WHERE tenant_key=$1 AND source_id=$2 AND entity='customer' AND state='active'`,
+      [tenantId,cSourceId,sha('prior content'),sha('prior projection'),ownId]);
+  }
   const sourceConnectionFactory: PostgresSourceConnectionFactory = { connect: async () => {
     let fetched = false;
     return { query: async sql => {
@@ -313,17 +326,29 @@ async function runRealSnapshotQuarantine(): Promise<void> {
     expect(await runSnapshotWorkerOnce(workerPool, dependencies)).toBeGreaterThan(0);
     let remapped = false;
     expect(await runSnapshotContinuationWorkerOnce(workerPool, 20, 60, { afterAggregateCommit: async item => {
-      if (remapped || item.run_id !== run.run_id || item.entity !== 'customer' || item.source_pk !== 'C-1') return;
+      if (proven || remapped || item.run_id !== run.run_id || item.entity !== 'customer' || item.source_pk !== 'C-1') return;
       remapped = true;
       await sourceService.updateIdentityMapping(ownerPrincipal, Buffer.from(`${cSourceId}\0user\0owner-ext`, 'utf8').toString('base64url'),
         '1', remapUserId, 'confirm current owner after first snapshot aggregate commit');
     } })).toBe(1);
-    expect(remapped).toBe(true);
+    expect(remapped).toBe(!proven);
   } finally { await workerPool.end(); }
   const cOutcome = await fixture.pool.query<{ status: string; error_code: string | null; indexed: number }>(`SELECT o.status,o.error_code,
     (SELECT count(*)::int FROM control.ingestion_quarantine_index i WHERE i.outcome_id=o.outcome_id) AS indexed
     FROM control.etl_snapshot_apply_outcome o WHERE o.run_id=$1 AND o.source_pk='C-2'`, [run.run_id]);
-  expect(cOutcome.rows).toEqual([{ status: 'QUARANTINED', error_code: 'AUTHORITY_MAPPING_SUPERSEDED', indexed: 1 }]);
+  expect(cOutcome.rows).toEqual([{ status: 'QUARANTINED', error_code: proven ? 'SOURCE_VERSION_CONFLICT' : 'AUTHORITY_MAPPING_SUPERSEDED', indexed: 1 }]);
+  const binding = await fixture.pool.query<{ eligibility: string }>(`SELECT b.eligibility
+    FROM control.etl_snapshot_quarantine_binding b JOIN control.etl_snapshot_apply_outcome o ON o.outcome_id=b.outcome_id
+    WHERE o.run_id=$1 AND o.source_pk='C-2'`, [run.run_id]);
+  expect(binding.rows).toEqual([{ eligibility: proven ? 'PROVEN' : 'INELIGIBLE' }]);
+  if (proven) {
+    await expect(fixture.pool.query(`UPDATE control.etl_snapshot_quarantine_binding SET eligibility='INELIGIBLE' WHERE run_id=$1`,
+      [run.run_id])).rejects.toMatchObject({ code: '55000' });
+    const worker = new pg.Pool({ connectionString: `postgres://postgres@127.0.0.1:${fixture.hostPort}/postgres`,
+      options: '-c role=hub_worker', max: 1 });
+    try { await expect(worker.query('SELECT * FROM control.etl_snapshot_quarantine_binding')).rejects.toMatchObject({ code: '42501' }); }
+    finally { await worker.end(); }
+  }
 }
 
 async function seedPreIndexSnapshot(pool: pg.Pool, preIndexTenant: string, preIndexSource: string): Promise<string> {
@@ -761,7 +786,7 @@ describe('API-023 quarantine read', () => {
     if (fixture) await fixture.close();
   });
 
-  it('API-024 rejects a snapshot origin with the scoped recovery conflict', async () => {
+  it('API-024 rejects a historical snapshot without quarantine-time binding', async () => {
     const auth = createAuthService({ pool: fixture.pool });
     await auth.repository.provisionSubject({ tenantId, userId: ownerId, managementScopes: ['source:read', 'source:approve'] });
     try {
@@ -769,12 +794,12 @@ describe('API-023 quarantine read', () => {
         WHERE tenant_key=$1 AND source_id=$2 AND origin_kind='SNAPSHOT' LIMIT 1`, [tenantId, sourceId]);
       expect(snapshot.rowCount).toBe(1);
       const id = snapshot.rows[0]!.quarantine_id;
-      const expectedState = Buffer.from(JSON.stringify({ v: 1, quarantine_id: id, generation: '0' })).toString('base64url');
+      const expectedState = Buffer.from(JSON.stringify({ v: 2, quarantine_id: id, generation: '0' })).toString('base64url');
       const response = await app.inject({ method: 'POST', url: `/hub/v1/admin/quarantine/${id}/retry`,
         headers: { authorization: `Bearer ${await tokenFor(subject)}`, 'idempotency-key': 'snapshot-red', 'content-type': 'application/json' },
         payload: { expected_state: expectedState, mapping_revision: '1', reason: 'test recovery' } });
       expect(response.statusCode).toBe(409);
-      expect(response.json().error.code).toBe('RECOVERY_SCOPE_UNAVAILABLE');
+      expect(response.json().error.code).toBe('RECOVERY_TARGET_CONFLICT');
     } finally {
       await auth.repository.provisionSubject({ tenantId, userId: ownerId, managementScopes: ['source:read'] });
       token = await tokenFor(subject);
@@ -818,6 +843,14 @@ describe('API-023 quarantine read', () => {
 
   it('captures an actual C worker quarantine after a current identity remap fences its older frozen proof', async () => {
     await runRealSnapshotQuarantine();
+  });
+  it('captures proven original binding in the actual C worker transaction', async () => {
+    await runRealSnapshotQuarantine(true);
+  });
+  it('marks privileged direct range inserts ineligible for recovery', async () => {
+    const rows = await fixture.pool.query<{ eligibility: string; count: number }>(`SELECT b.eligibility,count(*)::int AS count
+      FROM control.etl_snapshot_quarantine_binding b WHERE b.tenant_key=$1 AND b.source_id=$2 GROUP BY b.eligibility`, [tenantId,sourceId]);
+    expect(rows.rows).toEqual([{ eligibility: 'INELIGIBLE', count: 12 }]);
   });
 
   it('pages 24 mixed REST and supported parentless snapshot origins in stable microsecond order', async () => {
@@ -1274,6 +1307,9 @@ describe('API-023 quarantine read', () => {
       expect(first.statusCode,first.body).toBe(202);
       expect(replay.statusCode,replay.body).toBe(202);
       expect(replay.json().data).toEqual(first.json().data);
+      const registered=await fixture.pool.query<{operation_id:string;origin_kind:string}>(`SELECT operation_id::text,origin_kind
+        FROM control.ingestion_recovery_registry WHERE tenant_key=$1 AND source_id=$2 AND idempotency_key='recovery-first'`,[tenantId,sourceId]);
+      expect(registered.rows).toEqual([{operation_id:first.json().data.operation_id,origin_kind:'REST'}]);
       const storedReason=await fixture.pool.query<{reason_json:string}>('SELECT reason_json FROM control.ingestion_recovery_operation WHERE operation_id=$1',
         [first.json().data.operation_id]);
       expect(JSON.parse(storedReason.rows[0]!.reason_json)).toBe('\u0000\ud800');
